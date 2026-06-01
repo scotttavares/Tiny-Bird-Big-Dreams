@@ -1,5 +1,23 @@
 /* Tiny Bird, Big Dreams — Main JS */
 
+// ── Dark mode ──
+(function () {
+  const stored = localStorage.getItem('theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const theme = stored || (prefersDark ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', theme);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const toggle = document.getElementById('themeToggle');
+    if (!toggle) return;
+    toggle.addEventListener('click', () => {
+      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    });
+  });
+})();
+
 // ── Nav scroll shadow ──
 const nav = document.getElementById('nav');
 if (nav) {

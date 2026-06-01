@@ -1,0 +1,61 @@
+/* ============================================================
+   TINY BIRD — Dark Mode
+   ============================================================ */
+
+[data-theme="dark"] {
+  --bg:          #0F0F1A;
+  --bg-alt:      #151525;
+  --surface:     #1E1E30;
+  --text:        #F0F0FF;
+  --text-muted:  #9B9BB8;
+  --border:      #2A2A45;
+}
+
+[data-theme="dark"] .nav {
+  background: rgba(15,15,26,.92);
+}
+
+[data-theme="dark"] .trust-strip {
+  background: #0A0A14;
+}
+
+[data-theme="dark"] .transparency-section {
+  background: linear-gradient(135deg, #07050f, #12103a, #0d1424);
+}
+
+[data-theme="dark"] .shape--1 { opacity: .15; }
+[data-theme="dark"] .shape--2 { opacity: .12; }
+[data-theme="dark"] .shape--3 { opacity: .08; }
+
+[data-theme="dark"] .footer {
+  background: #07070F;
+}
+
+/* ── Dark mode toggle button ── */
+.theme-toggle {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 200;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  box-shadow: var(--shadow-md);
+  display: grid;
+  place-items: center;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: transform .2s, box-shadow .2s;
+  color: var(--text);
+}
+.theme-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: var(--shadow-lg);
+}
+.theme-toggle__icon--dark  { display: none; }
+.theme-toggle__icon--light { display: block; }
+
+[data-theme="dark"] .theme-toggle__icon--dark  { display: block; }
+[data-theme="dark"] .theme-toggle__icon--light { display: none; }

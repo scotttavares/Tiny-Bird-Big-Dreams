@@ -5,7 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tiny Bird, Big Dreams — AI-Powered Creativity for Everyone</title>
   <meta name="description" content="Tiny Bird, Big Dreams is a fully transparent AI company building mobile apps, storybooks, and websites for all ages." />
+  <!-- Open Graph -->
+  <meta property="og:title" content="Tiny Bird, Big Dreams" />
+  <meta property="og:description" content="AI-powered creativity for everyone — apps, storybooks, websites, and more." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="assets/og-image.png" />
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Tiny Bird, Big Dreams" />
+  <meta name="twitter:description" content="AI-powered creativity for everyone — apps, storybooks, websites, and more." />
+  <!-- PWA -->
+  <link rel="manifest" href="site.webmanifest" />
+  <meta name="theme-color" content="#FF8C42" />
   <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/dark.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Fredoka+One&display=swap" rel="stylesheet" />
 </head>
@@ -23,9 +36,11 @@
       </button>
       <ul class="nav__links" id="navLinks">
         <li><a href="#what-we-build">What We Build</a></li>
-        <li><a href="pages/about.html">About & AI</a></li>
+        <li><a href="pages/about.html">About &amp; AI</a></li>
         <li><a href="pages/apps.html">Apps</a></li>
         <li><a href="pages/stories.html">Stories</a></li>
+        <li><a href="pages/merch.html">Merch</a></li>
+        <li><a href="pages/contact.html">Contact</a></li>
         <li><a href="#community" class="btn btn--nav">Join Us</a></li>
       </ul>
     </div>
@@ -113,14 +128,14 @@
           <span class="product-card__tag">In Development</span>
         </a>
 
-        <a href="#" class="product-card product-card--web">
+        <a href="pages/contact.html" class="product-card product-card--web">
           <div class="product-card__icon">🌐</div>
           <h3>Websites</h3>
           <p>Custom websites built fast and beautifully. Personal portfolios, small business sites, and creative showcases.</p>
           <span class="product-card__tag">Available Now</span>
         </a>
 
-        <a href="#" class="product-card product-card--merch product-card--soon">
+        <a href="pages/merch.html" class="product-card product-card--merch product-card--soon">
           <div class="product-card__icon">👕</div>
           <h3>Merch &amp; Apparel</h3>
           <p>Tiny Bird branded clothing, accessories, and collectibles — because your style should dream big too.</p>
@@ -234,16 +249,15 @@
             <ul>
               <li><a href="pages/apps.html">Mobile Apps</a></li>
               <li><a href="pages/stories.html">Storybooks</a></li>
-              <li><a href="#">Websites</a></li>
-              <li><a href="#">Merch (coming soon)</a></li>
+              <li><a href="pages/contact.html">Websites</a></li>
+              <li><a href="pages/merch.html">Merch (coming soon)</a></li>
             </ul>
           </div>
           <div class="footer__col">
             <h4>Company</h4>
             <ul>
               <li><a href="pages/about.html">About &amp; AI Pledge</a></li>
-              <li><a href="#">Blog</a></li>
-              <li><a href="#">Contact</a></li>
+              <li><a href="pages/contact.html">Contact</a></li>
             </ul>
           </div>
           <div class="footer__col">
@@ -251,7 +265,7 @@
             <ul>
               <li><a href="#">Privacy Policy</a></li>
               <li><a href="#">Terms of Use</a></li>
-              <li><a href="#">AI Disclosure</a></li>
+              <li><a href="pages/about.html">AI Disclosure</a></li>
             </ul>
           </div>
         </nav>
@@ -263,6 +277,12 @@
       </div>
     </div>
   </footer>
+
+  <!-- Dark mode toggle -->
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+    <span class="theme-toggle__icon--light" aria-hidden="true">🌙</span>
+    <span class="theme-toggle__icon--dark" aria-hidden="true">☀️</span>
+  </button>
 
   <script src="js/main.js"></script>
 </body>
