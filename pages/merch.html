@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Merch & Apparel — Tiny Bird, Big Dreams</title>
+  <title>Merch &amp; Apparel — Tiny Bird, Big Dreams</title>
   <meta name="description" content="Tiny Bird, Big Dreams branded clothing, accessories, and collectibles — coming soon." />
   <link rel="stylesheet" href="../css/styles.css" />
   <link rel="stylesheet" href="../css/pages.css" />
@@ -13,13 +13,13 @@
 </head>
 <body>
 
-  <nav class="nav" id="nav">
+  <nav class="nav" id="nav" aria-label="Main navigation">
     <div class="nav__inner">
       <a href="../index.html" class="nav__logo">
         <span class="logo-bird" aria-hidden="true">🐦</span>
         <span class="logo-text">Tiny Bird<span class="logo-accent">, Big Dreams</span></span>
       </a>
-      <button class="nav__burger" id="navBurger" aria-label="Toggle menu" aria-expanded="false">
+      <button type="button" class="nav__burger" id="navBurger" aria-label="Toggle menu" aria-expanded="false">
         <span></span><span></span><span></span>
       </button>
       <ul class="nav__links" id="navLinks">
@@ -176,7 +176,7 @@
     </div>
   </footer>
 
-  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode"><span class="theme-toggle__icon--light" aria-hidden="true">🌙</span><span class="theme-toggle__icon--dark" aria-hidden="true">☀️</span></button>
+  <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode"><span class="theme-toggle__icon--light" aria-hidden="true">🌙</span><span class="theme-toggle__icon--dark" aria-hidden="true">☀️</span></button>
   <script src="../js/main.js"></script>
   <script>
     const f = document.getElementById('merchForm');

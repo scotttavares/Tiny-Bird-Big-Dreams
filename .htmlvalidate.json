@@ -1,0 +1,6 @@
+{
+  "rules": {
+    "void-style": ["error", { "style": "selfclosing" }],
+    "no-inline-style": "off"
+  }
+}
