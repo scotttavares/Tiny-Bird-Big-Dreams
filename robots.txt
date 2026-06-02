@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://scotttavares.github.io/Test/sitemap.xml
