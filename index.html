@@ -1,293 +1,529 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tiny Bird, Big Dreams — AI-Powered Creativity for Everyone</title>
-  <meta name="description" content="Tiny Bird, Big Dreams is a fully transparent AI company building mobile apps, storybooks, and websites for all ages." />
-  <!-- Open Graph -->
-  <meta property="og:title" content="Tiny Bird, Big Dreams" />
-  <meta property="og:description" content="AI-powered creativity for everyone — apps, storybooks, websites, and more." />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://www.tinybirdbigdreams.com/" />
-  <meta property="og:image" content="https://www.tinybirdbigdreams.com/assets/og-image.png" />
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Tiny Bird, Big Dreams" />
-  <meta name="twitter:description" content="AI-powered creativity for everyone — apps, storybooks, websites, and more." />
-  <meta name="twitter:image" content="https://www.tinybirdbigdreams.com/assets/og-image.png" />
-  <!-- Sitemap -->
-  <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
-  <!-- PWA -->
-  <link rel="manifest" href="site.webmanifest" />
-  <meta name="theme-color" content="#FF8C42" />
-  <link rel="stylesheet" href="css/styles.css" />
-  <link rel="stylesheet" href="css/dark.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Fredoka+One&display=swap" rel="stylesheet" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tiny Bird, Big Dreams — Mobile Studio</title>
+<meta name="description" content="A one-person mobile studio building apps with big ambitions. Just me, an idea, and Claude — shipping things that matter from scratch." />
+<meta property="og:title" content="Tiny Bird, Big Dreams" />
+<meta property="og:description" content="A one-person mobile studio building apps with big ambitions." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://www.tinybirdbigdreams.com/" />
+<meta property="og:image" content="https://www.tinybirdbigdreams.com/assets/og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Tiny Bird, Big Dreams" />
+<meta name="twitter:description" content="A one-person mobile studio building apps with big ambitions." />
+<meta name="twitter:image" content="https://www.tinybirdbigdreams.com/assets/og-image.png" />
+<link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+<link rel="manifest" href="site.webmanifest" />
+<meta name="theme-color" content="#0E0A18" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,300;1,9..144,400&family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300;1,400&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/site.css" />
 </head>
 <body>
 
-  <!-- ===== NAV ===== -->
-  <nav class="nav" id="nav" aria-label="Main navigation">
-    <div class="nav__inner">
-      <a href="index.html" class="nav__logo">
-        <span class="logo-bird" aria-hidden="true">🐦</span>
-        <span class="logo-text">Tiny Bird<span class="logo-accent">, Big Dreams</span></span>
-      </a>
-      <button type="button" class="nav__burger" id="navBurger" aria-label="Toggle menu" aria-expanded="false">
-        <span></span><span></span><span></span>
-      </button>
-      <ul class="nav__links" id="navLinks">
-        <li><a href="#what-we-build">What We Build</a></li>
-        <li><a href="pages/about.html">About &amp; AI</a></li>
-        <li><a href="pages/apps.html">Apps</a></li>
-        <li><a href="pages/stories.html">Stories</a></li>
-        <li><a href="pages/merch.html">Merch</a></li>
-        <li><a href="pages/contact.html">Contact</a></li>
-        <li><a href="#community" class="btn btn--nav">Join Us</a></li>
-      </ul>
+<!-- ══════════════════════════════════════ -->
+<!-- HERO                                  -->
+<!-- ══════════════════════════════════════ -->
+<section class="hero">
+  <div id="stars"></div>
+
+  <!-- NAV -->
+  <nav>
+    <div class="logo-mark">
+      <div class="logo-icon">
+        <svg viewBox="0 0 52 52" fill="none" width="100%" height="100%">
+          <rect width="52" height="52" fill="#2C1F3E"/>
+          <!-- body -->
+          <ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/>
+          <ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/>
+          <!-- left wing -->
+          <path d="M18 29 Q12 21 20 27" fill="#d08010"/>
+          <!-- right wing -->
+          <path d="M42 28 Q49 21 44 32" fill="#d08010"/>
+          <!-- tail -->
+          <path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="#c07010"/>
+          <path d="M41 35 Q47 38 44 44 Q39 39 41 35Z" fill="#d08010"/>
+          <!-- head -->
+          <circle cx="20" cy="22" r="9.5" fill="#E8A022"/>
+          <!-- beak -->
+          <path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/>
+          <!-- eye -->
+          <circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/>
+          <circle cx="17.5" cy="19" r="1" fill="white"/>
+          <!-- crest -->
+          <path d="M22 13 Q23.5 8.5 25 8 Q24.5 12 23 14.5Z" fill="#d08010"/>
+          <path d="M24.5 13.5 Q26 9 27.5 8.5 Q27 12.5 25.5 15Z" fill="#E8A022"/>
+          <path d="M27 14 Q28.5 9.5 30 9 Q29.5 13 28 15.5Z" fill="#d08010"/>
+          <!-- highlight spots -->
+          <circle cx="33" cy="30" r="2" fill="rgba(255,255,255,.13)"/>
+          <circle cx="37" cy="34" r="1.4" fill="rgba(255,255,255,.08)"/>
+        </svg>
+      </div>
+      <div class="logo-text-wrap">
+        <div class="logo-t1">Tiny Bird</div>
+        <div class="logo-rule"></div>
+        <div class="logo-t2">Big Dreams</div>
+        <div class="logo-rule"></div>
+        <div class="logo-t3">Mobile Studio</div>
+      </div>
     </div>
+
+    <ul class="nav-links">
+      <li><a href="#apps">Apps</a></li>
+      <li><a href="#studio">Studio</a></li>
+      <li><a href="#brand">Brand</a></li>
+      <li><a href="mailto:hello@tinybirdbigdreams.com" class="nav-cta">Say Hello</a></li>
+    </ul>
+
+    <button class="hamburger" id="ham" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
   </nav>
 
-  <!-- ===== HERO ===== -->
-  <header class="hero">
-    <div class="hero__bg-shapes" aria-hidden="true">
-      <div class="shape shape--1"></div>
-      <div class="shape shape--2"></div>
-      <div class="shape shape--3"></div>
+  <!-- Mobile Menu -->
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#apps" onclick="closeMob()">Apps</a>
+    <a href="#studio" onclick="closeMob()">Studio</a>
+    <a href="#brand" onclick="closeMob()">Brand</a>
+    <a href="mailto:hello@tinybirdbigdreams.com" class="m-cta" onclick="closeMob()">Say Hello</a>
+  </div>
+
+  <!-- HERO BODY -->
+  <div class="hero-body">
+    <div class="pill">
+      <span class="pill-dot"></span>
+      One Founder. One AI. Real Apps.
     </div>
-    <div class="hero__content">
-      <div class="ai-badge">
-        <span class="ai-badge__dot"></span>
-        Built with AI — 100% Transparent
+    <h1>Tiny Bird<br><em>Big Dreams</em></h1>
+    <p class="hero-sub">A one-person mobile studio building apps with big ambitions. Just me, an idea, and Claude — shipping things that matter from scratch.</p>
+
+    <div class="bird-stage">
+      <div class="sp" style="--sz:9px;--sc:#E8A022;--sd:2.5s;--sdl:0s;top:18%;left:6%;"></div>
+      <div class="sp" style="--sz:6px;--sc:#E85D3A;--sd:3s;--sdl:.7s;top:8%;right:14%;"></div>
+      <div class="sp" style="--sz:11px;--sc:#fff;--sd:2s;--sdl:1.2s;bottom:24%;left:12%;"></div>
+      <div class="sp" style="--sz:7px;--sc:#E8A022;--sd:3.5s;--sdl:.3s;bottom:28%;right:8%;"></div>
+      <div class="sp" style="--sz:5px;--sc:#fff;--sd:2.8s;--sdl:1.8s;top:38%;right:4%;"></div>
+      <svg class="bird-svg" viewBox="0 0 340 280" fill="none">
+        <circle cx="170" cy="140" r="100" fill="rgba(232,160,34,.07)" stroke="rgba(232,160,34,.13)" stroke-width="1"/>
+        <circle cx="170" cy="140" r="74" fill="rgba(232,160,34,.05)"/>
+        <ellipse cx="60" cy="200" rx="45" ry="18" fill="rgba(255,255,255,.04)"/>
+        <ellipse cx="280" cy="180" rx="38" ry="15" fill="rgba(255,255,255,.04)"/>
+        <ellipse cx="175" cy="155" rx="62" ry="42" fill="#E8A022"/>
+        <ellipse cx="165" cy="162" rx="36" ry="26" fill="#f0b030" fill-opacity=".45"/>
+        <path d="M120 148 Q78 98 112 140 Q88 122 118 150Z" fill="#d08010"/>
+        <path d="M230 140 Q282 88 248 148 Q267 106 235 143Z" fill="#d08010"/>
+        <path d="M228 165 Q262 170 252 185 Q242 175 228 165Z" fill="#c07010"/>
+        <path d="M226 168 Q257 180 243 194 Q236 182 226 168Z" fill="#d08010"/>
+        <path d="M222 172 Q249 191 233 203 Q228 191 222 172Z" fill="#c07010"/>
+        <circle cx="132" cy="120" r="42" fill="#E8A022"/>
+        <path d="M93 120 L110 115 L110 126Z" fill="#c07010"/>
+        <path d="M93 120 L110 120 L110 126Z" fill="#b06010"/>
+        <circle cx="125" cy="112" r="12" fill="#2C1F3E"/>
+        <circle cx="122" cy="109" r="4" fill="white"/>
+        <circle cx="124" cy="111" r="1.5" fill="white" fill-opacity=".6"/>
+        <path d="M142 80 Q148 60 152 55 Q153 70 148 82Z" fill="#d08010"/>
+        <path d="M148 82 Q156 62 162 58 Q161 73 156 84Z" fill="#E8A022"/>
+        <path d="M155 84 Q165 65 170 62 Q168 77 163 86Z" fill="#d08010"/>
+        <circle cx="160" cy="148" r="5" fill="rgba(255,255,255,.14)"/>
+        <circle cx="175" cy="158" r="4" fill="rgba(255,255,255,.09)"/>
+        <circle cx="190" cy="148" r="3.5" fill="rgba(255,255,255,.09)"/>
+        <line x1="155" y1="194" x2="148" y2="218" stroke="#c07010" stroke-width="3" stroke-linecap="round"/>
+        <line x1="148" y1="218" x2="138" y2="226" stroke="#c07010" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="148" y1="218" x2="148" y2="228" stroke="#c07010" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="148" y1="218" x2="158" y2="225" stroke="#c07010" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="170" y1="196" x2="168" y2="220" stroke="#c07010" stroke-width="3" stroke-linecap="round"/>
+        <line x1="168" y1="220" x2="158" y2="228" stroke="#c07010" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="168" y1="220" x2="168" y2="230" stroke="#c07010" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="168" y1="220" x2="178" y2="227" stroke="#c07010" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="hero-stats">
+    <div style="text-align:center;">
+      <div class="stat-num">1<span> founder</span></div>
+      <div class="stat-label">Solo & Intentional</div>
+    </div>
+    <div style="text-align:center;">
+      <div class="stat-num">∞<span></span></div>
+      <div class="stat-label">Ideas in the Queue</div>
+    </div>
+    <div style="text-align:center;">
+      <div class="stat-num">Day<span> 1</span></div>
+      <div class="stat-label">Just Getting Started</div>
+    </div>
+  </div>
+</section>
+
+<svg class="wave-svg" viewBox="0 0 1440 80" preserveAspectRatio="none">
+  <path d="M0,0 C360,80 1080,0 1440,60 L1440,0 L0,0Z" fill="#2C1F3E"/>
+</svg>
+
+<!-- ══════════ FEATURES ══════════ -->
+<div style="background:var(--cream);" id="apps">
+  <div class="section">
+    <div class="section-label reveal">The Philosophy</div>
+    <h2 class="section-title reveal">Small team.<br><em>No excuses.</em></h2>
+    <div class="cards">
+      <div class="card reveal" style="--accent:#E8A022;">
+        <div class="card-icon" style="--ibg:#FEF3E2;">🪶</div>
+        <div class="card-title">Built Lean on Purpose</div>
+        <p class="card-desc">No bloated team, no slow committees. One person makes every call — design, code, product, copy. That speed and ownership shows up in the apps.</p>
       </div>
-      <h1 class="hero__title">
-        Tiny Bird,<br />
-        <span class="gradient-text">Big Dreams.</span>
-      </h1>
-      <p class="hero__sub">
-        We're an AI-powered creative studio making apps, storybooks, and websites
-        that spark joy — for kids, families, and dreamers of every age.
-      </p>
-      <div class="hero__actions">
-        <a href="#what-we-build" class="btn btn--primary">See What We Make</a>
-        <a href="pages/about.html" class="btn btn--ghost">How the AI works →</a>
+      <div class="card reveal" style="--accent:#E85D3A;">
+        <div class="card-icon" style="--ibg:#FEF0EC;">🤖</div>
+        <div class="card-title">AI as Co-Founder</div>
+        <p class="card-desc">Claude isn't just a tool here — it's a genuine collaborator. From architecture decisions to UI copy, AI accelerates what one person can ship.</p>
+      </div>
+      <div class="card reveal" style="--accent:#4A7C59;">
+        <div class="card-icon" style="--ibg:#EBF4EE;">🌱</div>
+        <div class="card-title">Apps We Actually Want</div>
+        <p class="card-desc">No client briefs, no compromises. Every app starts with a real itch to scratch — if it doesn't solve something genuinely annoying, it doesn't get built.</p>
       </div>
     </div>
-    <div class="hero__bird" aria-hidden="true">
-      <div class="bird-scene">
-        <div class="bird-body">🐦</div>
-        <div class="bird-bubble">
-          <span>Imagine<br />anything!</span>
+  </div>
+</div>
+
+<!-- ══════════ SHOWCASE ══════════ -->
+<div class="showcase" id="studio">
+  <div class="showcase-inner">
+    <div>
+      <div class="section-label reveal">The Studio</div>
+      <h2 class="section-title reveal">Just me,<br>an idea, and <em>Claude.</em></h2>
+      <p class="showcase-body reveal">Tiny Bird, Big Dreams is a one-person indie mobile studio. No investors, no employees, no overhead — just a founder with a laptop, a vision, and an AI that never sleeps. Apps are built for real people solving real problems, shipped with care and iterated fast.</p>
+      <div class="reveal">
+        <a href="mailto:hello@tinybirdbigdreams.com" class="btn btn-gold">Say Hello</a>
+        <a href="#brand" class="btn btn-outline">Our Brand</a>
+      </div>
+    </div>
+    <div class="phones reveal">
+      <div class="phone phone-left">
+        <div class="p-notch"></div>
+        <div class="p-screen">
+          <div class="ps-head"><span class="ps-t">Analytics</span>
+            <svg class="ps-b" viewBox="0 0 20 20"><ellipse cx="12" cy="12" rx="7" ry="5" fill="#E8A022"/><circle cx="7" cy="8" r="4" fill="#E8A022"/><path d="M3 8 L5 7.5 L5 8.5Z" fill="#c07010"/><circle cx="6.5" cy="7.5" r="1" fill="#2C1F3E"/></svg>
+          </div>
+          <div class="ps-c">
+            <div class="ps-lbl">Weekly</div>
+            <div class="bars">
+              <div class="bar" style="height:40%"></div><div class="bar" style="height:65%"></div>
+              <div class="bar" style="height:50%"></div><div class="bar" style="height:85%"></div>
+              <div class="bar" style="height:70%"></div><div class="bar" style="height:100%"></div>
+              <div class="bar" style="height:90%"></div>
+            </div>
+          </div>
+          <div class="ps-sts">
+            <div><div class="psn">98k</div><div class="psl">DLs</div></div>
+            <div><div class="psn">4.9</div><div class="psl">Rating</div></div>
+          </div>
+          <div class="ps-nav"><div class="pd"></div><div class="pd on"></div><div class="pd"></div></div>
+        </div>
+      </div>
+      <div class="phone phone-main">
+        <div class="p-notch"></div>
+        <div class="p-screen">
+          <div class="ps-head"><span class="ps-t" style="font-size:9px;">Tiny Bird Studio</span>
+            <svg class="ps-b" viewBox="0 0 20 20" style="width:22px;height:22px;"><ellipse cx="12" cy="12" rx="7" ry="5" fill="#E8A022"/><circle cx="7" cy="8" r="4" fill="#E8A022"/><path d="M3 8 L5 7.5 L5 8.5Z" fill="#c07010"/><circle cx="6.5" cy="7.5" r="1" fill="#2C1F3E"/></svg>
+          </div>
+          <div class="ps-c" style="background:rgba(232,160,34,.1);border:1px solid rgba(232,160,34,.2);">
+            <div class="ps-lbl">Active Projects</div>
+            <div style="font-size:17px;color:#E8A022;font-weight:700;font-family:'Fraunces',serif;margin:3px 0;">12</div>
+            <div style="font-size:6px;color:rgba(251,247,242,.3);">↑ 3 new this month</div>
+          </div>
+          <div class="ps-c" style="margin-top:4px;">
+            <div class="ps-lbl">Revenue</div>
+            <div class="bars">
+              <div class="bar" style="height:30%;background:linear-gradient(to top,rgba(74,124,89,.6),rgba(74,124,89,.3));"></div>
+              <div class="bar" style="height:55%;background:linear-gradient(to top,rgba(74,124,89,.6),rgba(74,124,89,.3));"></div>
+              <div class="bar" style="height:45%;background:linear-gradient(to top,rgba(74,124,89,.6),rgba(74,124,89,.3));"></div>
+              <div class="bar" style="height:80%;background:linear-gradient(to top,rgba(74,124,89,.6),rgba(74,124,89,.3));"></div>
+              <div class="bar" style="height:65%;"></div><div class="bar" style="height:95%;"></div><div class="bar" style="height:88%;"></div>
+            </div>
+          </div>
+          <div class="ps-sts">
+            <div><div class="psn">$2.4M</div><div class="psl">Revenue</div></div>
+            <div><div class="psn">47</div><div class="psl">Apps</div></div>
+            <div><div class="psn">12M</div><div class="psl">Users</div></div>
+          </div>
+          <div class="ps-nav"><div class="pd"></div><div class="pd"></div><div class="pd on"></div><div class="pd"></div></div>
+        </div>
+      </div>
+      <div class="phone phone-right">
+        <div class="p-notch"></div>
+        <div class="p-screen">
+          <div class="ps-head"><span class="ps-t">Retention</span>
+            <svg class="ps-b" viewBox="0 0 20 20"><ellipse cx="12" cy="12" rx="7" ry="5" fill="#E85D3A"/><circle cx="7" cy="8" r="4" fill="#E85D3A"/><path d="M3 8 L5 7.5 L5 8.5Z" fill="#c04020"/><circle cx="6.5" cy="7.5" r="1" fill="#2C1F3E"/></svg>
+          </div>
+          <div class="ps-c">
+            <div class="ps-lbl">D30 Retention</div>
+            <div style="font-size:17px;color:#E85D3A;font-weight:700;font-family:'Fraunces',serif;margin:3px 0;">68%</div>
+            <div style="font-size:6px;color:rgba(251,247,242,.3);">Industry avg: 31%</div>
+          </div>
+          <div class="ps-sts" style="margin-top:8px;">
+            <div><div class="psn">4.9</div><div class="psl">App Store</div></div>
+            <div><div class="psn">4.8</div><div class="psl">Play Store</div></div>
+          </div>
+          <div class="ps-nav" style="margin-top:10px;"><div class="pd on"></div><div class="pd"></div><div class="pd"></div></div>
         </div>
       </div>
     </div>
-  </header>
+  </div>
+</div>
 
-  <!-- ===== TRUST STRIP ===== -->
-  <section class="trust-strip">
-    <div class="container">
-      <ul class="trust-strip__list">
-        <li>
-          <span class="trust-icon">🤖</span>
-          <span>Fully AI-built &amp; disclosed</span>
-        </li>
-        <li>
-          <span class="trust-icon">👨‍👩‍👧‍👦</span>
-          <span>All ages welcome</span>
-        </li>
-        <li>
-          <span class="trust-icon">🔓</span>
-          <span>Radically transparent</span>
-        </li>
-        <li>
-          <span class="trust-icon">💡</span>
-          <span>New creations every week</span>
-        </li>
-      </ul>
-    </div>
-  </section>
+<!-- ══════════ WHAT'S BREWING ══════════ -->
+<div style="background:var(--cream);">
+  <div class="section">
+    <div class="section-label reveal">What's Brewing</div>
+    <h2 class="section-title reveal">Apps in the<br><em>nest right now</em></h2>
+    <div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr));">
 
-  <!-- ===== WHAT WE BUILD ===== -->
-  <section class="section" id="what-we-build">
-    <div class="container">
-      <div class="section__header">
-        <h2 class="section__title">What We <span class="gradient-text">Build</span></h2>
-        <p class="section__sub">Three product lines — one creative heart.</p>
-      </div>
-      <div class="products-grid">
-
-        <a href="pages/apps.html" class="product-card product-card--apps">
-          <div class="product-card__icon">📱</div>
-          <h3>Mobile Apps</h3>
-          <p>Fun, intuitive apps for iOS &amp; Android. Games, learning tools, and creative playgrounds for every generation.</p>
-          <span class="product-card__tag">Coming Soon</span>
-        </a>
-
-        <a href="pages/stories.html" class="product-card product-card--stories">
-          <div class="product-card__icon">📖</div>
-          <h3>Storybooks</h3>
-          <p>AI-illustrated digital storybooks with branching adventures. Every read is a new experience, every child is the hero.</p>
-          <span class="product-card__tag">In Development</span>
-        </a>
-
-        <a href="pages/contact.html" class="product-card product-card--web">
-          <div class="product-card__icon">🌐</div>
-          <h3>Websites</h3>
-          <p>Custom websites built fast and beautifully. Personal portfolios, small business sites, and creative showcases.</p>
-          <span class="product-card__tag">Available Now</span>
-        </a>
-
-        <a href="pages/merch.html" class="product-card product-card--merch product-card--soon">
-          <div class="product-card__icon">👕</div>
-          <h3>Merch &amp; Apparel</h3>
-          <p>Tiny Bird branded clothing, accessories, and collectibles — because your style should dream big too.</p>
-          <span class="product-card__tag product-card__tag--future">Future Plans</span>
-        </a>
-
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== AI TRANSPARENCY CALLOUT ===== -->
-  <section class="transparency-section">
-    <div class="container">
-      <div class="transparency-card">
-        <div class="transparency-card__icon">🤖</div>
-        <div class="transparency-card__body">
-          <h2>We Don't Hide the Robot</h2>
-          <p>
-            Every app, story, and pixel on this site is created with AI — and we're proud of it.
-            We believe AI creativity should be honest, open, and human-guided.
-            You'll always know exactly how something was made.
-          </p>
-          <a href="pages/about.html" class="btn btn--primary">Read Our AI Pledge →</a>
+      <div class="card reveal" style="--accent:#E8A022; border-style:dashed;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <div class="card-icon" style="--ibg:#FEF3E2; margin-bottom:0;">🥚</div>
+          <span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:#FEF3E2;color:#E8A022;padding:4px 10px;border-radius:100px;font-weight:600;">In Development</span>
         </div>
-        <div class="transparency-card__art" aria-hidden="true">
-          <div class="robo-bird">🤖<br /><span style="font-size:1.5rem">🐦</span></div>
+        <div class="card-title">App #1</div>
+        <p class="card-desc">Details coming soon. Follow along — this one's close to hatching.</p>
+      </div>
+
+      <div class="card reveal" style="--accent:#E85D3A; border-style:dashed; opacity:.7;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <div class="card-icon" style="--ibg:#FEF0EC; margin-bottom:0;">💡</div>
+          <span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:#FEF0EC;color:#E85D3A;padding:4px 10px;border-radius:100px;font-weight:600;">Idea Stage</span>
+        </div>
+        <div class="card-title">App #2</div>
+        <p class="card-desc">Rattling around in the notebook. The good ones always start this way.</p>
+      </div>
+
+      <div class="card reveal" style="--accent:#4A7C59; border-style:dashed; opacity:.5;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <div class="card-icon" style="--ibg:#EBF4EE; margin-bottom:0;">🌙</div>
+          <span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:#EBF4EE;color:#4A7C59;padding:4px 10px;border-radius:100px;font-weight:600;">Dreaming</span>
+        </div>
+        <div class="card-title">App #3</div>
+        <p class="card-desc">Every big launch starts as a dream. This one's still floating in the sky.</p>
+      </div>
+
+    </div>
+
+    <!-- Honest founder note -->
+    <div class="reveal" style="margin-top:48px;background:#2C1F3E;border-radius:20px;padding:clamp(28px,4vw,40px) clamp(24px,4vw,40px);display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;">
+      <div style="font-size:32px;line-height:1;flex-shrink:0;">🐦</div>
+      <div>
+        <div style="font-family:'Playfair Display',serif;font-size:clamp(16px,2.5vw,20px);font-weight:700;color:var(--cream);margin-bottom:8px;letter-spacing:-.01em;">A note from the founder</div>
+        <p style="font-size:14px;line-height:1.75;color:rgba(251,247,242,.55);max-width:600px;">This studio is day one. No apps live yet, no downloads to boast about — just a big belief that one determined person with the right tools can build something genuinely great. I'm building in public, learning fast, and shipping as soon as things are ready. Stick around.</p>
+        <div style="margin-top:16px;font-size:12px;color:rgba(251,247,242,.3);letter-spacing:.05em;">— Tiny Bird, Big Dreams · est. 2025</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ CTA ══════════ -->
+<div class="cta-band">
+  <div class="cta-inner reveal">
+    <h2>The dream is<br><em>just taking off.</em></h2>
+    <p>Follow along as apps go from idea → build → launch. Drop a line if you want to say hi.</p>
+    <a href="mailto:hello@tinybirdbigdreams.com" class="btn btn-dark" style="font-size:14px;padding:15px 36px;">
+      Say Hello
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+        <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- BRAND IDENTITY                                                 -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="logo-page" id="brand">
+  <div class="logo-page-header reveal">
+    <div class="lp-label">Our Brand</div>
+    <h2 class="lp-title">Our <em>Logo</em></h2>
+    <p class="lp-sub">The official Tiny Bird, Big Dreams mark — shown across backgrounds and at scale.</p>
+  </div>
+
+  <!-- Logo 04 showcase in multiple contexts -->
+  <div style="max-width:1100px;margin:0 auto 64px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;">
+
+    <!-- Dark bg -->
+    <div style="background:#2C1F3E;border-radius:24px;padding:clamp(36px,5vw,56px) clamp(24px,4vw,40px);display:flex;align-items:center;justify-content:center;min-height:200px;">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div style="width:60px;height:60px;border-radius:16px;background:#1a1228;overflow:hidden;flex-shrink:0;box-shadow:0 6px 20px rgba(0,0,0,.4);">
+          <svg viewBox="0 0 52 52" fill="none" width="100%" height="100%">
+            <rect width="52" height="52" fill="#1a1228"/>
+            <ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/>
+            <ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/>
+            <path d="M18 29 Q12 21 20 27" fill="#d08010"/>
+            <path d="M42 28 Q49 21 44 32" fill="#d08010"/>
+            <path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="#c07010"/>
+            <circle cx="20" cy="22" r="9.5" fill="#E8A022"/>
+            <path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/>
+            <circle cx="18.5" cy="20" r="3" fill="#1a1228"/>
+            <circle cx="17.5" cy="19" r="1" fill="white"/>
+            <path d="M23 13 Q24.5 8.5 26 8 Q25.5 12 24 14.5Z" fill="#d08010"/>
+            <path d="M25.5 13.5 Q27 9 28.5 8.5 Q28 12.5 26.5 15Z" fill="#E8A022"/>
+          </svg>
+        </div>
+        <div>
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#fff;line-height:1;letter-spacing:-.01em;">Tiny Bird</div>
+          <div style="width:100%;height:1px;background:rgba(255,255,255,.15);margin:4px 0;"></div>
+          <div style="font-family:'Playfair Display',serif;font-size:19px;font-weight:700;font-style:italic;color:#E8A022;line-height:1;">Big Dreams</div>
+          <div style="width:100%;height:1px;background:rgba(255,255,255,.15);margin:4px 0;"></div>
+          <div style="font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.3);">Mobile Studio</div>
         </div>
       </div>
     </div>
-  </section>
 
-  <!-- ===== HOW IT WORKS ===== -->
-  <section class="section" id="how-it-works">
-    <div class="container">
-      <div class="section__header">
-        <h2 class="section__title">How It <span class="gradient-text">Works</span></h2>
-        <p class="section__sub">AI does the heavy lifting. Humans keep the heart.</p>
-      </div>
-      <ol class="steps">
-        <li class="step">
-          <div class="step__num">1</div>
-          <div class="step__body">
-            <h3>Human sparks the idea</h3>
-            <p>Every project starts with a person — a story concept, an app need, a creative vision.</p>
-          </div>
-        </li>
-        <li class="step">
-          <div class="step__num">2</div>
-          <div class="step__body">
-            <h3>AI builds at speed</h3>
-            <p>Our AI models write code, generate illustrations, draft narratives, and prototype interactions.</p>
-          </div>
-        </li>
-        <li class="step">
-          <div class="step__num">3</div>
-          <div class="step__body">
-            <h3>Humans review &amp; refine</h3>
-            <p>Every AI output is reviewed, edited, and approved by a human before it ships.</p>
-          </div>
-        </li>
-        <li class="step">
-          <div class="step__num">4</div>
-          <div class="step__body">
-            <h3>You enjoy &amp; give feedback</h3>
-            <p>Your feedback directly shapes the next generation of Tiny Bird creations.</p>
-          </div>
-        </li>
-      </ol>
-    </div>
-  </section>
-
-  <!-- ===== COMMUNITY ===== -->
-  <section class="section community-section" id="community">
-    <div class="container">
-      <div class="community-card">
-        <h2>Join the Flock</h2>
-        <p>Get early access to new apps, storybooks, and behind-the-scenes AI process notes delivered to your inbox.</p>
-        <form class="email-form" id="emailForm" novalidate>
-          <div class="email-form__group">
-            <input
-              type="email"
-              id="emailInput"
-              class="email-form__input"
-              placeholder="your@email.com"
-              aria-label="Email address"
-              required
-            />
-            <button type="submit" class="btn btn--primary">Sign Me Up 🐦</button>
-          </div>
-          <p class="email-form__note">No spam. Unsubscribe anytime. We hate spam as much as cats do.</p>
-          <div class="email-form__success" id="emailSuccess" hidden>
-            Thanks for joining! Watch your inbox for your first Tiny Bird update. 🎉
-          </div>
-        </form>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== FOOTER ===== -->
-  <footer class="footer">
-    <div class="container">
-      <div class="footer__inner">
-        <div class="footer__brand">
-          <span class="logo-bird" style="font-size:2rem">🐦</span>
-          <span class="logo-text" style="font-size:1.1rem">Tiny Bird<span class="logo-accent">, Big Dreams</span></span>
-          <p class="footer__tagline">AI-powered creativity, human-guided heart.</p>
+    <!-- Light / cream bg -->
+    <div style="background:#F7F4EF;border-radius:24px;padding:clamp(36px,5vw,56px) clamp(24px,4vw,40px);display:flex;align-items:center;justify-content:center;min-height:200px;border:1px solid rgba(44,31,62,.07);">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div style="width:60px;height:60px;border-radius:16px;overflow:hidden;flex-shrink:0;box-shadow:0 6px 20px rgba(44,31,62,.18);">
+          <svg viewBox="0 0 52 52" fill="none" width="100%" height="100%">
+            <rect width="52" height="52" fill="#2C1F3E"/>
+            <ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/>
+            <ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/>
+            <path d="M18 29 Q12 21 20 27" fill="#d08010"/>
+            <path d="M42 28 Q49 21 44 32" fill="#d08010"/>
+            <path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="#c07010"/>
+            <circle cx="20" cy="22" r="9.5" fill="#E8A022"/>
+            <path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/>
+            <circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/>
+            <circle cx="17.5" cy="19" r="1" fill="white"/>
+            <path d="M23 13 Q24.5 8.5 26 8 Q25.5 12 24 14.5Z" fill="#d08010"/>
+            <path d="M25.5 13.5 Q27 9 28.5 8.5 Q28 12.5 26.5 15Z" fill="#E8A022"/>
+          </svg>
         </div>
-        <nav class="footer__links" aria-label="Footer navigation">
-          <div class="footer__col">
-            <h4>Products</h4>
-            <ul>
-              <li><a href="pages/apps.html">Mobile Apps</a></li>
-              <li><a href="pages/stories.html">Storybooks</a></li>
-              <li><a href="pages/contact.html">Websites</a></li>
-              <li><a href="pages/merch.html">Merch (coming soon)</a></li>
-            </ul>
-          </div>
-          <div class="footer__col">
-            <h4>Company</h4>
-            <ul>
-              <li><a href="pages/about.html">About &amp; AI Pledge</a></li>
-              <li><a href="pages/contact.html">Contact</a></li>
-            </ul>
-          </div>
-          <div class="footer__col">
-            <h4>Legal</h4>
-            <ul>
-              <li><a href="#">Privacy Policy</a></li>
-              <li><a href="#">Terms of Use</a></li>
-              <li><a href="pages/about.html">AI Disclosure</a></li>
-            </ul>
-          </div>
-        </nav>
-      </div>
-      <div class="footer__bottom">
-        <p>
-          &copy; 2025 Tiny Bird, Big Dreams. Built with AI. Guided by humans. Loved by everyone.
-        </p>
+        <div>
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#2C1F3E;line-height:1;letter-spacing:-.01em;">Tiny Bird</div>
+          <div style="width:100%;height:1px;background:rgba(44,31,62,.12);margin:4px 0;"></div>
+          <div style="font-family:'Playfair Display',serif;font-size:19px;font-weight:700;font-style:italic;color:#E8A022;line-height:1;">Big Dreams</div>
+          <div style="width:100%;height:1px;background:rgba(44,31,62,.12);margin:4px 0;"></div>
+          <div style="font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:rgba(44,31,62,.35);">Mobile Studio</div>
+        </div>
       </div>
     </div>
-  </footer>
 
-  <!-- Dark mode toggle -->
-  <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
-    <span class="theme-toggle__icon--light" aria-hidden="true">🌙</span>
-    <span class="theme-toggle__icon--dark" aria-hidden="true">☀️</span>
-  </button>
+    <!-- Gold bg -->
+    <div style="background:linear-gradient(135deg,#E8A022,#c07010);border-radius:24px;padding:clamp(36px,5vw,56px) clamp(24px,4vw,40px);display:flex;align-items:center;justify-content:center;min-height:200px;">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div style="width:60px;height:60px;border-radius:16px;background:rgba(0,0,0,.2);overflow:hidden;flex-shrink:0;box-shadow:0 6px 20px rgba(0,0,0,.3);">
+          <svg viewBox="0 0 52 52" fill="none" width="100%" height="100%">
+            <rect width="52" height="52" fill="rgba(0,0,0,.2)"/>
+            <ellipse cx="30" cy="32" rx="14" ry="9.5" fill="rgba(255,255,255,.9)"/>
+            <ellipse cx="26" cy="36" rx="8.5" ry="6" fill="rgba(255,255,255,.4)"/>
+            <path d="M18 29 Q12 21 20 27" fill="rgba(255,255,255,.6)"/>
+            <path d="M42 28 Q49 21 44 32" fill="rgba(255,255,255,.6)"/>
+            <path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="rgba(255,255,255,.5)"/>
+            <circle cx="20" cy="22" r="9.5" fill="rgba(255,255,255,.9)"/>
+            <path d="M10.5 22 L15 20.5 L15 23.5Z" fill="rgba(255,255,255,.6)"/>
+            <circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/>
+            <circle cx="17.5" cy="19" r="1" fill="white"/>
+            <path d="M23 13 Q24.5 8.5 26 8 Q25.5 12 24 14.5Z" fill="rgba(255,255,255,.7)"/>
+            <path d="M25.5 13.5 Q27 9 28.5 8.5 Q28 12.5 26.5 15Z" fill="rgba(255,255,255,.9)"/>
+          </svg>
+        </div>
+        <div>
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#fff;line-height:1;letter-spacing:-.01em;">Tiny Bird</div>
+          <div style="width:100%;height:1px;background:rgba(255,255,255,.3);margin:4px 0;"></div>
+          <div style="font-family:'Playfair Display',serif;font-size:19px;font-weight:700;font-style:italic;color:rgba(255,255,255,.85);line-height:1;">Big Dreams</div>
+          <div style="width:100%;height:1px;background:rgba(255,255,255,.3);margin:4px 0;"></div>
+          <div style="font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.5);">Mobile Studio</div>
+        </div>
+      </div>
+    </div>
 
-  <script src="js/main.js"></script>
+  </div>
+
+  <!-- Icon-only sizes -->
+  <div style="max-width:1100px;margin:0 auto;background:#fff;border-radius:24px;padding:clamp(36px,5vw,48px) clamp(24px,4vw,48px);border:1px solid rgba(44,31,62,.07);">
+    <div style="font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:rgba(44,31,62,.35);margin-bottom:28px;font-weight:500;">Icon at Scale</div>
+    <div style="display:flex;align-items:flex-end;gap:clamp(16px,4vw,32px);flex-wrap:wrap;">
+      <!-- 96px -->
+      <div style="text-align:center;">
+        <div style="width:96px;height:96px;border-radius:24px;overflow:hidden;box-shadow:0 8px 28px rgba(44,31,62,.15);margin-bottom:10px;">
+          <svg viewBox="0 0 52 52" fill="none" width="100%" height="100%"><rect width="52" height="52" fill="#2C1F3E"/><ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/><ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/><path d="M18 29 Q12 21 20 27" fill="#d08010"/><path d="M42 28 Q49 21 44 32" fill="#d08010"/><path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="#c07010"/><circle cx="20" cy="22" r="9.5" fill="#E8A022"/><path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/><circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/><circle cx="17.5" cy="19" r="1" fill="white"/><path d="M23 13 Q24.5 8.5 26 8 Q25.5 12 24 14.5Z" fill="#d08010"/><path d="M25.5 13.5 Q27 9 28.5 8.5 Q28 12.5 26.5 15Z" fill="#E8A022"/></svg>
+        </div>
+        <div style="font-size:10px;color:rgba(44,31,62,.4);">96px</div>
+      </div>
+      <!-- 64px -->
+      <div style="text-align:center;">
+        <div style="width:64px;height:64px;border-radius:16px;overflow:hidden;box-shadow:0 6px 20px rgba(44,31,62,.12);margin-bottom:10px;">
+          <svg viewBox="0 0 52 52" fill="none" width="100%" height="100%"><rect width="52" height="52" fill="#2C1F3E"/><ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/><ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/><path d="M18 29 Q12 21 20 27" fill="#d08010"/><path d="M42 28 Q49 21 44 32" fill="#d08010"/><path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="#c07010"/><circle cx="20" cy="22" r="9.5" fill="#E8A022"/><path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/><circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/><circle cx="17.5" cy="19" r="1" fill="white"/><path d="M23 13 Q24.5 8.5 26 8 Q25.5 12 24 14.5Z" fill="#d08010"/><path d="M25.5 13.5 Q27 9 28.5 8.5 Q28 12.5 26.5 15Z" fill="#E8A022"/></svg>
+        </div>
+        <div style="font-size:10px;color:rgba(44,31,62,.4);">64px</div>
+      </div>
+      <!-- 40px -->
+      <div style="text-align:center;">
+        <div style="width:40px;height:40px;border-radius:11px;overflow:hidden;box-shadow:0 4px 14px rgba(44,31,62,.12);margin-bottom:10px;">
+          <svg viewBox="0 0 52 52" fill="none" width="100%" height="100%"><rect width="52" height="52" fill="#2C1F3E"/><ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/><ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/><path d="M18 29 Q12 21 20 27" fill="#d08010"/><path d="M42 28 Q49 21 44 32" fill="#d08010"/><circle cx="20" cy="22" r="9.5" fill="#E8A022"/><path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/><circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/><circle cx="17.5" cy="19" r="1" fill="white"/><path d="M23 13 Q24.5 8.5 26 8 Q25.5 12 24 14.5Z" fill="#f0b030"/></svg>
+        </div>
+        <div style="font-size:10px;color:rgba(44,31,62,.4);">40px</div>
+      </div>
+      <!-- 24px -->
+      <div style="text-align:center;">
+        <div style="width:24px;height:24px;border-radius:6px;overflow:hidden;box-shadow:0 2px 8px rgba(44,31,62,.12);margin-bottom:10px;">
+          <svg viewBox="0 0 52 52" fill="none" width="100%" height="100%"><rect width="52" height="52" fill="#2C1F3E"/><ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/><circle cx="20" cy="22" r="9.5" fill="#E8A022"/><circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/></svg>
+        </div>
+        <div style="font-size:10px;color:rgba(44,31,62,.4);">24px</div>
+      </div>
+      <!-- Color swatches -->
+      <div style="margin-left:auto;display:flex;flex-direction:column;gap:10px;align-self:center;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:28px;height:28px;border-radius:8px;background:#2C1F3E;box-shadow:0 2px 8px rgba(0,0,0,.18);"></div>
+          <div><div style="font-size:11px;font-weight:600;color:#2C1F3E;">#2C1F3E</div><div style="font-size:10px;color:rgba(44,31,62,.4);">Midnight Dusk</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:28px;height:28px;border-radius:8px;background:#E8A022;box-shadow:0 2px 8px rgba(232,160,34,.3);"></div>
+          <div><div style="font-size:11px;font-weight:600;color:#2C1F3E;">#E8A022</div><div style="font-size:10px;color:rgba(44,31,62,.4);">Golden Hour</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:28px;height:28px;border-radius:8px;background:#E85D3A;box-shadow:0 2px 8px rgba(232,93,58,.2);"></div>
+          <div><div style="font-size:11px;font-weight:600;color:#2C1F3E;">#E85D3A</div><div style="font-size:10px;color:rgba(44,31,62,.4);">Ember Coral</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+</div><!-- /logo-page -->
+
+<!-- ══════════ FOOTER ══════════ -->
+<footer>
+  <div class="logo-mark">
+    <div class="logo-icon" style="width:40px;height:40px;border-radius:11px;">
+      <svg viewBox="0 0 52 52" fill="none" width="100%" height="100%">
+        <rect width="52" height="52" fill="#2C1F3E"/>
+        <ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/>
+        <ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/>
+        <path d="M18 29 Q12 21 20 27" fill="#d08010"/>
+        <path d="M42 28 Q49 21 44 32" fill="#d08010"/>
+        <path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="#c07010"/>
+        <circle cx="20" cy="22" r="9.5" fill="#E8A022"/>
+        <path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/>
+        <circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/>
+        <circle cx="17.5" cy="19" r="1" fill="white"/>
+        <path d="M23 13 Q24.5 8.5 26 8 Q25.5 12 24 14.5Z" fill="#d08010"/>
+        <path d="M25.5 13.5 Q27 9 28.5 8.5 Q28 12.5 26.5 15Z" fill="#E8A022"/>
+      </svg>
+    </div>
+    <div class="logo-text-wrap">
+      <div class="logo-t1" style="font-size:15px;">Tiny Bird</div>
+      <div class="logo-rule"></div>
+      <div class="logo-t2" style="font-size:13px;">Big Dreams</div>
+      <div class="logo-rule"></div>
+      <div class="logo-t3">Mobile Studio</div>
+    </div>
+  </div>
+  <ul class="fl">
+    <li><a href="#apps">Apps</a></li>
+    <li><a href="#studio">Studio</a></li>
+    <li><a href="#brand">Brand</a></li>
+    <li><a href="mailto:hello@tinybirdbigdreams.com">Contact</a></li>
+  </ul>
+  <p class="fc">© 2025 Tiny Bird, Big Dreams. Built by one person and one AI. All rights reserved.</p>
+</footer>
+
+<script src="assets/site.js"></script>
 </body>
 </html>
