@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tiny-bird-big-dreams",
+  "compatibility_date": "2026-06-02",
+  "observability": { "enabled": true },
+  "assets": {
+    "directory": ".",
+    "exclude": [
+      ".git/**",
+      ".github/**",
+      ".gitignore",
+      ".htmlvalidate.json",
+      ".wrangler/**",
+      "wrangler.jsonc",
+      "*.md",
+      "CNAME",
+      "pages/**",
+      "css/**",
+      "js/**"
+    ]
+  },
+  "compatibility_flags": ["nodejs_compat"]
+}
