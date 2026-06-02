@@ -1,0 +1,243 @@
+/* ============================================================
+   TINY BIRD — Inner Pages Stylesheet
+   ============================================================ */
+
+/* ── Page Hero Variants ── */
+.page-hero--apps {
+  background: linear-gradient(135deg, #EBF5FB, #E8F8F5);
+}
+
+/* ── About Split Layout ── */
+.about-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+.about-split__text { font-size: 1.05rem; line-height: 1.8; }
+.about-split__text p + p { margin-top: .75rem; }
+.mission-card {
+  background: linear-gradient(135deg, #fffde7, #e3f2fd);
+  border-radius: var(--radius-xl);
+  padding: 40px;
+  text-align: center;
+  box-shadow: var(--shadow-md);
+}
+
+/* ── Pledge Grid ── */
+.pledge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+}
+.pledge-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 32px 28px;
+  box-shadow: var(--shadow-sm);
+  border-left: 4px solid var(--brand-orange);
+  transition: transform .2s, box-shadow .2s;
+}
+.pledge-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+.pledge-card__num {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  color: var(--brand-orange);
+  opacity: .3;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+.pledge-card h3 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+.pledge-card p { color: var(--text-muted); font-size: .95rem; }
+
+/* ── Tools Grid ── */
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+}
+.tool-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 28px 24px;
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+  transition: transform .2s;
+}
+.tool-card:hover { transform: translateY(-4px); }
+.tool-card__icon { font-size: 2.5rem; margin-bottom: 12px; }
+.tool-card h3 { font-size: 1rem; font-weight: 800; margin-bottom: 8px; }
+.tool-card p { color: var(--text-muted); font-size: .9rem; margin-bottom: 14px; }
+.tool-badge {
+  display: inline-block;
+  background: var(--bg-alt);
+  color: var(--brand-blue);
+  border-radius: var(--radius-xl);
+  padding: 4px 14px;
+  font-size: .8rem;
+  font-weight: 700;
+}
+.tool-badge--human {
+  background: rgba(76,175,130,.12);
+  color: var(--brand-green);
+}
+
+/* ── Story Block ── */
+.story-block {
+  max-width: 720px;
+  margin-inline: auto;
+  font-size: 1.1rem;
+  line-height: 1.9;
+  color: var(--text-muted);
+}
+.story-block p + p { margin-top: 1rem; }
+.story-block em { color: var(--brand-orange); font-style: normal; font-weight: 700; }
+.story-block strong { color: var(--text); }
+
+/* ── Pledge Section Background ── */
+.pledge-section { background: var(--bg-alt); }
+
+/* ── Merch ── */
+.merch-hero { background: linear-gradient(135deg, #f3e5f5, #ede7f6); }
+.merch-coming-card {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 56px;
+  align-items: center;
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  padding: 56px;
+  box-shadow: var(--shadow-md);
+}
+.merch-coming-card__art { text-align: center; }
+.merch-egg { font-size: 6rem; animation: float 3s ease-in-out infinite; display: block; }
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-12px); }
+}
+.merch-egg-label {
+  font-weight: 700;
+  color: var(--brand-purple);
+  margin-top: 8px;
+  font-size: .9rem;
+}
+.merch-coming-card__body h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  margin-bottom: 16px;
+}
+.merch-coming-card__body p { color: var(--text-muted); margin-bottom: 12px; line-height: 1.7; }
+
+/* ── Contact ── */
+.contact-layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 48px;
+  align-items: start;
+}
+.contact-form { display: flex; flex-direction: column; gap: 20px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-weight: 700; font-size: .9rem; }
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 12px 16px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 1rem;
+  background: var(--surface);
+  color: var(--text);
+  transition: border-color .2s;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--brand-orange);
+}
+.form-group textarea { resize: vertical; }
+.contact-form__success {
+  background: rgba(76,175,130,.12);
+  color: var(--brand-green);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  font-size: 1rem;
+}
+.contact-info-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 28px 24px;
+  box-shadow: var(--shadow-sm);
+}
+.contact-info-card h3 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+.contact-list { display: flex; flex-direction: column; gap: 16px; }
+.contact-list li { display: flex; gap: 14px; align-items: flex-start; }
+.contact-list__icon { font-size: 1.25rem; flex-shrink: 0; margin-top: 2px; }
+.contact-list strong { display: block; font-size: .9rem; margin-bottom: 2px; }
+.contact-list p { font-size: .875rem; color: var(--text-muted); margin: 0; }
+
+/* ── FAQ ── */
+.faq-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+.faq-item {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: 0;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.faq-item summary {
+  padding: 18px 22px;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::after {
+  content: '+';
+  font-size: 1.25rem;
+  color: var(--brand-orange);
+  flex-shrink: 0;
+  transition: transform .2s;
+}
+.faq-item[open] summary::after { transform: rotate(45deg); }
+.faq-item p {
+  padding: 0 22px 18px;
+  color: var(--text-muted);
+  font-size: .95rem;
+  line-height: 1.7;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .contact-layout { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .about-split { grid-template-columns: 1fr; gap: 32px; }
+  .about-split__visual { display: none; }
+  .pledge-grid { grid-template-columns: 1fr; }
+  .tools-grid { grid-template-columns: 1fr; }
+  .merch-coming-card { grid-template-columns: 1fr; padding: 32px 24px; gap: 24px; }
+  .merch-coming-card__art { display: none; }
+  .form-row { grid-template-columns: 1fr; }
+  .faq-grid { grid-template-columns: 1fr; }
+}
