@@ -73,7 +73,7 @@
       <li><a href="#apps">Apps</a></li>
       <li><a href="#studio">Studio</a></li>
       <li><a href="#brand">Brand</a></li>
-      <li><a href="mailto:hello@tinybirdbigdreams.com" class="nav-cta">Say Hello</a></li>
+      <li><a href="#contact" class="nav-cta">Say Hello</a></li>
     </ul>
 
     <button class="hamburger" id="ham" aria-label="Menu">
@@ -86,7 +86,7 @@
     <a href="#apps" onclick="closeMob()">Apps</a>
     <a href="#studio" onclick="closeMob()">Studio</a>
     <a href="#brand" onclick="closeMob()">Brand</a>
-    <a href="mailto:hello@tinybirdbigdreams.com" class="m-cta" onclick="closeMob()">Say Hello</a>
+    <a href="#contact" class="m-cta" onclick="closeMob()">Say Hello</a>
   </div>
 
   <!-- HERO BODY -->
@@ -193,7 +193,7 @@
       <h2 class="section-title reveal">Just me,<br>an idea, and <em>Claude.</em></h2>
       <p class="showcase-body reveal">Tiny Bird, Big Dreams is a one-person indie mobile studio. No investors, no employees, no overhead — just a founder with a laptop, a vision, and an AI that never sleeps. Apps are built for real people solving real problems, shipped with care and iterated fast.</p>
       <div class="reveal">
-        <a href="mailto:hello@tinybirdbigdreams.com" class="btn btn-gold">Say Hello</a>
+        <a href="#contact" class="btn btn-gold">Say Hello</a>
         <a href="#brand" class="btn btn-outline">Our Brand</a>
       </div>
     </div>
@@ -324,7 +324,7 @@
   <div class="cta-inner reveal">
     <h2>The dream is<br><em>just taking off.</em></h2>
     <p>Follow along as apps go from idea → build → launch. Drop a line if you want to say hi.</p>
-    <a href="mailto:hello@tinybirdbigdreams.com" class="btn btn-dark" style="font-size:14px;padding:15px 36px;">
+    <a href="#contact" class="btn btn-dark" style="font-size:14px;padding:15px 36px;">
       Say Hello
       <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
         <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -488,6 +488,45 @@
 
 </div><!-- /logo-page -->
 
+<!-- ══════════ CONTACT ══════════ -->
+<div class="contact-section" id="contact">
+  <div class="section">
+    <div class="section-label reveal" style="color:rgba(232,160,34,.7);">Get in Touch</div>
+    <h2 class="section-title reveal" style="color:var(--cream);">Say <em style="color:var(--gold);">Hello.</em></h2>
+    <p class="reveal" style="color:rgba(251,247,242,.5);max-width:480px;font-size:15px;line-height:1.75;margin-bottom:48px;">Have an idea, a question, or just want to say hi? Drop me a message and I'll get back to you.</p>
+    <div class="contact-form-wrap reveal">
+      <form id="contactForm" action="https://formspree.io/f/mojbggwj" method="POST">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="cName">Name</label>
+            <input type="text" id="cName" name="name" placeholder="Your name" required />
+          </div>
+          <div class="form-group">
+            <label for="cEmail">Email</label>
+            <input type="email" id="cEmail" name="email" placeholder="your@email.com" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="cMsg">Message</label>
+          <textarea id="cMsg" name="message" placeholder="What's on your mind?" rows="5" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-gold form-btn">
+          Send it
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </form>
+      <div id="formSuccess" style="display:none;text-align:center;padding:40px 20px;">
+        <div style="font-size:48px;margin-bottom:16px;">🐦</div>
+        <div style="font-family:'Fraunces',serif;font-size:28px;font-weight:700;color:var(--cream);margin-bottom:10px;">Message sent!</div>
+        <p style="color:rgba(251,247,242,.5);font-size:15px;">Thanks for reaching out — I'll be in touch soon.</p>
+      </div>
+      <div id="formError" style="display:none;margin-top:16px;padding:14px 18px;background:rgba(232,93,58,.12);border:1px solid rgba(232,93,58,.25);border-radius:12px;color:#E85D3A;font-size:14px;text-align:center;">
+        Something went wrong. Please try again or email <a href="mailto:hello@tinybirdbigdreams.com" style="color:var(--gold);">hello@tinybirdbigdreams.com</a> directly.
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════ FOOTER ══════════ -->
 <footer>
   <div class="logo-mark">
@@ -519,7 +558,7 @@
     <li><a href="#apps">Apps</a></li>
     <li><a href="#studio">Studio</a></li>
     <li><a href="#brand">Brand</a></li>
-    <li><a href="mailto:hello@tinybirdbigdreams.com">Contact</a></li>
+    <li><a href="#contact">Contact</a></li>
   </ul>
   <p class="fc">© 2025 Tiny Bird, Big Dreams. Built by one person and one AI. All rights reserved.</p>
 </footer>
