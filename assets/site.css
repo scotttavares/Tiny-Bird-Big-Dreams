@@ -498,22 +498,31 @@ h1 em { font-style:italic; font-weight:300; color:var(--gold); }
 /* ═══ FOOTER ════════════════════════════ */
 footer {
   background:#0E0A18;
-  padding:clamp(40px,6vw,60px) clamp(20px,6vw,56px) clamp(24px,4vw,36px);
+  padding:clamp(48px,8vw,72px) clamp(20px,6vw,56px) clamp(28px,4vw,40px);
   display:flex; flex-direction:column;
-  align-items:center; gap:24px;
+  align-items:center; gap:40px;
+  border-top:1px solid rgba(251,247,242,.05);
 }
-.fl {
-  display:flex; flex-wrap:wrap;
-  justify-content:center; gap:clamp(16px,4vw,40px);
-  list-style:none;
+.footer-links {
+  display:flex; gap:clamp(32px,8vw,80px);
+  justify-content:center; flex-wrap:wrap;
 }
-.fl a {
-  text-decoration:none; font-size:11px;
-  color:rgba(251,247,242,.3);
-  letter-spacing:.08em; text-transform:uppercase;
+.footer-col-title {
+  font-size:10px; letter-spacing:.14em;
+  text-transform:uppercase; color:rgba(251,247,242,.25);
+  margin-bottom:16px; font-weight:600;
+}
+.footer-col ul {
+  list-style:none; display:flex;
+  flex-direction:column; gap:11px;
+}
+.footer-col ul a {
+  text-decoration:none; font-size:13px;
+  color:rgba(251,247,242,.42);
   transition:color .2s;
 }
-.fl a:hover { color:var(--cream); }
+.footer-col ul a:hover { color:var(--cream); }
+.footer-bottom { text-align:center; }
 .fc { font-size:11px; color:rgba(251,247,242,.18); letter-spacing:.04em; text-align:center; }
 
 /* ═══ LOGO SHOWCASE PAGE ══════════════════ */
