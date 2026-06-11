@@ -2,9 +2,11 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "tiny-bird-big-dreams",
   "compatibility_date": "2026-06-02",
+  "main": "src/worker.js",
   "observability": { "enabled": true },
   "assets": {
     "directory": ".",
+    "binding": "ASSETS",
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page"
   },
