@@ -1,0 +1,14 @@
+.assetsignore
+.git
+.github
+.gitignore
+.htmlvalidate.json
+.wrangler
+node_modules
+src
+wrangler.jsonc
+*.md
+CNAME
+pages
+css
+js
