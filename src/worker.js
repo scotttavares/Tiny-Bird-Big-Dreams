@@ -153,18 +153,18 @@ const SNAPSHOT = {
   ttbi: { signups: 1, waitlist: 3, tiers: [{ tier: "byo", users: 1 }] },
   ts: {
     signups: 1,
-    downloads_total: 0,
+    downloads_total: 2,
     purchases: 2,
     purchases_revenue_cents: 1500,
     products: [
-      { title: "Data Analyzer", price_cents: 3900, downloads: 0 },
-      { title: "Presentation Pro", price_cents: 2900, downloads: 0 },
-      { title: "Meeting Memo", price_cents: 2400, downloads: 0 },
-      { title: "Project Planner", price_cents: 1900, downloads: 0 },
-      { title: "Brain Dump", price_cents: 1500, downloads: 0 },
-      { title: "Focus Mode", price_cents: 1500, downloads: 0 },
-      { title: "Email Wizard", price_cents: 1200, downloads: 0 },
-      { title: "Content Blaster", price_cents: 0, downloads: 0 },
+      { title: "Brain Dump", price_cents: 1500, downloads: 1, revenue_cents: 1500 },
+      { title: "Content Blaster", price_cents: 0, downloads: 1, revenue_cents: 0 },
+      { title: "Data Analyzer", price_cents: 3900, downloads: 0, revenue_cents: 0 },
+      { title: "Presentation Pro", price_cents: 2900, downloads: 0, revenue_cents: 0 },
+      { title: "Meeting Memo", price_cents: 2400, downloads: 0, revenue_cents: 0 },
+      { title: "Project Planner", price_cents: 1900, downloads: 0, revenue_cents: 0 },
+      { title: "Focus Mode", price_cents: 1500, downloads: 0, revenue_cents: 0 },
+      { title: "Email Wizard", price_cents: 1200, downloads: 0, revenue_cents: 0 },
     ],
   },
 };
@@ -311,6 +311,7 @@ function dashboardHTML(m) {
         <td>${s.title}</td>
         <td style="text-align:right;color:var(--muted)">${s.price_cents === 0 ? "Free" : money(s.price_cents)}</td>
         <td style="text-align:right;color:var(--gold)">${s.downloads}</td>
+        <td style="text-align:right;color:var(--gold)">${s.revenue_cents > 0 ? money(s.revenue_cents) : (s.downloads > 0 ? "$0" : "—")}</td>
       </tr>`
     )
     .join("");
@@ -363,7 +364,7 @@ function dashboardHTML(m) {
 
     <section class="panel">
       <div class="banner">
-        ${metric(stripeStr, "Stripe gross revenue" )}
+        ${metric(stripeStr, "Stripe gross revenue")}
         ${metric(num(ttbi.signups == null ? null : (ttbi.signups + (ts.signups || 0))), "Total sign-ups")}
         ${metric(num(ts.downloads_total), "Total downloads")}
       </div>
@@ -401,16 +402,64 @@ function dashboardHTML(m) {
       </div>
       <div class="sub">Downloads by superpower</div>
       <table>
-        <thead><tr><th>Superpower</th><th class="r">Price</th><th class="r">Downloads</th></tr></thead>
+        <thead><tr><th>Superpower</th><th class="r">Price</th><th class="r">Downloads</th><th class="r">Revenue</th></tr></thead>
         <tbody>${spRows}</tbody>
       </table>
     </section>
 
   </main>
+  <div style="max-width:1080px;margin:0 auto;padding:0 24px 24px;display:flex;justify-content:flex-end">
+    <button onclick="exportCSV()" style="background:var(--panel);border:1px solid rgba(251,247,242,.14);color:var(--cream);border-radius:10px;padding:10px 18px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px">
+      ↓ Download spreadsheet
+    </button>
+  </div>
   <div class="foot">
     ${dot(m.live.stripe)} Stripe &nbsp; ${dot(m.live.ttbi)} Tiny Thoughts DB &nbsp; ${dot(m.live.ts)} Tiny Superpowers DB
     &nbsp;— a filled dot means live; a hollow dot means showing the last snapshot (add the missing secret to go live).
     Traffic is not wired yet.
   </div>
+<script>
+const DATA = ${JSON.stringify({ asOf: m.asOf, stripe: m.stripe, ttbi: m.ttbi, ts: m.ts })};
+function csvRow(cells) {
+  return cells.map(c => {
+    const s = String(c ?? '');
+    return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g,'""') + '"' : s;
+  }).join(',');
+}
+function exportCSV() {
+  const rows = [];
+  rows.push(['Tiny Bird Studio Export', DATA.asOf]);
+  rows.push([]);
+  rows.push(['OVERVIEW']);
+  rows.push(['Stripe gross revenue', DATA.stripe ? (DATA.stripe.cents/100).toFixed(2) : '']);
+  rows.push(['Total sign-ups', (DATA.ttbi.signups||0)+(DATA.ts.signups||0)]);
+  rows.push(['Total downloads', DATA.ts.downloads_total||0]);
+  rows.push([]);
+  rows.push(['TINY THOUGHTS BIG IDEAS']);
+  rows.push(['Sign-ups', DATA.ttbi.signups]);
+  rows.push(['Waitlist', DATA.ttbi.waitlist]);
+  rows.push(['Stripe revenue', DATA.stripe ? (DATA.stripe.cents/100).toFixed(2) : '']);
+  rows.push(['Tier','Users']);
+  (DATA.ttbi.tiers||[]).forEach(t => rows.push([t.tier.toUpperCase(), t.users]));
+  rows.push([]);
+  rows.push(['TINY SUPERPOWERS']);
+  rows.push(['Sign-ups', DATA.ts.signups]);
+  rows.push(['Downloads', DATA.ts.downloads_total]);
+  rows.push(['Revenue (recorded)', DATA.ts.purchases_revenue_cents ? (DATA.ts.purchases_revenue_cents/100).toFixed(2) : 0]);
+  rows.push([]);
+  rows.push(['Superpower','Price','Downloads','Revenue']);
+  (DATA.ts.products||[]).forEach(p => rows.push([
+    p.title,
+    p.price_cents === 0 ? 'Free' : (p.price_cents/100).toFixed(2),
+    p.downloads,
+    p.revenue_cents > 0 ? (p.revenue_cents/100).toFixed(2) : (p.downloads > 0 ? '0.00' : '')
+  ]));
+  const csv = rows.map(csvRow).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'tiny-bird-studio-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+<\/script>
 </body></html>`;
 }
