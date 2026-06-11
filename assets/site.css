@@ -626,3 +626,47 @@ footer {
   transform: translateY(-3px);
   box-shadow: 0 8px 24px rgba(232,160,34,.5);
 }
+
+/* ═══ FLYING PIDGE (success state) ════════ */
+#formSuccess svg .pidge-fly { animation: pidgeBob 1.1s ease-in-out infinite; }
+#formSuccess svg .wing-near,
+#formSuccess svg .wing-near-2 {
+  transform-box: view-box; transform-origin: 38px 41px;
+  animation: flapNear .5s ease-in-out infinite;
+}
+#formSuccess svg .wing-far {
+  transform-box: view-box; transform-origin: 40px 42px;
+  animation: flapFar .5s ease-in-out infinite;
+}
+#formSuccess svg .gust {
+  transform-box: view-box;
+  animation: gust 1s linear infinite;
+}
+#formSuccess svg .gust.g2 { animation-delay: .25s; }
+#formSuccess svg .gust.g3 { animation-delay: .5s; }
+
+@keyframes pidgeBob {
+  0%,100% { transform: translateY(0) rotate(-2deg); }
+  50%     { transform: translateY(-4px) rotate(2deg); }
+}
+/* Big near wing sweeps from raised-up to down */
+@keyframes flapNear {
+  0%,100% { transform: rotate(-30deg); }
+  50%     { transform: rotate(18deg); }
+}
+@keyframes flapFar {
+  0%,100% { transform: rotate(20deg); }
+  50%     { transform: rotate(-12deg); }
+}
+@keyframes gust {
+  0%   { opacity: 0; transform: translateX(8px); }
+  30%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-14px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #formSuccess svg .pidge-fly,
+  #formSuccess svg .wing-near,
+  #formSuccess svg .wing-near-2,
+  #formSuccess svg .wing-far,
+  #formSuccess svg .gust { animation: none; }
+}

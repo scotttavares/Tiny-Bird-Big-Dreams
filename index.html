@@ -629,24 +629,35 @@
         </button>
       </form>
       <div id="formSuccess" style="display:none;text-align:center;padding:40px 20px;">
-        <svg viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:80px;height:70px;margin:0 auto 16px;display:block;">
-          <ellipse cx="38" cy="46" rx="24" ry="20" fill="#9B9EA8"/>
-          <ellipse cx="35" cy="51" rx="16" ry="13" fill="#C8CBD8"/>
-          <circle cx="49" cy="28" r="13" fill="#9B9EA8"/>
-          <ellipse cx="43" cy="38" rx="8" ry="5" fill="#6B5FD4" fill-opacity=".45"/>
-          <ellipse cx="45" cy="37" rx="5" ry="3.5" fill="#3DC8C0" fill-opacity=".4"/>
-          <circle cx="53" cy="25" r="5.5" fill="#E8A022" fill-opacity=".75"/>
-          <circle cx="53" cy="25" r="4" fill="white"/>
-          <circle cx="54" cy="24.5" r="2.5" fill="#1a1228"/>
-          <circle cx="55.5" cy="23" r=".9" fill="white"/>
-          <path d="M59 27 L67 24 L66 30Z" fill="#d08010"/>
-          <line x1="59" y1="27" x2="66" y2="27" stroke="#b06010" stroke-width=".8"/>
-          <!-- Wings spread up (flying away) -->
-          <path d="M20 38 Q8 22 26 34Z" fill="#82859A"/>
-          <path d="M52 36 Q68 20 54 34Z" fill="#82859A"/>
-          <!-- Letter -->
-          <rect x="66" y="21" width="14" height="10" rx="1.5" fill="#FBF7F2" stroke="rgba(44,31,62,.15)" stroke-width="1"/>
-          <path d="M66 23.5 L73 28 L80 23.5" stroke="rgba(232,160,34,.6)" stroke-width="1" fill="none"/>
+        <svg viewBox="-26 0 116 72" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:118px;height:73px;margin:0 auto 16px;display:block;overflow:visible;">
+          <!-- Comic wind gusts -->
+          <g class="gusts">
+            <path class="gust g1" d="M-22 30 Q-10 26 2 30" stroke="rgba(251,247,242,.45)" stroke-width="2" stroke-linecap="round" fill="none"/>
+            <path class="gust g2" d="M-24 42 Q-8 37 6 42" stroke="rgba(251,247,242,.3)" stroke-width="2" stroke-linecap="round" fill="none"/>
+            <path class="gust g3" d="M-18 52 Q-6 48 4 52" stroke="rgba(251,247,242,.2)" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+          </g>
+          <!-- Bird (bobs as it flies) -->
+          <g class="pidge-fly">
+            <ellipse cx="38" cy="46" rx="24" ry="20" fill="#9B9EA8"/>
+            <ellipse cx="35" cy="51" rx="16" ry="13" fill="#C8CBD8"/>
+            <circle cx="49" cy="28" r="13" fill="#9B9EA8"/>
+            <ellipse cx="43" cy="38" rx="8" ry="5" fill="#6B5FD4" fill-opacity=".45"/>
+            <ellipse cx="45" cy="37" rx="5" ry="3.5" fill="#3DC8C0" fill-opacity=".4"/>
+            <circle cx="53" cy="25" r="5.5" fill="#E8A022" fill-opacity=".75"/>
+            <circle cx="53" cy="25" r="4" fill="white"/>
+            <circle cx="54" cy="24.5" r="2.5" fill="#1a1228"/>
+            <circle cx="55.5" cy="23" r=".9" fill="white"/>
+            <path d="M59 27 L67 24 L66 30Z" fill="#d08010"/>
+            <line x1="59" y1="27" x2="66" y2="27" stroke="#b06010" stroke-width=".8"/>
+            <!-- Far wing (behind body, subtle) -->
+            <path class="wing-far" d="M40 40 Q56 30 60 42 Q50 46 40 44Z" fill="#72758A"/>
+            <!-- Near wing (big, prominent flap) -->
+            <path class="wing-near" d="M38 40 Q14 18 6 34 Q22 44 38 45Z" fill="#82859A"/>
+            <path class="wing-near-2" d="M38 41 Q18 26 10 36" stroke="#5f6276" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+            <!-- Letter -->
+            <rect x="66" y="21" width="14" height="10" rx="1.5" fill="#FBF7F2" stroke="rgba(44,31,62,.15)" stroke-width="1"/>
+            <path d="M66 23.5 L73 28 L80 23.5" stroke="rgba(232,160,34,.6)" stroke-width="1" fill="none"/>
+          </g>
         </svg>
         <div style="font-family:'Fraunces',serif;font-size:26px;font-weight:700;color:var(--cream);margin-bottom:10px;">Pidge is airborne!</div>
         <p style="color:rgba(251,247,242,.5);font-size:14px;line-height:1.7;">Your message is en route. Pidge has a perfect delivery record.<br/>ETA: soon-ish. (Subject to headwinds.)</p>
