@@ -174,20 +174,80 @@ function loginHTML({ error, configured }) {
 </form></div></body></html>`;
 }
 
+// Real figures, pulled from the project databases. Update STUDIO_DATA
+// when numbers change (or wire it to live Supabase queries later).
+const STUDIO_DATA = {
+  asOf: "Jun 11, 2026",
+  projects: [
+    {
+      name: "Tiny Thoughts, Big Ideas",
+      icon: "💡",
+      tag: "Live",
+      signups: 1,
+      waitlist: 3,
+      revenueCents: 0,
+      // Revenue by tier (cents). Tiers seen in the DB; revenue is from Stripe.
+      tiers: [
+        { name: "BYO", users: 1, revenueCents: 0 },
+        { name: "Pro", users: 0, revenueCents: 0 },
+        { name: "Power", users: 0, revenueCents: 0 },
+        { name: "Hosted", users: 0, revenueCents: 0 },
+      ],
+    },
+    {
+      name: "Tiny Superpowers",
+      icon: "⚡",
+      tag: "In development",
+      signups: 1,
+      downloads: 0,
+      revenueCents: 0,
+      traffic: null, // wire to Cloudflare analytics
+      // Each "superpower" product: downloads + list price (cents).
+      superpowers: [
+        { name: "Data Analyzer", priceCents: 3900, downloads: 0 },
+        { name: "Presentation Pro", priceCents: 2900, downloads: 0 },
+        { name: "Meeting Memo", priceCents: 2400, downloads: 0 },
+        { name: "Project Planner", priceCents: 1900, downloads: 0 },
+        { name: "Brain Dump", priceCents: 1500, downloads: 0 },
+        { name: "Focus Mode", priceCents: 1500, downloads: 0 },
+        { name: "Email Wizard", priceCents: 1200, downloads: 0 },
+        { name: "Content Blaster", priceCents: 0, downloads: 0 },
+      ],
+    },
+  ],
+};
+
+function money(cents) {
+  return "$" + (cents / 100).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function metric(value, label) {
+  return `<div class="stat"><div class="n">${value}</div><div class="k">${label}</div></div>`;
+}
+
 function dashboardHTML() {
-  // Placeholder figures matching the mockup — swap for real numbers anytime.
-  const revenueBars = [40, 34, 30, 46, 62, 70, 66];
-  const dlBars = [38, 44, 50, 58, 70, 82, 96];
-  const bar = (h, on) =>
-    `<div style="flex:1;height:${h}%;border-radius:6px 6px 3px 3px;background:${
-      on
-        ? "linear-gradient(180deg,#F0B83A,#E8A022)"
-        : "rgba(251,247,242,.10)"
-    }"></div>`;
-  const chart = (vals, hotFrom) =>
-    `<div style="display:flex;align-items:flex-end;gap:7px;height:90px;margin-top:8px">${vals
-      .map((v, i) => bar(v, i >= hotFrom))
-      .join("")}</div>`;
+  const d = STUDIO_DATA;
+  const ttbi = d.projects[0];
+  const ts = d.projects[1];
+
+  const tierRows = ttbi.tiers
+    .map(
+      (t) => `<tr>
+        <td>${t.name}</td>
+        <td style="text-align:right">${t.users}</td>
+        <td style="text-align:right;color:var(--gold)">${money(t.revenueCents)}</td>
+      </tr>`
+    )
+    .join("");
+
+  const spRows = ts.superpowers
+    .map(
+      (s) => `<tr>
+        <td>${s.name}</td>
+        <td style="text-align:right;color:var(--muted)">${s.priceCents === 0 ? "Free" : money(s.priceCents)}</td>
+        <td style="text-align:right;color:var(--gold)">${s.downloads}</td>
+      </tr>`
+    )
+    .join("");
 
   return `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -195,58 +255,78 @@ function dashboardHTML() {
 <title>Tiny Bird Studio</title>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>${BASE_CSS}
-  .top{max-width:1080px;margin:0 auto;padding:26px 24px;display:flex;align-items:center;justify-content:space-between}
+  .top{max-width:1080px;margin:0 auto;padding:26px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
   .brand{display:flex;align-items:center;gap:12px}
   .brand .ic{width:38px;height:38px;border-radius:11px;background:linear-gradient(150deg,#F0B83A,#E8A022);display:flex;align-items:center;justify-content:center;font-size:20px}
   .brand h1{font-size:20px;font-weight:700;letter-spacing:-.02em}
+  .brand .meta{font-size:12px;color:var(--muted);margin-top:2px}
   .out{font-size:13px;color:var(--muted);text-decoration:none;border:1px solid rgba(251,247,242,.14);padding:8px 14px;border-radius:10px;transition:color .2s,border-color .2s}
   .out:hover{color:var(--cream);border-color:rgba(251,247,242,.3)}
-  .grid{max-width:1080px;margin:0 auto;padding:6px 24px 60px;display:grid;grid-template-columns:repeat(12,1fr);gap:18px}
-  .panel{background:var(--panel);border:1px solid rgba(251,247,242,.07);border-radius:20px;padding:24px}
-  .lab{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
-  .big{font-family:'Fraunces',serif;font-size:46px;font-weight:700;line-height:1;color:var(--gold)}
-  .delta{font-size:13px;color:#6FBF8B;margin-top:10px}
-  .statrow{display:flex;gap:30px;margin-top:18px;flex-wrap:wrap}
-  .stat .n{font-family:'Fraunces',serif;font-size:26px;font-weight:700;color:var(--gold)}
-  .stat .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:4px}
-  .c12{grid-column:span 12}.c7{grid-column:span 7}.c5{grid-column:span 5}.c6{grid-column:span 6}.c4{grid-column:span 4}
-  @media(max-width:760px){.c7,.c5,.c6,.c4{grid-column:span 12}}
+  .wrap{max-width:1080px;margin:0 auto;padding:6px 24px 60px;display:flex;flex-direction:column;gap:18px}
+  .panel{background:var(--panel);border:1px solid rgba(251,247,242,.07);border-radius:20px;padding:26px}
+  .phead{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+  .phead .pic{width:34px;height:34px;border-radius:10px;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:18px}
+  .phead h2{font-family:'Fraunces',serif;font-size:21px;font-weight:700}
+  .pill{font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:20px;background:rgba(232,160,34,.14);color:var(--gold)}
+  .pill.live{background:rgba(111,191,139,.16);color:#8fd6a8}
+  .statrow{display:flex;gap:34px;flex-wrap:wrap}
+  .stat .n{font-family:'Fraunces',serif;font-size:30px;font-weight:700;color:var(--gold);line-height:1}
+  .stat .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+  .sub{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:24px 0 10px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500;padding:0 0 10px}
+  th.r,td.r{text-align:right}
+  td{padding:10px 0;border-top:1px solid rgba(251,247,242,.06)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:34px}
+  @media(max-width:680px){.row2{grid-template-columns:1fr}}
 </style></head>
 <body>
   <header class="top">
-    <div class="brand"><div class="ic">🐤</div><h1 class="serif">Tiny Bird Studio</h1></div>
+    <div class="brand">
+      <div class="ic">🐤</div>
+      <div><h1 class="serif">Tiny Bird Studio</h1><div class="meta">2 active projects · as of ${d.asOf}</div></div>
+    </div>
     <a class="out" href="/studio/logout">Sign out</a>
   </header>
-  <main class="grid">
-    <section class="panel c7">
-      <div class="lab">Active projects</div>
-      <div class="big">12</div>
-      <div class="delta">↑ 3 new this month</div>
-      <div class="statrow">
-        <div class="stat"><div class="n">$2.4M</div><div class="k">Revenue</div></div>
-        <div class="stat"><div class="n">47</div><div class="k">Apps</div></div>
-        <div class="stat"><div class="n">12M</div><div class="k">Users</div></div>
+  <main class="wrap">
+
+    <section class="panel">
+      <div class="phead">
+        <div class="pic">${ttbi.icon}</div>
+        <h2>${ttbi.name}</h2>
+        <span class="pill live">${ttbi.tag}</span>
       </div>
-    </section>
-    <section class="panel c5">
-      <div class="lab">Revenue</div>
-      ${chart(revenueBars, 4)}
-    </section>
-    <section class="panel c6">
-      <div class="lab">Analytics — weekly downloads</div>
-      <div class="big" style="font-size:34px">98k</div>
-      <div class="k" style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:4px">Downloads</div>
-      ${chart(dlBars, 4)}
-    </section>
-    <section class="panel c6">
-      <div class="lab">D30 Retention</div>
-      <div class="big">68%</div>
-      <div class="delta" style="color:var(--muted)">Industry avg: 31%</div>
       <div class="statrow">
-        <div class="stat"><div class="n">4.8</div><div class="k">Play Store</div></div>
-        <div class="stat"><div class="n">4.9</div><div class="k">App Store</div></div>
+        ${metric(ttbi.signups, "Sign-ups")}
+        ${metric(ttbi.waitlist, "Waitlist")}
+        ${metric(money(ttbi.revenueCents), "Total revenue")}
       </div>
+      <div class="sub">Revenue by tier</div>
+      <table>
+        <thead><tr><th>Tier</th><th class="r">Users</th><th class="r">Revenue</th></tr></thead>
+        <tbody>${tierRows}</tbody>
+      </table>
     </section>
+
+    <section class="panel">
+      <div class="phead">
+        <div class="pic">${ts.icon}</div>
+        <h2>${ts.name}</h2>
+        <span class="pill">${ts.tag}</span>
+      </div>
+      <div class="statrow">
+        ${metric(ts.signups, "Sign-ups")}
+        ${metric(ts.downloads, "Downloads")}
+        ${metric(money(ts.revenueCents), "Stripe revenue")}
+        ${metric(ts.traffic == null ? "—" : ts.traffic, "Traffic")}
+      </div>
+      <div class="sub">Downloads by superpower</div>
+      <table>
+        <thead><tr><th>Superpower</th><th class="r">Price</th><th class="r">Downloads</th></tr></thead>
+        <tbody>${spRows}</tbody>
+      </table>
+    </section>
+
   </main>
 </body></html>`;
 }
