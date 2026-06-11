@@ -276,43 +276,56 @@
   <div class="section">
     <div class="section-label reveal">What's Brewing</div>
     <h2 class="section-title reveal">Apps in the<br/><em>nest right now</em></h2>
-    <div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr));">
+    <div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));">
 
-      <div class="card reveal" style="--accent:#E8A022; border-style:dashed;">
+      <!-- Tiny Thoughts, Big Ideas -->
+      <div class="card reveal" style="--accent:#E8A022;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-          <div class="card-icon" style="--ibg:#FEF3E2; margin-bottom:0;">🥚</div>
+          <div class="card-icon" style="--ibg:#FEF3E2; margin-bottom:0;">💡</div>
+          <span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:#EBF4EE;color:#4A7C59;padding:4px 10px;border-radius:100px;font-weight:600;">Live Now</span>
+        </div>
+        <div class="card-title">Tiny Thoughts, Big Ideas</div>
+        <p class="card-desc" style="margin-bottom:12px;">An AI research notebook. Drop in articles, links, and notes — then chat with your sources, run 16 AI-powered sparks, and turn scattered reading into real insight.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px;">
+          <span style="font-size:10px;background:#FEF3E2;color:#c07010;padding:3px 9px;border-radius:100px;font-weight:500;">Chat your sources</span>
+          <span style="font-size:10px;background:#FEF3E2;color:#c07010;padding:3px 9px;border-radius:100px;font-weight:500;">16 AI sparks</span>
+          <span style="font-size:10px;background:#FEF3E2;color:#c07010;padding:3px 9px;border-radius:100px;font-weight:500;">Podcast mode</span>
+          <span style="font-size:10px;background:#FEF3E2;color:#c07010;padding:3px 9px;border-radius:100px;font-weight:500;">BYOAI</span>
+        </div>
+        <a href="https://tiny-thoughts.tavares-scott.workers.dev/" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#E8A022;text-decoration:none;letter-spacing:.01em;">
+          Open the app
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+
+      <!-- Tiny Superpowers -->
+      <div class="card reveal" style="--accent:#E85D3A; border-style:dashed;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <div class="card-icon" style="--ibg:#FEF0EC; margin-bottom:0;">⚡</div>
           <span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:#FEF3E2;color:#E8A022;padding:4px 10px;border-radius:100px;font-weight:600;">In Development</span>
         </div>
-        <div class="card-title">App #1</div>
-        <p class="card-desc">Details coming soon. Follow along — this one's close to hatching.</p>
+        <div class="card-title">Tiny Superpowers</div>
+        <p class="card-desc">Next up in the nest. Details coming soon — this one's close to hatching.</p>
       </div>
 
-      <div class="card reveal" style="--accent:#E85D3A; border-style:dashed; opacity:.7;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-          <div class="card-icon" style="--ibg:#FEF0EC; margin-bottom:0;">💡</div>
-          <span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:#FEF0EC;color:#E85D3A;padding:4px 10px;border-radius:100px;font-weight:600;">Idea Stage</span>
-        </div>
-        <div class="card-title">App #2</div>
-        <p class="card-desc">Rattling around in the notebook. The good ones always start this way.</p>
-      </div>
-
+      <!-- Coming soon placeholder -->
       <div class="card reveal" style="--accent:#4A7C59; border-style:dashed; opacity:.5;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
           <div class="card-icon" style="--ibg:#EBF4EE; margin-bottom:0;">🌙</div>
           <span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:#EBF4EE;color:#4A7C59;padding:4px 10px;border-radius:100px;font-weight:600;">Dreaming</span>
         </div>
-        <div class="card-title">App #3</div>
-        <p class="card-desc">Every big launch starts as a dream. This one's still floating in the sky.</p>
+        <div class="card-title">What's Next?</div>
+        <p class="card-desc">Every big launch starts as a dream. The ideas queue never empties.</p>
       </div>
 
     </div>
 
-    <!-- Honest founder note -->
+    <!-- Founder note -->
     <div class="reveal" style="margin-top:48px;background:#2C1F3E;border-radius:20px;padding:clamp(28px,4vw,40px) clamp(24px,4vw,40px);display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;">
       <div style="font-size:32px;line-height:1;flex-shrink:0;">🐦</div>
       <div>
         <div style="font-family:'Playfair Display',serif;font-size:clamp(16px,2.5vw,20px);font-weight:700;color:var(--cream);margin-bottom:8px;letter-spacing:-.01em;">A note from the founder</div>
-        <p style="font-size:14px;line-height:1.75;color:rgba(251,247,242,.55);max-width:600px;">This studio is day one. No apps live yet, no downloads to boast about — just a big belief that one determined person with the right tools can build something genuinely great. I'm building in public, learning fast, and shipping as soon as things are ready. Stick around.</p>
+        <p style="font-size:14px;line-height:1.75;color:rgba(251,247,242,.55);max-width:600px;">One person, one AI, real apps — that's the whole deal. Tiny Thoughts, Big Ideas is live and growing. Tiny Superpowers is coming next. I build in public, ship fast, and iterate even faster. The best apps come from solving problems you actually have — and this studio exists to do exactly that.</p>
         <div style="margin-top:16px;font-size:12px;color:rgba(251,247,242,.3);letter-spacing:.05em;">— Tiny Bird, Big Dreams · est. 2025</div>
       </div>
     </div>
