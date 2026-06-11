@@ -28,6 +28,13 @@ export default {
     if (p === "/studio/logout") {
       return handleLogout();
     }
+    if (p === "/studio/export.csv") {
+      if (await isAuthed(request, env)) {
+        const metrics = await collectMetrics(env);
+        return csvExport(metrics);
+      }
+      return new Response(null, { status: 303, headers: { location: "/studio" } });
+    }
     if (p === "/studio" || p === "/studio/") {
       if (await isAuthed(request, env)) {
         const metrics = await collectMetrics(env);
@@ -158,6 +165,7 @@ const SNAPSHOT = {
       { tier: "power", users: 0, waitlist: 1 },
       { tier: "pro", users: 0, waitlist: 1 },
     ],
+    weekly_signups: [],
   },
   ts: {
     signups: 1,
@@ -174,6 +182,8 @@ const SNAPSHOT = {
       { title: "Focus Mode", price_cents: 1500, downloads: 0, revenue_cents: 0 },
       { title: "Email Wizard", price_cents: 1200, downloads: 0, revenue_cents: 0 },
     ],
+    weekly_signups: [],
+    weekly_revenue: [],
   },
 };
 
@@ -193,6 +203,14 @@ async function supaMetrics(cfg, env) {
   return r.json();
 }
 
+function getMondayStr(ms) {
+  const d = new Date(ms);
+  const day = d.getUTCDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setUTCDate(d.getUTCDate() + diff);
+  return d.toISOString().slice(0, 10);
+}
+
 async function stripeRevenue(env) {
   const key = env.STRIPE_KEY;
   if (!key) throw new Error("no key");
@@ -204,14 +222,22 @@ async function stripeRevenue(env) {
   let cents = 0;
   let count = 0;
   let currency = "usd";
+  const weekly = {};
+  const cutoff = Date.now() - 12 * 7 * 24 * 3600 * 1000;
   for (const c of j.data || []) {
     if (c.paid && !c.refunded && c.status === "succeeded") {
-      cents += (c.amount || 0) - (c.amount_refunded || 0);
+      const amount = (c.amount || 0) - (c.amount_refunded || 0);
+      cents += amount;
       count += 1;
       currency = c.currency || currency;
+      const ms = (c.created || 0) * 1000;
+      if (ms >= cutoff) {
+        const w = getMondayStr(ms);
+        weekly[w] = (weekly[w] || 0) + amount;
+      }
     }
   }
-  return { cents, count, currency, more: !!j.has_more };
+  return { cents, count, currency, weekly, more: !!j.has_more };
 }
 
 async function collectMetrics(env) {
@@ -242,6 +268,122 @@ async function collectMetrics(env) {
     ttbi: ttbiData,
     ts: tsData,
     stripe: stripeData,
+  };
+}
+
+/* ----------------------------- CSV export ---------------------------- */
+
+function csvRow(cells) {
+  return cells
+    .map((c) => {
+      const s = String(c ?? "");
+      if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+        return '"' + s.replace(/"/g, '""') + '"';
+      }
+      return s;
+    })
+    .join(",");
+}
+
+function csvExport(m) {
+  const rows = [];
+  rows.push(["Tiny Bird Studio Export", m.asOf]);
+  rows.push([]);
+  rows.push(["OVERVIEW"]);
+  rows.push(["Stripe gross revenue", m.stripe ? (m.stripe.cents / 100).toFixed(2) : ""]);
+  rows.push(["Total sign-ups", (m.ttbi.signups || 0) + (m.ts.signups || 0)]);
+  rows.push(["Total downloads", m.ts.downloads_total || 0]);
+  rows.push([]);
+  rows.push(["TINY THOUGHTS BIG IDEAS"]);
+  rows.push(["Sign-ups", m.ttbi.signups]);
+  rows.push(["Waitlist", m.ttbi.waitlist]);
+  rows.push(["Stripe revenue", m.stripe ? (m.stripe.cents / 100).toFixed(2) : ""]);
+  rows.push(["Tier", "Active Users", "Waitlist"]);
+  for (const t of m.ttbi.tiers || []) {
+    rows.push([t.tier.toUpperCase(), t.users ?? 0, t.waitlist ?? 0]);
+  }
+  rows.push([]);
+  rows.push(["TINY SUPERPOWERS"]);
+  rows.push(["Sign-ups", m.ts.signups]);
+  rows.push(["Downloads", m.ts.downloads_total]);
+  rows.push([
+    "Revenue (recorded)",
+    m.ts.purchases_revenue_cents ? (m.ts.purchases_revenue_cents / 100).toFixed(2) : 0,
+  ]);
+  rows.push([]);
+  rows.push(["Superpower", "Price", "Downloads", "Revenue"]);
+  for (const p of m.ts.products || []) {
+    rows.push([
+      p.title,
+      p.price_cents === 0 ? "Free" : (p.price_cents / 100).toFixed(2),
+      p.downloads,
+      p.revenue_cents > 0
+        ? (p.revenue_cents / 100).toFixed(2)
+        : p.downloads > 0
+        ? "0.00"
+        : "",
+    ]);
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  const csv = rows.map(csvRow).join("\n");
+  return new Response(csv, {
+    headers: {
+      "content-type": "text/csv;charset=UTF-8",
+      "content-disposition": `attachment; filename="tiny-bird-studio-${today}.csv"`,
+      "cache-control": "no-store",
+    },
+  });
+}
+
+/* ----------------------------- chart data ---------------------------- */
+
+function lastNWeeks(n) {
+  const weeks = [];
+  const now = new Date();
+  const day = now.getUTCDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const monday = new Date(now);
+  monday.setUTCDate(monday.getUTCDate() + diff);
+  monday.setUTCHours(0, 0, 0, 0);
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(monday);
+    d.setUTCDate(d.getUTCDate() - i * 7);
+    weeks.push(d.toISOString().slice(0, 10));
+  }
+  return weeks;
+}
+
+function buildChartData(m) {
+  const weeks = lastNWeeks(12);
+  const labels = weeks.map((w) => {
+    const d = new Date(w + "T00:00:00Z");
+    return (d.getUTCMonth() + 1) + "/" + d.getUTCDate();
+  });
+
+  const ttbiSignupMap = {};
+  for (const pt of m.ttbi.weekly_signups || []) {
+    ttbiSignupMap[pt.week.slice(0, 10)] = Number(pt.count);
+  }
+  const tsSignupMap = {};
+  for (const pt of m.ts.weekly_signups || []) {
+    tsSignupMap[pt.week.slice(0, 10)] = Number(pt.count);
+  }
+  const tsRevMap = {};
+  for (const pt of m.ts.weekly_revenue || []) {
+    tsRevMap[pt.week.slice(0, 10)] = Number(pt.revenue_cents);
+  }
+  const stripeWeekly = m.stripe ? (m.stripe.weekly || {}) : {};
+
+  return {
+    labels,
+    signups: {
+      ttbi: weeks.map((w) => ttbiSignupMap[w] || 0),
+      ts: weeks.map((w) => tsSignupMap[w] || 0),
+    },
+    revenue: {
+      stripe: weeks.map((w) => +((stripeWeekly[w] || 0) / 100).toFixed(2)),
+      ts: weeks.map((w) => +((tsRevMap[w] || 0) / 100).toFixed(2)),
+    },
   };
 }
 
@@ -303,6 +445,7 @@ function dot(on) {
 function dashboardHTML(m) {
   const ttbi = m.ttbi;
   const ts = m.ts;
+  const chartData = buildChartData(m);
 
   const tierRows = (ttbi.tiers || [])
     .map(
@@ -343,7 +486,7 @@ function dashboardHTML(m) {
   .wrap{max-width:1080px;margin:0 auto;padding:6px 24px 60px;display:flex;flex-direction:column;gap:18px}
   .panel{background:var(--panel);border:1px solid rgba(251,247,242,.07);border-radius:20px;padding:26px}
   .banner{display:flex;gap:34px;flex-wrap:wrap;align-items:flex-end}
-  .phead{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+  .phead{display:flex;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap}
   .phead .pic{width:34px;height:34px;border-radius:10px;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:18px}
   .phead h2{font-family:'Fraunces',serif;font-size:21px;font-weight:700}
   .pill{font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:20px;background:rgba(232,160,34,.14);color:var(--gold)}
@@ -360,6 +503,11 @@ function dashboardHTML(m) {
   .dot.on{background:#6FBF8B;box-shadow:0 0 0 3px rgba(111,191,139,.18)}
   .dot.off{background:rgba(251,247,242,.25)}
   .foot{max-width:1080px;margin:0 auto;padding:0 24px 50px;font-size:12px;color:var(--muted);line-height:1.7}
+  .filters{display:flex;gap:8px;margin-left:auto}
+  .fbtn{background:var(--panel2);border:1px solid rgba(251,247,242,.1);color:var(--muted);border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;transition:all .2s}
+  .fbtn.active{background:rgba(232,160,34,.18);border-color:var(--gold);color:var(--gold)}
+  .fbtn:hover:not(.active){border-color:rgba(251,247,242,.3);color:var(--cream)}
+  .traffic-note{color:var(--muted);font-size:13px;padding:30px 0;text-align:center}
 </style></head>
 <body>
   <header class="top">
@@ -416,59 +564,88 @@ function dashboardHTML(m) {
       </table>
     </section>
 
+    <section class="panel">
+      <div class="phead">
+        <div class="pic">📈</div>
+        <h2>Trends</h2>
+        <div class="filters">
+          <button class="fbtn active" data-filter="signups" onclick="setFilter('signups')">Sign-ups</button>
+          <button class="fbtn" data-filter="revenue" onclick="setFilter('revenue')">Revenue</button>
+          <button class="fbtn" data-filter="traffic" onclick="setFilter('traffic')">Traffic</button>
+        </div>
+      </div>
+      <canvas id="trend-chart" height="80"></canvas>
+      <div id="traffic-note" class="traffic-note" style="display:none">Traffic data not connected yet.</div>
+    </section>
+
   </main>
   <div style="max-width:1080px;margin:0 auto;padding:0 24px 24px;display:flex;justify-content:flex-end">
-    <button onclick="exportCSV()" style="background:var(--panel);border:1px solid rgba(251,247,242,.14);color:var(--cream);border-radius:10px;padding:10px 18px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px">
+    <a href="/studio/export.csv" style="background:var(--panel);border:1px solid rgba(251,247,242,.14);color:var(--cream);border-radius:10px;padding:10px 18px;font-size:13px;display:flex;align-items:center;gap:8px;text-decoration:none">
       ↓ Download spreadsheet
-    </button>
+    </a>
   </div>
   <div class="foot">
     ${dot(m.live.stripe)} Stripe &nbsp; ${dot(m.live.ttbi)} Tiny Thoughts DB &nbsp; ${dot(m.live.ts)} Tiny Superpowers DB
     &nbsp;— a filled dot means live; a hollow dot means showing the last snapshot (add the missing secret to go live).
     Traffic is not wired yet.
   </div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"><\/script>
 <script>
-const DATA = ${JSON.stringify({ asOf: m.asOf, stripe: m.stripe, ttbi: m.ttbi, ts: m.ts })};
-function csvRow(cells) {
-  return cells.map(c => {
-    const s = String(c ?? '');
-    return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g,'""') + '"' : s;
-  }).join(',');
+var CD = ${JSON.stringify(chartData)};
+var chart = null;
+
+function getDatasets(filter) {
+  if (filter === 'signups') {
+    return [
+      {label:'TTBI',data:CD.signups.ttbi,borderColor:'#6FBF8B',backgroundColor:'rgba(111,191,139,0.08)',tension:0.4,fill:true,pointRadius:3},
+      {label:'Tiny Superpowers',data:CD.signups.ts,borderColor:'#E8A022',backgroundColor:'rgba(232,160,34,0.08)',tension:0.4,fill:true,pointRadius:3}
+    ];
+  }
+  if (filter === 'revenue') {
+    return [
+      {label:'Stripe (all apps)',data:CD.revenue.stripe,borderColor:'#6FBF8B',backgroundColor:'rgba(111,191,139,0.08)',tension:0.4,fill:true,pointRadius:3},
+      {label:'Tiny Superpowers',data:CD.revenue.ts,borderColor:'#E8A022',backgroundColor:'rgba(232,160,34,0.08)',tension:0.4,fill:true,pointRadius:3}
+    ];
+  }
+  return [];
 }
-function exportCSV() {
-  const rows = [];
-  rows.push(['Tiny Bird Studio Export', DATA.asOf]);
-  rows.push([]);
-  rows.push(['OVERVIEW']);
-  rows.push(['Stripe gross revenue', DATA.stripe ? (DATA.stripe.cents/100).toFixed(2) : '']);
-  rows.push(['Total sign-ups', (DATA.ttbi.signups||0)+(DATA.ts.signups||0)]);
-  rows.push(['Total downloads', DATA.ts.downloads_total||0]);
-  rows.push([]);
-  rows.push(['TINY THOUGHTS BIG IDEAS']);
-  rows.push(['Sign-ups', DATA.ttbi.signups]);
-  rows.push(['Waitlist', DATA.ttbi.waitlist]);
-  rows.push(['Stripe revenue', DATA.stripe ? (DATA.stripe.cents/100).toFixed(2) : '']);
-  rows.push(['Tier','Active Users','Waitlist']);
-  (DATA.ttbi.tiers||[]).forEach(t => rows.push([t.tier.toUpperCase(), t.users??0, t.waitlist??0]));
-  rows.push([]);
-  rows.push(['TINY SUPERPOWERS']);
-  rows.push(['Sign-ups', DATA.ts.signups]);
-  rows.push(['Downloads', DATA.ts.downloads_total]);
-  rows.push(['Revenue (recorded)', DATA.ts.purchases_revenue_cents ? (DATA.ts.purchases_revenue_cents/100).toFixed(2) : 0]);
-  rows.push([]);
-  rows.push(['Superpower','Price','Downloads','Revenue']);
-  (DATA.ts.products||[]).forEach(p => rows.push([
-    p.title,
-    p.price_cents === 0 ? 'Free' : (p.price_cents/100).toFixed(2),
-    p.downloads,
-    p.revenue_cents > 0 ? (p.revenue_cents/100).toFixed(2) : (p.downloads > 0 ? '0.00' : '')
-  ]));
-  const csv = rows.map(csvRow).join('\n');
-  const a = document.createElement('a');
-  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-  a.download = 'tiny-bird-studio-' + new Date().toISOString().slice(0,10) + '.csv';
-  a.click();
+
+function setFilter(filter) {
+  document.querySelectorAll('.fbtn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.filter === filter);
+  });
+  var canvas = document.getElementById('trend-chart');
+  var note = document.getElementById('traffic-note');
+  if (filter === 'traffic') {
+    canvas.style.display = 'none';
+    note.style.display = '';
+    return;
+  }
+  canvas.style.display = '';
+  note.style.display = 'none';
+  if (chart) {
+    chart.data.datasets = getDatasets(filter);
+    chart.update();
+  }
 }
+
+(function() {
+  var ctx = document.getElementById('trend-chart').getContext('2d');
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {labels: CD.labels, datasets: getDatasets('signups')},
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {labels: {color: 'rgba(251,247,242,0.7)', font: {size: 12}}}
+      },
+      scales: {
+        x: {ticks: {color: 'rgba(251,247,242,0.5)', font: {size: 11}}, grid: {color: 'rgba(251,247,242,0.05)'}},
+        y: {ticks: {color: 'rgba(251,247,242,0.5)', font: {size: 11}}, grid: {color: 'rgba(251,247,242,0.05)'}, beginAtZero: true}
+      }
+    }
+  });
+})();
 <\/script>
 </body></html>`;
 }
