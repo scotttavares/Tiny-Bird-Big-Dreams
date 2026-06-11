@@ -17,7 +17,10 @@
       "pages/**",
       "css/**",
       "js/**"
-    ]
+    ],
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "single-page-application",
+    "serve_directly": true
   },
   "compatibility_flags": ["nodejs_compat"]
 }
