@@ -378,6 +378,7 @@ function dashboardHTML(m) {
       <div class="statrow">
         ${metric(num(ttbi.signups), "Sign-ups")}
         ${metric(num(ttbi.waitlist), "Waitlist")}
+        ${metric(m.stripe ? money(m.stripe.cents) + (m.stripe.more ? "+" : "") : "—", "Stripe revenue")}
       </div>
       <div class="sub">Sign-ups by tier</div>
       <table>
