@@ -22,6 +22,28 @@ function closeMob(){
   document.body.style.overflow='';
 }
 
+// Contact form
+const form=document.getElementById('contactForm');
+if(form){
+  form.addEventListener('submit',async(e)=>{
+    e.preventDefault();
+    const btn=form.querySelector('.form-btn');
+    const orig=btn.innerHTML;
+    btn.disabled=true;
+    btn.textContent='Sending…';
+    try{
+      const res=await fetch(form.action,{method:'POST',body:new FormData(form),headers:{'Accept':'application/json'}});
+      if(res.ok){ form.style.display='none'; document.getElementById('formSuccess').style.display='block'; }
+      else{ throw new Error(); }
+    }catch{ document.getElementById('formError').style.display='block'; btn.disabled=false; btn.innerHTML=orig; }
+  });
+}
+
+// Back to top
+const btt=document.getElementById('backToTop');
+window.addEventListener('scroll',()=>btt.classList.toggle('visible',window.scrollY>400),{passive:true});
+btt.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
+
 // Scroll reveal
 const obs=new IntersectionObserver((entries)=>{
   entries.forEach((e,i)=>{
