@@ -5,22 +5,8 @@
   "observability": { "enabled": true },
   "assets": {
     "directory": ".",
-    "exclude": [
-      ".git/**",
-      ".github/**",
-      ".gitignore",
-      ".htmlvalidate.json",
-      ".wrangler/**",
-      "wrangler.jsonc",
-      "*.md",
-      "CNAME",
-      "pages/**",
-      "css/**",
-      "js/**"
-    ],
     "html_handling": "auto-trailing-slash",
-    "not_found_handling": "single-page-application",
-    "serve_directly": true
+    "not_found_handling": "404-page"
   },
   "compatibility_flags": ["nodejs_compat"]
 }
