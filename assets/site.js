@@ -39,6 +39,11 @@ if(form){
   });
 }
 
+// Back to top
+const btt=document.getElementById('backToTop');
+window.addEventListener('scroll',()=>btt.classList.toggle('visible',window.scrollY>400),{passive:true});
+btt.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
+
 // Scroll reveal
 const obs=new IntersectionObserver((entries)=>{
   entries.forEach((e,i)=>{
