@@ -866,7 +866,7 @@ function updateTrafficStats() {
   upd('ttbi-visits', ttbiT ? fmt(ttbiT.visitors) : '—');
   upd('ttbi-pv',     ttbiT ? fmt(ttbiT.pageviews) : '—');
   upd('ts-visits',   tsT ? fmt(tsT.visitors) : '—');
-  upd('ts-pv',       tsT ? fmt(tsT.pageviews) : '—';
+  upd('ts-pv',       tsT ? fmt(tsT.pageviews) : '—');
   document.querySelectorAll('.wl').forEach(function(el) { el.textContent = wlabel; });
 }
 
