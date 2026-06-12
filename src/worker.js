@@ -658,18 +658,20 @@ function dashboardHTML(m) {
   const totalRevStr = (m.stripe || tsRevCents) ? money(totalRevCents) + (m.stripe?.more ? "+" : "") : "—";
   const ttbiRevStr = m.stripe ? money(m.stripe.cents) + (m.stripe.more ? "+" : "") : "—";
 
-  const byo = (ttbi.tiers || []).find((t) => t.tier === "byo") || { users: 0, waitlist: 0, waitlist_users: [] };
-  const byoWaitlistRows = (byo.waitlist_users || []).map((u) => `<tr style="background:rgba(251,247,242,.03)">
+  const tierRows = (ttbi.tiers || []).map((t) => {
+    const subRows = (t.waitlist_users || []).map((u) => `<tr style="background:rgba(251,247,242,.03)">
         <td style="padding-left:20px;font-size:13px;color:var(--muted)">↳ ${u.name || "—"}<span style="font-size:11px;margin-left:8px;opacity:.6">${u.email || ""}</span></td>
         <td colspan="2" style="text-align:right;font-size:11px;color:var(--muted)">${u.status || "pending"}</td>
         <td></td>
       </tr>`).join("");
-  const tierRows = `<tr>
-        <td>BYO</td>
-        <td style="text-align:right;color:var(--gold)">${byo.users ?? 0}</td>
-        <td style="text-align:right;color:var(--muted)">${byo.waitlist ?? 0}</td>
-        <td style="text-align:right;color:var(--gold)">${ttbiRevStr}</td>
-      </tr>${byoWaitlistRows}`;
+    const rev = t.tier === "byo" ? ttbiRevStr : "—";
+    return `<tr>
+        <td>${t.tier.toUpperCase()}</td>
+        <td style="text-align:right;color:var(--gold)">${t.users ?? 0}</td>
+        <td style="text-align:right;color:var(--muted)">${t.waitlist ?? 0}</td>
+        <td style="text-align:right;color:var(--gold)">${rev}</td>
+      </tr>${subRows}`;
+  }).join("");
 
   const spRows = (ts.products || [])
     .map(
