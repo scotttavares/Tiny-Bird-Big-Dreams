@@ -20,8 +20,13 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           wranglerVersion: "4"
 
-      # Upload secrets after deploy so the deployed version matches
+      # Upload secrets after deploy. Best-effort: while the Cloudflare "Workers
+      # Builds" git integration is connected, the Worker is in Versions mode and
+      # this can fail with error 10215 — that's fine, the deploy above still
+      # succeeds. Set the data secrets in the Cloudflare dashboard as the source
+      # of truth, or disconnect Workers Builds to let CI own them.
       - name: Set Worker secrets
+        continue-on-error: true
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           STUDIO_PASSWORD: ${{ secrets.STUDIO_PASSWORD }}
