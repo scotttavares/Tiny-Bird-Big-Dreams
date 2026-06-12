@@ -529,6 +529,20 @@ function dashboardHTML(m) {
 
     <section class="panel">
       <div class="phead">
+        <div class="pic">📈</div>
+        <h2>Trends</h2>
+        <div class="filters">
+          <button class="fbtn active" data-filter="signups" onclick="setFilter('signups')">Sign-ups</button>
+          <button class="fbtn" data-filter="revenue" onclick="setFilter('revenue')">Revenue</button>
+          <button class="fbtn" data-filter="traffic" onclick="setFilter('traffic')">Traffic</button>
+        </div>
+      </div>
+      <canvas id="trend-chart" height="80"></canvas>
+      <div id="traffic-note" class="traffic-note" style="display:none">Traffic data not connected yet.</div>
+    </section>
+
+    <section class="panel">
+      <div class="phead">
         <div class="pic">💡</div>
         <h2>Tiny Thoughts, Big Ideas</h2>
         <span class="pill live">Live</span>${dot(m.live.ttbi)}
@@ -562,20 +576,6 @@ function dashboardHTML(m) {
         <thead><tr><th>Superpower</th><th class="r">Price</th><th class="r">Downloads</th><th class="r">Revenue</th></tr></thead>
         <tbody>${spRows}</tbody>
       </table>
-    </section>
-
-    <section class="panel">
-      <div class="phead">
-        <div class="pic">📈</div>
-        <h2>Trends</h2>
-        <div class="filters">
-          <button class="fbtn active" data-filter="signups" onclick="setFilter('signups')">Sign-ups</button>
-          <button class="fbtn" data-filter="revenue" onclick="setFilter('revenue')">Revenue</button>
-          <button class="fbtn" data-filter="traffic" onclick="setFilter('traffic')">Traffic</button>
-        </div>
-      </div>
-      <canvas id="trend-chart" height="80"></canvas>
-      <div id="traffic-note" class="traffic-note" style="display:none">Traffic data not connected yet.</div>
     </section>
 
   </main>
