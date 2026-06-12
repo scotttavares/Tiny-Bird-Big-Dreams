@@ -20,5 +20,11 @@ jobs:
           wranglerVersion: "4"
           secrets: |
             STUDIO_PASSWORD
+            STRIPE_KEY
+            TTBI_SERVICE_KEY
+            TS_SERVICE_KEY
         env:
           STUDIO_PASSWORD: ${{ secrets.STUDIO_PASSWORD }}
+          STRIPE_KEY: ${{ secrets.STRIPE_KEY }}
+          TTBI_SERVICE_KEY: ${{ secrets.TTBI_SERVICE_KEY }}
+          TS_SERVICE_KEY: ${{ secrets.TS_SERVICE_KEY }}
