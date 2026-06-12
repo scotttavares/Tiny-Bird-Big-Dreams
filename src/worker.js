@@ -9,8 +9,13 @@
 //   TS_SERVICE_KEY       – Supabase service_role key (tinysuperpowers)
 //   STRIPE_KEY           – Stripe restricted, read-only secret key
 //   CF_ANALYTICS_TOKEN   – Cloudflare API token (Account Analytics: Read)
-//   CF_TTBI_BEACON       – Cloudflare Web Analytics site tag for TTBI
-//   CF_TS_BEACON         – Cloudflare Web Analytics site tag for Tiny Superpowers
+//   CF_ACCOUNT_ID        – Cloudflare account tag (for the beacon fallback)
+//   CF_TBBD_ZONE_TAG     – Cloudflare zone tag for tinybirdbigdreams.com
+//   CF_TTBI_ZONE_TAG     – Cloudflare zone tag for tinythoughtsbigideas.com
+//   CF_TS_ZONE_TAG       – Cloudflare zone tag for tinysuperpowers.com
+//   CF_TBBD_BEACON       – Web Analytics site tag for tinybirdbigdreams.com (fallback)
+//   CF_TTBI_BEACON       – Web Analytics site tag for tinythoughtsbigideas.com (fallback)
+//   CF_TS_BEACON         – Web Analytics site tag for tinysuperpowers.com (fallback)
 
 const SESSION_COOKIE = "tbbd_studio";
 const SESSION_TTL = 60 * 60 * 24 * 30; // 30 days, in seconds
@@ -37,12 +42,6 @@ export default {
         return csvExport(metrics);
       }
       return new Response(null, { status: 303, headers: { location: "/studio" } });
-    }
-    if (p === "/studio/cf-debug") {
-      if (!(await isAuthed(request, env))) {
-        return new Response("Unauthorized", { status: 401 });
-      }
-      return cfDebug(env);
     }
     if (p === "/studio" || p === "/studio/") {
       if (await isAuthed(request, env)) {
@@ -370,97 +369,6 @@ async function cfTraffic(rawTag, hostname, env) {
     if (!siteTag) throw new Error("no cf config");
     return await cfTrafficBeacon(siteTag, env);
   }
-}
-
-async function cfDebug(env) {
-  const ttbiTag = beaconToken(env.CF_TBBD_BEACON);
-  const tsTag = beaconToken(env.CF_TS_BEACON);
-  const cleanedToken = (env.CF_ANALYTICS_TOKEN || "").replace(/\s/g, "");
-  const endDate = new Date().toISOString().slice(0, 10);
-  const startDate = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-  const out = {
-    token: !!env.CF_ANALYTICS_TOKEN,
-    token_length: cleanedToken.length,
-    token_preview: cleanedToken.slice(0, 6) + "...",
-    ttbi_zone_tag_set: !!env.CF_TTBI_ZONE_TAG,
-    ts_zone_tag_set: !!env.CF_TS_ZONE_TAG,
-    tbbd_zone_tag_set: !!env.CF_TBBD_ZONE_TAG,
-    ttbi_beacon: ttbiTag,
-    ts_beacon: tsTag,
-  };
-
-  // Test zone-level analytics for TTBI
-  if (env.CF_TTBI_ZONE_TAG) {
-    try {
-      const zoneId = env.CF_TTBI_ZONE_TAG.trim();
-      const zr = await fetch("https://api.cloudflare.com/client/v4/graphql", {
-        method: "POST",
-        headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: `{viewer{zones(filter:{zoneTag:"${zoneId}"}){httpRequests1dGroups(filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},limit:3,orderBy:[date_ASC]){dimensions{date}sum{requests}uniq{uniques}}}}}`,
-        }),
-      });
-      const zj = await zr.json();
-      out.zone_ttbi_status = zr.status;
-      out.zone_ttbi_errors = zj.errors || null;
-      out.zone_ttbi_rows = zj.data?.viewer?.zones?.[0]?.httpRequests1dGroups?.length ?? 0;
-      out.zone_ttbi_sample = zj.data?.viewer?.zones?.[0]?.httpRequests1dGroups?.slice(0, 2) || null;
-    } catch (e) {
-      out.zone_ttbi_error = e.message;
-    }
-  }
-
-  // Test zone-level analytics for TS
-  if (env.CF_TS_ZONE_TAG) {
-    try {
-      const zoneId = env.CF_TS_ZONE_TAG.trim();
-      const zr = await fetch("https://api.cloudflare.com/client/v4/graphql", {
-        method: "POST",
-        headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: `{viewer{zones(filter:{zoneTag:"${zoneId}"}){httpRequests1dGroups(filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},limit:3,orderBy:[date_ASC]){dimensions{date}sum{requests}uniq{uniques}}}}}`,
-        }),
-      });
-      const zj = await zr.json();
-      out.zone_ts_status = zr.status;
-      out.zone_ts_errors = zj.errors || null;
-      out.zone_ts_rows = zj.data?.viewer?.zones?.[0]?.httpRequests1dGroups?.length ?? 0;
-      out.zone_ts_sample = zj.data?.viewer?.zones?.[0]?.httpRequests1dGroups?.slice(0, 2) || null;
-    } catch (e) {
-      out.zone_ts_error = e.message;
-    }
-  }
-
-  // Test account-level beacon query
-  try {
-    const r = await fetch("https://api.cloudflare.com/client/v4/accounts?per_page=5", {
-      headers: cfAuthHeader(env),
-    });
-    const j = await r.json();
-    out.accounts_status = r.status;
-    out.accounts_errors = j.errors || null;
-    out.cf_account_id_set = !!env.CF_ACCOUNT_ID;
-    const accountId = env.CF_ACCOUNT_ID?.trim() || j.result?.[0]?.id;
-    if (accountId && ttbiTag) {
-      const gr = await fetch("https://api.cloudflare.com/client/v4/graphql", {
-        method: "POST",
-        headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: `{viewer{accounts(filter:{accountTag:"${accountId}"}){rumPageloadEventsAdaptiveGroups(filter:{AND:[{siteTag:"${ttbiTag}"},{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},limit:3,orderBy:[date_ASC]){count dimensions{date}sum{visits}}}}}`,
-        }),
-      });
-      const gj = await gr.json();
-      out.beacon_graphql_status = gr.status;
-      out.beacon_graphql_errors = gj.errors || null;
-      out.beacon_rows = gj.data?.viewer?.accounts?.[0]?.rumPageloadEventsAdaptiveGroups?.length ?? 0;
-    }
-  } catch (e) {
-    out.accounts_error = e.message;
-  }
-
-  return new Response(JSON.stringify(out, null, 2), {
-    headers: { "content-type": "application/json", "cache-control": "no-store" },
-  });
 }
 
 async function collectMetrics(env) {
@@ -822,7 +730,7 @@ function dashboardHTML(m) {
         </div>
       </div>
       <canvas id="trend-chart" height="80"></canvas>
-      <div id="traffic-note" class="traffic-note" style="display:none">Traffic not connected yet — add <code>CF_ANALYTICS_TOKEN</code>, <code>CF_TTBI_BEACON</code>, and <code>CF_TS_BEACON</code> secrets.</div>
+      <div id="traffic-note" class="traffic-note" style="display:none">Traffic not connected yet — add <code>CF_ANALYTICS_TOKEN</code> and the zone-tag secrets.</div>
     </section>
 
     <section class="panel">
