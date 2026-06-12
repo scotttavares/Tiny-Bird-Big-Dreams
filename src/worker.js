@@ -735,6 +735,18 @@ function dashboardHTML(m) {
 
     <section class="panel">
       <div class="phead">
+        <div class="pic">🐤</div>
+        <h2>Tiny Bird Big Dreams</h2>
+        <span class="pill live">Landing site</span>${dot(!!m.traffic?.tbbd)}
+      </div>
+      <div class="statrow">
+        <div class="stat"><div class="n" id="tbbd-visits">—</div><div class="k">Visits (<span class="wl">30d</span>)</div></div>
+        <div class="stat"><div class="n" id="tbbd-pv">—</div><div class="k">Requests (<span class="wl">30d</span>)</div></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="phead">
         <div class="pic">💡</div>
         <h2>Tiny Thoughts, Big Ideas</h2>
         <span class="pill live">Live</span>${dot(m.live.ttbi)}
@@ -845,9 +857,12 @@ function updateChart() {
 function updateTrafficStats() {
   var key = currentWindow === 1 ? 'd1' : currentWindow === 7 ? 'd7' : 'd30';
   var wlabel = currentWindow === 1 ? '24h' : currentWindow === 7 ? '7d' : '30d';
+  var tbbdT = TS.tbbd ? TS.tbbd[key] : null;
   var ttbiT = TS.ttbi ? TS.ttbi[key] : null;
   var tsT = TS.ts ? TS.ts[key] : null;
   function upd(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; }
+  upd('tbbd-visits', tbbdT ? fmt(tbbdT.visitors) : '—');
+  upd('tbbd-pv',     tbbdT ? fmt(tbbdT.pageviews) : '—');
   upd('ttbi-visits', ttbiT ? fmt(ttbiT.visitors) : '—');
   upd('ttbi-pv',     ttbiT ? fmt(ttbiT.pageviews) : '—');
   upd('ts-visits',   tsT ? fmt(tsT.visitors) : '—');
