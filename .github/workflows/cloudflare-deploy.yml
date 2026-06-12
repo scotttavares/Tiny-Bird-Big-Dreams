@@ -18,3 +18,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           wranglerVersion: "4"
+          secrets: |
+            STUDIO_PASSWORD
+        env:
+          STUDIO_PASSWORD: ${{ secrets.STUDIO_PASSWORD }}
