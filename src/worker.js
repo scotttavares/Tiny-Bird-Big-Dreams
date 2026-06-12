@@ -38,6 +38,12 @@ export default {
       }
       return new Response(null, { status: 303, headers: { location: "/studio" } });
     }
+    if (p === "/studio/cf-debug") {
+      if (!(await isAuthed(request, env))) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+      return cfDebug(env);
+    }
     if (p === "/studio" || p === "/studio/") {
       if (await isAuthed(request, env)) {
         const metrics = await collectMetrics(env);
@@ -313,6 +319,39 @@ async function cfTraffic(siteTag, env) {
   }
 
   return { totals, weekly };
+}
+
+async function cfDebug(env) {
+  const out = { token: !!env.CF_ANALYTICS_TOKEN, ttbi_beacon: env.CF_TBBD_BEACON || null, ts_beacon: env.CF_TS_BEACON || null };
+  try {
+    const r = await fetch("https://api.cloudflare.com/client/v4/accounts?per_page=5", {
+      headers: { Authorization: `Bearer ${env.CF_ANALYTICS_TOKEN}` },
+    });
+    const j = await r.json();
+    out.accounts_status = r.status;
+    out.accounts = (j.result || []).map((a) => ({ id: a.id, name: a.name }));
+    const accountId = j.result?.[0]?.id;
+    if (accountId) {
+      const endDate = new Date().toISOString().slice(0, 10);
+      const startDate = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+      const siteTag = env.CF_TBBD_BEACON || "MISSING";
+      const gr = await fetch("https://api.cloudflare.com/client/v4/graphql", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${env.CF_ANALYTICS_TOKEN}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: `{viewer{accounts(filter:{accountTag:"${accountId}"}){rumPageloadEventsAdaptiveGroups(filter:{AND:[{siteTag:"${siteTag}"},{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},limit:5,orderBy:[date_ASC]){count dimensions{date}sum{visits pageViews}}}}}`,
+        }),
+      });
+      const gj = await gr.json();
+      out.graphql_status = gr.status;
+      out.graphql = gj;
+    }
+  } catch (e) {
+    out.error = e.message;
+  }
+  return new Response(JSON.stringify(out, null, 2), {
+    headers: { "content-type": "application/json", "cache-control": "no-store" },
+  });
 }
 
 async function collectMetrics(env) {
@@ -719,7 +758,7 @@ var chart = null;
 function fmt(n) {
   if (n == null || n === '') return '—';
   n = Number(n);
-  if (n >= 10000) return (n / 1000).toFixed(1).replace(/\\.0$/, '') + 'k';
+  if (n >= 10000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
   return n.toLocaleString('en-US');
 }
 
