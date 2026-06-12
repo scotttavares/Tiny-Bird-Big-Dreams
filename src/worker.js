@@ -292,7 +292,7 @@ async function cfTraffic(rawTag, env) {
         `rumPageloadEventsAdaptiveGroups(` +
         `filter:{AND:[{siteTag:"${siteTag}"},{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},` +
         `limit:10000,orderBy:[date_ASC]` +
-        `){count dimensions{date}sum{visits pageViews}}}}}`,
+        `){count dimensions{date}sum{visits}}}}}`,
     }),
   });
 
@@ -315,7 +315,7 @@ async function cfTraffic(rawTag, env) {
   for (const g of groups) {
     const date = g.dimensions?.date || "";
     const v = g.sum?.visits || 0;
-    const pv = g.sum?.pageViews || g.sum?.pageviews || 0;
+    const pv = g.count || 0;
 
     totals.d30.visitors += v;
     totals.d30.pageviews += pv;
@@ -361,7 +361,7 @@ async function cfDebug(env) {
         method: "POST",
         headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: `{viewer{accounts(filter:{accountTag:"${accountId}"}){rumPageloadEventsAdaptiveGroups(filter:{AND:[{siteTag:"${siteTag}"},{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},limit:5,orderBy:[date_ASC]){count dimensions{date}sum{visits pageViews}}}}}`,
+          query: `{viewer{accounts(filter:{accountTag:"${accountId}"}){rumPageloadEventsAdaptiveGroups(filter:{AND:[{siteTag:"${siteTag}"},{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},limit:5,orderBy:[date_ASC]){count dimensions{date}sum{visits}}}}}`,
         }),
       });
       const gj = await gr.json();
