@@ -171,7 +171,7 @@ const SNAPSHOT = {
     signups: 1,
     waitlist: 3,
     tiers: [
-      { tier: "byo", users: 1, waitlist: 1 },
+      { tier: "byo", users: 1, waitlist: 1, waitlist_users: [] },
     ],
     weekly_signups: [],
   },
@@ -443,6 +443,9 @@ function csvExport(m) {
   rows.push(["Tier", "Active Users", "Waitlist"]);
   for (const t of m.ttbi.tiers || []) {
     rows.push([t.tier.toUpperCase(), t.users ?? 0, t.waitlist ?? 0]);
+    for (const u of t.waitlist_users || []) {
+      rows.push(["  ↳ " + (u.name || ""), u.email || "", u.status || "pending"]);
+    }
   }
   rows.push([]);
   rows.push(["TINY SUPERPOWERS"]);
@@ -618,13 +621,18 @@ function dashboardHTML(m) {
   const totalRevStr = (m.stripe || tsRevCents) ? money(totalRevCents) + (m.stripe?.more ? "+" : "") : "—";
   const ttbiRevStr = m.stripe ? money(m.stripe.cents) + (m.stripe.more ? "+" : "") : "—";
 
-  const byo = (ttbi.tiers || []).find((t) => t.tier === "byo") || { users: 0, waitlist: 0 };
+  const byo = (ttbi.tiers || []).find((t) => t.tier === "byo") || { users: 0, waitlist: 0, waitlist_users: [] };
+  const byoWaitlistRows = (byo.waitlist_users || []).map((u) => `<tr style="background:rgba(251,247,242,.03)">
+        <td style="padding-left:20px;font-size:13px;color:var(--muted)">↳ ${u.name || "—"}<span style="font-size:11px;margin-left:8px;opacity:.6">${u.email || ""}</span></td>
+        <td colspan="2" style="text-align:right;font-size:11px;color:var(--muted)">${u.status || "pending"}</td>
+        <td></td>
+      </tr>`).join("");
   const tierRows = `<tr>
         <td>BYO</td>
         <td style="text-align:right;color:var(--gold)">${byo.users ?? 0}</td>
         <td style="text-align:right;color:var(--muted)">${byo.waitlist ?? 0}</td>
         <td style="text-align:right;color:var(--gold)">${ttbiRevStr}</td>
-      </tr>`;
+      </tr>${byoWaitlistRows}`;
 
   const spRows = (ts.products || [])
     .map(
