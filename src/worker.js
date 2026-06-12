@@ -213,8 +213,8 @@ async function supaMetrics(cfg, env) {
 function getMondayStr(ms) {
   const d = new Date(ms);
   const day = d.getUTCDay();
-  const day2 = day === 0 ? -6 : 1 - day;
-  d.setUTCDate(d.getUTCDate() + day2);
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setUTCDate(d.getUTCDate() + diff);
   return d.toISOString().slice(0, 10);
 }
 
@@ -325,14 +325,14 @@ async function cfTrafficZone(zoneId, env) {
         httpRequests1dGroups(
         filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},
         limit:365,orderBy:[date_ASC]
-        ){dimensions{date}sum{visits requests}}}}}`,
+        ){dimensions{date}sum{requests}uniq{uniques}}}}}`,
     }),
   });
   if (!r.ok) throw new Error("cf graphql zone " + r.status);
   const j = await r.json();
   if (j.errors?.length) throw new Error("cf gql zone: " + j.errors[0].message);
   const groups = j.data?.viewer?.zones?.[0]?.httpRequests1dGroups || [];
-  return parseCfGroups(groups, (g) => ({ v: g.sum?.visits || 0, pv: g.sum?.requests || 0 }));
+  return parseCfGroups(groups, (g) => ({ v: g.uniq?.uniques || 0, pv: g.sum?.requests || 0 }));
 }
 
 // Beacon-based Web Analytics — only tracks visits with the JS snippet installed
@@ -397,7 +397,7 @@ async function cfDebug(env) {
         method: "POST",
         headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: `{viewer{zones(filter:{zoneTag:"${zoneId}"}){httpRequests1dGroups(filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},limit:3,orderBy:[date_ASC]){dimensions{date}sum{visits requests}}}}}`,
+          query: `{viewer{zones(filter:{zoneTag:"${zoneId}"}){httpRequests1dGroups(filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},limit:3,orderBy:[date_ASC]){dimensions{date}sum{requests}uniq{uniques}}}}}`,
         }),
       });
       const zj = await zr.json();
@@ -418,7 +418,7 @@ async function cfDebug(env) {
         method: "POST",
         headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: `{viewer{zones(filter:{zoneTag:"${zoneId}"}){httpRequests1dGroups(filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},limit:3,orderBy:[date_ASC]){dimensions{date}sum{visits requests}}}}}`,
+          query: `{viewer{zones(filter:{zoneTag:"${zoneId}"}){httpRequests1dGroups(filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},limit:3,orderBy:[date_ASC]){dimensions{date}sum{requests}uniq{uniques}}}}}`,
         }),
       });
       const zj = await zr.json();
