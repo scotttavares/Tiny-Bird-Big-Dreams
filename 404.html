@@ -9,50 +9,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Fredoka+One&display=swap" rel="stylesheet" />
   <style>
-    .error-page {
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      text-align: center;
-      padding: 40px 24px;
-    }
-    .error-page__inner { max-width: 520px; }
-    .error-bird {
-      font-size: 6rem;
-      animation: wobble 2s ease-in-out infinite;
-      display: block;
-      margin-bottom: 8px;
-    }
-    @keyframes wobble {
-      0%, 100% { transform: rotate(-8deg); }
-      50%       { transform: rotate(8deg); }
-    }
-    .error-code {
-      font-family: var(--font-display);
-      font-size: 8rem;
-      line-height: 1;
-      background: linear-gradient(135deg, var(--brand-orange), var(--brand-purple));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 0;
-    }
-    .error-page h1 {
-      font-family: var(--font-display);
-      font-size: 2rem;
-      margin-bottom: 16px;
-    }
-    .error-page p {
-      color: var(--text-muted);
-      font-size: 1.05rem;
-      margin-bottom: 32px;
-    }
-    .error-links {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      justify-content: center;
-    }
+    .error-page { min-height:100vh; display:grid; place-items:center; text-align:center; padding:40px 24px; }
+    .error-page__inner { max-width:520px; }
+    .error-bird { font-size:6rem; animation:wobble 2s ease-in-out infinite; display:block; margin-bottom:8px; }
+    @keyframes wobble { 0%,100%{transform:rotate(-8deg)} 50%{transform:rotate(8deg)} }
+    .error-code { font-family:var(--font-display); font-size:8rem; line-height:1; background:linear-gradient(135deg,var(--brand-orange),var(--brand-purple)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:0; }
+    .error-page h1 { font-family:var(--font-display); font-size:2rem; margin-bottom:16px; }
+    .error-page p { color:var(--text-muted); font-size:1.05rem; margin-bottom:32px; }
+    .error-links { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
   </style>
 </head>
 <body>
@@ -64,16 +28,12 @@
       </a>
     </div>
   </nav>
-
   <main class="error-page">
     <div class="error-page__inner">
       <span class="error-bird" aria-hidden="true">🐦</span>
       <p class="error-code">404</p>
       <h1>This page flew the coop.</h1>
-      <p>
-        The page you're looking for doesn't exist — or maybe it dreamed so big it flew somewhere new.
-        Either way, let's get you back on track.
-      </p>
+      <p>The page you're looking for doesn't exist — or maybe it dreamed so big it flew somewhere new. Either way, let's get you back on track.</p>
       <div class="error-links">
         <a href="index.html" class="btn btn--primary">← Back to Home</a>
         <a href="pages/about.html" class="btn btn--ghost">About Us</a>
@@ -81,11 +41,11 @@
       </div>
     </div>
   </main>
-
   <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
     <span class="theme-toggle__icon--light" aria-hidden="true">🌙</span>
     <span class="theme-toggle__icon--dark" aria-hidden="true">☀️</span>
   </button>
   <script src="js/main.js"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b0b9b5a0ff9345038eb0ab5e85b9ac3d"}'></script>
 </body>
 </html>
