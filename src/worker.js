@@ -551,6 +551,12 @@ function dashboardHTML(m) {
     ts: m.traffic?.ts?.totals || null,
   };
 
+  const ttbiRevCents = m.stripe ? m.stripe.cents : 0;
+  const tsRevCents = ts.purchases_revenue_cents || 0;
+  const totalRevCents = ttbiRevCents + tsRevCents;
+  const totalRevStr = (m.stripe || tsRevCents) ? money(totalRevCents) + (m.stripe?.more ? "+" : "") : "—";
+  const ttbiRevStr = m.stripe ? money(m.stripe.cents) + (m.stripe.more ? "+" : "") : "—";
+
   const byo = (ttbi.tiers || []).find((t) => t.tier === "byo") || { users: 0, waitlist: 0 };
   const tierRows = `<tr>
         <td>BYO</td>
@@ -569,12 +575,6 @@ function dashboardHTML(m) {
       </tr>`
     )
     .join("");
-
-  const ttbiRevCents = m.stripe ? m.stripe.cents : 0;
-  const tsRevCents = ts.purchases_revenue_cents || 0;
-  const totalRevCents = ttbiRevCents + tsRevCents;
-  const totalRevStr = (m.stripe || tsRevCents) ? money(totalRevCents) + (m.stripe?.more ? "+" : "") : "—";
-  const ttbiRevStr = m.stripe ? money(m.stripe.cents) + (m.stripe.more ? "+" : "") : "—";
 
   return `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
