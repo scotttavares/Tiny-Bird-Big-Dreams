@@ -298,6 +298,7 @@ function parseCfGroups(groups, extractor) {
 
 // Lookup zone tag — check explicit env secrets first, then auto-discover via REST API
 async function cfGetZoneTag(hostname, env) {
+  if (hostname === "tinybirdbigdreams.com" && env.CF_TBBD_ZONE_TAG) return env.CF_TBBD_ZONE_TAG.trim();
   if (hostname === "tinythoughtsbigideas.com" && env.CF_TTBI_ZONE_TAG) return env.CF_TTBI_ZONE_TAG.trim();
   if (hostname === "tinysuperpowers.com" && env.CF_TS_ZONE_TAG) return env.CF_TS_ZONE_TAG.trim();
   const r = await fetch(
@@ -320,11 +321,11 @@ async function cfTrafficZone(zoneId, env) {
     headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
     body: JSON.stringify({
       query:
-        `{viewer{zones(filter:{zoneTag:"${zoneId}"}){` +
-        `httpRequestsAdaptiveGroups(` +
-        `filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},` +
-        `limit:10000,orderBy:[date_ASC]` +
-        `){dimensions{date}sum{visits pageViews}}}}}`,
+        `{viewer{zones(filter:{zoneTag:"${zoneId}"}){
+        httpRequestsAdaptiveGroups(
+        filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},
+        limit:10000,orderBy:[date_ASC]
+        ){dimensions{date}sum{visits pageViews}}}}}`,
     }),
   });
   if (!r.ok) throw new Error("cf graphql zone " + r.status);
@@ -344,11 +345,11 @@ async function cfTrafficBeacon(siteTag, env) {
     headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
     body: JSON.stringify({
       query:
-        `{viewer{accounts(filter:{accountTag:"${accountId}"}){` +
-        `rumPageloadEventsAdaptiveGroups(` +
-        `filter:{AND:[{siteTag:"${siteTag}"},{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},` +
-        `limit:10000,orderBy:[date_ASC]` +
-        `){count dimensions{date}sum{visits}}}}}`,
+        `{viewer{accounts(filter:{accountTag:"${accountId}"}){
+        rumPageloadEventsAdaptiveGroups(
+        filter:{AND:[{siteTag:"${siteTag}"},{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},
+        limit:10000,orderBy:[date_ASC]
+        ){count dimensions{date}sum{visits}}}}}`,
     }),
   });
   if (!r.ok) throw new Error("cf graphql beacon " + r.status);
@@ -827,7 +828,7 @@ var chart = null;
 function fmt(n) {
   if (n == null || n === '') return '—';
   n = Number(n);
-  if (n >= 10000) return (n / 1000).toFixed(1).replace(/\\.0$/, '') + 'k';
+  if (n >= 10000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
   return n.toLocaleString('en-US');
 }
 
