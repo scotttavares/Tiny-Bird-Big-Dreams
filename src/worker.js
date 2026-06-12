@@ -336,13 +336,22 @@ async function cfTraffic(rawTag, env) {
 async function cfDebug(env) {
   const ttbiTag = beaconToken(env.CF_TBBD_BEACON);
   const tsTag = beaconToken(env.CF_TS_BEACON);
-  const out = { token: !!env.CF_ANALYTICS_TOKEN, ttbi_beacon: ttbiTag, ts_beacon: tsTag };
+  const cleanedToken = (env.CF_ANALYTICS_TOKEN || "").replace(/\s/g, "");
+  const out = {
+    token: !!env.CF_ANALYTICS_TOKEN,
+    token_length: cleanedToken.length,
+    token_preview: cleanedToken.slice(0, 6) + "...",
+    ttbi_beacon: ttbiTag,
+    ts_beacon: tsTag,
+  };
   try {
     const r = await fetch("https://api.cloudflare.com/client/v4/accounts?per_page=5", {
       headers: cfAuthHeader(env),
     });
     const j = await r.json();
     out.accounts_status = r.status;
+    out.accounts_errors = j.errors || null;
+    out.accounts_messages = j.messages || null;
     out.accounts = (j.result || []).map((a) => ({ id: a.id, name: a.name }));
     const accountId = j.result?.[0]?.id;
     if (accountId) {
@@ -561,12 +570,12 @@ function loginHTML({ error, configured }) {
   .logo{width:46px;height:46px;border-radius:13px;background:linear-gradient(150deg,#F0B83A,#E8A022);display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:22px}
   h1{font-size:24px;font-weight:700;letter-spacing:-.02em;margin-bottom:6px}
   .sub{font-size:14px;color:var(--muted);margin-bottom:26px}
+  .err{background:rgba(214,77,77,.12);border:1px solid rgba(214,77,77,.4);color:#f0a3a3;font-size:13px;padding:11px 14px;border-radius:10px;margin-bottom:18px}
   label{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
   input{width:100%;background:#0f0a1a;border:1px solid rgba(251,247,242,.12);border-radius:12px;padding:14px 16px;color:var(--cream);font-size:15px;outline:none;transition:border-color .2s}
   input:focus{border-color:var(--gold)}
   button{width:100%;margin-top:18px;background:var(--gold);color:#2C1F3E;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer;transition:background .2s,transform .15s}
   button:hover{background:#f0b030;transform:translateY(-1px)}
-  .err{background:rgba(214,77,77,.12);border:1px solid rgba(214,77,77,.4);color:#f0a3a3;font-size:13px;padding:11px 14px;border-radius:10px;margin-bottom:18px}
   .note{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.6}
 </style></head>
 <body><div class="wrap"><form class="card" method="POST" action="/studio/login">
