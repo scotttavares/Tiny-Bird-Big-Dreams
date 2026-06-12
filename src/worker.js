@@ -464,17 +464,19 @@ async function cfDebug(env) {
 }
 
 async function collectMetrics(env) {
-  const [ttbi, ts, stripe, ttbiTraf, tsTraf] = await Promise.allSettled([
+  const [ttbi, ts, stripe, tbbdTraf, ttbiTraf, tsTraf] = await Promise.allSettled([
     supaMetrics(SUPA.ttbi, env),
     supaMetrics(SUPA.ts, env),
     stripeRevenue(env),
-    cfTraffic(env.CF_TBBD_BEACON, "tinythoughtsbigideas.com", env),
+    cfTraffic(env.CF_TBBD_BEACON, "tinybirdbigdreams.com", env),
+    cfTraffic(env.CF_TTBI_BEACON, "tinythoughtsbigideas.com", env),
     cfTraffic(env.CF_TS_BEACON, "tinysuperpowers.com", env),
   ]);
 
   const ttbiData = ttbi.status === "fulfilled" ? ttbi.value : SNAPSHOT.ttbi;
   const tsData = ts.status === "fulfilled" ? ts.value : SNAPSHOT.ts;
   const stripeData = stripe.status === "fulfilled" ? stripe.value : null;
+  const tbbdTrafData = tbbdTraf.status === "fulfilled" ? tbbdTraf.value : null;
   const ttbiTrafData = ttbiTraf.status === "fulfilled" ? ttbiTraf.value : null;
   const tsTrafData = tsTraf.status === "fulfilled" ? tsTraf.value : null;
 
@@ -491,12 +493,15 @@ async function collectMetrics(env) {
       ttbi: ttbi.status === "fulfilled",
       ts: ts.status === "fulfilled",
       stripe: stripe.status === "fulfilled",
-      traffic: ttbiTraf.status === "fulfilled" || tsTraf.status === "fulfilled",
+      traffic:
+        tbbdTraf.status === "fulfilled" ||
+        ttbiTraf.status === "fulfilled" ||
+        tsTraf.status === "fulfilled",
     },
     ttbi: ttbiData,
     ts: tsData,
     stripe: stripeData,
-    traffic: { ttbi: ttbiTrafData, ts: tsTrafData },
+    traffic: { tbbd: tbbdTrafData, ttbi: ttbiTrafData, ts: tsTrafData },
   };
 }
 
@@ -553,9 +558,13 @@ function csvExport(m) {
         : "",
     ]);
   }
-  if (m.traffic?.ttbi?.totals || m.traffic?.ts?.totals) {
+  if (m.traffic?.tbbd?.totals || m.traffic?.ttbi?.totals || m.traffic?.ts?.totals) {
     rows.push([]);
     rows.push(["TRAFFIC (last 30 days)"]);
+    if (m.traffic?.tbbd?.totals) {
+      rows.push(["Tiny Bird Big Dreams Visits", m.traffic.tbbd.totals.d30.visitors]);
+      rows.push(["Tiny Bird Big Dreams Requests", m.traffic.tbbd.totals.d30.pageviews]);
+    }
     if (m.traffic?.ttbi?.totals) {
       rows.push(["TTBI Visits", m.traffic.ttbi.totals.d30.visitors]);
       rows.push(["TTBI Requests", m.traffic.ttbi.totals.d30.pageviews]);
@@ -615,6 +624,7 @@ function buildChartData(m) {
   }
   const stripeWeekly = m.stripe ? (m.stripe.weekly || {}) : {};
 
+  const tbbdTrafW = m.traffic?.tbbd?.weekly || {};
   const ttbiTrafW = m.traffic?.ttbi?.weekly || {};
   const tsTrafW = m.traffic?.ts?.weekly || {};
 
@@ -629,6 +639,7 @@ function buildChartData(m) {
       ts: weeks.map((w) => +((tsRevMap[w] || 0) / 100).toFixed(2)),
     },
     traffic: {
+      tbbd: weeks.map((w) => (tbbdTrafW[w] ? tbbdTrafW[w].visitors : 0)),
       ttbi: weeks.map((w) => (ttbiTrafW[w] ? ttbiTrafW[w].visitors : 0)),
       ts: weeks.map((w) => (tsTrafW[w] ? tsTrafW[w].visitors : 0)),
     },
@@ -695,6 +706,7 @@ function dashboardHTML(m) {
   const ts = m.ts;
   const chartData = buildChartData(m);
   const trafficStats = {
+    tbbd: m.traffic?.tbbd?.totals || null,
     ttbi: m.traffic?.ttbi?.totals || null,
     ts: m.traffic?.ts?.totals || null,
   };
@@ -887,6 +899,7 @@ function getDatasets(filter) {
   var g = {tension:0.4, fill:true, pointRadius:3};
   var green = Object.assign({}, g, {borderColor:'#6FBF8B', backgroundColor:'rgba(111,191,139,0.08)'});
   var gold  = Object.assign({}, g, {borderColor:'#E8A022',  backgroundColor:'rgba(232,160,34,0.08)'});
+  var blue  = Object.assign({}, g, {borderColor:'#8B9DF0', backgroundColor:'rgba(139,157,240,0.08)'});
   if (filter === 'signups') return [
     Object.assign({label:'TTBI', data:CD.signups.ttbi.slice(-n)}, green),
     Object.assign({label:'Tiny Superpowers', data:CD.signups.ts.slice(-n)}, gold)
@@ -896,6 +909,7 @@ function getDatasets(filter) {
     Object.assign({label:'Tiny Superpowers', data:CD.revenue.ts.slice(-n)}, gold)
   ];
   if (filter === 'traffic') return [
+    Object.assign({label:'Tiny Bird Big Dreams visitors', data:CD.traffic.tbbd.slice(-n)}, blue),
     Object.assign({label:'TTBI visitors', data:CD.traffic.ttbi.slice(-n)}, green),
     Object.assign({label:'Tiny Superpowers visitors', data:CD.traffic.ts.slice(-n)}, gold)
   ];
@@ -903,7 +917,7 @@ function getDatasets(filter) {
 }
 
 function hasTraffic() {
-  return TS && (TS.ttbi || TS.ts);
+  return TS && (TS.tbbd || TS.ttbi || TS.ts);
 }
 
 function updateChart() {
