@@ -371,14 +371,14 @@ function csvExport(m) {
   rows.push(["Tiny Bird Studio Export", m.asOf]);
   rows.push([]);
   rows.push(["OVERVIEW"]);
-  rows.push(["Stripe gross revenue", m.stripe ? (m.stripe.cents / 100).toFixed(2) : ""]);
+  rows.push(["Revenue", ((m.stripe ? m.stripe.cents : 0) + (m.ts.purchases_revenue_cents || 0)) / 100]);
   rows.push(["Total sign-ups", (m.ttbi.signups || 0) + (m.ts.signups || 0)]);
   rows.push(["Total downloads", m.ts.downloads_total || 0]);
   rows.push([]);
   rows.push(["TINY THOUGHTS BIG IDEAS"]);
   rows.push(["Sign-ups", m.ttbi.signups]);
   rows.push(["Waitlist", m.ttbi.waitlist]);
-  rows.push(["Stripe revenue", m.stripe ? (m.stripe.cents / 100).toFixed(2) : ""]);
+  rows.push(["Revenue", m.stripe ? (m.stripe.cents / 100).toFixed(2) : ""]);
   rows.push(["Tier", "Active Users", "Waitlist"]);
   for (const t of m.ttbi.tiers || []) {
     rows.push([t.tier.toUpperCase(), t.users ?? 0, t.waitlist ?? 0]);
@@ -388,7 +388,7 @@ function csvExport(m) {
   rows.push(["Sign-ups", m.ts.signups]);
   rows.push(["Downloads", m.ts.downloads_total]);
   rows.push([
-    "Revenue (recorded)",
+    "Revenue",
     m.ts.purchases_revenue_cents ? (m.ts.purchases_revenue_cents / 100).toFixed(2) : 0,
   ]);
   rows.push([]);
@@ -556,7 +556,7 @@ function dashboardHTML(m) {
         <td>BYO</td>
         <td style="text-align:right;color:var(--gold)">${byo.users ?? 0}</td>
         <td style="text-align:right;color:var(--muted)">${byo.waitlist ?? 0}</td>
-        <td style="text-align:right;color:var(--gold)">${m.stripe ? money(m.stripe.cents) + (m.stripe.more ? "+" : "") : "—"}</td>
+        <td style="text-align:right;color:var(--gold)">${ttbiRevStr}</td>
       </tr>`;
 
   const spRows = (ts.products || [])
@@ -570,7 +570,11 @@ function dashboardHTML(m) {
     )
     .join("");
 
-  const stripeStr = m.stripe ? money(m.stripe.cents) + (m.stripe.more ? "+" : "") : "—";
+  const ttbiRevCents = m.stripe ? m.stripe.cents : 0;
+  const tsRevCents = ts.purchases_revenue_cents || 0;
+  const totalRevCents = ttbiRevCents + tsRevCents;
+  const totalRevStr = (m.stripe || tsRevCents) ? money(totalRevCents) + (m.stripe?.more ? "+" : "") : "—";
+  const ttbiRevStr = m.stripe ? money(m.stripe.cents) + (m.stripe.more ? "+" : "") : "—";
 
   return `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -627,7 +631,7 @@ function dashboardHTML(m) {
 
     <section class="panel">
       <div class="banner">
-        ${metric(stripeStr, "Stripe gross revenue")}
+        ${metric(totalRevStr, "Revenue")}
         ${metric(num(ttbi.signups == null ? null : (ttbi.signups + (ts.signups || 0))), "Total sign-ups")}
         ${metric(num(ts.downloads_total), "Total downloads")}
       </div>
@@ -663,7 +667,7 @@ function dashboardHTML(m) {
       <div class="statrow">
         ${metric(num(ttbi.signups), "Sign-ups")}
         ${metric(num(ttbi.waitlist), "Waitlist")}
-        ${metric(m.stripe ? money(m.stripe.cents) + (m.stripe.more ? "+" : "") : "—", "Stripe revenue")}
+        ${metric(ttbiRevStr, "Revenue")}
         <div class="stat"><div class="n" id="ttbi-visits">—</div><div class="k">Visits (<span class="wl">30d</span>)</div></div>
         <div class="stat"><div class="n" id="ttbi-pv">—</div><div class="k">Pageviews (<span class="wl">30d</span>)</div></div>
       </div>
@@ -683,7 +687,7 @@ function dashboardHTML(m) {
       <div class="statrow">
         ${metric(num(ts.signups), "Sign-ups")}
         ${metric(num(ts.downloads_total), "Downloads")}
-        ${metric(money(ts.purchases_revenue_cents), "Revenue (recorded)")}
+        ${metric(money(ts.purchases_revenue_cents), "Revenue")}
         <div class="stat"><div class="n" id="ts-visits">—</div><div class="k">Visits (<span class="wl">30d</span>)</div></div>
         <div class="stat"><div class="n" id="ts-pv">—</div><div class="k">Pageviews (<span class="wl">30d</span>)</div></div>
       </div>
