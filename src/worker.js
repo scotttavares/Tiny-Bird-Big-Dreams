@@ -264,14 +264,18 @@ let _cfAccountId = null;
 
 async function cfGetAccountId(env) {
   if (_cfAccountId) return _cfAccountId;
-  const r = await fetch("https://api.cloudflare.com/client/v4/accounts?per_page=1", {
-    headers: cfAuthHeader(env),
+  // REST accounts endpoint requires Account:Read — try GraphQL instead (works with Analytics tokens)
+  const gr = await fetch("https://api.cloudflare.com/client/v4/graphql", {
+    method: "POST",
+    headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
+    body: JSON.stringify({ query: "{ viewer { accounts { id name } } }" }),
   });
-  if (!r.ok) throw new Error("cf accounts " + r.status);
-  const j = await r.json();
-  _cfAccountId = j.result?.[0]?.id;
-  if (!_cfAccountId) throw new Error("no CF account");
-  return _cfAccountId;
+  if (gr.ok) {
+    const gj = await gr.json();
+    const id = gj.data?.viewer?.accounts?.[0]?.id;
+    if (id) { _cfAccountId = id; return _cfAccountId; }
+  }
+  throw new Error("no CF account via graphql");
 }
 
 async function cfTraffic(rawTag, env) {
@@ -353,7 +357,18 @@ async function cfDebug(env) {
     out.accounts_errors = j.errors || null;
     out.accounts_messages = j.messages || null;
     out.accounts = (j.result || []).map((a) => ({ id: a.id, name: a.name }));
-    const accountId = j.result?.[0]?.id;
+    // Try GraphQL account lookup if REST returned empty
+    let accountId = j.result?.[0]?.id;
+    if (!accountId) {
+      const agr = await fetch("https://api.cloudflare.com/client/v4/graphql", {
+        method: "POST",
+        headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
+        body: JSON.stringify({ query: "{ viewer { accounts { id name } } }" }),
+      });
+      const agj = await agr.json();
+      out.gql_accounts = agj?.data?.viewer?.accounts || agj?.errors || null;
+      accountId = agj?.data?.viewer?.accounts?.[0]?.id;
+    }
     if (accountId) {
       const endDate = new Date().toISOString().slice(0, 10);
       const startDate = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
@@ -570,12 +585,12 @@ function loginHTML({ error, configured }) {
   .logo{width:46px;height:46px;border-radius:13px;background:linear-gradient(150deg,#F0B83A,#E8A022);display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:22px}
   h1{font-size:24px;font-weight:700;letter-spacing:-.02em;margin-bottom:6px}
   .sub{font-size:14px;color:var(--muted);margin-bottom:26px}
-  .err{background:rgba(214,77,77,.12);border:1px solid rgba(214,77,77,.4);color:#f0a3a3;font-size:13px;padding:11px 14px;border-radius:10px;margin-bottom:18px}
   label{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
   input{width:100%;background:#0f0a1a;border:1px solid rgba(251,247,242,.12);border-radius:12px;padding:14px 16px;color:var(--cream);font-size:15px;outline:none;transition:border-color .2s}
   input:focus{border-color:var(--gold)}
   button{width:100%;margin-top:18px;background:var(--gold);color:#2C1F3E;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer;transition:background .2s,transform .15s}
   button:hover{background:#f0b030;transform:translateY(-1px)}
+  .err{background:rgba(214,77,77,.12);border:1px solid rgba(214,77,77,.4);color:#f0a3a3;font-size:13px;padding:11px 14px;border-radius:10px;margin-bottom:18px}
   .note{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.6}
 </style></head>
 <body><div class="wrap"><form class="card" method="POST" action="/studio/login">
