@@ -376,13 +376,62 @@ async function cfDebug(env) {
   const ttbiTag = beaconToken(env.CF_TBBD_BEACON);
   const tsTag = beaconToken(env.CF_TS_BEACON);
   const cleanedToken = (env.CF_ANALYTICS_TOKEN || "").replace(/\s/g, "");
+  const endDate = new Date().toISOString().slice(0, 10);
+  const startDate = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
   const out = {
     token: !!env.CF_ANALYTICS_TOKEN,
     token_length: cleanedToken.length,
     token_preview: cleanedToken.slice(0, 6) + "...",
+    ttbi_zone_tag_set: !!env.CF_TTBI_ZONE_TAG,
+    ts_zone_tag_set: !!env.CF_TS_ZONE_TAG,
+    tbbd_zone_tag_set: !!env.CF_TBBD_ZONE_TAG,
     ttbi_beacon: ttbiTag,
     ts_beacon: tsTag,
   };
+
+  // Test zone-level analytics for TTBI
+  if (env.CF_TTBI_ZONE_TAG) {
+    try {
+      const zoneId = env.CF_TTBI_ZONE_TAG.trim();
+      const zr = await fetch("https://api.cloudflare.com/client/v4/graphql", {
+        method: "POST",
+        headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: `{viewer{zones(filter:{zoneTag:"${zoneId}"}){httpRequestsAdaptiveGroups(filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},limit:3,orderBy:[date_ASC]){dimensions{date}sum{visits pageViews}}}}}`,
+        }),
+      });
+      const zj = await zr.json();
+      out.zone_ttbi_status = zr.status;
+      out.zone_ttbi_errors = zj.errors || null;
+      out.zone_ttbi_rows = zj.data?.viewer?.zones?.[0]?.httpRequestsAdaptiveGroups?.length ?? 0;
+      out.zone_ttbi_sample = zj.data?.viewer?.zones?.[0]?.httpRequestsAdaptiveGroups?.slice(0, 2) || null;
+    } catch (e) {
+      out.zone_ttbi_error = e.message;
+    }
+  }
+
+  // Test zone-level analytics for TS
+  if (env.CF_TS_ZONE_TAG) {
+    try {
+      const zoneId = env.CF_TS_ZONE_TAG.trim();
+      const zr = await fetch("https://api.cloudflare.com/client/v4/graphql", {
+        method: "POST",
+        headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: `{viewer{zones(filter:{zoneTag:"${zoneId}"}){httpRequestsAdaptiveGroups(filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},limit:3,orderBy:[date_ASC]){dimensions{date}sum{visits pageViews}}}}}`,
+        }),
+      });
+      const zj = await zr.json();
+      out.zone_ts_status = zr.status;
+      out.zone_ts_errors = zj.errors || null;
+      out.zone_ts_rows = zj.data?.viewer?.zones?.[0]?.httpRequestsAdaptiveGroups?.length ?? 0;
+      out.zone_ts_sample = zj.data?.viewer?.zones?.[0]?.httpRequestsAdaptiveGroups?.slice(0, 2) || null;
+    } catch (e) {
+      out.zone_ts_error = e.message;
+    }
+  }
+
+  // Test account-level beacon query
   try {
     const r = await fetch("https://api.cloudflare.com/client/v4/accounts?per_page=5", {
       headers: cfAuthHeader(env),
@@ -390,28 +439,25 @@ async function cfDebug(env) {
     const j = await r.json();
     out.accounts_status = r.status;
     out.accounts_errors = j.errors || null;
-    out.accounts_messages = j.messages || null;
-    out.accounts = (j.result || []).map((a) => ({ id: a.id, name: a.name }));
     out.cf_account_id_set = !!env.CF_ACCOUNT_ID;
     const accountId = env.CF_ACCOUNT_ID?.trim() || j.result?.[0]?.id;
-    if (accountId) {
-      const endDate = new Date().toISOString().slice(0, 10);
-      const startDate = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-      const siteTag = ttbiTag || "MISSING";
+    if (accountId && ttbiTag) {
       const gr = await fetch("https://api.cloudflare.com/client/v4/graphql", {
         method: "POST",
         headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: `{viewer{accounts(filter:{accountTag:"${accountId}"}){rumPageloadEventsAdaptiveGroups(filter:{AND:[{siteTag:"${siteTag}"},{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},limit:5,orderBy:[date_ASC]){count dimensions{date}sum{visits}}}}}`,
+          query: `{viewer{accounts(filter:{accountTag:"${accountId}"}){rumPageloadEventsAdaptiveGroups(filter:{AND:[{siteTag:"${ttbiTag}"},{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},limit:3,orderBy:[date_ASC]){count dimensions{date}sum{visits}}}}}`,
         }),
       });
       const gj = await gr.json();
-      out.graphql_status = gr.status;
-      out.graphql = gj;
+      out.beacon_graphql_status = gr.status;
+      out.beacon_graphql_errors = gj.errors || null;
+      out.beacon_rows = gj.data?.viewer?.accounts?.[0]?.rumPageloadEventsAdaptiveGroups?.length ?? 0;
     }
   } catch (e) {
-    out.error = e.message;
+    out.accounts_error = e.message;
   }
+
   return new Response(JSON.stringify(out, null, 2), {
     headers: { "content-type": "application/json", "cache-control": "no-store" },
   });
