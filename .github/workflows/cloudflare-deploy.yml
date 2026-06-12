@@ -13,8 +13,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Deploy Worker first — secrets must be set AFTER deploy (Cloudflare error 10215)
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           wranglerVersion: "4"
+
+      # Upload secrets after deploy. Best-effort: while the Cloudflare "Workers
+      # Builds" git integration is connected, the Worker is in Versions mode and
+      # this can fail with error 10215 — that's fine, the deploy above still
+      # succeeds. Set the data secrets in the Cloudflare dashboard as the source
+      # of truth, or disconnect Workers Builds to let CI own them.
+      - name: Set Worker secrets
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          STUDIO_PASSWORD: ${{ secrets.STUDIO_PASSWORD }}
+          STRIPE_KEY: ${{ secrets.STRIPE_KEY }}
+          TTBI_SERVICE_KEY: ${{ secrets.TTBI_SERVICE_KEY }}
+          TS_SERVICE_KEY: ${{ secrets.TS_SERVICE_KEY }}
+          CF_ANALYTICS_TOKEN: ${{ secrets.CF_ANALYTICS_TOKEN }}
+          CF_TTBI_BEACON: ${{ secrets.CF_TTBI_BEACON }}
+          CF_TS_BEACON: ${{ secrets.CF_TS_BEACON }}
+        run: |
+          python3 -c "
+          import json, os
+          keys = ['STUDIO_PASSWORD', 'STRIPE_KEY', 'TTBI_SERVICE_KEY', 'TS_SERVICE_KEY',
+                  'CF_ANALYTICS_TOKEN', 'CF_TTBI_BEACON', 'CF_TS_BEACON']
+          print(json.dumps({k: os.environ[k] for k in keys if os.environ.get(k)}))
+          " | npx wrangler secret bulk --name tiny-bird-big-dreams
