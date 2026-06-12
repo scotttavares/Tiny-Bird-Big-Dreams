@@ -298,7 +298,7 @@ function parseCfGroups(groups, extractor) {
 
 // Lookup zone tag — check explicit env secrets first, then auto-discover via REST API
 async function cfGetZoneTag(hostname, env) {
-  if (hostname === "tinybirdbigdreams.com" && env.CF_TBBD_ZONE_TAG) return env.CF_TBBD_ZONE_TAG.trim();
+  if (hostname === "tinythoughtsbigideas.com" && env.CF_TTBI_ZONE_TAG) return env.CF_TTBI_ZONE_TAG.trim();
   if (hostname === "tinysuperpowers.com" && env.CF_TS_ZONE_TAG) return env.CF_TS_ZONE_TAG.trim();
   const r = await fetch(
     `https://api.cloudflare.com/client/v4/zones?name=${encodeURIComponent(hostname)}&per_page=1`,
@@ -421,7 +421,7 @@ async function collectMetrics(env) {
     supaMetrics(SUPA.ttbi, env),
     supaMetrics(SUPA.ts, env),
     stripeRevenue(env),
-    cfTraffic(env.CF_TBBD_BEACON, "tinybirdbigdreams.com", env),
+    cfTraffic(env.CF_TBBD_BEACON, "tinythoughtsbigideas.com", env),
     cfTraffic(env.CF_TS_BEACON, "tinysuperpowers.com", env),
   ]);
 
