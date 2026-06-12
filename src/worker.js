@@ -355,7 +355,7 @@ async function cfDebug(env) {
     const accountId = env.CF_ACCOUNT_ID?.trim() || j.result?.[0]?.id;
     if (accountId) {
       const endDate = new Date().toISOString().slice(0, 10);
-      const startDate = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+      const startDate = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString().slice(0, 10);
       const siteTag = ttbiTag || "MISSING";
       const gr = await fetch("https://api.cloudflare.com/client/v4/graphql", {
         method: "POST",
