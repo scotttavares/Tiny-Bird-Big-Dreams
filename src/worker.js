@@ -257,7 +257,7 @@ function beaconToken(raw) {
 }
 
 function cfAuthHeader(env) {
-  return { Authorization: `Bearer ${(env.CF_ANALYTICS_TOKEN || "").trim()}` };
+  return { Authorization: `Bearer ${(env.CF_ANALYTICS_TOKEN || "").replace(/\s/g, "")}` };
 }
 
 let _cfAccountId = null;
@@ -703,7 +703,7 @@ function dashboardHTML(m) {
           <div class="filters">
             <button class="wbtn active" data-window="30" onclick="setWindow(30)">30 days</button>
             <button class="wbtn" data-window="7" onclick="setWindow(7)">7 days</button>
-            <button class="wbtn" data-window="1" onclick="setWindow(1)" >24 hours</button>
+            <button class="wbtn" data-window="1" onclick="setWindow(1)">24 hours</button>
           </div>
         </div>
       </div>
