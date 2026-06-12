@@ -268,11 +268,11 @@ async function cfGetAccountId(env) {
   const gr = await fetch("https://api.cloudflare.com/client/v4/graphql", {
     method: "POST",
     headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
-    body: JSON.stringify({ query: "{ viewer { accounts { id name } } }" }),
+    body: JSON.stringify({ query: "{ viewer { accounts { accountTag } } }" }),
   });
   if (gr.ok) {
     const gj = await gr.json();
-    const id = gj.data?.viewer?.accounts?.[0]?.id;
+    const id = gj.data?.viewer?.accounts?.[0]?.accountTag;
     if (id) { _cfAccountId = id; return _cfAccountId; }
   }
   throw new Error("no CF account via graphql");
@@ -363,11 +363,11 @@ async function cfDebug(env) {
       const agr = await fetch("https://api.cloudflare.com/client/v4/graphql", {
         method: "POST",
         headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
-        body: JSON.stringify({ query: "{ viewer { accounts { id name } } }" }),
+        body: JSON.stringify({ query: "{ viewer { accounts { accountTag } } }" }),
       });
       const agj = await agr.json();
       out.gql_accounts = agj?.data?.viewer?.accounts || agj?.errors || null;
-      accountId = agj?.data?.viewer?.accounts?.[0]?.id;
+      accountId = agj?.data?.viewer?.accounts?.[0]?.accountTag;
     }
     if (accountId) {
       const endDate = new Date().toISOString().slice(0, 10);
@@ -796,7 +796,7 @@ var chart = null;
 function fmt(n) {
   if (n == null || n === '') return '—';
   n = Number(n);
-  if (n >= 10000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+  if (n >= 10000) return (n / 1000).toFixed(1).replace(/\\.0$/, '') + 'k';
   return n.toLocaleString('en-US');
 }
 
