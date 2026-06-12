@@ -13,18 +13,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Deploy Worker first — secrets must be set AFTER deploy (Cloudflare error 10215)
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           wranglerVersion: "4"
-          secrets: |
-            STUDIO_PASSWORD
-            STRIPE_KEY
-            TTBI_SERVICE_KEY
-            TS_SERVICE_KEY
+
+      # Upload secrets after deploy so the deployed version matches
+      - name: Set Worker secrets
         env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           STUDIO_PASSWORD: ${{ secrets.STUDIO_PASSWORD }}
           STRIPE_KEY: ${{ secrets.STRIPE_KEY }}
           TTBI_SERVICE_KEY: ${{ secrets.TTBI_SERVICE_KEY }}
           TS_SERVICE_KEY: ${{ secrets.TS_SERVICE_KEY }}
+        run: |
+          python3 -c "
+          import json, os
+          keys = ['STUDIO_PASSWORD', 'STRIPE_KEY', 'TTBI_SERVICE_KEY', 'TS_SERVICE_KEY']
+          print(json.dumps({k: os.environ[k] for k in keys}))
+          " | npx wrangler secret bulk --name tiny-bird-big-dreams
