@@ -730,7 +730,7 @@ function dashboardHTML(m) {
         </div>
       </div>
       <canvas id="trend-chart" height="80"></canvas>
-      <div id="traffic-note" class="traffic-note" style="display:none">Traffic not connected yet — add <code>CF_ANALYTICS_TOKEN</code>, <code>CF_TTBI_BEACON</code>, and <code>CF_TS_BEACON</code> secrets.</div>
+      <div id="traffic-note" class="traffic-note" style="display:none">Traffic not connected yet — add <code>CF_ANALYTICS_TOKEN</code> and the zone-tag secrets.</div>
     </section>
 
     <section class="panel">
