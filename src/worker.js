@@ -322,7 +322,7 @@ async function collectMetrics(env) {
     supaMetrics(SUPA.ttbi, env),
     supaMetrics(SUPA.ts, env),
     stripeRevenue(env),
-    cfTraffic(env.CF_TTBI_BEACON, env),
+    cfTraffic(env.CF_TBBD_BEACON, env),
     cfTraffic(env.CF_TS_BEACON, env),
   ]);
 

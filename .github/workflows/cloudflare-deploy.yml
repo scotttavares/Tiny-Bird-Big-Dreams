@@ -34,12 +34,13 @@ jobs:
           TTBI_SERVICE_KEY: ${{ secrets.TTBI_SERVICE_KEY }}
           TS_SERVICE_KEY: ${{ secrets.TS_SERVICE_KEY }}
           CF_ANALYTICS_TOKEN: ${{ secrets.CF_ANALYTICS_TOKEN }}
+          CF_TBBD_BEACON: ${{ secrets.CF_TBBD_BEACON }}
           CF_TTBI_BEACON: ${{ secrets.CF_TTBI_BEACON }}
           CF_TS_BEACON: ${{ secrets.CF_TS_BEACON }}
         run: |
           python3 -c "
           import json, os
           keys = ['STUDIO_PASSWORD', 'STRIPE_KEY', 'TTBI_SERVICE_KEY', 'TS_SERVICE_KEY',
-                  'CF_ANALYTICS_TOKEN', 'CF_TTBI_BEACON', 'CF_TS_BEACON']
+                  'CF_ANALYTICS_TOKEN', 'CF_TBBD_BEACON', 'CF_TTBI_BEACON', 'CF_TS_BEACON']
           print(json.dumps({k: os.environ[k] for k in keys if os.environ.get(k)}))
           " | npx wrangler secret bulk --name tiny-bird-big-dreams
