@@ -322,16 +322,16 @@ async function cfTrafficZone(zoneId, env) {
     body: JSON.stringify({
       query:
         `{viewer{zones(filter:{zoneTag:"${zoneId}"}){
-        httpRequestsAdaptiveGroups(
+        httpRequests1dGroups(
         filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},
-        limit:10000,orderBy:[date_ASC]
+        limit:365,orderBy:[date_ASC]
         ){dimensions{date}sum{visits requests}}}}}`,
     }),
   });
   if (!r.ok) throw new Error("cf graphql zone " + r.status);
   const j = await r.json();
   if (j.errors?.length) throw new Error("cf gql zone: " + j.errors[0].message);
-  const groups = j.data?.viewer?.zones?.[0]?.httpRequestsAdaptiveGroups || [];
+  const groups = j.data?.viewer?.zones?.[0]?.httpRequests1dGroups || [];
   return parseCfGroups(groups, (g) => ({ v: g.sum?.visits || 0, pv: g.sum?.requests || 0 }));
 }
 
@@ -397,14 +397,14 @@ async function cfDebug(env) {
         method: "POST",
         headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: `{viewer{zones(filter:{zoneTag:"${zoneId}"}){httpRequestsAdaptiveGroups(filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},limit:3,orderBy:[date_ASC]){dimensions{date}sum{visits requests}}}}}`,
+          query: `{viewer{zones(filter:{zoneTag:"${zoneId}"}){httpRequests1dGroups(filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},limit:3,orderBy:[date_ASC]){dimensions{date}sum{visits requests}}}}}`,
         }),
       });
       const zj = await zr.json();
       out.zone_ttbi_status = zr.status;
       out.zone_ttbi_errors = zj.errors || null;
-      out.zone_ttbi_rows = zj.data?.viewer?.zones?.[0]?.httpRequestsAdaptiveGroups?.length ?? 0;
-      out.zone_ttbi_sample = zj.data?.viewer?.zones?.[0]?.httpRequestsAdaptiveGroups?.slice(0, 2) || null;
+      out.zone_ttbi_rows = zj.data?.viewer?.zones?.[0]?.httpRequests1dGroups?.length ?? 0;
+      out.zone_ttbi_sample = zj.data?.viewer?.zones?.[0]?.httpRequests1dGroups?.slice(0, 2) || null;
     } catch (e) {
       out.zone_ttbi_error = e.message;
     }
@@ -418,14 +418,14 @@ async function cfDebug(env) {
         method: "POST",
         headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: `{viewer{zones(filter:{zoneTag:"${zoneId}"}){httpRequestsAdaptiveGroups(filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},limit:3,orderBy:[date_ASC]){dimensions{date}sum{visits requests}}}}}`,
+          query: `{viewer{zones(filter:{zoneTag:"${zoneId}"}){httpRequests1dGroups(filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},limit:3,orderBy:[date_ASC]){dimensions{date}sum{visits requests}}}}}`,
         }),
       });
       const zj = await zr.json();
       out.zone_ts_status = zr.status;
       out.zone_ts_errors = zj.errors || null;
-      out.zone_ts_rows = zj.data?.viewer?.zones?.[0]?.httpRequestsAdaptiveGroups?.length ?? 0;
-      out.zone_ts_sample = zj.data?.viewer?.zones?.[0]?.httpRequestsAdaptiveGroups?.slice(0, 2) || null;
+      out.zone_ts_rows = zj.data?.viewer?.zones?.[0]?.httpRequests1dGroups?.length ?? 0;
+      out.zone_ts_sample = zj.data?.viewer?.zones?.[0]?.httpRequests1dGroups?.slice(0, 2) || null;
     } catch (e) {
       out.zone_ts_error = e.message;
     }
