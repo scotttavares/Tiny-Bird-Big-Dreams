@@ -836,7 +836,7 @@ function dashboardHTML(m) {
         ${metric(num(ttbi.waitlist), "Waitlist")}
         ${metric(ttbiRevStr, "Revenue")}
         <div class="stat"><div class="n" id="ttbi-visits">—</div><div class="k">Visits (<span class="wl">30d</span>)</div></div>
-        <div class="stat"><div class="n" id="ttbi-pv">—</div><div class="k">Pageviews (<span class="wl">30d</span>)</div></div>
+        <div class="stat"><div class="n" id="ttbi-pv">—</div><div class="k">Requests (<span class="wl">30d</span>)</div></div>
       </div>
       <div class="sub">Sign-ups by tier</div>
       <table>
@@ -856,7 +856,7 @@ function dashboardHTML(m) {
         ${metric(num(ts.downloads_total), "Downloads")}
         ${metric(money(ts.purchases_revenue_cents), "Revenue")}
         <div class="stat"><div class="n" id="ts-visits">—</div><div class="k">Visits (<span class="wl">30d</span>)</div></div>
-        <div class="stat"><div class="n" id="ts-pv">—</div><div class="k">Pageviews (<span class="wl">30d</span>)</div></div>
+        <div class="stat"><div class="n" id="ts-pv">—</div><div class="k">Requests (<span class="wl">30d</span>)</div></div>
       </div>
       <div class="sub">Downloads by superpower</div>
       <table>
