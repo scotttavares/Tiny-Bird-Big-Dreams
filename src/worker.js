@@ -165,8 +165,6 @@ const SNAPSHOT = {
     waitlist: 3,
     tiers: [
       { tier: "byo", users: 1, waitlist: 1 },
-      { tier: "power", users: 0, waitlist: 1 },
-      { tier: "pro", users: 0, waitlist: 1 },
     ],
     weekly_signups: [],
   },
@@ -553,15 +551,13 @@ function dashboardHTML(m) {
     ts: m.traffic?.ts?.totals || null,
   };
 
-  const tierRows = (ttbi.tiers || [])
-    .map(
-      (t) => `<tr>
-        <td>${String(t.tier).toUpperCase()}</td>
-        <td style="text-align:right;color:var(--gold)">${t.users ?? 0}</td>
-        <td style="text-align:right;color:var(--muted)">${t.waitlist ?? 0}</td>
-      </tr>`
-    )
-    .join("") || `<tr><td colspan="3" style="color:var(--muted)">No tiers yet</td></tr>`;
+  const byo = (ttbi.tiers || []).find((t) => t.tier === "byo") || { users: 0, waitlist: 0 };
+  const tierRows = `<tr>
+        <td>BYO</td>
+        <td style="text-align:right;color:var(--gold)">${byo.users ?? 0}</td>
+        <td style="text-align:right;color:var(--muted)">${byo.waitlist ?? 0}</td>
+        <td style="text-align:right;color:var(--gold)">${m.stripe ? money(m.stripe.cents) + (m.stripe.more ? "+" : "") : "—"}</td>
+      </tr>`;
 
   const spRows = (ts.products || [])
     .map(
@@ -673,7 +669,7 @@ function dashboardHTML(m) {
       </div>
       <div class="sub">Sign-ups by tier</div>
       <table>
-        <thead><tr><th>Tier</th><th class="r">Active users</th><th class="r">Waitlist</th></tr></thead>
+        <thead><tr><th>Tier</th><th class="r">Active users</th><th class="r">Waitlist</th><th class="r">Revenue</th></tr></thead>
         <tbody>${tierRows}</tbody>
       </table>
     </section>
