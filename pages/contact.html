@@ -12,16 +12,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Fredoka+One&display=swap" rel="stylesheet" />
 </head>
 <body>
-
   <nav class="nav" id="nav" aria-label="Main navigation">
     <div class="nav__inner">
-      <a href="../index.html" class="nav__logo">
-        <span class="logo-bird" aria-hidden="true">🐦</span>
-        <span class="logo-text">Tiny Bird<span class="logo-accent">, Big Dreams</span></span>
-      </a>
-      <button type="button" class="nav__burger" id="navBurger" aria-label="Toggle menu" aria-expanded="false">
-        <span></span><span></span><span></span>
-      </button>
+      <a href="../index.html" class="nav__logo"><span class="logo-bird" aria-hidden="true">🐦</span><span class="logo-text">Tiny Bird<span class="logo-accent">, Big Dreams</span></span></a>
+      <button type="button" class="nav__burger" id="navBurger" aria-label="Toggle menu" aria-expanded="false"><span></span><span></span><span></span></button>
       <ul class="nav__links" id="navLinks">
         <li><a href="../index.html#what-we-build">What We Build</a></li>
         <li><a href="about.html">About &amp; AI</a></li>
@@ -31,8 +25,6 @@
       </ul>
     </div>
   </nav>
-
-  <!-- PAGE HERO -->
   <section class="page-hero">
     <div class="container">
       <a href="../index.html" class="page-hero__back">← Back to Home</a>
@@ -40,184 +32,70 @@
       <p>We're a small team with big ears. We read every message and reply to most of them.</p>
     </div>
   </section>
-
-  <!-- CONTACT LAYOUT -->
   <section class="section">
     <div class="container">
       <div class="contact-layout">
-
-        <!-- FORM -->
         <div class="contact-form-wrap">
           <h2 style="font-family:var(--font-display); font-size:1.8rem; margin-bottom:24px">Send a <span class="gradient-text">Message</span></h2>
           <form class="contact-form" id="contactForm" novalidate>
             <div class="form-row">
-              <div class="form-group">
-                <label for="contactName">Your Name</label>
-                <input type="text" id="contactName" name="name" placeholder="Ada Lovelace" required />
-              </div>
-              <div class="form-group">
-                <label for="contactEmail">Email Address</label>
-                <input type="email" id="contactEmail" name="email" placeholder="ada@example.com" required />
-              </div>
+              <div class="form-group"><label for="contactName">Your Name</label><input type="text" id="contactName" name="name" placeholder="Ada Lovelace" required /></div>
+              <div class="form-group"><label for="contactEmail">Email Address</label><input type="email" id="contactEmail" name="email" placeholder="ada@example.com" required /></div>
             </div>
-            <div class="form-group">
-              <label for="contactSubject">Subject</label>
-              <select id="contactSubject" name="subject">
-                <option value="">Select a topic…</option>
-                <option value="general">General hello</option>
-                <option value="app-idea">App idea or feedback</option>
-                <option value="story-idea">Story idea</option>
-                <option value="website">I want a website</option>
-                <option value="merch">Merch question</option>
-                <option value="press">Press &amp; media</option>
-                <option value="partnership">Partnership or collaboration</option>
-                <option value="other">Something else</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="contactMessage">Message</label>
-              <textarea id="contactMessage" name="message" rows="6" placeholder="Tell us what's on your mind…" required></textarea>
-            </div>
-            <button type="submit" class="btn btn--primary" style="width:100%; justify-content:center">
-              Send Message 🐦
-            </button>
-            <div class="contact-form__success" id="contactSuccess" hidden>
-              <strong>Message sent!</strong> We'll get back to you within 1–2 business days. Thanks for reaching out! 🎉
-            </div>
+            <div class="form-group"><label for="contactSubject">Subject</label><select id="contactSubject" name="subject"><option value="">Select a topic…</option><option value="general">General hello</option><option value="app-idea">App idea or feedback</option><option value="story-idea">Story idea</option><option value="website">I want a website</option><option value="merch">Merch question</option><option value="press">Press &amp; media</option><option value="partnership">Partnership or collaboration</option><option value="other">Something else</option></select></div>
+            <div class="form-group"><label for="contactMessage">Message</label><textarea id="contactMessage" name="message" rows="6" placeholder="Tell us what's on your mind…" required></textarea></div>
+            <button type="submit" class="btn btn--primary" style="width:100%; justify-content:center">Send Message 🐦</button>
+            <div class="contact-form__success" id="contactSuccess" hidden><strong>Message sent!</strong> We'll get back to you within 1–2 business days. Thanks for reaching out! 🎉</div>
           </form>
         </div>
-
-        <!-- SIDEBAR -->
         <aside class="contact-sidebar">
           <div class="contact-info-card">
             <div style="font-size:2.5rem; margin-bottom:12px">📬</div>
             <h3>Other Ways to Reach Us</h3>
             <ul class="contact-list">
-              <li>
-                <span class="contact-list__icon">✉️</span>
-                <div>
-                  <strong>Email</strong>
-                  <p>hello@tinybirdstudio.com</p>
-                </div>
-              </li>
-              <li>
-                <span class="contact-list__icon">💬</span>
-                <div>
-                  <strong>Community</strong>
-                  <p>Discord (coming soon)</p>
-                </div>
-              </li>
-              <li>
-                <span class="contact-list__icon">🐦</span>
-                <div>
-                  <strong>Social</strong>
-                  <p>@TinyBirdDreams (coming soon)</p>
-                </div>
-              </li>
+              <li><span class="contact-list__icon">✉️</span><div><strong>Email</strong><p>hello@tinybirdstudio.com</p></div></li>
+              <li><span class="contact-list__icon">💬</span><div><strong>Community</strong><p>Discord (coming soon)</p></div></li>
+              <li><span class="contact-list__icon">🐦</span><div><strong>Social</strong><p>@TinyBirdDreams (coming soon)</p></div></li>
             </ul>
           </div>
-
           <div class="contact-info-card" style="margin-top:24px">
             <div style="font-size:2.5rem; margin-bottom:12px">⏱️</div>
             <h3>Response Times</h3>
             <ul class="contact-list">
-              <li>
-                <span class="contact-list__icon">💚</span>
-                <div>
-                  <strong>General questions</strong>
-                  <p>1–2 business days</p>
-                </div>
-              </li>
-              <li>
-                <span class="contact-list__icon">💛</span>
-                <div>
-                  <strong>Press &amp; partnerships</strong>
-                  <p>3–5 business days</p>
-                </div>
-              </li>
-              <li>
-                <span class="contact-list__icon">🤖</span>
-                <div>
-                  <strong>Note</strong>
-                  <p>We use AI to help draft replies — but a human always sends them.</p>
-                </div>
-              </li>
+              <li><span class="contact-list__icon">💚</span><div><strong>General questions</strong><p>1–2 business days</p></div></li>
+              <li><span class="contact-list__icon">💛</span><div><strong>Press &amp; partnerships</strong><p>3–5 business days</p></div></li>
+              <li><span class="contact-list__icon">🤖</span><div><strong>Note</strong><p>We use AI to help draft replies — but a human always sends them.</p></div></li>
             </ul>
           </div>
         </aside>
-
       </div>
     </div>
   </section>
-
-  <!-- FAQ -->
   <section class="section" style="background:var(--bg-alt)">
     <div class="container">
-      <div class="section__header">
-        <h2 class="section__title">Common <span class="gradient-text">Questions</span></h2>
-      </div>
+      <div class="section__header"><h2 class="section__title">Common <span class="gradient-text">Questions</span></h2></div>
       <div class="faq-grid">
-        <details class="faq-item">
-          <summary>Can I submit an app or story idea?</summary>
-          <p>Absolutely — we love community ideas! Use the contact form above and select "App idea" or "Story idea." We read every one.</p>
-        </details>
-        <details class="faq-item">
-          <summary>Do you build custom websites for clients?</summary>
-          <p>Yes! Send us a message with your project details. We use AI-assisted development to keep costs lower and turnaround faster than traditional agencies.</p>
-        </details>
-        <details class="faq-item">
-          <summary>Are you hiring?</summary>
-          <p>We're a tiny flock right now, but growing. Watch this space — or email us with your background and what excites you about the mission.</p>
-        </details>
-        <details class="faq-item">
-          <summary>Can I use your storybooks in a classroom?</summary>
-          <p>We're designing our storybooks with educators in mind. Reach out — we're happy to discuss educational licensing.</p>
-        </details>
-        <details class="faq-item">
-          <summary>How is this different from other AI companies?</summary>
-          <p>We tell you exactly how every product was made, which AI tools were used, and what a human did before it reached you. No smoke, no mirrors.</p>
-        </details>
-        <details class="faq-item">
-          <summary>Is the site itself built with AI?</summary>
-          <p>Yes! This entire site was built with AI coding assistance (Claude by Anthropic) and reviewed by a human before publishing. We walk the talk.</p>
-        </details>
+        <details class="faq-item"><summary>Can I submit an app or story idea?</summary><p>Absolutely — we love community ideas! Use the contact form above and select "App idea" or "Story idea." We read every one.</p></details>
+        <details class="faq-item"><summary>Do you build custom websites for clients?</summary><p>Yes! Send us a message with your project details. We use AI-assisted development to keep costs lower and turnaround faster than traditional agencies.</p></details>
+        <details class="faq-item"><summary>Are you hiring?</summary><p>We're a tiny flock right now, but growing. Watch this space — or email us with your background and what excites you about the mission.</p></details>
+        <details class="faq-item"><summary>Can I use your storybooks in a classroom?</summary><p>We're designing our storybooks with educators in mind. Reach out — we're happy to discuss educational licensing.</p></details>
+        <details class="faq-item"><summary>How is this different from other AI companies?</summary><p>We tell you exactly how every product was made, which AI tools were used, and what a human did before it reached you. No smoke, no mirrors.</p></details>
+        <details class="faq-item"><summary>Is the site itself built with AI?</summary><p>Yes! This entire site was built with AI coding assistance (Claude by Anthropic) and reviewed by a human before publishing. We walk the talk.</p></details>
       </div>
     </div>
   </section>
-
   <footer class="footer">
     <div class="container">
       <div class="footer__inner">
-        <div class="footer__brand">
-          <span class="logo-bird" style="font-size:2rem">🐦</span>
-          <span class="logo-text" style="font-size:1.1rem">Tiny Bird<span class="logo-accent">, Big Dreams</span></span>
-          <p class="footer__tagline">AI-powered creativity, human-guided heart.</p>
-        </div>
+        <div class="footer__brand"><span class="logo-bird" style="font-size:2rem">🐦</span><span class="logo-text" style="font-size:1.1rem">Tiny Bird<span class="logo-accent">, Big Dreams</span></span><p class="footer__tagline">AI-powered creativity, human-guided heart.</p></div>
         <nav class="footer__links" aria-label="Footer navigation">
-          <div class="footer__col">
-            <h4>Products</h4>
-            <ul>
-              <li><a href="apps.html">Mobile Apps</a></li>
-              <li><a href="stories.html">Storybooks</a></li>
-              <li><a href="#">Websites</a></li>
-              <li><a href="merch.html">Merch (coming soon)</a></li>
-            </ul>
-          </div>
-          <div class="footer__col">
-            <h4>Company</h4>
-            <ul>
-              <li><a href="about.html">About &amp; AI Pledge</a></li>
-              <li><a href="contact.html">Contact</a></li>
-            </ul>
-          </div>
+          <div class="footer__col"><h4>Products</h4><ul><li><a href="apps.html">Mobile Apps</a></li><li><a href="stories.html">Storybooks</a></li><li><a href="#">Websites</a></li><li><a href="merch.html">Merch (coming soon)</a></li></ul></div>
+          <div class="footer__col"><h4>Company</h4><ul><li><a href="about.html">About &amp; AI Pledge</a></li><li><a href="contact.html">Contact</a></li></ul></div>
         </nav>
       </div>
-      <div class="footer__bottom">
-        <p>&copy; 2025 Tiny Bird, Big Dreams. Built with AI. Guided by humans. Loved by everyone.</p>
-      </div>
+      <div class="footer__bottom"><p>&copy; 2025 Tiny Bird, Big Dreams. Built with AI. Guided by humans. Loved by everyone.</p></div>
     </div>
   </footer>
-
   <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode"><span class="theme-toggle__icon--light" aria-hidden="true">🌙</span><span class="theme-toggle__icon--dark" aria-hidden="true">☀️</span></button>
   <script src="../js/main.js"></script>
   <script>
@@ -240,5 +118,6 @@
       });
     }
   </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b0b9b5a0ff9345038eb0ab5e85b9ac3d"}'></script>
 </body>
 </html>
