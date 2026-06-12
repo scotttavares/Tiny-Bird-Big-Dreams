@@ -249,12 +249,23 @@ async function stripeRevenue(env) {
 
 /* -------------------- Cloudflare Web Analytics -------------------- */
 
+// Extract bare 32-char hex token from a raw value that may be the full <script> snippet
+function beaconToken(raw) {
+  if (!raw) return null;
+  const m = raw.match(/["']token["']\s*:\s*["']([a-f0-9]{32})["']/i);
+  return m ? m[1] : raw.trim();
+}
+
+function cfAuthHeader(env) {
+  return { Authorization: `Bearer ${(env.CF_ANALYTICS_TOKEN || "").trim()}` };
+}
+
 let _cfAccountId = null;
 
 async function cfGetAccountId(env) {
   if (_cfAccountId) return _cfAccountId;
   const r = await fetch("https://api.cloudflare.com/client/v4/accounts?per_page=1", {
-    headers: { Authorization: `Bearer ${env.CF_ANALYTICS_TOKEN}` },
+    headers: cfAuthHeader(env),
   });
   if (!r.ok) throw new Error("cf accounts " + r.status);
   const j = await r.json();
@@ -263,7 +274,8 @@ async function cfGetAccountId(env) {
   return _cfAccountId;
 }
 
-async function cfTraffic(siteTag, env) {
+async function cfTraffic(rawTag, env) {
+  const siteTag = beaconToken(rawTag);
   if (!env.CF_ANALYTICS_TOKEN || !siteTag) throw new Error("no cf config");
   const accountId = await cfGetAccountId(env);
 
@@ -273,7 +285,7 @@ async function cfTraffic(siteTag, env) {
   const r = await fetch("https://api.cloudflare.com/client/v4/graphql", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${env.CF_ANALYTICS_TOKEN}`,
+      ...cfAuthHeader(env),
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -322,10 +334,12 @@ async function cfTraffic(siteTag, env) {
 }
 
 async function cfDebug(env) {
-  const out = { token: !!env.CF_ANALYTICS_TOKEN, ttbi_beacon: env.CF_TBBD_BEACON || null, ts_beacon: env.CF_TS_BEACON || null };
+  const ttbiTag = beaconToken(env.CF_TBBD_BEACON);
+  const tsTag = beaconToken(env.CF_TS_BEACON);
+  const out = { token: !!env.CF_ANALYTICS_TOKEN, ttbi_beacon: ttbiTag, ts_beacon: tsTag };
   try {
     const r = await fetch("https://api.cloudflare.com/client/v4/accounts?per_page=5", {
-      headers: { Authorization: `Bearer ${env.CF_ANALYTICS_TOKEN}` },
+      headers: cfAuthHeader(env),
     });
     const j = await r.json();
     out.accounts_status = r.status;
@@ -334,10 +348,10 @@ async function cfDebug(env) {
     if (accountId) {
       const endDate = new Date().toISOString().slice(0, 10);
       const startDate = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-      const siteTag = env.CF_TBBD_BEACON || "MISSING";
+      const siteTag = ttbiTag || "MISSING";
       const gr = await fetch("https://api.cloudflare.com/client/v4/graphql", {
         method: "POST",
-        headers: { Authorization: `Bearer ${env.CF_ANALYTICS_TOKEN}`, "Content-Type": "application/json" },
+        headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
         body: JSON.stringify({
           query: `{viewer{accounts(filter:{accountTag:"${accountId}"}){rumPageloadEventsAdaptiveGroups(filter:{AND:[{siteTag:"${siteTag}"},{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},limit:5,orderBy:[date_ASC]){count dimensions{date}sum{visits pageViews}}}}}`,
         }),
@@ -689,7 +703,7 @@ function dashboardHTML(m) {
           <div class="filters">
             <button class="wbtn active" data-window="30" onclick="setWindow(30)">30 days</button>
             <button class="wbtn" data-window="7" onclick="setWindow(7)">7 days</button>
-            <button class="wbtn" data-window="1" onclick="setWindow(1)">24 hours</button>
+            <button class="wbtn" data-window="1" onclick="setWindow(1)" >24 hours</button>
           </div>
         </div>
       </div>
