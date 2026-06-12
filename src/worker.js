@@ -9,6 +9,7 @@
 //   TS_SERVICE_KEY       – Supabase service_role key (tinysuperpowers)
 //   STRIPE_KEY           – Stripe restricted, read-only secret key
 //   CF_ANALYTICS_TOKEN   – Cloudflare API token (Account Analytics: Read)
+//   CF_ACCOUNT_ID        – Cloudflare account ID (visible in dash.cloudflare.com URL)
 //   CF_TTBI_BEACON       – Cloudflare Web Analytics site tag for TTBI
 //   CF_TS_BEACON         – Cloudflare Web Analytics site tag for Tiny Superpowers
 
@@ -264,18 +265,11 @@ let _cfAccountId = null;
 
 async function cfGetAccountId(env) {
   if (_cfAccountId) return _cfAccountId;
-  // REST accounts endpoint requires Account:Read — try GraphQL instead (works with Analytics tokens)
-  const gr = await fetch("https://api.cloudflare.com/client/v4/graphql", {
-    method: "POST",
-    headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
-    body: JSON.stringify({ query: "{ viewer { accounts { accountTag } } }" }),
-  });
-  if (gr.ok) {
-    const gj = await gr.json();
-    const id = gj.data?.viewer?.accounts?.[0]?.accountTag;
-    if (id) { _cfAccountId = id; return _cfAccountId; }
+  if (env.CF_ACCOUNT_ID) {
+    _cfAccountId = env.CF_ACCOUNT_ID.trim();
+    return _cfAccountId;
   }
-  throw new Error("no CF account via graphql");
+  throw new Error("CF_ACCOUNT_ID secret not set");
 }
 
 async function cfTraffic(rawTag, env) {
@@ -357,18 +351,8 @@ async function cfDebug(env) {
     out.accounts_errors = j.errors || null;
     out.accounts_messages = j.messages || null;
     out.accounts = (j.result || []).map((a) => ({ id: a.id, name: a.name }));
-    // Try GraphQL account lookup if REST returned empty
-    let accountId = j.result?.[0]?.id;
-    if (!accountId) {
-      const agr = await fetch("https://api.cloudflare.com/client/v4/graphql", {
-        method: "POST",
-        headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
-        body: JSON.stringify({ query: "{ viewer { accounts { accountTag } } }" }),
-      });
-      const agj = await agr.json();
-      out.gql_accounts = agj?.data?.viewer?.accounts || agj?.errors || null;
-      accountId = agj?.data?.viewer?.accounts?.[0]?.accountTag;
-    }
+    out.cf_account_id_set = !!env.CF_ACCOUNT_ID;
+    const accountId = env.CF_ACCOUNT_ID?.trim() || j.result?.[0]?.id;
     if (accountId) {
       const endDate = new Date().toISOString().slice(0, 10);
       const startDate = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
