@@ -4,10 +4,13 @@
 // falling back to a snapshot when a source/secret isn't available.
 //
 // Secrets (set in Cloudflare → Worker → Settings → Variables and secrets):
-//   STUDIO_PASSWORD   – password for the login gate
-//   TTBI_SERVICE_KEY  – Supabase service_role key (Tiny Thoughts, Big Ideas)
-//   TS_SERVICE_KEY    – Supabase service_role key (tinysuperpowers)
-//   STRIPE_KEY        – Stripe restricted, read-only secret key
+//   STUDIO_PASSWORD      – password for the login gate
+//   TTBI_SERVICE_KEY     – Supabase service_role key (Tiny Thoughts, Big Ideas)
+//   TS_SERVICE_KEY       – Supabase service_role key (tinysuperpowers)
+//   STRIPE_KEY           – Stripe restricted, read-only secret key
+//   CF_ANALYTICS_TOKEN   – Cloudflare API token (Account Analytics: Read)
+//   CF_TTBI_BEACON       – Cloudflare Web Analytics site tag for TTBI
+//   CF_TS_BEACON         – Cloudflare Web Analytics site tag for Tiny Superpowers
 
 const SESSION_COOKIE = "tbbd_studio";
 const SESSION_TTL = 60 * 60 * 24 * 30; // 30 days, in seconds
@@ -162,8 +165,6 @@ const SNAPSHOT = {
     waitlist: 3,
     tiers: [
       { tier: "byo", users: 1, waitlist: 1 },
-      { tier: "power", users: 0, waitlist: 1 },
-      { tier: "pro", users: 0, waitlist: 1 },
     ],
     weekly_signups: [],
   },
@@ -240,16 +241,94 @@ async function stripeRevenue(env) {
   return { cents, count, currency, weekly, more: !!j.has_more };
 }
 
+/* -------------------- Cloudflare Web Analytics -------------------- */
+
+let _cfAccountId = null;
+
+async function cfGetAccountId(env) {
+  if (_cfAccountId) return _cfAccountId;
+  const r = await fetch("https://api.cloudflare.com/client/v4/accounts?per_page=1", {
+    headers: { Authorization: `Bearer ${env.CF_ANALYTICS_TOKEN}` },
+  });
+  if (!r.ok) throw new Error("cf accounts " + r.status);
+  const j = await r.json();
+  _cfAccountId = j.result?.[0]?.id;
+  if (!_cfAccountId) throw new Error("no CF account");
+  return _cfAccountId;
+}
+
+async function cfTraffic(siteTag, env) {
+  if (!env.CF_ANALYTICS_TOKEN || !siteTag) throw new Error("no cf config");
+  const accountId = await cfGetAccountId(env);
+
+  const endDate = new Date().toISOString().slice(0, 10);
+  const startDate = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+
+  const r = await fetch("https://api.cloudflare.com/client/v4/graphql", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.CF_ANALYTICS_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      query:
+        `{viewer{accounts(filter:{accountTag:"${accountId}"}){` +
+        `rumPageloadEventsAdaptiveGroups(` +
+        `filter:{AND:[{siteTag:"${siteTag}"},{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},` +
+        `limit:10000,orderBy:[date_ASC]` +
+        `){count dimensions{date}sum{visits pageViews}}}}}`,
+    }),
+  });
+
+  if (!r.ok) throw new Error("cf graphql " + r.status);
+  const j = await r.json();
+  if (j.errors?.length) throw new Error("cf gql: " + j.errors[0].message);
+
+  const groups = j.data?.viewer?.accounts?.[0]?.rumPageloadEventsAdaptiveGroups || [];
+
+  const d7start = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+  const d1start = new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+
+  const totals = {
+    d30: { visitors: 0, pageviews: 0 },
+    d7: { visitors: 0, pageviews: 0 },
+    d1: { visitors: 0, pageviews: 0 },
+  };
+  const weekly = {};
+
+  for (const g of groups) {
+    const date = g.dimensions?.date || "";
+    const v = g.sum?.visits || 0;
+    const pv = g.sum?.pageViews || g.sum?.pageviews || 0;
+
+    totals.d30.visitors += v;
+    totals.d30.pageviews += pv;
+    if (date >= d7start) { totals.d7.visitors += v; totals.d7.pageviews += pv; }
+    if (date >= d1start) { totals.d1.visitors += v; totals.d1.pageviews += pv; }
+
+    const w = getMondayStr(new Date(date + "T00:00:00Z").getTime());
+    if (!weekly[w]) weekly[w] = { visitors: 0, pageviews: 0 };
+    weekly[w].visitors += v;
+    weekly[w].pageviews += pv;
+  }
+
+  return { totals, weekly };
+}
+
 async function collectMetrics(env) {
-  const [ttbi, ts, stripe] = await Promise.allSettled([
+  const [ttbi, ts, stripe, ttbiTraf, tsTraf] = await Promise.allSettled([
     supaMetrics(SUPA.ttbi, env),
     supaMetrics(SUPA.ts, env),
     stripeRevenue(env),
+    cfTraffic(env.CF_TBBD_BEACON, env),
+    cfTraffic(env.CF_TS_BEACON, env),
   ]);
 
   const ttbiData = ttbi.status === "fulfilled" ? ttbi.value : SNAPSHOT.ttbi;
   const tsData = ts.status === "fulfilled" ? ts.value : SNAPSHOT.ts;
   const stripeData = stripe.status === "fulfilled" ? stripe.value : null;
+  const ttbiTrafData = ttbiTraf.status === "fulfilled" ? ttbiTraf.value : null;
+  const tsTrafData = tsTraf.status === "fulfilled" ? tsTraf.value : null;
 
   return {
     asOf: new Date().toLocaleString("en-US", {
@@ -264,10 +343,12 @@ async function collectMetrics(env) {
       ttbi: ttbi.status === "fulfilled",
       ts: ts.status === "fulfilled",
       stripe: stripe.status === "fulfilled",
+      traffic: ttbiTraf.status === "fulfilled" || tsTraf.status === "fulfilled",
     },
     ttbi: ttbiData,
     ts: tsData,
     stripe: stripeData,
+    traffic: { ttbi: ttbiTrafData, ts: tsTrafData },
   };
 }
 
@@ -290,14 +371,14 @@ function csvExport(m) {
   rows.push(["Tiny Bird Studio Export", m.asOf]);
   rows.push([]);
   rows.push(["OVERVIEW"]);
-  rows.push(["Stripe gross revenue", m.stripe ? (m.stripe.cents / 100).toFixed(2) : ""]);
+  rows.push(["Revenue", ((m.stripe ? m.stripe.cents : 0) + (m.ts.purchases_revenue_cents || 0)) / 100]);
   rows.push(["Total sign-ups", (m.ttbi.signups || 0) + (m.ts.signups || 0)]);
   rows.push(["Total downloads", m.ts.downloads_total || 0]);
   rows.push([]);
   rows.push(["TINY THOUGHTS BIG IDEAS"]);
   rows.push(["Sign-ups", m.ttbi.signups]);
   rows.push(["Waitlist", m.ttbi.waitlist]);
-  rows.push(["Stripe revenue", m.stripe ? (m.stripe.cents / 100).toFixed(2) : ""]);
+  rows.push(["Revenue", m.stripe ? (m.stripe.cents / 100).toFixed(2) : ""]);
   rows.push(["Tier", "Active Users", "Waitlist"]);
   for (const t of m.ttbi.tiers || []) {
     rows.push([t.tier.toUpperCase(), t.users ?? 0, t.waitlist ?? 0]);
@@ -307,7 +388,7 @@ function csvExport(m) {
   rows.push(["Sign-ups", m.ts.signups]);
   rows.push(["Downloads", m.ts.downloads_total]);
   rows.push([
-    "Revenue (recorded)",
+    "Revenue",
     m.ts.purchases_revenue_cents ? (m.ts.purchases_revenue_cents / 100).toFixed(2) : 0,
   ]);
   rows.push([]);
@@ -323,6 +404,18 @@ function csvExport(m) {
         ? "0.00"
         : "",
     ]);
+  }
+  if (m.traffic?.ttbi?.totals || m.traffic?.ts?.totals) {
+    rows.push([]);
+    rows.push(["TRAFFIC (last 30 days)"]);
+    if (m.traffic?.ttbi?.totals) {
+      rows.push(["TTBI Visits", m.traffic.ttbi.totals.d30.visitors]);
+      rows.push(["TTBI Pageviews", m.traffic.ttbi.totals.d30.pageviews]);
+    }
+    if (m.traffic?.ts?.totals) {
+      rows.push(["Tiny Superpowers Visits", m.traffic.ts.totals.d30.visitors]);
+      rows.push(["Tiny Superpowers Pageviews", m.traffic.ts.totals.d30.pageviews]);
+    }
   }
   const today = new Date().toISOString().slice(0, 10);
   const csv = rows.map(csvRow).join("\n");
@@ -374,6 +467,9 @@ function buildChartData(m) {
   }
   const stripeWeekly = m.stripe ? (m.stripe.weekly || {}) : {};
 
+  const ttbiTrafW = m.traffic?.ttbi?.weekly || {};
+  const tsTrafW = m.traffic?.ts?.weekly || {};
+
   return {
     labels,
     signups: {
@@ -383,6 +479,10 @@ function buildChartData(m) {
     revenue: {
       stripe: weeks.map((w) => +((stripeWeekly[w] || 0) / 100).toFixed(2)),
       ts: weeks.map((w) => +((tsRevMap[w] || 0) / 100).toFixed(2)),
+    },
+    traffic: {
+      ttbi: weeks.map((w) => (ttbiTrafW[w] ? ttbiTrafW[w].pageviews : 0)),
+      ts: weeks.map((w) => (tsTrafW[w] ? tsTrafW[w].pageviews : 0)),
     },
   };
 }
@@ -446,16 +546,18 @@ function dashboardHTML(m) {
   const ttbi = m.ttbi;
   const ts = m.ts;
   const chartData = buildChartData(m);
+  const trafficStats = {
+    ttbi: m.traffic?.ttbi?.totals || null,
+    ts: m.traffic?.ts?.totals || null,
+  };
 
-  const tierRows = (ttbi.tiers || [])
-    .map(
-      (t) => `<tr>
-        <td>${String(t.tier).toUpperCase()}</td>
-        <td style="text-align:right;color:var(--gold)">${t.users ?? 0}</td>
-        <td style="text-align:right;color:var(--muted)">${t.waitlist ?? 0}</td>
-      </tr>`
-    )
-    .join("") || `<tr><td colspan="3" style="color:var(--muted)">No tiers yet</td></tr>`;
+  const byo = (ttbi.tiers || []).find((t) => t.tier === "byo") || { users: 0, waitlist: 0 };
+  const tierRows = `<tr>
+        <td>BYO</td>
+        <td style="text-align:right;color:var(--gold)">${byo.users ?? 0}</td>
+        <td style="text-align:right;color:var(--muted)">${byo.waitlist ?? 0}</td>
+        <td style="text-align:right;color:var(--gold)">${ttbiRevStr}</td>
+      </tr>`;
 
   const spRows = (ts.products || [])
     .map(
@@ -468,7 +570,11 @@ function dashboardHTML(m) {
     )
     .join("");
 
-  const stripeStr = m.stripe ? money(m.stripe.cents) + (m.stripe.more ? "+" : "") : "—";
+  const ttbiRevCents = m.stripe ? m.stripe.cents : 0;
+  const tsRevCents = ts.purchases_revenue_cents || 0;
+  const totalRevCents = ttbiRevCents + tsRevCents;
+  const totalRevStr = (m.stripe || tsRevCents) ? money(totalRevCents) + (m.stripe?.more ? "+" : "") : "—";
+  const ttbiRevStr = m.stripe ? money(m.stripe.cents) + (m.stripe.more ? "+" : "") : "—";
 
   return `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -503,10 +609,14 @@ function dashboardHTML(m) {
   .dot.on{background:#6FBF8B;box-shadow:0 0 0 3px rgba(111,191,139,.18)}
   .dot.off{background:rgba(251,247,242,.25)}
   .foot{max-width:1080px;margin:0 auto;padding:0 24px 50px;font-size:12px;color:var(--muted);line-height:1.7}
-  .filters{display:flex;gap:8px;margin-left:auto}
+  .filter-stack{margin-left:auto;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+  .filters{display:flex;gap:8px}
   .fbtn{background:var(--panel2);border:1px solid rgba(251,247,242,.1);color:var(--muted);border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;transition:all .2s}
   .fbtn.active{background:rgba(232,160,34,.18);border-color:var(--gold);color:var(--gold)}
   .fbtn:hover:not(.active){border-color:rgba(251,247,242,.3);color:var(--cream)}
+  .wbtn{background:var(--panel2);border:1px solid rgba(251,247,242,.08);color:var(--muted);border-radius:7px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all .2s}
+  .wbtn.active{background:rgba(232,160,34,.1);border-color:rgba(232,160,34,.4);color:rgba(232,160,34,.9)}
+  .wbtn:hover:not(.active){border-color:rgba(251,247,242,.25);color:var(--cream)}
   .traffic-note{color:var(--muted);font-size:13px;padding:30px 0;text-align:center}
 </style></head>
 <body>
@@ -521,7 +631,7 @@ function dashboardHTML(m) {
 
     <section class="panel">
       <div class="banner">
-        ${metric(stripeStr, "Stripe gross revenue")}
+        ${metric(totalRevStr, "Revenue")}
         ${metric(num(ttbi.signups == null ? null : (ttbi.signups + (ts.signups || 0))), "Total sign-ups")}
         ${metric(num(ts.downloads_total), "Total downloads")}
       </div>
@@ -531,14 +641,21 @@ function dashboardHTML(m) {
       <div class="phead">
         <div class="pic">📈</div>
         <h2>Trends</h2>
-        <div class="filters">
-          <button class="fbtn active" data-filter="signups" onclick="setFilter('signups')">Sign-ups</button>
-          <button class="fbtn" data-filter="revenue" onclick="setFilter('revenue')">Revenue</button>
-          <button class="fbtn" data-filter="traffic" onclick="setFilter('traffic')">Traffic</button>
+        <div class="filter-stack">
+          <div class="filters">
+            <button class="fbtn active" data-filter="signups" onclick="setFilter('signups')">Sign-ups</button>
+            <button class="fbtn" data-filter="revenue" onclick="setFilter('revenue')">Revenue</button>
+            <button class="fbtn" data-filter="traffic" onclick="setFilter('traffic')">Traffic</button>
+          </div>
+          <div class="filters">
+            <button class="wbtn active" data-window="30" onclick="setWindow(30)">30 days</button>
+            <button class="wbtn" data-window="7" onclick="setWindow(7)">7 days</button>
+            <button class="wbtn" data-window="1" onclick="setWindow(1)">24 hours</button>
+          </div>
         </div>
       </div>
       <canvas id="trend-chart" height="80"></canvas>
-      <div id="traffic-note" class="traffic-note" style="display:none">Traffic data not connected yet.</div>
+      <div id="traffic-note" class="traffic-note" style="display:none">Traffic not connected yet — add <code>CF_ANALYTICS_TOKEN</code>, <code>CF_TTBI_BEACON</code>, and <code>CF_TS_BEACON</code> secrets.</div>
     </section>
 
     <section class="panel">
@@ -550,11 +667,13 @@ function dashboardHTML(m) {
       <div class="statrow">
         ${metric(num(ttbi.signups), "Sign-ups")}
         ${metric(num(ttbi.waitlist), "Waitlist")}
-        ${metric(m.stripe ? money(m.stripe.cents) + (m.stripe.more ? "+" : "") : "—", "Stripe revenue")}
+        ${metric(ttbiRevStr, "Revenue")}
+        <div class="stat"><div class="n" id="ttbi-visits">—</div><div class="k">Visits (<span class="wl">30d</span>)</div></div>
+        <div class="stat"><div class="n" id="ttbi-pv">—</div><div class="k">Pageviews (<span class="wl">30d</span>)</div></div>
       </div>
       <div class="sub">Sign-ups by tier</div>
       <table>
-        <thead><tr><th>Tier</th><th class="r">Active users</th><th class="r">Waitlist</th></tr></thead>
+        <thead><tr><th>Tier</th><th class="r">Active users</th><th class="r">Waitlist</th><th class="r">Revenue</th></tr></thead>
         <tbody>${tierRows}</tbody>
       </table>
     </section>
@@ -568,8 +687,9 @@ function dashboardHTML(m) {
       <div class="statrow">
         ${metric(num(ts.signups), "Sign-ups")}
         ${metric(num(ts.downloads_total), "Downloads")}
-        ${metric(money(ts.purchases_revenue_cents), "Revenue (recorded)")}
-        ${metric("—", "Traffic")}
+        ${metric(money(ts.purchases_revenue_cents), "Revenue")}
+        <div class="stat"><div class="n" id="ts-visits">—</div><div class="k">Visits (<span class="wl">30d</span>)</div></div>
+        <div class="stat"><div class="n" id="ts-pv">—</div><div class="k">Pageviews (<span class="wl">30d</span>)</div></div>
       </div>
       <div class="sub">Downloads by superpower</div>
       <table>
@@ -585,55 +705,102 @@ function dashboardHTML(m) {
     </a>
   </div>
   <div class="foot">
-    ${dot(m.live.stripe)} Stripe &nbsp; ${dot(m.live.ttbi)} Tiny Thoughts DB &nbsp; ${dot(m.live.ts)} Tiny Superpowers DB
-    &nbsp;— a filled dot means live; a hollow dot means showing the last snapshot (add the missing secret to go live).
-    Traffic is not wired yet.
+    ${dot(m.live.stripe)} Stripe &nbsp; ${dot(m.live.ttbi)} Tiny Thoughts DB &nbsp; ${dot(m.live.ts)} Tiny Superpowers DB &nbsp; ${dot(m.live.traffic)} Traffic
+    &nbsp;— filled dot = live data; hollow dot = snapshot or not connected yet.
   </div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"><\/script>
 <script>
 var CD = ${JSON.stringify(chartData)};
+var TS = ${JSON.stringify(trafficStats)};
+var currentFilter = 'signups';
+var currentWindow = 30;
 var chart = null;
 
+function fmt(n) {
+  if (n == null || n === '') return '—';
+  n = Number(n);
+  if (n >= 10000) return (n / 1000).toFixed(1).replace(/\\.0$/, '') + 'k';
+  return n.toLocaleString('en-US');
+}
+
+function weeksFor(w) {
+  return w === 1 ? 1 : w === 7 ? 2 : 12;
+}
+
 function getDatasets(filter) {
-  if (filter === 'signups') {
-    return [
-      {label:'TTBI',data:CD.signups.ttbi,borderColor:'#6FBF8B',backgroundColor:'rgba(111,191,139,0.08)',tension:0.4,fill:true,pointRadius:3},
-      {label:'Tiny Superpowers',data:CD.signups.ts,borderColor:'#E8A022',backgroundColor:'rgba(232,160,34,0.08)',tension:0.4,fill:true,pointRadius:3}
-    ];
-  }
-  if (filter === 'revenue') {
-    return [
-      {label:'Stripe (all apps)',data:CD.revenue.stripe,borderColor:'#6FBF8B',backgroundColor:'rgba(111,191,139,0.08)',tension:0.4,fill:true,pointRadius:3},
-      {label:'Tiny Superpowers',data:CD.revenue.ts,borderColor:'#E8A022',backgroundColor:'rgba(232,160,34,0.08)',tension:0.4,fill:true,pointRadius:3}
-    ];
-  }
+  var n = weeksFor(currentWindow);
+  var g = {tension:0.4, fill:true, pointRadius:3};
+  var green = Object.assign({}, g, {borderColor:'#6FBF8B', backgroundColor:'rgba(111,191,139,0.08)'});
+  var gold  = Object.assign({}, g, {borderColor:'#E8A022',  backgroundColor:'rgba(232,160,34,0.08)'});
+  if (filter === 'signups') return [
+    Object.assign({label:'TTBI', data:CD.signups.ttbi.slice(-n)}, green),
+    Object.assign({label:'Tiny Superpowers', data:CD.signups.ts.slice(-n)}, gold)
+  ];
+  if (filter === 'revenue') return [
+    Object.assign({label:'Stripe (all apps)', data:CD.revenue.stripe.slice(-n)}, green),
+    Object.assign({label:'Tiny Superpowers', data:CD.revenue.ts.slice(-n)}, gold)
+  ];
+  if (filter === 'traffic') return [
+    Object.assign({label:'TTBI pageviews', data:CD.traffic.ttbi.slice(-n)}, green),
+    Object.assign({label:'Tiny Superpowers pageviews', data:CD.traffic.ts.slice(-n)}, gold)
+  ];
   return [];
 }
 
-function setFilter(filter) {
-  document.querySelectorAll('.fbtn').forEach(function(b) {
-    b.classList.toggle('active', b.dataset.filter === filter);
-  });
+function hasTraffic() {
+  return TS && (TS.ttbi || TS.ts);
+}
+
+function updateChart() {
+  var n = weeksFor(currentWindow);
   var canvas = document.getElementById('trend-chart');
   var note = document.getElementById('traffic-note');
-  if (filter === 'traffic') {
-    canvas.style.display = 'none';
-    note.style.display = '';
-    return;
-  }
-  canvas.style.display = '';
-  note.style.display = 'none';
-  if (chart) {
-    chart.data.datasets = getDatasets(filter);
+  var showNote = (currentFilter === 'traffic' && !hasTraffic());
+  canvas.style.display = showNote ? 'none' : '';
+  note.style.display = showNote ? '' : 'none';
+  if (!showNote && chart) {
+    chart.data.labels = CD.labels.slice(-n);
+    chart.data.datasets = getDatasets(currentFilter);
     chart.update();
   }
 }
 
+function updateTrafficStats() {
+  var key = currentWindow === 1 ? 'd1' : currentWindow === 7 ? 'd7' : 'd30';
+  var wlabel = currentWindow === 1 ? '24h' : currentWindow === 7 ? '7d' : '30d';
+  var ttbiT = TS.ttbi ? TS.ttbi[key] : null;
+  var tsT = TS.ts ? TS.ts[key] : null;
+  function upd(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; }
+  upd('ttbi-visits', ttbiT ? fmt(ttbiT.visitors) : '—');
+  upd('ttbi-pv',     ttbiT ? fmt(ttbiT.pageviews) : '—');
+  upd('ts-visits',   tsT ? fmt(tsT.visitors) : '—');
+  upd('ts-pv',       tsT ? fmt(tsT.pageviews) : '—');
+  document.querySelectorAll('.wl').forEach(function(el) { el.textContent = wlabel; });
+}
+
+function setFilter(filter) {
+  currentFilter = filter;
+  document.querySelectorAll('.fbtn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.filter === filter);
+  });
+  updateChart();
+}
+
+function setWindow(w) {
+  currentWindow = w;
+  document.querySelectorAll('.wbtn').forEach(function(b) {
+    b.classList.toggle('active', +b.dataset.window === w);
+  });
+  updateTrafficStats();
+  updateChart();
+}
+
 (function() {
+  updateTrafficStats();
   var ctx = document.getElementById('trend-chart').getContext('2d');
   chart = new Chart(ctx, {
     type: 'line',
-    data: {labels: CD.labels, datasets: getDatasets('signups')},
+    data: {labels: CD.labels.slice(-12), datasets: getDatasets('signups')},
     options: {
       responsive: true,
       plugins: {
