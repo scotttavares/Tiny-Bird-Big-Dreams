@@ -213,8 +213,8 @@ async function supaMetrics(cfg, env) {
 function getMondayStr(ms) {
   const d = new Date(ms);
   const day = d.getUTCDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setUTCDate(d.getUTCDate() + diff);
+  const day2 = day === 0 ? -6 : 1 - day;
+  d.setUTCDate(d.getUTCDate() + day2);
   return d.toISOString().slice(0, 10);
 }
 
@@ -325,14 +325,14 @@ async function cfTrafficZone(zoneId, env) {
         httpRequestsAdaptiveGroups(
         filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},
         limit:10000,orderBy:[date_ASC]
-        ){dimensions{date}sum{visits pageViews}}}}}`,
+        ){dimensions{date}sum{visits requests}}}}}`,
     }),
   });
   if (!r.ok) throw new Error("cf graphql zone " + r.status);
   const j = await r.json();
   if (j.errors?.length) throw new Error("cf gql zone: " + j.errors[0].message);
   const groups = j.data?.viewer?.zones?.[0]?.httpRequestsAdaptiveGroups || [];
-  return parseCfGroups(groups, (g) => ({ v: g.sum?.visits || 0, pv: g.sum?.pageViews || 0 }));
+  return parseCfGroups(groups, (g) => ({ v: g.sum?.visits || 0, pv: g.sum?.requests || 0 }));
 }
 
 // Beacon-based Web Analytics — only tracks visits with the JS snippet installed
@@ -397,7 +397,7 @@ async function cfDebug(env) {
         method: "POST",
         headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: `{viewer{zones(filter:{zoneTag:"${zoneId}"}){httpRequestsAdaptiveGroups(filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},limit:3,orderBy:[date_ASC]){dimensions{date}sum{visits pageViews}}}}}`,
+          query: `{viewer{zones(filter:{zoneTag:"${zoneId}"}){httpRequestsAdaptiveGroups(filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},limit:3,orderBy:[date_ASC]){dimensions{date}sum{visits requests}}}}}`,
         }),
       });
       const zj = await zr.json();
@@ -418,7 +418,7 @@ async function cfDebug(env) {
         method: "POST",
         headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: `{viewer{zones(filter:{zoneTag:"${zoneId}"}){httpRequestsAdaptiveGroups(filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},limit:3,orderBy:[date_ASC]){dimensions{date}sum{visits pageViews}}}}}`,
+          query: `{viewer{zones(filter:{zoneTag:"${zoneId}"}){httpRequestsAdaptiveGroups(filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},limit:3,orderBy:[date_ASC]){dimensions{date}sum{visits requests}}}}}`,
         }),
       });
       const zj = await zr.json();
@@ -558,11 +558,11 @@ function csvExport(m) {
     rows.push(["TRAFFIC (last 30 days)"]);
     if (m.traffic?.ttbi?.totals) {
       rows.push(["TTBI Visits", m.traffic.ttbi.totals.d30.visitors]);
-      rows.push(["TTBI Pageviews", m.traffic.ttbi.totals.d30.pageviews]);
+      rows.push(["TTBI Requests", m.traffic.ttbi.totals.d30.pageviews]);
     }
     if (m.traffic?.ts?.totals) {
       rows.push(["Tiny Superpowers Visits", m.traffic.ts.totals.d30.visitors]);
-      rows.push(["Tiny Superpowers Pageviews", m.traffic.ts.totals.d30.pageviews]);
+      rows.push(["Tiny Superpowers Requests", m.traffic.ts.totals.d30.pageviews]);
     }
   }
   const today = new Date().toISOString().slice(0, 10);
@@ -629,8 +629,8 @@ function buildChartData(m) {
       ts: weeks.map((w) => +((tsRevMap[w] || 0) / 100).toFixed(2)),
     },
     traffic: {
-      ttbi: weeks.map((w) => (ttbiTrafW[w] ? ttbiTrafW[w].pageviews : 0)),
-      ts: weeks.map((w) => (tsTrafW[w] ? tsTrafW[w].pageviews : 0)),
+      ttbi: weeks.map((w) => (ttbiTrafW[w] ? ttbiTrafW[w].visitors : 0)),
+      ts: weeks.map((w) => (tsTrafW[w] ? tsTrafW[w].visitors : 0)),
     },
   };
 }
@@ -824,7 +824,7 @@ function dashboardHTML(m) {
         ${metric(num(ttbi.waitlist), "Waitlist")}
         ${metric(ttbiRevStr, "Revenue")}
         <div class="stat"><div class="n" id="ttbi-visits">—</div><div class="k">Visits (<span class="wl">30d</span>)</div></div>
-        <div class="stat"><div class="n" id="ttbi-pv">—</div><div class="k">Pageviews (<span class="wl">30d</span>)</div></div>
+        <div class="stat"><div class="n" id="ttbi-pv">—</div><div class="k">Requests (<span class="wl">30d</span>)</div></div>
       </div>
       <div class="sub">Sign-ups by tier</div>
       <table>
@@ -844,7 +844,7 @@ function dashboardHTML(m) {
         ${metric(num(ts.downloads_total), "Downloads")}
         ${metric(money(ts.purchases_revenue_cents), "Revenue")}
         <div class="stat"><div class="n" id="ts-visits">—</div><div class="k">Visits (<span class="wl">30d</span>)</div></div>
-        <div class="stat"><div class="n" id="ts-pv">—</div><div class="k">Pageviews (<span class="wl">30d</span>)</div></div>
+        <div class="stat"><div class="n" id="ts-pv">—</div><div class="k">Requests (<span class="wl">30d</span>)</div></div>
       </div>
       <div class="sub">Downloads by superpower</div>
       <table>
@@ -896,8 +896,8 @@ function getDatasets(filter) {
     Object.assign({label:'Tiny Superpowers', data:CD.revenue.ts.slice(-n)}, gold)
   ];
   if (filter === 'traffic') return [
-    Object.assign({label:'TTBI pageviews', data:CD.traffic.ttbi.slice(-n)}, green),
-    Object.assign({label:'Tiny Superpowers pageviews', data:CD.traffic.ts.slice(-n)}, gold)
+    Object.assign({label:'TTBI visitors', data:CD.traffic.ttbi.slice(-n)}, green),
+    Object.assign({label:'Tiny Superpowers visitors', data:CD.traffic.ts.slice(-n)}, gold)
   ];
   return [];
 }
