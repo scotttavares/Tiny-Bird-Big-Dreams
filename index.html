@@ -479,28 +479,33 @@
       </form>
       <div id="formSuccess" style="display:none;text-align:center;padding:40px 20px;">
         <svg viewBox="0 0 120 80" fill="none" width="120" height="80" style="display:block;margin:0 auto 20px;">
-          <!-- wind gusts trailing right of bird -->
-          <line class="gust"    x1="88" y1="36" x2="102" y2="36" stroke="rgba(251,247,242,.4)" stroke-width="2"   stroke-linecap="round"/>
-          <line class="gust g2" x1="90" y1="44" x2="103" y2="44" stroke="rgba(251,247,242,.28)" stroke-width="1.5" stroke-linecap="round"/>
-          <line class="gust g3" x1="86" y1="51" x2="97"  y2="51" stroke="rgba(251,247,242,.18)" stroke-width="1"   stroke-linecap="round"/>
+          <!-- wind gusts trailing behind bird -->
+          <line class="gust"    x1="87" y1="37" x2="106" y2="37" stroke="rgba(251,247,242,.4)"  stroke-width="2"   stroke-linecap="round"/>
+          <line class="gust g2" x1="89" y1="45" x2="107" y2="45" stroke="rgba(251,247,242,.28)" stroke-width="1.5" stroke-linecap="round"/>
+          <line class="gust g3" x1="85" y1="52" x2="99"  y2="52" stroke="rgba(251,247,242,.18)" stroke-width="1"   stroke-linecap="round"/>
           <g class="pidge-fly">
-            <!-- far wing (behind body) — root at (40,42) -->
-            <path class="wing-far" d="M40 42 Q32 26 14 30 Q24 36 40 42Z" fill="#c07010"/>
-            <!-- body -->
-            <ellipse cx="50" cy="44" rx="20" ry="12" fill="#E8A022"/>
-            <ellipse cx="54" cy="47" rx="13" ry="8"  fill="#f0b030" fill-opacity=".4"/>
-            <!-- tail -->
-            <path d="M68 42 Q81 36 84 43 Q80 51 68 47Z" fill="#d08010"/>
-            <!-- head -->
-            <circle cx="30" cy="35" r="10" fill="#E8A022"/>
-            <!-- beak -->
-            <path d="M21 36 L14 35 L21 39Z" fill="#c07010"/>
+            <!-- far wing — root at (40,42), swept right+up -->
+            <path class="wing-far" d="M40 42 Q52 27 74 30 Q62 36 40 42Z" fill="#c07010"/>
+            <!-- tail fan (drawn behind body) -->
+            <path d="M67 39 Q82 31 87 39 Q83 44 67 41Z" fill="#c07010" fill-opacity=".65"/>
+            <path d="M66 41 Q81 34 86 41 Q81 49 66 46Z" fill="#d08010"/>
+            <path d="M67 44 Q80 41 84 47 Q80 53 67 49Z" fill="#c07010" fill-opacity=".65"/>
+            <!-- body — elongated torpedo, nose-down flying tilt -->
+            <ellipse cx="50" cy="43" rx="23" ry="10" fill="#E8A022" transform="rotate(-8 50 43)"/>
+            <ellipse cx="46" cy="46" rx="13" ry="6"  fill="#f0b030" fill-opacity=".4" transform="rotate(-8 46 46)"/>
+            <!-- neck -->
+            <path d="M34 37 Q38 41 43 43 Q40 38 36 34Z" fill="#E8A022"/>
+            <!-- head — small pigeon head -->
+            <circle cx="28" cy="31" r="9" fill="#E8A022"/>
+            <!-- beak — short pigeon beak with centre ridge -->
+            <path d="M20 32 L13 34 L20 37Z" fill="#c07010"/>
+            <line x1="13" y1="34" x2="20" y2="34" stroke="#b06010" stroke-width="1" stroke-linecap="round"/>
             <!-- eye -->
-            <circle cx="26" cy="33" r="3" fill="#2C1F3E"/>
-            <circle cx="25" cy="32" r="1" fill="white"/>
+            <circle cx="24" cy="29" r="3" fill="#2C1F3E"/>
+            <circle cx="23" cy="28" r="1" fill="white"/>
             <!-- near wing (front) — root at (38,41) -->
-            <path class="wing-near"   d="M38 41 Q30 22 12 26 Q22 33 38 41Z" fill="#E8A022"/>
-            <path class="wing-near-2" d="M38 41 Q32 24 16 29 Q24 34 38 41Z" fill="#f0b030" fill-opacity=".55"/>
+            <path class="wing-near"   d="M38 41 Q50 21 73 25 Q61 32 38 41Z" fill="#E8A022"/>
+            <path class="wing-near-2" d="M38 41 Q52 24 73 29 Q63 34 38 41Z" fill="#f0b030" fill-opacity=".5"/>
           </g>
         </svg>
         <div style="font-family:'Fraunces',serif;font-size:26px;font-weight:700;color:var(--cream);margin-bottom:10px;">Pidge is airborne!</div>
