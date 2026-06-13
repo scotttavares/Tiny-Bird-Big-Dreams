@@ -950,6 +950,36 @@ async function handleEmailWebhook(request, env) {
     return new Response("Missing required fields", { status: 400 });
   }
 
+  // Classify the message before doing anything else.
+  // spam   → drop silently (no reply, no founder alert)
+  // flagged → alert founder only, NO auto-reply (legal, media, abuse, etc.)
+  // safe   → proceed with AI auto-reply + founder notification
+  let classification = { category: "safe", reason: "" };
+  try {
+    classification = await classifyMessage({ name: senderName, email: senderEmail, message }, env);
+  } catch (err) {
+    console.error("Classification failed — defaulting to safe:", err);
+  }
+
+  if (classification.category === "spam") {
+    console.log(`Spam dropped from ${senderEmail}: ${classification.reason}`);
+    return new Response("OK", { status: 200 });
+  }
+
+  if (classification.category === "flagged") {
+    try {
+      await sendEmail({
+        to: "hello@tinybirdbigdreams.com",
+        toName: "Scott",
+        subject: `[⚠️ NEEDS REVIEW] Message from ${senderName || senderEmail}`,
+        html: founderFlaggedAlertHTML({ senderName, senderEmail, message, reason: classification.reason }),
+      }, env);
+    } catch (err) {
+      console.error("Flagged alert failed:", err);
+    }
+    return new Response("OK", { status: 200 });
+  }
+
   // Generate AI reply
   let aiResult;
   try {
@@ -986,6 +1016,43 @@ async function handleEmailWebhook(request, env) {
   return new Response("OK", { status: 200 });
 }
 
+// Returns { category: "safe"|"spam"|"flagged", reason: string }
+async function classifyMessage({ name, email, message }, env) {
+  if (!env.ANTHROPIC_API_KEY) return { category: "safe", reason: "no api key" };
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 80,
+      system: `Classify an incoming contact form message for a small indie app studio. Reply with ONLY valid JSON: {"category":"safe"|"spam"|"flagged","reason":"one short sentence"}.
+
+Categories:
+- safe: genuine inquiry, feedback, question about the apps, or friendly note
+- spam: marketing solicitation, SEO/link-building pitch, unrelated offer, gibberish, or obvious test submission
+- flagged: legal threat, DMCA/copyright claim, acquisition or investment inquiry, press/media inquiry, large partnership proposal requiring contract review, harassment or abusive language, data deletion/privacy request (GDPR/CCPA), or anything that could create legal or financial obligation`,
+      messages: [{
+        role: "user",
+        content: `Name: ${name}\nEmail: ${email}\nMessage: ${message.slice(0, 800)}`,
+      }],
+    }),
+  });
+
+  if (!res.ok) throw new Error(`Anthropic classify ${res.status}`);
+  const data = await res.json();
+  const raw = data.content[0].text.trim();
+  try {
+    const parsed = JSON.parse(raw);
+    if (["safe", "spam", "flagged"].includes(parsed.category)) return parsed;
+  } catch { /* fall through */ }
+  return { category: "safe", reason: "parse error" };
+}
+
 async function generateAIReply({ name, email, message }, env) {
   if (!env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
 
@@ -1004,7 +1071,18 @@ Reply guidelines:
 - Be specific to what they asked if possible
 - Sign off as "Scott & the Tiny Bird team"
 - End with one line noting this initial reply was handled by the studio AI and Scott reviews everything
-- Plain prose only — no bullet points, no markdown`;
+- Plain prose only — no bullet points, no markdown
+
+STRICT PROHIBITIONS — never do any of the following:
+- Promise pricing, discounts, refunds, free access, or special deals
+- Commit to timelines, launch dates, or feature delivery
+- Agree to custom work, integrations, or contracts on Scott's behalf
+- Claim to be a human or deny being an AI if asked directly
+- Share internal technical details, API keys, credentials, or business metrics
+- Make scheduling commitments ("Scott will call you Tuesday")
+- Respond to legal notices, formal complaints, or threats — say Scott will personally review
+- Apologise in ways that imply fault or liability
+- If uncertain about anything, say Scott will follow up personally rather than guessing`;
 
   const userPrompt = `Contact form message received:
 Name: ${name}
@@ -1090,6 +1168,36 @@ a{color:#E8A022;}
     <a href="https://tinybirdbigdreams.com">tinybirdbigdreams.com</a> &middot; <a href="mailto:hello@tinybirdbigdreams.com">hello@tinybirdbigdreams.com</a>
   </div>
 </div>
+</body></html>`;
+}
+
+function founderFlaggedAlertHTML({ senderName, senderEmail, message, reason }) {
+  const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/><style>
+body{margin:0;padding:20px;background:#0e0a18;font-family:'DM Mono','Courier New',monospace;font-size:13px;color:#e0dcea;}
+h3{color:#f87171;margin:0 0 6px;}
+.sub{font-size:11px;color:rgba(248,113,113,.6);margin-bottom:18px;}
+.block{background:#1a1229;border-radius:10px;padding:16px;margin-bottom:14px;border:1px solid rgba(255,255,255,.07);}
+.lbl{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(224,220,234,.3);margin-bottom:8px;}
+.warn{border-left:3px solid #f87171;}
+.orig{border-left:3px solid #E8A022;}
+p{margin:0 0 8px;color:rgba(224,220,234,.7);}
+a{color:#E8A022;}
+.badge{display:inline-block;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.4);color:#f87171;padding:3px 10px;border-radius:6px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;}
+</style></head><body>
+<h3>&#9888;&#65039; Flagged Message — No Auto-Reply Sent</h3>
+<p class="sub">This message was held for your review. The sender did NOT receive an automated reply.</p>
+<div class="block warn">
+  <div class="lbl">Flag reason</div>
+  <p>${esc(reason)}</p>
+</div>
+<div class="block orig">
+  <div class="lbl">From</div>
+  <p><strong>${esc(senderName) || "(no name)"}</strong> &lt;<a href="mailto:${esc(senderEmail)}">${esc(senderEmail)}</a>&gt;</p>
+  <div class="lbl" style="margin-top:12px;">Message</div>
+  <p>${esc(message)}</p>
+</div>
+<p style="font-size:11px;color:rgba(224,220,234,.4);">Reply directly to <a href="mailto:${esc(senderEmail)}">${esc(senderEmail)}</a> when you're ready.</p>
 </body></html>`;
 }
 
