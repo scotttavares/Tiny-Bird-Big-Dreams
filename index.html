@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tiny Bird, Big Dreams — App Studio</title>
+<meta name="description" content="A one-person app studio building web and mobile apps with big ambitions. Just me, an idea, and Claude — shipping things that matter from scratch." />
+<meta property="og:title" content="Tiny Bird, Big Dreams" />
+<meta property="og:description" content="A one-person app studio building web and mobile apps with big ambitions." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://www.tinybirdbigdreams.com/" />
+<meta property="og:image" content="https://www.tinybirdbigdreams.com/assets/og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Tiny Bird, Big Dreams" />
+<meta name="twitter:description" content="A one-person app studio building web and mobile apps with big ambitions." />
+<meta name="twitter:image" content="https://www.tinybirdbigdreams.com/assets/og-image.png" />
+<link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+<link rel="manifest" href="site.webmanifest" />
+<meta name="theme-color" content="#0E0A18" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,300;1,9..144,400&family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300;1,400&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/site.css?v=2" />
+</head>
+<body>
+
+<!-- ══════════════════════════════════════ -->
+<!-- HERO                                  -->
+<!-- ══════════════════════════════════════ -->
+<section class="hero">
+  <div id="stars"></div>
+
+  <!-- NAV -->
+  <nav>
+    <div class="logo-mark">
+      <div class="logo-icon">
+        <svg viewBox="0 0 52 52" fill="none" width="100%" height="100%">
+          <rect width="52" height="52" fill="#2C1F3E"/>
+          <!-- body -->
+          <ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/>
+          <ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/>
+          <!-- left wing -->
+          <path d="M18 29 Q12 21 20 27" fill="#d08010"/>
+          <!-- right wing -->
+          <path d="M42 28 Q49 21 44 32" fill="#d08010"/>
+          <!-- tail -->
+          <path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="#c07010"/>
+          <path d="M41 35 Q47 38 44 44 Q39 39 41 35Z" fill="#d08010"/>
+          <!-- head -->
+          <circle cx="20" cy="22" r="9.5" fill="#E8A022"/>
+          <!-- beak -->
+          <path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/>
+          <!-- eye -->
+          <circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/>
+          <circle cx="17.5" cy="19" r="1" fill="white"/>
+          <!-- crest -->
+          <path d="M22 13 Q23.5 8.5 25 8 Q24.5 12 23 14.5Z" fill="#d08010"/>
+          <path d="M24.5 13.5 Q26 9 27.5 8.5 Q27 12.5 25.5 15Z" fill="#E8A022"/>
+          <path d="M27 14 Q28.5 9.5 30 9 Q29.5 13 28 15.5Z" fill="#d08010"/>
+          <!-- highlight spots -->
+          <circle cx="33" cy="30" r="2" fill="rgba(255,255,255,.13)"/>
+          <circle cx="37" cy="34" r="1.4" fill="rgba(255,255,255,.08)"/>
+        </svg>
+      </div>
+      <div class="logo-text-wrap">
+        <div class="logo-t1">Tiny Bird</div>
+        <div class="logo-rule"></div>
+        <div class="logo-t2">Big Dreams</div>
+        <div class="logo-rule"></div>
+        <div class="logo-t3">App Studio</div>
+      </div>
+    </div>
+
+    <ul class="nav-links">
+      <li><a href="#apps">Apps</a></li>
+      <li><a href="#studio">Studio</a></li>
+      <li><a href="#brand">Brand</a></li>
+      <li><a href="#contact" class="nav-cta">Say Hello</a></li>
+    </ul>
+
+    <button class="hamburger" id="ham" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <!-- Mobile Menu -->
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#apps" onclick="closeMob()">Apps</a>
+    <a href="#studio" onclick="closeMob()">Studio</a>
+    <a href="#brand" onclick="closeMob()">Brand</a>
+    <a href="#contact" class="m-cta" onclick="closeMob()">Say Hello</a>
+  </div>
+
+  <!-- HERO BODY -->
+  <div class="hero-body">
+    <div class="pill">
+      <span class="pill-dot"></span>
+      One Founder. One AI. Real Apps.
+    </div>
+    <h1>Tiny Bird<br/><em>Big Dreams</em></h1>
+    <p class="hero-sub">A one-person app studio building web and mobile apps with big ambitions. Just me, an idea, and Claude — shipping things that matter from scratch.</p>
+
+    <div class="bird-stage">
+      <div class="sp" style="--sz:9px;--sc:#E8A022;--sd:2.5s;--sdl:0s;top:18%;left:6%;"></div>
+      <div class="sp" style="--sz:6px;--sc:#E85D3A;--sd:3s;--sdl:.7s;top:8%;right:14%;"></div>
+      <div class="sp" style="--sz:11px;--sc:#fff;--sd:2s;--sdl:1.2s;bottom:24%;left:12%;"></div>
+      <div class="sp" style="--sz:7px;--sc:#E8A022;--sd:3.5s;--sdl:.3s;bottom:28%;right:8%;"></div>
+      <div class="sp" style="--sz:5px;--sc:#fff;--sd:2.8s;--sdl:1.8s;top:38%;right:4%;"></div>
+      <svg class="bird-svg" viewBox="0 0 340 280" fill="none">
+        <circle cx="170" cy="140" r="100" fill="rgba(232,160,34,.07)" stroke="rgba(232,160,34,.13)" stroke-width="1"/>
+        <circle cx="170" cy="140" r="74" fill="rgba(232,160,34,.05)"/>
+        <ellipse cx="60" cy="200" rx="45" ry="18" fill="rgba(255,255,255,.04)"/>
+        <ellipse cx="280" cy="180" rx="38" ry="15" fill="rgba(255,255,255,.04)"/>
+        <ellipse cx="175" cy="155" rx="62" ry="42" fill="#E8A022"/>
+        <ellipse cx="165" cy="162" rx="36" ry="26" fill="#f0b030" fill-opacity=".45"/>
+        <path d="M120 148 Q78 98 112 140 Q88 122 118 150Z" fill="#d08010"/>
+        <path d="M230 140 Q282 88 248 148 Q267 106 235 143Z" fill="#d08010"/>
+        <path d="M228 165 Q262 170 252 185 Q242 175 228 165Z" fill="#c07010"/>
+        <path d="M226 168 Q257 180 243 194 Q236 182 226 168Z" fill="#d08010"/>
+        <path d="M222 172 Q249 191 233 203 Q228 191 222 172Z" fill="#c07010"/>
+        <circle cx="132" cy="120" r="42" fill="#E8A022"/>
+        <path d="M93 120 L110 115 L110 126Z" fill="#c07010"/>
+        <path d="M93 120 L110 120 L110 126Z" fill="#b06010"/>
+        <circle cx="125" cy="112" r="12" fill="#2C1F3E"/>
+        <circle cx="122" cy="109" r="4" fill="white"/>
+        <circle cx="124" cy="111" r="1.5" fill="white" fill-opacity=".6"/>
+        <path d="M142 80 Q148 60 152 55 Q153 70 148 82Z" fill="#d08010"/>
+        <path d="M148 82 Q156 62 162 58 Q161 73 156 84Z" fill="#E8A022"/>
+        <path d="M155 84 Q165 65 170 62 Q168 77 163 86Z" fill="#d08010"/>
+        <circle cx="160" cy="148" r="5" fill="rgba(255,255,255,.14)"/>
+        <circle cx="175" cy="158" r="4" fill="rgba(255,255,255,.09)"/>
+        <circle cx="190" cy="148" r="3.5" fill="rgba(255,255,255,.09)"/>
+        <line x1="155" y1="194" x2="148" y2="218" stroke="#c07010" stroke-width="3" stroke-linecap="round"/>
+        <line x1="148" y1="218" x2="138" y2="226" stroke="#c07010" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="148" y1="218" x2="148" y2="228" stroke="#c07010" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="148" y1="218" x2="158" y2="225" stroke="#c07010" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="170" y1="196" x2="168" y2="220" stroke="#c07010" stroke-width="3" stroke-linecap="round"/>
+        <line x1="168" y1="220" x2="158" y2="228" stroke="#c07010" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="168" y1="220" x2="168" y2="230" stroke="#c07010" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="168" y1="220" x2="178" y2="227" stroke="#c07010" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="hero-stats">
+    <div style="text-align:center;">
+      <div class="stat-num">1<span> founder</span></div>
+      <div class="stat-label">Solo &amp; Intentional</div>
+    </div>
+    <div style="text-align:center;">
+      <div class="stat-num">&#8734;<span></span></div>
+      <div class="stat-label">Ideas in the Queue</div>
+    </div>
+    <div style="text-align:center;">
+      <div class="stat-num">Live<span></span></div>
+      <div class="stat-label">First App Shipped</div>
+    </div>
+  </div>
+</section>
+
+<svg class="wave-svg" viewBox="0 0 1440 80" preserveAspectRatio="none">
+  <path d="M0,0 C360,80 1080,0 1440,60 L1440,0 L0,0Z" fill="#2C1F3E"/>
+</svg>
+
+<!-- ══════════ FEATURES ══════════ -->
+<div style="background:var(--cream);" id="apps">
+  <div class="section">
+    <div class="section-label reveal">The Philosophy</div>
+    <h2 class="section-title reveal">Small team.<br/><em>No excuses.</em></h2>
+    <div class="cards">
+      <div class="card reveal" style="--accent:#E8A022;">
+        <div class="card-icon" style="--ibg:#FEF3E2;">🩶</div>
+        <div class="card-title">Built Lean on Purpose</div>
+        <p class="card-desc">No bloated team, no slow committees. One person makes every call — design, code, product, copy. That speed and ownership shows up in the apps.</p>
+      </div>
+      <div class="card reveal" style="--accent:#E85D3A;">
+        <div class="card-icon" style="--ibg:#FEF0EC;">🤖</div>
+        <div class="card-title">AI as Co-Founder</div>
+        <p class="card-desc">Claude isn't just a tool here — it's a genuine collaborator. From architecture decisions to UI copy, AI accelerates what one person can ship.</p>
+      </div>
+      <div class="card reveal" style="--accent:#4A7C59;">
+        <div class="card-icon" style="--ibg:#EBF4EE;">🌱</div>
+        <div class="card-title">Apps We Actually Want</div>
+        <p class="card-desc">No client briefs, no compromises. Every app starts with a real itch to scratch — if it doesn't solve something genuinely annoying, it doesn't get built.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SHOWCASE ══════════ -->
+<div class="showcase" id="studio">
+  <div class="showcase-inner">
+    <div>
+      <div class="section-label reveal">The Studio</div>
+      <h2 class="section-title reveal">1 founder. 1 AI.<br/><em>Real apps.</em></h2>
+      <p class="showcase-body reveal">Each app in the Tiny Bird studio runs with its own AI webmaster — responding to emails automatically, monitoring uptime, onboarding new users, and keeping everything running 24/7 without manual babysitting. The founder's role? Set the vision, make the big calls, approve what matters. The AI handles everything else.</p>
+      <div class="reveal">
+        <a href="#contact" class="btn btn-gold">Say Hello</a>
+        <a href="#brand" class="btn btn-outline">Our Brand</a>
+      </div>
+    </div>
+    <div class="reveal" style="display:flex;justify-content:center;align-items:center;">
+      <div class="ai-console">
+        <div class="aic-bar">
+          <div class="aic-dots"><span></span><span></span><span></span></div>
+          <span class="aic-title">tbbd_webmasters &middot; AI Ops</span>
+          <span class="aic-live">&#9679; LIVE</span>
+        </div>
+        <div class="aic-agents">
+          <div class="aic-agent">
+            <div class="aic-pulse green"></div>
+            <div class="aic-ainfo">
+              <div class="aic-aname">TBBD Email Agent</div>
+              <div class="aic-adesc">auto-replies &middot; inbox triage &middot; founder alerts</div>
+            </div>
+            <div class="aic-astat">&lt;1min</div>
+          </div>
+          <div class="aic-agent">
+            <div class="aic-pulse green"></div>
+            <div class="aic-ainfo">
+              <div class="aic-aname">Site Guardian</div>
+              <div class="aic-adesc">uptime &middot; error detection &middot; auto-deploys</div>
+            </div>
+            <div class="aic-astat">99.9%</div>
+          </div>
+          <div class="aic-agent">
+            <div class="aic-pulse amber"></div>
+            <div class="aic-ainfo">
+              <div class="aic-aname">TTBI Webmaster</div>
+              <div class="aic-adesc">user onboarding &middot; support &middot; analytics</div>
+            </div>
+            <div class="aic-astat">building</div>
+          </div>
+          <div class="aic-agent">
+            <div class="aic-pulse green"></div>
+            <div class="aic-ainfo">
+              <div class="aic-aname">Build Bot</div>
+              <div class="aic-adesc">ci/cd &middot; deploy checks &middot; auto-rollback</div>
+            </div>
+            <div class="aic-astat">active</div>
+          </div>
+        </div>
+        <div class="aic-sep"></div>
+        <div class="aic-log">
+          <div class="aic-log-hd">recent activity</div>
+          <div class="aic-row"><span class="aic-ts">04:12:33</span><span class="aic-ok">&#10003;</span><span>email reply sent &middot; TBBD contact form</span></div>
+          <div class="aic-row"><span class="aic-ts">02:55:07</span><span class="aic-ok">&#10003;</span><span>deploy health check passed &middot; all green</span></div>
+          <div class="aic-row"><span class="aic-ts">01:33:44</span><span class="aic-ok">&#10003;</span><span>new user onboarded &middot; TTBI</span></div>
+          <div class="aic-row aic-row--active"><span class="aic-ts">now</span><span class="aic-cur">_</span><span>monitoring all systems&hellip;</span></div>
+        </div>
+        <div class="aic-foot">
+          1 founder approves &middot; AI handles the rest &middot; always&nbsp;on
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ WHAT'S BREWING ══════════ -->
+<div style="background:var(--cream);">
+  <div class="section">
+    <div class="section-label reveal">What's Brewing</div>
+    <h2 class="section-title reveal">Apps in the<br/><em>nest right now</em></h2>
+    <div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));">
+
+      <!-- Tiny Thoughts, Big Ideas -->
+      <div class="card reveal" style="--accent:#E8A022;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <div class="card-icon" style="--ibg:#FEF3E2; margin-bottom:0;">💡</div>
+          <span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:#EBF4EE;color:#4A7C59;padding:4px 10px;border-radius:100px;font-weight:600;">Live Now</span>
+        </div>
+        <div class="card-title">Tiny Thoughts, Big Ideas</div>
+        <p class="card-desc" style="margin-bottom:12px;">An AI research notebook. Drop in articles, links, and notes — then chat with your sources, run 16 AI-powered sparks, and turn scattered reading into real insight.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px;">
+          <span style="font-size:10px;background:#FEF3E2;color:#c07010;padding:3px 9px;border-radius:100px;font-weight:500;">Chat your sources</span>
+          <span style="font-size:10px;background:#FEF3E2;color:#c07010;padding:3px 9px;border-radius:100px;font-weight:500;">16 AI sparks</span>
+          <span style="font-size:10px;background:#FEF3E2;color:#c07010;padding:3px 9px;border-radius:100px;font-weight:500;">Podcast mode</span>
+          <span style="font-size:10px;background:#FEF3E2;color:#c07010;padding:3px 9px;border-radius:100px;font-weight:500;">BYOAI</span>
+        </div>
+        <a href="https://tinythoughtsbigideas.com/" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#E8A022;text-decoration:none;letter-spacing:.01em;">
+          Open the app
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+
+      <!-- Tiny Superpowers -->
+      <div class="card reveal" style="--accent:#E85D3A; border-style:dashed;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <div class="card-icon" style="--ibg:#FEF0EC; margin-bottom:0;">⚡</div>
+          <span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:#FEF3E2;color:#E8A022;padding:4px 10px;border-radius:100px;font-weight:600;">In Development</span>
+        </div>
+        <div class="card-title">Tiny Superpowers</div>
+        <p class="card-desc">Next up in the nest. Details coming soon — this one's close to hatching.</p>
+      </div>
+
+      <!-- Coming soon placeholder -->
+      <div class="card reveal" style="--accent:#4A7C59; border-style:dashed; opacity:.5;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <div class="card-icon" style="--ibg:#EBF4EE; margin-bottom:0;">🌙</div>
+          <span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:#EBF4EE;color:#4A7C59;padding:4px 10px;border-radius:100px;font-weight:600;">Dreaming</span>
+        </div>
+        <div class="card-title">What's Next?</div>
+        <p class="card-desc">Every big launch starts as a dream. The ideas queue never empties.</p>
+      </div>
+
+    </div>
+
+    <!-- Founder note -->
+    <div class="reveal" style="margin-top:48px;background:#2C1F3E;border-radius:20px;padding:clamp(28px,4vw,40px) clamp(24px,4vw,40px);display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;">
+      <div style="font-size:32px;line-height:1;flex-shrink:0;">🐦</div>
+      <div>
+        <div style="font-family:'Playfair Display',serif;font-size:clamp(16px,2.5vw,20px);font-weight:700;color:var(--cream);margin-bottom:8px;letter-spacing:-.01em;">A note from the founder</div>
+        <p style="font-size:14px;line-height:1.75;color:rgba(251,247,242,.55);max-width:600px;">One person, one AI, real apps — that's the whole deal. Tiny Thoughts, Big Ideas is live and growing. Tiny Superpowers is coming next. I build in public, ship fast, and iterate even faster. The best apps come from solving problems you actually have — and this studio exists to do exactly that.</p>
+        <div style="margin-top:16px;font-size:12px;color:rgba(251,247,242,.3);letter-spacing:.05em;">— Tiny Bird, Big Dreams &middot; est. 2025</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ CTA ══════════ -->
+<div class="cta-band">
+  <div class="cta-inner reveal">
+    <h2>The dream is<br/><em>just taking off.</em></h2>
+    <p>Follow along as apps go from idea → build → launch. Drop a line if you want to say hi.</p>
+    <a href="#contact" class="btn btn-dark" style="font-size:14px;padding:15px 36px;">
+      Say Hello
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+        <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+  </div>
+</div>
+
+<!-- BRAND IDENTITY -->
+<div class="logo-page" id="brand">
+  <div class="logo-page-header reveal">
+    <div class="lp-label">Our Brand</div>
+    <h2 class="lp-title">Our <em>Logo</em></h2>
+    <p class="lp-sub">The official Tiny Bird, Big Dreams mark — shown across backgrounds and at scale.</p>
+  </div>
+
+  <div style="max-width:1100px;margin:0 auto 64px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;">
+    <div style="background:#2C1F3E;border-radius:24px;padding:clamp(36px,5vw,56px) clamp(24px,4vw,40px);display:flex;align-items:center;justify-content:center;min-height:200px;">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div style="width:60px;height:60px;border-radius:16px;background:#1a1228;overflow:hidden;flex-shrink:0;box-shadow:0 6px 20px rgba(0,0,0,.4);">
+          <svg viewBox="0 0 52 52" fill="none" width="100%" height="100%"><rect width="52" height="52" fill="#1a1228"/><ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/><ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/><path d="M18 29 Q12 21 20 27" fill="#d08010"/><path d="M42 28 Q49 21 44 32" fill="#d08010"/><path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="#c07010"/><circle cx="20" cy="22" r="9.5" fill="#E8A022"/><path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/><circle cx="18.5" cy="20" r="3" fill="#1a1228"/><circle cx="17.5" cy="19" r="1" fill="white"/><path d="M23 13 Q24.5 8.5 26 8 Q25.5 12 24 14.5Z" fill="#d08010"/><path d="M25.5 13.5 Q27 9 28.5 8.5 Q28 12.5 26.5 15Z" fill="#E8A022"/></svg>
+        </div>
+        <div>
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#fff;line-height:1;letter-spacing:-.01em;">Tiny Bird</div>
+          <div style="width:100%;height:1px;background:rgba(255,255,255,.15);margin:4px 0;"></div>
+          <div style="font-family:'Playfair Display',serif;font-size:19px;font-weight:700;font-style:italic;color:#E8A022;line-height:1;">Big Dreams</div>
+          <div style="width:100%;height:1px;background:rgba(255,255,255,.15);margin:4px 0;"></div>
+          <div style="font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.3);">App Studio</div>
+        </div>
+      </div>
+    </div>
+    <div style="background:#F7F4EF;border-radius:24px;padding:clamp(36px,5vw,56px) clamp(24px,4vw,40px);display:flex;align-items:center;justify-content:center;min-height:200px;border:1px solid rgba(44,31,62,.07);">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div style="width:60px;height:60px;border-radius:16px;overflow:hidden;flex-shrink:0;box-shadow:0 6px 20px rgba(44,31,62,.18);">
+          <svg viewBox="0 0 52 52" fill="none" width="100%" height="100%"><rect width="52" height="52" fill="#2C1F3E"/><ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/><ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/><path d="M18 29 Q12 21 20 27" fill="#d08010"/><path d="M42 28 Q49 21 44 32" fill="#d08010"/><path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="#c07010"/><circle cx="20" cy="22" r="9.5" fill="#E8A022"/><path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/><circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/><circle cx="17.5" cy="19" r="1" fill="white"/><path d="M23 13 Q24.5 8.5 26 8 Q25.5 12 24 14.5Z" fill="#d08010"/><path d="M25.5 13.5 Q27 9 28.5 8.5 Q28 12.5 26.5 15Z" fill="#E8A022"/></svg>
+        </div>
+        <div>
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#2C1F3E;line-height:1;letter-spacing:-.01em;">Tiny Bird</div>
+          <div style="width:100%;height:1px;background:rgba(44,31,62,.12);margin:4px 0;"></div>
+          <div style="font-family:'Playfair Display',serif;font-size:19px;font-weight:700;font-style:italic;color:#E8A022;line-height:1;">Big Dreams</div>
+          <div style="width:100%;height:1px;background:rgba(44,31,62,.12);margin:4px 0;"></div>
+          <div style="font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:rgba(44,31,62,.35);">App Studio</div>
+        </div>
+      </div>
+    </div>
+    <div style="background:linear-gradient(135deg,#E8A022,#c07010);border-radius:24px;padding:clamp(36px,5vw,56px) clamp(24px,4vw,40px);display:flex;align-items:center;justify-content:center;min-height:200px;">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div style="width:60px;height:60px;border-radius:16px;background:rgba(0,0,0,.2);overflow:hidden;flex-shrink:0;box-shadow:0 6px 20px rgba(0,0,0,.3);">
+          <svg viewBox="0 0 52 52" fill="none" width="100%" height="100%"><rect width="52" height="52" fill="rgba(0,0,0,.2)"/><ellipse cx="30" cy="32" rx="14" ry="9.5" fill="rgba(255,255,255,.9)"/><ellipse cx="26" cy="36" rx="8.5" ry="6" fill="rgba(255,255,255,.4)"/><path d="M18 29 Q12 21 20 27" fill="rgba(255,255,255,.6)"/><path d="M42 28 Q49 21 44 32" fill="rgba(255,255,255,.6)"/><path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="rgba(255,255,255,.5)"/><circle cx="20" cy="22" r="9.5" fill="rgba(255,255,255,.9)"/><path d="M10.5 22 L15 20.5 L15 23.5Z" fill="rgba(255,255,255,.6)"/><circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/><circle cx="17.5" cy="19" r="1" fill="white"/><path d="M23 13 Q24.5 8.5 26 8 Q25.5 12 24 14.5Z" fill="rgba(255,255,255,.7)"/><path d="M25.5 13.5 Q27 9 28.5 8.5 Q28 12.5 26.5 15Z" fill="rgba(255,255,255,.9)"/></svg>
+        </div>
+        <div>
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#fff;line-height:1;letter-spacing:-.01em;">Tiny Bird</div>
+          <div style="width:100%;height:1px;background:rgba(255,255,255,.3);margin:4px 0;"></div>
+          <div style="font-family:'Playfair Display',serif;font-size:19px;font-weight:700;font-style:italic;color:rgba(255,255,255,.85);line-height:1;">Big Dreams</div>
+          <div style="width:100%;height:1px;background:rgba(255,255,255,.3);margin:4px 0;"></div>
+          <div style="font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.5);">App Studio</div>
+        </div>
+      </div>
+    </div>
+    <div style="background:repeating-conic-gradient(#d8d8d8 0% 25%,#f4f4f4 0% 50%) 0 0/20px 20px;border-radius:24px;padding:clamp(36px,5vw,56px) clamp(24px,4vw,40px);display:flex;align-items:center;justify-content:center;min-height:200px;border:1px solid rgba(0,0,0,.06);">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div style="width:60px;height:60px;border-radius:16px;overflow:hidden;flex-shrink:0;box-shadow:0 6px 20px rgba(0,0,0,.12);background:repeating-conic-gradient(#d8d8d8 0% 25%,#f4f4f4 0% 50%) 0 0/12px 12px;">
+          <svg viewBox="0 0 52 52" fill="none" width="100%" height="100%"><ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/><ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/><path d="M18 29 Q12 21 20 27" fill="#d08010"/><path d="M42 28 Q49 21 44 32" fill="#d08010"/><path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="#c07010"/><circle cx="20" cy="22" r="9.5" fill="#E8A022"/><path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/><circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/><circle cx="17.5" cy="19" r="1" fill="white"/><path d="M23 13 Q24.5 8.5 26 8 Q25.5 12 24 14.5Z" fill="#d08010"/><path d="M25.5 13.5 Q27 9 28.5 8.5 Q28 12.5 26.5 15Z" fill="#E8A022"/></svg>
+        </div>
+        <div>
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#2C1F3E;line-height:1;letter-spacing:-.01em;">Tiny Bird</div>
+          <div style="width:100%;height:1px;background:rgba(44,31,62,.15);margin:4px 0;"></div>
+          <div style="font-family:'Playfair Display',serif;font-size:19px;font-weight:700;font-style:italic;color:#E8A022;line-height:1;">Big Dreams</div>
+          <div style="width:100%;height:1px;background:rgba(44,31,62,.15);margin:4px 0;"></div>
+          <div style="font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:rgba(44,31,62,.4);">App Studio</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width:1100px;margin:0 auto;background:#fff;border-radius:24px;padding:clamp(36px,5vw,48px) clamp(24px,4vw,48px);border:1px solid rgba(44,31,62,.07);">
+    <div style="font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:rgba(44,31,62,.35);margin-bottom:28px;font-weight:500;">Icon at Scale</div>
+    <div style="display:flex;align-items:flex-end;gap:clamp(16px,4vw,32px);flex-wrap:wrap;">
+      <div style="text-align:center;"><div style="width:96px;height:96px;border-radius:24px;overflow:hidden;box-shadow:0 8px 28px rgba(44,31,62,.15);margin-bottom:10px;"><svg viewBox="0 0 52 52" fill="none" width="100%" height="100%"><rect width="52" height="52" fill="#2C1F3E"/><ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/><ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/><path d="M18 29 Q12 21 20 27" fill="#d08010"/><path d="M42 28 Q49 21 44 32" fill="#d08010"/><path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="#c07010"/><circle cx="20" cy="22" r="9.5" fill="#E8A022"/><path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/><circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/><circle cx="17.5" cy="19" r="1" fill="white"/><path d="M23 13 Q24.5 8.5 26 8 Q25.5 12 24 14.5Z" fill="#d08010"/><path d="M25.5 13.5 Q27 9 28.5 8.5 Q28 12.5 26.5 15Z" fill="#E8A022"/></svg></div><div style="font-size:10px;color:rgba(44,31,62,.4);">96px</div></div>
+      <div style="text-align:center;"><div style="width:64px;height:64px;border-radius:16px;overflow:hidden;box-shadow:0 6px 20px rgba(44,31,62,.12);margin-bottom:10px;"><svg viewBox="0 0 52 52" fill="none" width="100%" height="100%"><rect width="52" height="52" fill="#2C1F3E"/><ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/><ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/><path d="M18 29 Q12 21 20 27" fill="#d08010"/><path d="M42 28 Q49 21 44 32" fill="#d08010"/><path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="#c07010"/><circle cx="20" cy="22" r="9.5" fill="#E8A022"/><path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/><circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/><circle cx="17.5" cy="19" r="1" fill="white"/><path d="M23 13 Q24.5 8.5 26 8 Q25.5 12 24 14.5Z" fill="#d08010"/><path d="M25.5 13.5 Q27 9 28.5 8.5 Q28 12.5 26.5 15Z" fill="#E8A022"/></svg></div><div style="font-size:10px;color:rgba(44,31,62,.4);">64px</div></div>
+      <div style="text-align:center;"><div style="width:40px;height:40px;border-radius:11px;overflow:hidden;box-shadow:0 4px 14px rgba(44,31,62,.12);margin-bottom:10px;"><svg viewBox="0 0 52 52" fill="none" width="100%" height="100%"><rect width="52" height="52" fill="#2C1F3E"/><ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/><ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/><path d="M18 29 Q12 21 20 27" fill="#d08010"/><path d="M42 28 Q49 21 44 32" fill="#d08010"/><circle cx="20" cy="22" r="9.5" fill="#E8A022"/><path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/><circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/><circle cx="17.5" cy="19" r="1" fill="white"/><path d="M23 13 Q24.5 8.5 26 8 Q25.5 12 24 14.5Z" fill="#f0b030"/></svg></div><div style="font-size:10px;color:rgba(44,31,62,.4);">40px</div></div>
+      <div style="text-align:center;"><div style="width:24px;height:24px;border-radius:6px;overflow:hidden;box-shadow:0 2px 8px rgba(44,31,62,.12);margin-bottom:10px;"><svg viewBox="0 0 52 52" fill="none" width="100%" height="100%"><rect width="52" height="52" fill="#2C1F3E"/><ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/><circle cx="20" cy="22" r="9.5" fill="#E8A022"/><circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/></svg></div><div style="font-size:10px;color:rgba(44,31,62,.4);">24px</div></div>
+      <div style="margin-left:auto;display:flex;flex-direction:column;gap:10px;align-self:center;">
+        <div style="display:flex;align-items:center;gap:10px;"><div style="width:28px;height:28px;border-radius:8px;background:#2C1F3E;box-shadow:0 2px 8px rgba(0,0,0,.18);"></div><div><div style="font-size:11px;font-weight:600;color:#2C1F3E;">#2C1F3E</div><div style="font-size:10px;color:rgba(44,31,62,.4);">Midnight Dusk</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><div style="width:28px;height:28px;border-radius:8px;background:#E8A022;box-shadow:0 2px 8px rgba(232,160,34,.3);"></div><div><div style="font-size:11px;font-weight:600;color:#2C1F3E;">#E8A022</div><div style="font-size:10px;color:rgba(44,31,62,.4);">Golden Hour</div></div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><div style="width:28px;height:28px;border-radius:8px;background:#E85D3A;box-shadow:0 2px 8px rgba(232,93,58,.2);"></div><div><div style="font-size:11px;font-weight:600;color:#2C1F3E;">#E85D3A</div><div style="font-size:10px;color:rgba(44,31,62,.4);">Ember Coral</div></div></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /logo-page -->
+
+<!-- ══════════ CONTACT ══════════ -->
+<div class="contact-section" id="contact">
+  <div class="section">
+    <div class="section-label reveal" style="color:rgba(232,160,34,.7);">Ancient DM Technology</div>
+    <h2 class="section-title reveal" style="color:var(--cream);">Send a note.<br/><em style="color:var(--gold);">Pidge handles the rest.</em></h2>
+
+    <div class="reveal" style="display:flex;align-items:center;gap:32px;flex-wrap:wrap;margin-bottom:48px;">
+      <div style="flex-shrink:0;">
+        <svg viewBox="0 0 210 210" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:150px;height:150px;display:block;">
+          <ellipse cx="100" cy="200" rx="52" ry="7" fill="rgba(0,0,0,.25)"/>
+          <path d="M38 122 Q18 150 36 158 Q55 147 62 130Z" fill="#72758A"/>
+          <path d="M44 117 Q22 143 40 153 Q60 142 66 124Z" fill="#82859A"/>
+          <path d="M50 113 Q30 137 48 149 Q67 138 72 120Z" fill="#9295A8"/>
+          <ellipse cx="102" cy="120" rx="62" ry="50" fill="#9B9EA8"/>
+          <ellipse cx="94" cy="130" rx="42" ry="34" fill="#C8CBD8"/>
+          <path d="M50 110 Q44 124 52 136" stroke="#72758A" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <path d="M56 107 Q49 122 58 133" stroke="#72758A" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          <path d="M63 104 Q56 119 65 130" stroke="#72758A" stroke-width="1" stroke-linecap="round" fill="none"/>
+          <circle cx="128" cy="74" r="32" fill="#9B9EA8"/>
+          <ellipse cx="114" cy="98" rx="20" ry="13" fill="#6B5FD4" fill-opacity=".45"/>
+          <ellipse cx="118" cy="95" rx="13" ry="9" fill="#3DC8C0" fill-opacity=".4"/>
+          <ellipse cx="121" cy="93" rx="8" ry="5" fill="#6BD44F" fill-opacity=".3"/>
+          <circle cx="137" cy="68" r="14" fill="#E8A022" fill-opacity=".75"/>
+          <circle cx="137" cy="68" r="10" fill="white"/>
+          <circle cx="139" cy="67" r="6" fill="#1a1228"/>
+          <circle cx="142" cy="63" r="2.2" fill="white"/>
+          <circle cx="141" cy="70" r="1" fill="rgba(255,255,255,.5)"/>
+          <path d="M153 71 L172 65 L170 77Z" fill="#d08010"/>
+          <line x1="153" y1="71" x2="170" y2="71" stroke="#b06010" stroke-width="1.5"/>
+          <ellipse cx="155" cy="67" rx="5.5" ry="4" fill="#e8c090"/>
+          <line x1="90" y1="168" x2="83" y2="187" stroke="#d08010" stroke-width="4.5" stroke-linecap="round"/>
+          <line x1="112" y1="168" x2="119" y2="187" stroke="#d08010" stroke-width="4.5" stroke-linecap="round"/>
+          <path d="M83 187 L69 193 M83 187 L81 196 M83 187 L92 193" stroke="#d08010" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M119 187 L133 193 M119 187 L121 196 M119 187 L110 193" stroke="#d08010" stroke-width="2.5" stroke-linecap="round"/>
+          <rect x="78" y="179" width="12" height="8" rx="3.5" fill="#E85D3A"/>
+          <rect x="170" y="60" width="30" height="22" rx="3" fill="#FBF7F2" stroke="rgba(44,31,62,.18)" stroke-width="1.5"/>
+          <path d="M170 65 L185 74 L200 65" stroke="rgba(232,160,34,.7)" stroke-width="1.5" fill="none"/>
+          <line x1="175" y1="69" x2="196" y2="69" stroke="rgba(44,31,62,.18)" stroke-width="1"/>
+          <line x1="175" y1="73" x2="196" y2="73" stroke="rgba(44,31,62,.18)" stroke-width="1"/>
+          <circle cx="185" cy="79" r="5" fill="#E8A022"/>
+          <text x="182.5" y="82" font-size="5" fill="#2C1F3E" font-weight="bold" font-family="sans-serif">TB</text>
+          <line x1="22" y1="88" x2="38" y2="88" stroke="rgba(251,247,242,.2)" stroke-width="2" stroke-linecap="round"/>
+          <line x1="16" y1="98" x2="35" y2="98" stroke="rgba(251,247,242,.15)" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="24" y1="108" x2="38" y2="108" stroke="rgba(251,247,242,.1)" stroke-width="1" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <p style="color:rgba(251,247,242,.55);max-width:420px;font-size:15px;line-height:1.8;margin:0 0 12px;">Before email, before text, before the fax machine (RIP) — there was the carrier pigeon. We've modernized things slightly.</p>
+        <p style="color:rgba(251,247,242,.35);max-width:420px;font-size:13px;line-height:1.75;margin:0;">Fill in the form. Pidge takes it from there. Zero spam filters. Zero read receipts. One very determined bird.</p>
+      </div>
+    </div>
+
+    <div class="contact-form-wrap reveal">
+      <form id="contactForm" action="https://formspree.io/f/mojbggwj" method="POST">
+        <div class="form-row">
+          <div class="form-group"><label for="cName">Name</label><input type="text" id="cName" name="name" placeholder="Your name" required /></div>
+          <div class="form-group"><label for="cEmail">Email</label><input type="email" id="cEmail" name="email" placeholder="your@email.com" required /></div>
+        </div>
+        <div class="form-group"><label for="cMsg">Message</label><textarea id="cMsg" name="message" placeholder="What's on your mind?" rows="5" required></textarea></div>
+        <button type="submit" class="btn btn-gold form-btn">
+          Release the pigeon
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </form>
+      <div id="formSuccess" style="display:none;text-align:center;padding:40px 20px;">
+        <svg viewBox="0 0 120 80" fill="none" width="120" height="80" style="display:block;margin:0 auto 20px;">
+          <!-- wind gusts trailing right of bird -->
+          <line class="gust"    x1="88" y1="36" x2="102" y2="36" stroke="rgba(251,247,242,.4)" stroke-width="2"   stroke-linecap="round"/>
+          <line class="gust g2" x1="90" y1="44" x2="103" y2="44" stroke="rgba(251,247,242,.28)" stroke-width="1.5" stroke-linecap="round"/>
+          <line class="gust g3" x1="86" y1="51" x2="97"  y2="51" stroke="rgba(251,247,242,.18)" stroke-width="1"   stroke-linecap="round"/>
+          <g class="pidge-fly">
+            <!-- far wing (behind body) — root at (40,42) -->
+            <path class="wing-far" d="M40 42 Q32 26 14 30 Q24 36 40 42Z" fill="#c07010"/>
+            <!-- body -->
+            <ellipse cx="50" cy="44" rx="20" ry="12" fill="#E8A022"/>
+            <ellipse cx="54" cy="47" rx="13" ry="8"  fill="#f0b030" fill-opacity=".4"/>
+            <!-- tail -->
+            <path d="M68 42 Q81 36 84 43 Q80 51 68 47Z" fill="#d08010"/>
+            <!-- head -->
+            <circle cx="30" cy="35" r="10" fill="#E8A022"/>
+            <!-- beak -->
+            <path d="M21 36 L14 35 L21 39Z" fill="#c07010"/>
+            <!-- eye -->
+            <circle cx="26" cy="33" r="3" fill="#2C1F3E"/>
+            <circle cx="25" cy="32" r="1" fill="white"/>
+            <!-- near wing (front) — root at (38,41) -->
+            <path class="wing-near"   d="M38 41 Q30 22 12 26 Q22 33 38 41Z" fill="#E8A022"/>
+            <path class="wing-near-2" d="M38 41 Q32 24 16 29 Q24 34 38 41Z" fill="#f0b030" fill-opacity=".55"/>
+          </g>
+        </svg>
+        <div style="font-family:'Fraunces',serif;font-size:26px;font-weight:700;color:var(--cream);margin-bottom:10px;">Pidge is airborne!</div>
+        <p style="color:rgba(251,247,242,.5);font-size:14px;line-height:1.7;">Your message is en route. Pidge has a perfect delivery record.<br/>ETA: soon-ish. (Subject to headwinds.)</p>
+      </div>
+      <div id="formError" style="display:none;margin-top:16px;padding:14px 18px;background:rgba(232,93,58,.12);border:1px solid rgba(232,93,58,.25);border-radius:12px;color:#E85D3A;font-size:14px;text-align:center;">
+        Pidge ran into turbulence. Please try again or email <a href="mailto:hello@tinybirdbigdreams.com" style="color:var(--gold);">hello@tinybirdbigdreams.com</a> directly.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ FOOTER ══════════ -->
+<footer>
+  <div class="logo-mark">
+    <div class="logo-icon" style="width:40px;height:40px;border-radius:11px;">
+      <svg viewBox="0 0 52 52" fill="none" width="100%" height="100%">
+        <rect width="52" height="52" fill="#2C1F3E"/>
+        <ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/>
+        <ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/>
+        <path d="M18 29 Q12 21 20 27" fill="#d08010"/>
+        <path d="M42 28 Q49 21 44 32" fill="#d08010"/>
+        <path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="#c07010"/>
+        <circle cx="20" cy="22" r="9.5" fill="#E8A022"/>
+        <path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/>
+        <circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/>
+        <circle cx="17.5" cy="19" r="1" fill="white"/>
+        <path d="M23 13 Q24.5 8.5 26 8 Q25.5 12 24 14.5Z" fill="#d08010"/>
+        <path d="M25.5 13.5 Q27 9 28.5 8.5 Q28 12.5 26.5 15Z" fill="#E8A022"/>
+      </svg>
+    </div>
+    <div class="logo-text-wrap">
+      <div class="logo-t1" style="font-size:15px;">Tiny Bird</div>
+      <div class="logo-rule"></div>
+      <div class="logo-t2" style="font-size:13px;">Big Dreams</div>
+      <div class="logo-rule"></div>
+      <div class="logo-t3">App Studio</div>
+    </div>
+  </div>
+
+  <div class="footer-links">
+    <div class="footer-col">
+      <div class="footer-col-title">Explore</div>
+      <ul>
+        <li><a href="#apps">Apps</a></li>
+        <li><a href="#studio">Studio</a></li>
+        <li><a href="#studio">Our Story</a></li>
+        <li><a href="#brand">Brand</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <div class="footer-col-title">Connect</div>
+      <ul>
+        <li><a href="#contact">Say Hello</a></li>
+        <li><a href="mailto:hello@tinybirdbigdreams.com">Email Us</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <div class="footer-col-title">Legal</div>
+      <ul>
+        <li><a href="privacy.html">Privacy Policy</a></li>
+        <li><a href="terms.html">Terms of Use</a></li>
+        <li><a href="privacy.html#ai">AI Disclosure</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <p class="fc">&copy; 2026 Tiny Bird, Big Dreams. Built by one person and one AI. All rights reserved.</p>
+    <p class="fc" style="margin-top:6px;font-size:10px;">Made with Claude &middot; Shipped from scratch</p>
+  </div>
+</footer>
+
+<button id="backToTop" aria-label="Back to top">
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 14V4M4 9l5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</button>
+<script src="assets/site.js?v=2"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b0b9b5a0ff9345038eb0ab5e85b9ac3d"}'></script>
+</body>
+</html>
