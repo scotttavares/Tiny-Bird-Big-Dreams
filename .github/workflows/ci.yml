@@ -22,7 +22,7 @@ jobs:
         run: npm install -g html-validate
 
       - name: Validate HTML files
-        run: html-validate "*.html" "pages/*.html"
+        run: html-validate "*.html"
 
   check-links:
     name: Check Internal Links
@@ -33,5 +33,5 @@ jobs:
       - name: Check links (offline, local files only)
         uses: lycheeverse/lychee-action@v2
         with:
-          args: --offline --no-progress "*.html" "pages/*.html"
+          args: --offline --no-progress "*.html"
           fail: false
