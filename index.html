@@ -17,6 +17,7 @@
 <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
 <link rel="manifest" href="site.webmanifest" />
 <meta name="theme-color" content="#0E0A18" />
+<!--TBBD:VID-->
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,300;1,9..144,400&family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300;1,400&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="assets/site.css?v=2" />
 </head>
@@ -93,10 +94,10 @@
   <div class="hero-body">
     <div class="pill">
       <span class="pill-dot"></span>
-      One Founder. One AI. Real Apps.
+      <!--TBBD:PILL-->One Founder. One AI. Real Apps.<!--/TBBD:PILL-->
     </div>
     <h1>Tiny Bird<br/><em>Big Dreams</em></h1>
-    <p class="hero-sub">A one-person app studio building web and mobile apps with big ambitions. Just me, an idea, and Claude — shipping things that matter from scratch.</p>
+    <p class="hero-sub"><!--TBBD:HERO_SUB-->A one-person app studio building web and mobile apps with big ambitions. Just me, an idea, and Claude — shipping things that matter from scratch.<!--/TBBD:HERO_SUB--></p>
 
     <div class="bird-stage">
       <div class="sp" style="--sz:9px;--sc:#E8A022;--sd:2.5s;--sdl:0s;top:18%;left:6%;"></div>
@@ -191,7 +192,7 @@
     <div>
       <div class="section-label reveal">The Studio</div>
       <h2 class="section-title reveal">Just me,<br/>an idea, and <em>Claude.</em></h2>
-      <p class="showcase-body reveal">Tiny Bird, Big Dreams is a one-person indie app studio. No investors, no employees, no overhead — just a founder with a laptop, a vision, and an AI that never sleeps. Apps are built for real people solving real problems, shipped with care and iterated fast.</p>
+      <p class="showcase-body reveal"><!--TBBD:STUDIO_BODY-->Tiny Bird, Big Dreams is a one-person indie app studio. No investors, no employees, no overhead — just a founder with a laptop, a vision, and an AI that never sleeps. Apps are built for real people solving real problems, shipped with care and iterated fast.<!--/TBBD:STUDIO_BODY--></p>
       <div class="reveal">
         <a href="#contact" class="btn btn-gold">Say Hello</a>
         <a href="#brand" class="btn btn-outline">Our Brand</a>
@@ -327,7 +328,7 @@
       <div style="font-size:32px;line-height:1;flex-shrink:0;">🐦</div>
       <div>
         <div style="font-family:'Playfair Display',serif;font-size:clamp(16px,2.5vw,20px);font-weight:700;color:var(--cream);margin-bottom:8px;letter-spacing:-.01em;">A note from the founder</div>
-        <p style="font-size:14px;line-height:1.75;color:rgba(251,247,242,.55);max-width:600px;">One person, one AI, real apps — that's the whole deal. Tiny Thoughts, Big Ideas is live and growing. Tiny Superpowers is coming next. I build in public, ship fast, and iterate even faster. The best apps come from solving problems you actually have — and this studio exists to do exactly that.</p>
+        <p style="font-size:14px;line-height:1.75;color:rgba(251,247,242,.55);max-width:600px;"><!--TBBD:FOUNDER_NOTE-->One person, one AI, real apps — that's the whole deal. Tiny Thoughts, Big Ideas is live and growing. Tiny Superpowers is coming next. I build in public, ship fast, and iterate even faster. The best apps come from solving problems you actually have — and this studio exists to do exactly that.<!--/TBBD:FOUNDER_NOTE--></p>
         <div style="margin-top:16px;font-size:12px;color:rgba(251,247,242,.3);letter-spacing:.05em;">— Tiny Bird, Big Dreams &middot; est. 2025</div>
       </div>
     </div>
@@ -337,8 +338,8 @@
 <!-- ══════════ CTA ══════════ -->
 <div class="cta-band">
   <div class="cta-inner reveal">
-    <h2>The dream is<br/><em>just taking off.</em></h2>
-    <p>Follow along as apps go from idea → build → launch. Drop a line if you want to say hi.</p>
+    <h2><!--TBBD:CTA_H2-->The dream is<br/><em>just taking off.</em><!--/TBBD:CTA_H2--></h2>
+    <p><!--TBBD:CTA_P-->Follow along as apps go from idea → build → launch. Drop a line if you want to say hi.<!--/TBBD:CTA_P--></p>
     <a href="#contact" class="btn btn-dark" style="font-size:14px;padding:15px 36px;">
       Say Hello
       <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
@@ -491,6 +492,7 @@
           <div class="form-group"><label for="cEmail">Email</label><input type="email" id="cEmail" name="email" placeholder="your@email.com" required /></div>
         </div>
         <div class="form-group"><label for="cMsg">Message</label><textarea id="cMsg" name="message" placeholder="What's on your mind?" rows="5" required></textarea></div>
+        <input type="hidden" name="_vid" id="tbbdVid" value="" />
         <button type="submit" class="btn btn-gold form-btn">
           Release the pigeon
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
