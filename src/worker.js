@@ -987,6 +987,20 @@ async function handleEmailWebhook(request, env) {
     return new Response("OK", { status: 200 });
   }
 
+  // Stage 1: record that email was received — visitor sees "reply in progress" banner on next visit
+  if (visitorId && env.VISITORS) {
+    try {
+      const s = await env.VISITORS.get(`v:${visitorId}`, { type: "json" });
+      if (s) {
+        if (!s.email) s.email = senderEmail;
+        if (senderName && !s.name) s.name = senderName;
+        s.emailReplied = false;
+        s.generatedContent = null;
+        await env.VISITORS.put(`v:${visitorId}`, JSON.stringify(s), { expirationTtl: 365 * 24 * 3600 });
+      }
+    } catch { /* ignore */ }
+  }
+
   // Generate AI reply
   let aiResult;
   try {
@@ -997,6 +1011,7 @@ async function handleEmailWebhook(request, env) {
   }
 
   // Send auto-reply to sender
+  let replySent = false;
   try {
     await sendEmail({
       to: senderEmail,
@@ -1004,8 +1019,21 @@ async function handleEmailWebhook(request, env) {
       subject: "Re: Your message to Tiny Bird, Big Dreams",
       html: aiResult.html,
     }, env);
+    replySent = true;
   } catch (err) {
     console.error("Auto-reply send failed:", err);
+  }
+
+  // Stage 2: mark reply as sent — visitor sees warm acknowledgment on next visit instead of "in progress"
+  if (replySent && visitorId && env.VISITORS) {
+    try {
+      const s = await env.VISITORS.get(`v:${visitorId}`, { type: "json" });
+      if (s) {
+        s.emailReplied = true;
+        s.generatedContent = null;
+        await env.VISITORS.put(`v:${visitorId}`, JSON.stringify(s), { expirationTtl: 365 * 24 * 3600 });
+      }
+    } catch { /* ignore */ }
   }
 
   // Notify founder with original message + AI draft
@@ -1018,19 +1046,6 @@ async function handleEmailWebhook(request, env) {
     }, env);
   } catch (err) {
     console.error("Founder alert failed:", err);
-  }
-
-  // Link email identity to visitor profile (enables personalization with name context)
-  if (visitorId && env.VISITORS) {
-    try {
-      const stored = await env.VISITORS.get(`v:${visitorId}`, { type: "json" });
-      if (stored && !stored.email) {
-        stored.email = senderEmail;
-        if (senderName) stored.name = senderName;
-        stored.generatedContent = null; // force regen with email context on next visit
-        await env.VISITORS.put(`v:${visitorId}`, JSON.stringify(stored), { expirationTtl: 365 * 24 * 3600 });
-      }
-    } catch { /* ignore */ }
   }
 
   return new Response("OK", { status: 200 });
@@ -1312,6 +1327,14 @@ async function serveHome(request, env, ctx) {
 
   html = html.replace("<!--TBBD:VID-->", `<meta name="tbbd-vid" content="${vid}">`);
 
+  if (profile.email && profile.emailReplied === false) {
+    const emailNote = `<div style="background:rgba(232,160,34,.1);border:1px solid rgba(232,160,34,.25);border-radius:16px;padding:20px 28px;margin:32px auto 0;max-width:760px;text-align:center;font-size:14px;color:rgba(251,247,242,.75);line-height:1.75;">📬&ensp;<strong style="color:#E8A022;">Your message landed safely.</strong>&ensp;The studio AI sent an initial reply — Scott reviews every note and will follow up personally if needed.</div>`;
+    html = html.replace(
+      /<!--TBBD:EMAIL_NOTE-->[\s\S]*?<!--\/TBBD:EMAIL_NOTE-->/,
+      `<!--TBBD:EMAIL_NOTE-->${emailNote}<!--/TBBD:EMAIL_NOTE-->`
+    );
+  }
+
   if (profile.generatedContent) {
     html = injectContent(html, profile.generatedContent);
   }
@@ -1399,7 +1422,9 @@ async function generatePersonalizedContent(profile, env) {
     : scroll > 0.2 ? "skimmed the top"
     : "just glanced";
   const interests = (profile.interests || []).join(", ") || "general browsing";
-  const emailLine = profile.email ? `They've reached out via the contact form.` : `Still anonymous.`;
+  const emailLine = !profile.email ? `Still anonymous.`
+    : profile.emailReplied === false ? `They've reached out via the contact form — a reply is in progress. Acknowledge their outreach warmly but don't explicitly say "we replied" yet.`
+    : `They've reached out and received a reply — treat them warmly as a known contact.`;
   const visitTone = visits === 1 ? "This is their FIRST return visit — make the copy feel like a warm, genuine welcome back."
     : visits <= 3 ? "They're an early regular — be warm and a bit more familiar."
     : "They keep coming back — treat them like someone who really gets it.";
