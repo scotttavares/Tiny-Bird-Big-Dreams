@@ -1293,6 +1293,15 @@ async function serveHome(request, env, ctx) {
     }
   } catch { /* serve default on KV error */ }
 
+  // Returning visitor with no cached content: generate NOW so this response is personalized.
+  // (Visit 1 → default. Visit 2+ with no cache → generate synchronously. Visit 3+ with cache → instant.)
+  if (profile.visits >= 1 && !profile.generatedContent) {
+    try {
+      const content = await generatePersonalizedContent(profile, env);
+      if (content) profile.generatedContent = { ...content, generatedAt: Date.now() };
+    } catch { /* fall through to default */ }
+  }
+
   let assetRes;
   try {
     assetRes = await env.ASSETS.fetch(new Request(new URL("/index.html", request.url).href, { headers: request.headers }));
@@ -1330,7 +1339,8 @@ async function updateVisitor(vid, profile, env) {
   const contentAge = updated.generatedContent?.generatedAt
     ? now - updated.generatedContent.generatedAt
     : Infinity;
-  if (updated.visits >= 2 && contentAge > 7 * 24 * 3600 * 1000) {
+  // Skip regen if content was just generated synchronously this request (<5 min old)
+  if (updated.visits >= 2 && contentAge > 7 * 24 * 3600 * 1000 && contentAge > 5 * 60 * 1000) {
     try {
       const content = await generatePersonalizedContent(updated, env);
       if (content) updated.generatedContent = { ...content, generatedAt: now };
@@ -1390,14 +1400,18 @@ async function generatePersonalizedContent(profile, env) {
     : "just glanced";
   const interests = (profile.interests || []).join(", ") || "general browsing";
   const emailLine = profile.email ? `They've reached out via the contact form.` : `Still anonymous.`;
+  const visitTone = visits === 1 ? "This is their FIRST return visit — make the copy feel like a warm, genuine welcome back."
+    : visits <= 3 ? "They're an early regular — be warm and a bit more familiar."
+    : "They keep coming back — treat them like someone who really gets it.";
 
   const prompt = `You are the AI content engine for Tiny Bird, Big Dreams, a one-person indie app studio by Scott who uses Claude as his AI co-founder.
 
 Visitor context:
-- Visit number: ${visits}
-- Last visit scroll depth: ${scrollDesc}
+- Visit number: ${visits + 1} (returning visitor)
+- Previous visit scroll depth: ${scrollDesc}
 - Sections they engaged: ${interests}
 - ${emailLine}
+- Tone guidance: ${visitTone}
 
 Remix the homepage copy to feel slightly fresh and relevant for this returning visitor. Output ONLY valid JSON with exactly these keys:
 
