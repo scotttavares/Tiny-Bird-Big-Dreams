@@ -26,10 +26,16 @@ const SUPA = {
 };
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const p = url.pathname;
 
+    if (p === "/" || p === "") {
+      return serveHome(request, env, ctx);
+    }
+    if (p === "/track" && request.method === "POST") {
+      return handleTrack(request, env, ctx);
+    }
     if (p === "/studio/login" && request.method === "POST") {
       return handleLogin(request, env);
     }
@@ -945,6 +951,7 @@ async function handleEmailWebhook(request, env) {
   const senderEmail = body.email || body._replyto || "";
   const senderName  = body.name  || "";
   const message     = body.message || body.body || "";
+  const visitorId   = isValidVid(body._vid) ? body._vid : null;
 
   if (!senderEmail || !message) {
     return new Response("Missing required fields", { status: 400 });
@@ -1011,6 +1018,19 @@ async function handleEmailWebhook(request, env) {
     }, env);
   } catch (err) {
     console.error("Founder alert failed:", err);
+  }
+
+  // Link email identity to visitor profile (enables personalization with name context)
+  if (visitorId && env.VISITORS) {
+    try {
+      const stored = await env.VISITORS.get(`v:${visitorId}`, { type: "json" });
+      if (stored && !stored.email) {
+        stored.email = senderEmail;
+        if (senderName) stored.name = senderName;
+        stored.generatedContent = null; // force regen with email context on next visit
+        await env.VISITORS.put(`v:${visitorId}`, JSON.stringify(stored), { expirationTtl: 365 * 24 * 3600 });
+      }
+    } catch { /* ignore */ }
   }
 
   return new Response("OK", { status: 200 });
@@ -1240,4 +1260,202 @@ async function verifyHmacSha256(secret, payload, signature) {
   } catch {
     return false;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AI VISITOR PERSONALIZATION
+   ═══════════════════════════════════════════════════════════════ */
+
+function isValidVid(v) {
+  return typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(v);
+}
+
+function getOrSetVid(request) {
+  const cookie = request.headers.get("cookie") || "";
+  const m = cookie.match(/(?:^|;\s*)tbbd_vid=([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/);
+  if (m) return { vid: m[1], isNew: false, cookieHeader: null };
+  const vid = crypto.randomUUID();
+  return {
+    vid,
+    isNew: true,
+    cookieHeader: `tbbd_vid=${vid}; Path=/; Max-Age=31536000; SameSite=Lax; Secure; HttpOnly`,
+  };
+}
+
+async function serveHome(request, env, ctx) {
+  const { vid, cookieHeader } = getOrSetVid(request);
+
+  let profile = { vid, visits: 0, firstSeen: Date.now(), lastSeen: Date.now(), maxScrollDepth: 0, interests: [], email: null, generatedContent: null };
+  try {
+    if (env.VISITORS) {
+      const stored = await env.VISITORS.get(`v:${vid}`, { type: "json" });
+      if (stored) profile = { ...profile, ...stored };
+    }
+  } catch { /* serve default on KV error */ }
+
+  let assetRes;
+  try {
+    assetRes = await env.ASSETS.fetch(new Request(new URL("/index.html", request.url).href, { headers: request.headers }));
+  } catch {
+    return env.ASSETS.fetch(request);
+  }
+  let html = await assetRes.text();
+
+  html = html.replace("<!--TBBD:VID-->", `<meta name="tbbd-vid" content="${vid}">`);
+
+  if (profile.generatedContent) {
+    html = injectContent(html, profile.generatedContent);
+  }
+
+  const headers = new Headers();
+  headers.set("content-type", "text/html;charset=UTF-8");
+  headers.set("cache-control", "private, no-store");
+  if (cookieHeader) headers.set("set-cookie", cookieHeader);
+
+  if (ctx) ctx.waitUntil(updateVisitor(vid, profile, env));
+
+  return new Response(html, { status: 200, headers });
+}
+
+async function updateVisitor(vid, profile, env) {
+  if (!env.VISITORS) return;
+  const now = Date.now();
+  const updated = {
+    ...profile,
+    visits: (profile.visits || 0) + 1,
+    lastSeen: now,
+    firstSeen: profile.firstSeen || now,
+  };
+
+  const contentAge = updated.generatedContent?.generatedAt
+    ? now - updated.generatedContent.generatedAt
+    : Infinity;
+  if (updated.visits >= 2 && contentAge > 7 * 24 * 3600 * 1000) {
+    try {
+      const content = await generatePersonalizedContent(updated, env);
+      if (content) updated.generatedContent = { ...content, generatedAt: now };
+    } catch { /* ignore */ }
+  }
+
+  try {
+    await env.VISITORS.put(`v:${vid}`, JSON.stringify(updated), { expirationTtl: 365 * 24 * 3600 });
+  } catch { /* ignore */ }
+}
+
+async function handleTrack(request, env, ctx) {
+  let data;
+  try { data = await request.json(); } catch { return new Response("", { status: 204 }); }
+  if (!isValidVid(data?.vid)) return new Response("", { status: 204 });
+  if (ctx) ctx.waitUntil(applyBehavior(data.vid, data, env));
+  return new Response("", { status: 204 });
+}
+
+async function applyBehavior(vid, data, env) {
+  if (!env.VISITORS) return;
+  try {
+    const stored = await env.VISITORS.get(`v:${vid}`, { type: "json" });
+    if (!stored) return;
+
+    const scrollDepth = typeof data.scrollDepth === "number" ? Math.min(1, Math.max(0, data.scrollDepth)) : 0;
+    const clicks = Array.isArray(data.clicks) ? data.clicks.slice(0, 30).map(String) : [];
+
+    stored.maxScrollDepth = Math.max(stored.maxScrollDepth || 0, scrollDepth);
+
+    const interests = new Set(stored.interests || []);
+    const prevSize = interests.size;
+    for (const href of clicks) {
+      if (/apps|tinythoughts|tinysuperpowers/i.test(href)) interests.add("apps");
+      if (/#studio/i.test(href)) interests.add("studio");
+      if (/#brand/i.test(href)) interests.add("brand");
+      if (/#contact/i.test(href)) interests.add("contact");
+    }
+    stored.interests = [...interests];
+
+    if (interests.size > prevSize && stored.visits >= 2) {
+      stored.generatedContent = null;
+    }
+
+    await env.VISITORS.put(`v:${vid}`, JSON.stringify(stored), { expirationTtl: 365 * 24 * 3600 });
+  } catch { /* ignore */ }
+}
+
+async function generatePersonalizedContent(profile, env) {
+  if (!env.ANTHROPIC_API_KEY) return null;
+
+  const visits = profile.visits || 1;
+  const scroll = profile.maxScrollDepth || 0;
+  const scrollDesc = scroll > 0.8 ? "read most of the page"
+    : scroll > 0.5 ? "scrolled well past the fold"
+    : scroll > 0.2 ? "skimmed the top"
+    : "just glanced";
+  const interests = (profile.interests || []).join(", ") || "general browsing";
+  const emailLine = profile.email ? `They've reached out via the contact form.` : `Still anonymous.`;
+
+  const prompt = `You are the AI content engine for Tiny Bird, Big Dreams, a one-person indie app studio by Scott who uses Claude as his AI co-founder.
+
+Visitor context:
+- Visit number: ${visits}
+- Last visit scroll depth: ${scrollDesc}
+- Sections they engaged: ${interests}
+- ${emailLine}
+
+Remix the homepage copy to feel slightly fresh and relevant for this returning visitor. Output ONLY valid JSON with exactly these keys:
+
+{
+  "pill": "Short tagline ~5 words. Variant of 'One Founder. One AI. Real Apps.'",
+  "heroSub": "1-2 sentences. Variant of the hero description. Punchy.",
+  "studioBody": "2-3 sentences about the AI-run studio. Slightly different emphasis based on their interests.",
+  "ctaH2": "CTA headline ~5 words. Must include <br/> and wrap last 2-3 words in <em>...</em>.",
+  "ctaP": "1 sentence. Warm and inviting call to action.",
+  "founderNote": "2-3 sentences in founder's voice. Warmer and more familiar for repeat visitors."
+}
+
+Rules:
+- Brand voice: ambitious but lean, warm, direct, slightly poetic
+- Keep lengths similar to the originals
+- Only <br/> and <em> HTML tags are allowed
+- Never mention tracking, personalization, cookies, or visits
+- If they engaged with apps: lean into the apps angle
+- If they engaged with studio: lean into the AI-runs-everything angle
+- For 3+ visits: be warmer, more like talking to someone who gets it`;
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 700,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const raw = data.content?.[0]?.text?.trim();
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const required = ["pill", "heroSub", "studioBody", "ctaH2", "ctaP", "founderNote"];
+    if (required.every(k => typeof parsed[k] === "string" && parsed[k].length > 0)) return parsed;
+  } catch { /* ignore */ }
+  return null;
+}
+
+function injectContent(html, content) {
+  const map = {
+    PILL: "pill", HERO_SUB: "heroSub", STUDIO_BODY: "studioBody",
+    CTA_H2: "ctaH2", CTA_P: "ctaP", FOUNDER_NOTE: "founderNote",
+  };
+  for (const [sec, key] of Object.entries(map)) {
+    const val = content[key];
+    if (!val) continue;
+    html = html.replace(
+      new RegExp(`<!--TBBD:${sec}-->[\\s\\S]*?<!--\\/TBBD:${sec}-->`, "g"),
+      `<!--TBBD:${sec}-->${val}<!--/TBBD:${sec}-->`
+    );
+  }
+  return html;
 }

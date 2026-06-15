@@ -59,3 +59,31 @@ const obs=new IntersectionObserver((entries)=>{
   });
 },{threshold:.1});
 document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+
+// Behavior tracking beacon
+(function(){
+  const vid=document.querySelector('meta[name="tbbd-vid"]')?.content;
+  if(!vid)return;
+  const vidInput=document.getElementById('tbbdVid');
+  if(vidInput)vidInput.value=vid;
+  const t0=Date.now();
+  let maxScroll=0;
+  const clicks=[];
+  window.addEventListener('scroll',()=>{
+    const d=(window.scrollY+window.innerHeight)/Math.max(1,document.body.scrollHeight);
+    if(d>maxScroll)maxScroll=d;
+  },{passive:true});
+  document.addEventListener('click',e=>{
+    const a=e.target.closest('[href]');
+    if(a){const h=(a.getAttribute('href')||'').slice(0,60);if(h)clicks.push(h);}
+  },{passive:true});
+  window.addEventListener('pagehide',()=>{
+    if(!navigator.sendBeacon)return;
+    navigator.sendBeacon('/track',JSON.stringify({
+      vid,
+      scrollDepth:Math.round(maxScroll*100)/100,
+      timeMs:Date.now()-t0,
+      clicks:clicks.slice(0,20)
+    }));
+  });
+})();
