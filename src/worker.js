@@ -60,7 +60,7 @@ export default {
     // Email webhook — called by Formspree when a contact form is submitted.
     // Needs env secrets: ANTHROPIC_API_KEY, RESEND_API_KEY, FORMSPREE_WEBHOOK_SECRET (optional)
     if (p === "/email-webhook" && request.method === "POST") {
-      return handleEmailWebhook(request, env);
+      return handleEmailWebhook(request, env, ctx);
     }
 
     // Everything else → the public static site.
@@ -929,7 +929,7 @@ function setWindow(w) {
      3. Add all three secrets in Cloudflare → Workers → tbbd → Settings → Variables
    ═══════════════════════════════════════════════════════════════ */
 
-async function handleEmailWebhook(request, env) {
+async function handleEmailWebhook(request, env, ctx) {
   const rawBody = await request.text();
 
   // Verify Formspree signature if secret is configured
@@ -987,7 +987,7 @@ async function handleEmailWebhook(request, env) {
     return new Response("OK", { status: 200 });
   }
 
-  // Stage 1: record that email was received — visitor sees "reply in progress" banner on next visit
+  // Stage 1 (sync): record that email was received — visitor sees banner immediately on next page load
   if (visitorId && env.VISITORS) {
     try {
       const s = await env.VISITORS.get(`v:${visitorId}`, { type: "json" });
@@ -1001,16 +1001,23 @@ async function handleEmailWebhook(request, env) {
     } catch { /* ignore */ }
   }
 
-  // Generate AI reply
+  // Stage 2 (background): generate AI reply, send emails, then flip emailReplied → true.
+  // Running in background means the 200 OK reaches Formspree immediately after Stage 1,
+  // giving the visitor a visible window to see the "in progress" banner.
+  if (ctx) ctx.waitUntil(sendEmailReply({ senderName, senderEmail, message, visitorId }, env));
+
+  return new Response("OK", { status: 200 });
+}
+
+async function sendEmailReply({ senderName, senderEmail, message, visitorId }, env) {
   let aiResult;
   try {
     aiResult = await generateAIReply({ name: senderName || "there", email: senderEmail, message }, env);
   } catch (err) {
     console.error("AI reply generation failed:", err);
-    return new Response("AI error", { status: 500 });
+    return;
   }
 
-  // Send auto-reply to sender
   let replySent = false;
   try {
     await sendEmail({
@@ -1024,7 +1031,7 @@ async function handleEmailWebhook(request, env) {
     console.error("Auto-reply send failed:", err);
   }
 
-  // Stage 2: mark reply as sent — visitor sees warm acknowledgment on next visit instead of "in progress"
+  // Stage 2: flip to replied — banner disappears on visitor's next reload
   if (replySent && visitorId && env.VISITORS) {
     try {
       const s = await env.VISITORS.get(`v:${visitorId}`, { type: "json" });
@@ -1036,7 +1043,6 @@ async function handleEmailWebhook(request, env) {
     } catch { /* ignore */ }
   }
 
-  // Notify founder with original message + AI draft
   try {
     await sendEmail({
       to: "hello@tinybirdbigdreams.com",
@@ -1047,8 +1053,6 @@ async function handleEmailWebhook(request, env) {
   } catch (err) {
     console.error("Founder alert failed:", err);
   }
-
-  return new Response("OK", { status: 200 });
 }
 
 // Returns { category: "safe"|"spam"|"flagged", reason: string }
