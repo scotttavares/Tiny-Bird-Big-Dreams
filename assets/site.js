@@ -1,24 +1,27 @@
 // Stars
 const s=document.getElementById('stars');
-for(let i=0;i<90;i++){
-  const el=document.createElement('div');
-  el.className='star';
-  const sz=Math.random()*2.5+.5;
-  el.style.cssText=`width:${sz}px;height:${sz}px;top:${Math.random()*75}%;left:${Math.random()*100}%;--d:${2+Math.random()*4}s;--dl:${Math.random()*4}s;--lo:${.06+Math.random()*.14};--hi:${.45+Math.random()*.5};`;
-  s.appendChild(el);
+if(s){
+  for(let i=0;i<90;i++){
+    const el=document.createElement('div');
+    el.className='star';
+    const sz=Math.random()*2.5+.5;
+    el.style.cssText=`width:${sz}px;height:${sz}px;top:${Math.random()*75}%;left:${Math.random()*100}%;--d:${2+Math.random()*4}s;--dl:${Math.random()*4}s;--lo:${.06+Math.random()*.14};--hi:${.45+Math.random()*.5};`;
+    s.appendChild(el);
+  }
 }
 
 // Hamburger
 const ham=document.getElementById('ham');
 const mob=document.getElementById('mobileMenu');
-ham.addEventListener('click',()=>{
-  ham.classList.toggle('open');
-  mob.classList.toggle('open');
-  document.body.style.overflow=mob.classList.contains('open')?'hidden':'';
-});
+if(ham){
+  ham.addEventListener('click',()=>{
+    ham.classList.toggle('open');
+    mob.classList.toggle('open');
+    document.body.style.overflow=mob.classList.contains('open')?'hidden':'';
+  });
+}
 function closeMob(){
-  ham.classList.remove('open');
-  mob.classList.remove('open');
+  if(ham){ ham.classList.remove('open'); mob.classList.remove('open'); }
   document.body.style.overflow='';
 }
 
@@ -41,8 +44,10 @@ if(form){
 
 // Back to top
 const btt=document.getElementById('backToTop');
-window.addEventListener('scroll',()=>btt.classList.toggle('visible',window.scrollY>400),{passive:true});
-btt.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
+if(btt){
+  window.addEventListener('scroll',()=>btt.classList.toggle('visible',window.scrollY>400),{passive:true});
+  btt.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
+}
 
 // Scroll reveal
 const obs=new IntersectionObserver((entries)=>{
@@ -59,7 +64,6 @@ document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
 (function(){
   const vid=document.querySelector('meta[name="tbbd-vid"]')?.content;
   if(!vid)return;
-  // Wire VID into contact form hidden field
   const vidInput=document.getElementById('tbbdVid');
   if(vidInput)vidInput.value=vid;
   const t0=Date.now();

@@ -57,6 +57,12 @@ export default {
       return html(loginHTML({ error: false, configured: !!env.STUDIO_PASSWORD }), 401);
     }
 
+    // Email webhook — called by Formspree when a contact form is submitted.
+    // Needs env secrets: ANTHROPIC_API_KEY, RESEND_API_KEY, FORMSPREE_WEBHOOK_SECRET (optional)
+    if (p === "/email-webhook" && request.method === "POST") {
+      return handleEmailWebhook(request, env);
+    }
+
     // Everything else → the public static site.
     return env.ASSETS.fetch(request);
   },
@@ -326,11 +332,7 @@ async function cfTrafficZone(zoneId, env) {
     headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
     body: JSON.stringify({
       query:
-        `{viewer{zones(filter:{zoneTag:"${zoneId}"}){
-        httpRequests1dGroups(
-        filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},
-        limit:365,orderBy:[date_ASC]
-        ){dimensions{date}sum{requests}uniq{uniques}}}}}`,
+        `{viewer{zones(filter:{zoneTag:"${zoneId}"}){\n        httpRequests1dGroups(\n        filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},\n        limit:365,orderBy:[date_ASC]\n        ){dimensions{date}sum{requests}uniq{uniques}}}}}`,
     }),
   });
   if (!r.ok) throw new Error("cf graphql zone " + r.status);
@@ -350,11 +352,7 @@ async function cfTrafficBeacon(siteTag, env) {
     headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
     body: JSON.stringify({
       query:
-        `{viewer{accounts(filter:{accountTag:"${accountId}"}){
-        rumPageloadEventsAdaptiveGroups(
-        filter:{AND:[{siteTag:"${siteTag}"},{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},
-        limit:10000,orderBy:[date_ASC]
-        ){count dimensions{date}sum{visits}}}}}`,
+        `{viewer{accounts(filter:{accountTag:"${accountId}"}){\n        rumPageloadEventsAdaptiveGroups(\n        filter:{AND:[{siteTag:"${siteTag}"},{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},\n        limit:10000,orderBy:[date_ASC]\n        ){count dimensions{date}sum{visits}}}}}`,
     }),
   });
   if (!r.ok) throw new Error("cf graphql beacon " + r.status);
@@ -916,6 +914,355 @@ function setWindow(w) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   EMAIL WEBHOOK — AI Auto-Responder
+
+   Triggered by Formspree webhook on contact form submission.
+
+   Required Cloudflare Worker secrets:
+     ANTHROPIC_API_KEY       — Anthropic API key (claude-haiku-4-5-20251001)
+     RESEND_API_KEY          — Resend.com API key (free tier: 100 emails/day)
+     FORMSPREE_WEBHOOK_SECRET — Optional: webhook secret from Formspree dashboard
+
+   Setup:
+     1. Resend: sign up at resend.com, verify tinybirdbigdreams.com domain, get API key
+     2. Formspree: go to form settings → Webhooks → add https://tinybirdbigdreams.com/email-webhook
+     3. Add all three secrets in Cloudflare → Workers → tbbd → Settings → Variables
+   ═══════════════════════════════════════════════════════════════ */
+
+async function handleEmailWebhook(request, env) {
+  const rawBody = await request.text();
+
+  // Verify Formspree signature if secret is configured
+  if (env.FORMSPREE_WEBHOOK_SECRET) {
+    const sig = request.headers.get("X-Formspree-Signature") || "";
+    const valid = await verifyHmacSha256(env.FORMSPREE_WEBHOOK_SECRET, rawBody, sig);
+    if (!valid) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+  }
+
+  let body;
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
+    return new Response("Bad Request", { status: 400 });
+  }
+
+  const senderEmail = body.email || body._replyto || "";
+  const senderName  = body.name  || "";
+  const message     = body.message || body.body || "";
+  const visitorId   = isValidVid(body._vid) ? body._vid : null;
+
+  if (!senderEmail || !message) {
+    return new Response("Missing required fields", { status: 400 });
+  }
+
+  // Classify the message before doing anything else.
+  // spam   → drop silently (no reply, no founder alert)
+  // flagged → alert founder only, NO auto-reply (legal, media, abuse, etc.)
+  // safe   → proceed with AI auto-reply + founder notification
+  let classification = { category: "safe", reason: "" };
+  try {
+    classification = await classifyMessage({ name: senderName, email: senderEmail, message }, env);
+  } catch (err) {
+    console.error("Classification failed — defaulting to safe:", err);
+  }
+
+  if (classification.category === "spam") {
+    console.log(`Spam dropped from ${senderEmail}: ${classification.reason}`);
+    return new Response("OK", { status: 200 });
+  }
+
+  if (classification.category === "flagged") {
+    try {
+      await sendEmail({
+        to: "hello@tinybirdbigdreams.com",
+        toName: "Scott",
+        subject: `[⚠️ NEEDS REVIEW] Message from ${senderName || senderEmail}`,
+        html: founderFlaggedAlertHTML({ senderName, senderEmail, message, reason: classification.reason }),
+      }, env);
+    } catch (err) {
+      console.error("Flagged alert failed:", err);
+    }
+    return new Response("OK", { status: 200 });
+  }
+
+  // Generate AI reply
+  let aiResult;
+  try {
+    aiResult = await generateAIReply({ name: senderName || "there", email: senderEmail, message }, env);
+  } catch (err) {
+    console.error("AI reply generation failed:", err);
+    return new Response("AI error", { status: 500 });
+  }
+
+  // Send auto-reply to sender
+  try {
+    await sendEmail({
+      to: senderEmail,
+      toName: senderName,
+      subject: "Re: Your message to Tiny Bird, Big Dreams",
+      html: aiResult.html,
+    }, env);
+  } catch (err) {
+    console.error("Auto-reply send failed:", err);
+  }
+
+  // Notify founder with original message + AI draft
+  try {
+    await sendEmail({
+      to: "hello@tinybirdbigdreams.com",
+      toName: "Scott",
+      subject: `[AI Replied] Message from ${senderName || senderEmail}`,
+      html: founderAlertHTML({ senderName, senderEmail, message, aiReply: aiResult.text }),
+    }, env);
+  } catch (err) {
+    console.error("Founder alert failed:", err);
+  }
+
+  // Link email identity to visitor profile (enables personalization with name context)
+  if (visitorId && env.VISITORS) {
+    try {
+      const stored = await env.VISITORS.get(`v:${visitorId}`, { type: "json" });
+      if (stored && !stored.email) {
+        stored.email = senderEmail;
+        if (senderName) stored.name = senderName;
+        stored.generatedContent = null; // force regen with email context on next visit
+        await env.VISITORS.put(`v:${visitorId}`, JSON.stringify(stored), { expirationTtl: 365 * 24 * 3600 });
+      }
+    } catch { /* ignore */ }
+  }
+
+  return new Response("OK", { status: 200 });
+}
+
+// Returns { category: "safe"|"spam"|"flagged", reason: string }
+async function classifyMessage({ name, email, message }, env) {
+  if (!env.ANTHROPIC_API_KEY) return { category: "safe", reason: "no api key" };
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 80,
+      system: `Classify an incoming contact form message for a small indie app studio. Reply with ONLY valid JSON: {"category":"safe"|"spam"|"flagged","reason":"one short sentence"}.
+
+Categories:
+- safe: genuine inquiry, feedback, question about the apps, or friendly note
+- spam: marketing solicitation, SEO/link-building pitch, unrelated offer, gibberish, or obvious test submission
+- flagged: legal threat, DMCA/copyright claim, acquisition or investment inquiry, press/media inquiry, large partnership proposal requiring contract review, harassment or abusive language, data deletion/privacy request (GDPR/CCPA), or anything that could create legal or financial obligation`,
+      messages: [{
+        role: "user",
+        content: `Name: ${name}\nEmail: ${email}\nMessage: ${message.slice(0, 800)}`,
+      }],
+    }),
+  });
+
+  if (!res.ok) throw new Error(`Anthropic classify ${res.status}`);
+  const data = await res.json();
+  const raw = data.content[0].text.trim();
+  try {
+    const parsed = JSON.parse(raw);
+    if (["safe", "spam", "flagged"].includes(parsed.category)) return parsed;
+  } catch { /* fall through */ }
+  return { category: "safe", reason: "parse error" };
+}
+
+async function generateAIReply({ name, email, message }, env) {
+  if (!env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
+
+  const system = `You are the AI assistant for Tiny Bird, Big Dreams — a one-person indie app studio run by Scott.
+Your job is to reply to contact form messages warmly and helpfully on Scott's behalf.
+
+About the studio:
+- Solo founder + AI collaboration model
+- Live app: Tiny Thoughts, Big Ideas (tinythoughtsbigideas.com) — an AI research notebook
+- Coming soon: Tiny Superpowers
+- Building in public, ships fast, iterates faster
+- Contact: hello@tinybirdbigdreams.com
+
+Reply guidelines:
+- 3–5 sentences, warm and genuine, no hollow filler phrases
+- Be specific to what they asked if possible
+- Sign off as "Scott & the Tiny Bird team"
+- End with one line noting this initial reply was handled by the studio AI and Scott reviews everything
+- Plain prose only — no bullet points, no markdown
+
+STRICT PROHIBITIONS — never do any of the following:
+- Promise pricing, discounts, refunds, free access, or special deals
+- Commit to timelines, launch dates, or feature delivery
+- Agree to custom work, integrations, or contracts on Scott's behalf
+- Claim to be a human or deny being an AI if asked directly
+- Share internal technical details, API keys, credentials, or business metrics
+- Make scheduling commitments ("Scott will call you Tuesday")
+- Respond to legal notices, formal complaints, or threats — say Scott will personally review
+- Apologise in ways that imply fault or liability
+- If uncertain about anything, say Scott will follow up personally rather than guessing`;
+
+  const userPrompt = `Contact form message received:
+Name: ${name}
+Email: ${email}
+Message: ${message}
+
+Write the reply email body (no subject line, just body text starting with "Hi ${name.split(" ")[0] || "there"},").`;
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 450,
+      system,
+      messages: [{ role: "user", content: userPrompt }],
+    }),
+  });
+
+  if (!res.ok) throw new Error(`Anthropic API ${res.status}`);
+  const data = await res.json();
+  const text = data.content[0].text.trim();
+
+  const htmlBody = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\n\n/g, "</p><p>")
+    .replace(/\n/g, "<br>");
+
+  return { text, html: replyEmailHTML({ name, body: `<p>${htmlBody}</p>` }) };
+}
+
+async function sendEmail({ to, toName, subject, html }, env) {
+  if (!env.RESEND_API_KEY) {
+    console.log("RESEND_API_KEY not set — skipping email send");
+    return;
+  }
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: "Tiny Bird, Big Dreams <hello@tinybirdbigdreams.com>",
+      to: toName ? `${toName} <${to}>` : to,
+      subject,
+      html,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Resend ${res.status}: ${err}`);
+  }
+  return res.json();
+}
+
+function replyEmailHTML({ name, body }) {
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/><style>
+body{margin:0;padding:20px;background:#F7F4EF;font-family:'DM Sans',Helvetica,Arial,sans-serif;}
+.w{max-width:560px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid rgba(44,31,62,.08);}
+.hd{background:#2C1F3E;padding:28px 36px;text-align:center;}
+.hd-t{font-size:18px;font-weight:700;color:#fff;font-family:Georgia,serif;letter-spacing:-.01em;}
+.hd-s{font-size:11px;color:rgba(251,247,242,.35);margin-top:3px;letter-spacing:.07em;text-transform:uppercase;}
+.bd{padding:28px 36px;font-size:14px;line-height:1.8;color:#2C1F3E;}
+.bd p{margin:0 0 14px;}
+.ft{background:#F7F4EF;padding:16px 36px;font-size:11px;color:rgba(44,31,62,.35);border-top:1px solid rgba(44,31,62,.06);line-height:1.6;}
+a{color:#E8A022;}
+</style></head><body>
+<div class="w">
+  <div class="hd">
+    <div class="hd-t">🐦 Tiny Bird, Big Dreams</div>
+    <div class="hd-s">App Studio · est. 2025</div>
+  </div>
+  <div class="bd">${body}</div>
+  <div class="ft">
+    This initial reply was handled by the studio&rsquo;s AI agent. Scott reviews every conversation and will follow up personally if needed.<br>
+    <a href="https://tinybirdbigdreams.com">tinybirdbigdreams.com</a> &middot; <a href="mailto:hello@tinybirdbigdreams.com">hello@tinybirdbigdreams.com</a>
+  </div>
+</div>
+</body></html>`;
+}
+
+function founderFlaggedAlertHTML({ senderName, senderEmail, message, reason }) {
+  const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/><style>
+body{margin:0;padding:20px;background:#0e0a18;font-family:'DM Mono','Courier New',monospace;font-size:13px;color:#e0dcea;}
+h3{color:#f87171;margin:0 0 6px;}
+.sub{font-size:11px;color:rgba(248,113,113,.6);margin-bottom:18px;}
+.block{background:#1a1229;border-radius:10px;padding:16px;margin-bottom:14px;border:1px solid rgba(255,255,255,.07);}
+.lbl{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(224,220,234,.3);margin-bottom:8px;}
+.warn{border-left:3px solid #f87171;}
+.orig{border-left:3px solid #E8A022;}
+p{margin:0 0 8px;color:rgba(224,220,234,.7);}
+a{color:#E8A022;}
+.badge{display:inline-block;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.4);color:#f87171;padding:3px 10px;border-radius:6px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;}
+</style></head><body>
+<h3>&#9888;&#65039; Flagged Message — No Auto-Reply Sent</h3>
+<p class="sub">This message was held for your review. The sender did NOT receive an automated reply.</p>
+<div class="block warn">
+  <div class="lbl">Flag reason</div>
+  <p>${esc(reason)}</p>
+</div>
+<div class="block orig">
+  <div class="lbl">From</div>
+  <p><strong>${esc(senderName) || "(no name)"}</strong> &lt;<a href="mailto:${esc(senderEmail)}">${esc(senderEmail)}</a>&gt;</p>
+  <div class="lbl" style="margin-top:12px;">Message</div>
+  <p>${esc(message)}</p>
+</div>
+<p style="font-size:11px;color:rgba(224,220,234,.4);">Reply directly to <a href="mailto:${esc(senderEmail)}">${esc(senderEmail)}</a> when you're ready.</p>
+</body></html>`;
+}
+
+function founderAlertHTML({ senderName, senderEmail, message, aiReply }) {
+  const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/><style>
+body{margin:0;padding:20px;background:#0e0a18;font-family:'DM Mono','Courier New',monospace;font-size:13px;color:#e0dcea;}
+h3{color:#E8A022;margin:0 0 16px;}
+.block{background:#1a1229;border-radius:10px;padding:16px;margin-bottom:14px;border:1px solid rgba(255,255,255,.07);}
+.lbl{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(224,220,234,.3);margin-bottom:8px;}
+.ai{border-left:3px solid #4ade80;}
+.orig{border-left:3px solid #E8A022;}
+p{margin:0 0 8px;color:rgba(224,220,234,.7);}
+a{color:#E8A022;}
+</style></head><body>
+<h3>&#128236; New Contact Form Submission</h3>
+<div class="block orig">
+  <div class="lbl">From</div>
+  <p><strong>${esc(senderName) || "(no name)"}</strong> &lt;<a href="mailto:${esc(senderEmail)}">${esc(senderEmail)}</a>&gt;</p>
+  <div class="lbl" style="margin-top:12px;">Message</div>
+  <p>${esc(message)}</p>
+</div>
+<div class="block ai">
+  <div class="lbl">AI auto-reply sent</div>
+  <p>${esc(aiReply)}</p>
+</div>
+<p style="font-size:11px;color:rgba(224,220,234,.3);">Reply directly to ${esc(senderEmail)} to follow up personally.</p>
+</body></html>`;
+}
+
+async function verifyHmacSha256(secret, payload, signature) {
+  try {
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw", enc.encode(secret),
+      { name: "HMAC", hash: "SHA-256" }, false, ["verify"]
+    );
+    const sigBytes = Uint8Array.from(atob(signature), c => c.charCodeAt(0));
+    return crypto.subtle.verify("HMAC", key, sigBytes, enc.encode(payload));
+  } catch {
+    return false;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
    AI VISITOR PERSONALIZATION
    ═══════════════════════════════════════════════════════════════ */
 
@@ -1057,7 +1404,7 @@ Remix the homepage copy to feel slightly fresh and relevant for this returning v
 {
   "pill": "Short tagline ~5 words. Variant of 'One Founder. One AI. Real Apps.'",
   "heroSub": "1-2 sentences. Variant of the hero description. Punchy.",
-  "studioBody": "2-3 sentences about the solo founder + AI studio. Slightly different emphasis based on their interests.",
+  "studioBody": "2-3 sentences about the AI-run studio. Slightly different emphasis based on their interests.",
   "ctaH2": "CTA headline ~5 words. Must include <br/> and wrap last 2-3 words in <em>...</em>.",
   "ctaP": "1 sentence. Warm and inviting call to action.",
   "founderNote": "2-3 sentences in founder's voice. Warmer and more familiar for repeat visitors."
