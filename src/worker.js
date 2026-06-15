@@ -951,7 +951,7 @@ async function handleEmailWebhook(request, env, ctx) {
   const senderEmail = body.email || body._replyto || "";
   const senderName  = body.name  || "";
   const message     = body.message || body.body || "";
-  const visitorId   = isValidVid(body._vid) ? body._vid : null;
+  const visitorId   = isValidVid(body.vid) ? body.vid : null;
 
   if (!senderEmail || !message) {
     return new Response("Missing required fields", { status: 400 });
