@@ -948,12 +948,18 @@ async function handleEmailWebhook(request, env, ctx) {
     return new Response("Bad Request", { status: 400 });
   }
 
-  const senderEmail = body.email || body._replyto || "";
-  const senderName  = body.name  || "";
-  const message     = body.message || body.body || "";
-  const visitorId   = isValidVid(body.vid) ? body.vid : null;
+  // Formspree may nest fields under a "payload" or "data" key — unwrap if needed
+  const fields = body.payload || body.data || body;
+
+  const senderEmail = fields.email || fields._replyto || "";
+  const senderName  = fields.name  || "";
+  const message     = fields.message || fields.body || "";
+  const visitorId   = isValidVid(fields.vid) ? fields.vid : null;
+
+  console.log(`[webhook] email=${senderEmail} vid=${visitorId || "none"} body_keys=${Object.keys(body).join(",")}`);
 
   if (!senderEmail || !message) {
+    console.log(`[webhook] missing fields — email="${senderEmail}" message="${message?.slice(0,40)}"`);
     return new Response("Missing required fields", { status: 400 });
   }
 
@@ -968,6 +974,8 @@ async function handleEmailWebhook(request, env, ctx) {
     console.error("Classification failed — defaulting to safe:", err);
   }
 
+  console.log(`[webhook] classification=${classification.category} reason=${classification.reason}`);
+
   if (classification.category === "spam") {
     console.log(`Spam dropped from ${senderEmail}: ${classification.reason}`);
     return new Response("OK", { status: 200 });
@@ -978,13 +986,17 @@ async function handleEmailWebhook(request, env, ctx) {
   if (visitorId && env.VISITORS) {
     try {
       const s = await env.VISITORS.get(`v:${visitorId}`, { type: "json" });
+      console.log(`[webhook] KV profile for ${visitorId}: ${s ? "found" : "not found"}`);
       if (s) {
         if (!s.email) s.email = senderEmail;
         if (senderName && !s.name) s.name = senderName;
         s.generatedContent = null;
         await env.VISITORS.put(`v:${visitorId}`, JSON.stringify(s), { expirationTtl: 365 * 24 * 3600 });
+        console.log(`[webhook] Stage 1 complete — email written to KV for ${visitorId}`);
       }
-    } catch { /* ignore */ }
+    } catch (err) { console.error(`[webhook] Stage 1 KV error:`, err); }
+  } else {
+    console.log(`[webhook] Stage 1 skipped — visitorId=${visitorId} VISITORS=${!!env.VISITORS}`);
   }
 
   if (classification.category === "flagged") {
