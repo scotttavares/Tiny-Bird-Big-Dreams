@@ -930,33 +930,35 @@ function setWindow(w) {
    ═══════════════════════════════════════════════════════════════ */
 
 async function handleEmailWebhook(request, env, ctx) {
-  const rawBody = await request.text();
+  // Support both direct form POST (multipart/FormData) and legacy Formspree JSON webhook
+  const contentType = request.headers.get("content-type") || "";
+  let fields;
 
-  // Verify Formspree signature if secret is configured
-  if (env.FORMSPREE_WEBHOOK_SECRET) {
-    const sig = request.headers.get("X-Formspree-Signature") || "";
-    const valid = await verifyHmacSha256(env.FORMSPREE_WEBHOOK_SECRET, rawBody, sig);
-    if (!valid) {
-      return new Response("Unauthorized", { status: 401 });
+  if (contentType.includes("application/json")) {
+    // Formspree JSON webhook path (kept for legacy / future use)
+    const rawBody = await request.text();
+    if (env.FORMSPREE_WEBHOOK_SECRET) {
+      const sig = request.headers.get("X-Formspree-Signature") || "";
+      const valid = await verifyHmacSha256(env.FORMSPREE_WEBHOOK_SECRET, rawBody, sig);
+      if (!valid) return new Response("Unauthorized", { status: 401 });
     }
+    let body;
+    try { body = JSON.parse(rawBody); } catch { return new Response("Bad Request", { status: 400 }); }
+    fields = body.payload || body.data || body;
+  } else {
+    // Direct form POST path (multipart/form-data or application/x-www-form-urlencoded)
+    try {
+      const fd = await request.formData();
+      fields = Object.fromEntries(fd.entries());
+    } catch { return new Response("Bad Request", { status: 400 }); }
   }
-
-  let body;
-  try {
-    body = JSON.parse(rawBody);
-  } catch {
-    return new Response("Bad Request", { status: 400 });
-  }
-
-  // Formspree may nest fields under a "payload" or "data" key — unwrap if needed
-  const fields = body.payload || body.data || body;
 
   const senderEmail = fields.email || fields._replyto || "";
   const senderName  = fields.name  || "";
   const message     = fields.message || fields.body || "";
   const visitorId   = isValidVid(fields.vid) ? fields.vid : null;
 
-  console.log(`[webhook] email=${senderEmail} vid=${visitorId || "none"} body_keys=${Object.keys(body).join(",")}`);
+  console.log(`[webhook] email=${senderEmail} vid=${visitorId || "none"} fields=${Object.keys(fields).join(",")}`);
 
   if (!senderEmail || !message) {
     console.log(`[webhook] missing fields — email="${senderEmail}" message="${message?.slice(0,40)}"`);
