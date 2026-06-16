@@ -1359,34 +1359,34 @@ async function updateVisitor(vid, profile, env) {
   if (!env.VISITORS) return;
   const now = Date.now();
 
-  // Do a fresh KV read before writing — the webhook handler may have written
-  // email/name to KV after the GET request read the profile, and we must not
-  // overwrite those fields with the stale snapshot captured at request time.
-  let base = profile;
-  try {
-    const fresh = await env.VISITORS.get(`v:${vid}`, { type: "json" });
-    if (fresh) base = fresh;
-  } catch { /* fall back to captured profile */ }
+  // Compute what we own: visit increment and optional content regen.
+  // Do all async work first, then read-merge-write at the end so we never
+  // overwrite fields written concurrently by the webhook (email, name, etc.)
+  const newVisits = (profile.visits || 0) + 1;
+  let generatedContent = profile.generatedContent;
 
-  const updated = {
-    ...base,
-    visits: (base.visits || 0) + 1,
-    lastSeen: now,
-    firstSeen: base.firstSeen || now,
-  };
-
-  const contentAge = updated.generatedContent?.generatedAt
-    ? now - updated.generatedContent.generatedAt
+  const contentAge = generatedContent?.generatedAt
+    ? now - generatedContent.generatedAt
     : Infinity;
   // Skip regen if content was just generated synchronously this request (<5 min old)
-  if (updated.visits >= 2 && contentAge > 7 * 24 * 3600 * 1000 && contentAge > 5 * 60 * 1000) {
+  if (newVisits >= 2 && contentAge > 7 * 24 * 3600 * 1000 && contentAge > 5 * 60 * 1000) {
     try {
-      const content = await generatePersonalizedContent(updated, env);
-      if (content) updated.generatedContent = { ...content, generatedAt: now };
+      const content = await generatePersonalizedContent({ ...profile, visits: newVisits }, env);
+      if (content) generatedContent = { ...content, generatedAt: now };
     } catch { /* ignore */ }
   }
 
+  // Fresh KV read immediately before writing — picks up any concurrent writes
+  // (e.g., webhook Stage 1 wrote email during our AI generation above).
   try {
+    const fresh = await env.VISITORS.get(`v:${vid}`, { type: "json" }) || profile;
+    const updated = {
+      ...fresh,
+      visits: (fresh.visits || 0) + 1,
+      lastSeen: now,
+      firstSeen: fresh.firstSeen || now,
+      generatedContent,
+    };
     await env.VISITORS.put(`v:${vid}`, JSON.stringify(updated), { expirationTtl: 365 * 24 * 3600 });
   } catch { /* ignore */ }
 }
