@@ -24,9 +24,11 @@ Returning visitors get Claude-remixed homepage copy based on behavior (scroll de
 Markers in `index.html`: `<!--TBBD:PILL-->`, `<!--TBBD:HERO_SUB-->`, `<!--TBBD:STUDIO_BODY-->`, `<!--TBBD:CTA_H2-->`, `<!--TBBD:CTA_P-->`, `<!--TBBD:FOUNDER_NOTE-->`, `<!--TBBD:EMAIL_NOTE-->`
 
 ### Email Acknowledgment Banner
-After a visitor submits the contact form:
-- Stage 1 (sync): `emailReplied: false` written to KV → visitor sees "📬 Your message landed safely" banner on next page load
-- Stage 2 (background via `ctx.waitUntil`): AI generates reply, Resend sends it, then `emailReplied: true` → banner disappears
+After a visitor submits the contact form, their KV profile gets `email` set. On every subsequent visit, `serveHome` injects a persistent "📬 Thanks for reaching out" banner — no timing-dependent flag needed.
+
+- Banner condition: `if (profile.email)` — shows permanently once they've emailed
+- Stage 1 (sync): writes visitor's email/name to KV profile, clears `generatedContent` cache
+- Stage 2 (background via `ctx.waitUntil`): AI generates reply, Resend sends it, sends founder alert
 
 The form hidden field uses `name="vid"` (not `_vid` — Formspree strips underscore-prefixed fields).
 

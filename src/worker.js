@@ -981,7 +981,6 @@ async function handleEmailWebhook(request, env, ctx) {
       if (s) {
         if (!s.email) s.email = senderEmail;
         if (senderName && !s.name) s.name = senderName;
-        s.emailReplied = false;
         s.generatedContent = null;
         await env.VISITORS.put(`v:${visitorId}`, JSON.stringify(s), { expirationTtl: 365 * 24 * 3600 });
       }
@@ -1030,18 +1029,6 @@ async function sendEmailReply({ senderName, senderEmail, message, visitorId }, e
     replySent = true;
   } catch (err) {
     console.error("Auto-reply send failed:", err);
-  }
-
-  // Stage 2: flip to replied — banner disappears on visitor's next reload
-  if (replySent && visitorId && env.VISITORS) {
-    try {
-      const s = await env.VISITORS.get(`v:${visitorId}`, { type: "json" });
-      if (s) {
-        s.emailReplied = true;
-        s.generatedContent = null;
-        await env.VISITORS.put(`v:${visitorId}`, JSON.stringify(s), { expirationTtl: 365 * 24 * 3600 });
-      }
-    } catch { /* ignore */ }
   }
 
   try {
@@ -1332,8 +1319,8 @@ async function serveHome(request, env, ctx) {
 
   html = html.replace("<!--TBBD:VID-->", `<meta name="tbbd-vid" content="${vid}">`);
 
-  if (profile.email && profile.emailReplied === false) {
-    const emailNote = `<div style="background:rgba(232,160,34,.1);border:1px solid rgba(232,160,34,.25);border-radius:16px;padding:20px 28px;margin:32px auto 0;max-width:760px;text-align:center;font-size:14px;color:rgba(251,247,242,.75);line-height:1.75;">📬&ensp;<strong style="color:#E8A022;">Your message landed safely.</strong>&ensp;The studio AI sent an initial reply — Scott reviews every note and will follow up personally if needed.</div>`;
+  if (profile.email) {
+    const emailNote = `<div style="background:rgba(232,160,34,.1);border:1px solid rgba(232,160,34,.25);border-radius:16px;padding:20px 28px;margin:32px auto 0;max-width:760px;text-align:center;font-size:14px;color:rgba(251,247,242,.75);line-height:1.75;">📬&ensp;<strong style="color:#E8A022;">Thanks for reaching out.</strong>&ensp;Scott has your message and will follow up personally.</div>`;
     html = html.replace(
       /<!--TBBD:EMAIL_NOTE-->[\s\S]*?<!--\/TBBD:EMAIL_NOTE-->/,
       `<!--TBBD:EMAIL_NOTE-->${emailNote}<!--/TBBD:EMAIL_NOTE-->`
@@ -1427,9 +1414,9 @@ async function generatePersonalizedContent(profile, env) {
     : scroll > 0.2 ? "skimmed the top"
     : "just glanced";
   const interests = (profile.interests || []).join(", ") || "general browsing";
-  const emailLine = !profile.email ? `Still anonymous.`
-    : profile.emailReplied === false ? `They've reached out via the contact form — a reply is in progress. Acknowledge their outreach warmly but don't explicitly say "we replied" yet.`
-    : `They've reached out and received a reply — treat them warmly as a known contact.`;
+  const emailLine = profile.email
+    ? `They've reached out via the contact form — treat them warmly as a known contact.`
+    : `Still anonymous.`;
   const visitTone = visits === 1 ? "This is their FIRST return visit — make the copy feel like a warm, genuine welcome back."
     : visits <= 3 ? "They're an early regular — be warm and a bit more familiar."
     : "They keep coming back — treat them like someone who really gets it.";
