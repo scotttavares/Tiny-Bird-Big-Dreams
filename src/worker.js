@@ -1358,11 +1358,21 @@ async function serveHome(request, env, ctx) {
 async function updateVisitor(vid, profile, env) {
   if (!env.VISITORS) return;
   const now = Date.now();
+
+  // Do a fresh KV read before writing — the webhook handler may have written
+  // email/name to KV after the GET request read the profile, and we must not
+  // overwrite those fields with the stale snapshot captured at request time.
+  let base = profile;
+  try {
+    const fresh = await env.VISITORS.get(`v:${vid}`, { type: "json" });
+    if (fresh) base = fresh;
+  } catch { /* fall back to captured profile */ }
+
   const updated = {
-    ...profile,
-    visits: (profile.visits || 0) + 1,
+    ...base,
+    visits: (base.visits || 0) + 1,
     lastSeen: now,
-    firstSeen: profile.firstSeen || now,
+    firstSeen: base.firstSeen || now,
   };
 
   const contentAge = updated.generatedContent?.generatedAt
