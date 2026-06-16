@@ -1320,7 +1320,7 @@ async function serveHome(request, env, ctx) {
   html = html.replace("<!--TBBD:VID-->", `<meta name="tbbd-vid" content="${vid}">`);
 
   if (profile.email) {
-    const emailNote = `<div style="background:rgba(232,160,34,.1);border:1px solid rgba(232,160,34,.25);border-radius:16px;padding:20px 28px;margin:32px auto 0;max-width:760px;text-align:center;font-size:14px;color:rgba(251,247,242,.75);line-height:1.75;">📬&ensp;<strong style="color:#E8A022;">Thanks for reaching out.</strong>&ensp;Scott has your message and will follow up personally.</div>`;
+    const emailNote = `<div style="background:rgba(232,160,34,.1);border:1px solid rgba(232,160,34,.25);border-radius:16px;padding:20px 28px;margin:32px auto 0;max-width:760px;text-align:center;font-size:14px;color:rgba(251,247,242,.75);line-height:1.75;">📬&ensp;<strong style="color:#E8A022;">Thanks for reaching out.</strong>&ensp;We've got your message and will be in touch soon.</div>`;
     html = html.replace(
       /<!--TBBD:EMAIL_NOTE-->[\s\S]*?<!--\/TBBD:EMAIL_NOTE-->/,
       `<!--TBBD:EMAIL_NOTE-->${emailNote}<!--/TBBD:EMAIL_NOTE-->`
