@@ -973,6 +973,21 @@ async function handleEmailWebhook(request, env, ctx) {
     return new Response("OK", { status: 200 });
   }
 
+  // Stage 1 (sync): record that email was received for all non-spam messages.
+  // Runs before flagged check so even flagged senders see the acknowledgment banner.
+  if (visitorId && env.VISITORS) {
+    try {
+      const s = await env.VISITORS.get(`v:${visitorId}`, { type: "json" });
+      if (s) {
+        if (!s.email) s.email = senderEmail;
+        if (senderName && !s.name) s.name = senderName;
+        s.emailReplied = false;
+        s.generatedContent = null;
+        await env.VISITORS.put(`v:${visitorId}`, JSON.stringify(s), { expirationTtl: 365 * 24 * 3600 });
+      }
+    } catch { /* ignore */ }
+  }
+
   if (classification.category === "flagged") {
     try {
       await sendEmail({
@@ -985,20 +1000,6 @@ async function handleEmailWebhook(request, env, ctx) {
       console.error("Flagged alert failed:", err);
     }
     return new Response("OK", { status: 200 });
-  }
-
-  // Stage 1 (sync): record that email was received — visitor sees banner immediately on next page load
-  if (visitorId && env.VISITORS) {
-    try {
-      const s = await env.VISITORS.get(`v:${visitorId}`, { type: "json" });
-      if (s) {
-        if (!s.email) s.email = senderEmail;
-        if (senderName && !s.name) s.name = senderName;
-        s.emailReplied = false;
-        s.generatedContent = null;
-        await env.VISITORS.put(`v:${visitorId}`, JSON.stringify(s), { expirationTtl: 365 * 24 * 3600 });
-      }
-    } catch { /* ignore */ }
   }
 
   // Stage 2 (background): generate AI reply, send emails, then flip emailReplied → true.
