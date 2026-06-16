@@ -1381,10 +1381,10 @@ async function updateVisitor(vid, profile, env) {
 
 async function handleTrack(request, env, ctx) {
   let data;
-  try { data = await request.json(); } catch { return new Response("", { status: 204 }); }
-  if (!isValidVid(data?.vid)) return new Response("", { status: 204 });
+  try { data = await request.json(); } catch { return new Response(null, { status: 204 }); }
+  if (!isValidVid(data?.vid)) return new Response(null, { status: 204 });
   if (ctx) ctx.waitUntil(applyBehavior(data.vid, data, env));
-  return new Response("", { status: 204 });
+  return new Response(null, { status: 204 });
 }
 
 async function applyBehavior(vid, data, env) {
