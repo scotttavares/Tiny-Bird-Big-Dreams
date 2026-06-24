@@ -1,7 +1,7 @@
 /**
  * Lull — installable breathing web app (PWA) + privacy policy
  * Serves:
- *   /                       → app landing with a live breathing exercise + pattern picker
+ *   /                       → app sales-pitch landing with a live breathing exercise, sound, pattern picker
  *   /privacy                → privacy policy (use as the App Store Privacy Policy URL)
  *   /manifest.webmanifest   → PWA manifest
  *   /sw.js                  → offline service worker
@@ -22,7 +22,7 @@ const SHELL = (title, body) => `<!doctype html>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <title>${title}</title>
-<meta name="description" content="Lull — a minute to breathe. One glowing sphere that paces your breath. No account, no streaks, fully offline. Try the web version, free."/>
+<meta name="description" content="Lull — a minute to breathe. A glowing orb that paces your breath, with calming sound. Free, no account, fully offline. Try the web app now."/>
 <meta name="color-scheme" content="dark"/>
 <meta name="theme-color" content="#0a0613"/>
 <link rel="manifest" href="/manifest.webmanifest"/>
@@ -32,15 +32,15 @@ const SHELL = (title, body) => `<!doctype html>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Lull"/>
 <meta property="og:title" content="Lull — a minute to breathe"/>
-<meta property="og:description" content="A pocket of calm whenever you need one. Try the breathing web app, free — no account, fully offline."/>
+<meta property="og:description" content="A glowing orb that paces your breath, with calming sound. Free, no account, fully offline. Try the web app now."/>
 <meta property="og:type" content="website"/>
 <meta property="og:url" content="https://lull.tinybirdbigdreams.com/"/>
 <style>
-:root{ --bg0:#1c1133; --bg1:#0a0613; --bg2:#070410; --ink:#f3efff; --mut:rgba(243,239,255,.62); --faint:rgba(243,239,255,.4); --lav:#bfa9ff; }
+:root{ --bg0:#1c1133; --bg1:#0a0613; --bg2:#070410; --ink:#f3efff; --mut:rgba(243,239,255,.62); --faint:rgba(243,239,255,.4); --lav:#bfa9ff; --lav2:#8a6cf0; }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
-body{ min-height:100vh; background:radial-gradient(120% 90% at 50% 12%, var(--bg0), var(--bg1) 48%, var(--bg2) 100%); background-attachment:fixed; color:var(--ink); font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
-.wrap{ max-width:680px; margin:0 auto; padding:40px 26px 96px; }
+body{ min-height:100vh; background:radial-gradient(125% 90% at 50% 8%, var(--bg0), var(--bg1) 46%, var(--bg2) 100%); background-attachment:fixed; color:var(--ink); font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+.wrap{ max-width:720px; margin:0 auto; padding:36px 24px 90px; }
 h1{ font-size:26px; font-weight:600; letter-spacing:-.01em; margin:0 0 6px; }
 h2{ font-size:16px; font-weight:600; margin:30px 0 6px; color:var(--ink); }
 p{ color:var(--mut); margin:0 0 14px; }
@@ -49,53 +49,98 @@ a{ color:var(--lav); text-decoration:none; } a:hover{ text-decoration:underline;
 .card{ background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:20px; padding:26px 28px; }
 .eff{ color:var(--faint); font-size:13px; margin-top:2px; }
 .back{ font-size:14px; color:var(--mut); }
-footer{ text-align:center; margin-top:48px; color:var(--faint); font-size:13px; }
+footer{ text-align:center; margin-top:56px; color:var(--faint); font-size:13px; }
 footer a{ color:var(--mut); }
 
 /* ── landing ── */
-.topbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:36px; }
+.topbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:30px; }
 .word{ font-size:15px; letter-spacing:.42em; text-indent:.42em; font-weight:700; opacity:.92; }
 .top-privacy{ font-size:13px; color:var(--mut); }
 .hero{ text-align:center; }
-.kicker{ text-transform:uppercase; letter-spacing:.32em; text-indent:.32em; font-size:12px; color:var(--lav); margin:0 0 14px; }
-.hero-h1{ font-size:clamp(28px,7vw,38px); line-height:1.12; font-weight:700; letter-spacing:-.02em; margin:0 0 16px; color:var(--ink); }
-.hero-sub{ max-width:460px; margin:0 auto; color:var(--mut); font-size:16px; }
+.kicker{ display:inline-block; text-transform:uppercase; letter-spacing:.28em; text-indent:.28em; font-size:11px; color:var(--lav); margin:0 0 16px; padding:6px 14px; border:1px solid rgba(183,155,255,.28); border-radius:999px; }
+.hero-h1{ font-size:clamp(32px,8.5vw,52px); line-height:1.06; font-weight:800; letter-spacing:-.03em; margin:0 0 16px; color:#fff; }
+.hero-h1 em{ font-style:normal; background:linear-gradient(120deg,#e7deff,#b79bff 40%,#8a6cf0); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.hero-sub{ max-width:480px; margin:0 auto; color:var(--mut); font-size:clamp(15px,2.4vw,17px); }
 
-.breathe{ text-align:center; margin:30px 0 6px; }
-.orb-wrap{ position:relative; height:300px; display:flex; align-items:center; justify-content:center; }
-.orb-ring{ position:absolute; width:296px; height:296px; border-radius:50%; border:1px solid rgba(183,155,255,.14); }
-.orb-ring.r2{ width:230px; height:230px; border-color:rgba(183,155,255,.10); }
-.borb{ width:190px; height:190px; border-radius:50%; cursor:pointer; outline:none; -webkit-tap-highlight-color:transparent;
-  background:radial-gradient(circle at 38% 32%, #efe6ff 0%, #b79bff 26%, #8a6cf0 52%, #5b3fb0 74%, #2a1c54 100%);
-  box-shadow:0 0 80px 14px rgba(150,116,255,.45), inset -10px -12px 30px rgba(20,10,40,.7), inset 8px 8px 22px rgba(255,255,255,.25);
-  transition:transform 1.4s ease-in-out; will-change:transform; }
-.borb:focus-visible{ box-shadow:0 0 0 3px rgba(191,169,255,.7), 0 0 80px 14px rgba(150,116,255,.45), inset -10px -12px 30px rgba(20,10,40,.7), inset 8px 8px 22px rgba(255,255,255,.25); }
-.cue{ font-size:22px; font-weight:600; min-height:28px; }
+/* premium orb */
+.breathe{ text-align:center; margin:26px 0 6px; }
+.orb-wrap{ position:relative; height:340px; display:flex; align-items:center; justify-content:center; }
+.orb-ring{ position:absolute; border-radius:50%; border:1px solid rgba(183,155,255,.12); width:308px; height:308px; }
+.orb-ring.r2{ width:236px; height:236px; border-color:rgba(183,155,255,.07); }
+.orb-stage{ position:relative; width:196px; height:196px; display:flex; align-items:center; justify-content:center; cursor:pointer; outline:none; -webkit-tap-highlight-color:transparent; transition:transform 1.4s cubic-bezier(.37,0,.36,1); will-change:transform; }
+.orb-stage:focus-visible{ box-shadow:0 0 0 3px rgba(191,169,255,.7); border-radius:50%; }
+.orb-aura{ position:absolute; width:320px; height:320px; border-radius:50%; background:radial-gradient(circle, rgba(150,116,255,.55) 0%, rgba(138,108,240,.20) 40%, transparent 68%); filter:blur(16px); opacity:.6; animation:auraIdle 7s ease-in-out infinite; pointer-events:none; }
+.orb-core{ position:relative; width:188px; height:188px; border-radius:50%; overflow:hidden;
+  background:radial-gradient(circle at 35% 28%, #f6f0ff 0%, #d6c4ff 20%, #b49bf6 42%, #8a6cf0 62%, #5a3fb4 82%, #34216a 96%, #241551 100%);
+  box-shadow:0 26px 70px rgba(60,30,120,.55), 0 0 80px 10px rgba(150,116,255,.42), inset -14px -18px 40px rgba(18,8,38,.74), inset 12px 12px 30px rgba(255,255,255,.34);
+  animation:liveBreath 7s ease-in-out infinite; }
+.orb-sheen{ position:absolute; inset:-30%; border-radius:50%; background:conic-gradient(from 130deg, transparent 0%, rgba(255,255,255,.18) 16%, transparent 36%, transparent 100%); mix-blend-mode:screen; animation:spin 18s linear infinite; opacity:.7; pointer-events:none; }
+.orb-spec{ position:absolute; top:13%; left:20%; width:48%; height:42%; border-radius:50%; background:radial-gradient(circle at 38% 34%, rgba(255,255,255,.9), rgba(255,255,255,.2) 44%, transparent 70%); filter:blur(2px); pointer-events:none; }
+.orb-particles span{ position:absolute; top:50%; left:50%; width:5px; height:5px; margin:-2.5px 0 0 -2.5px; border-radius:50%; background:rgba(224,212,255,.95); box-shadow:0 0 9px rgba(183,155,255,.95); transform:rotate(var(--a)) translateX(var(--r)); animation:orbit var(--d) linear infinite var(--dl); pointer-events:none; }
+@keyframes auraIdle{ 0%,100%{opacity:.5; transform:scale(1)} 50%{opacity:.74; transform:scale(1.06)} }
+@keyframes liveBreath{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.025)} }
+@keyframes spin{ to{ transform:rotate(360deg) } }
+@keyframes orbit{ 0%{ transform:rotate(var(--a)) translateX(var(--r)); opacity:0 } 12%{opacity:.95} 88%{opacity:.4} 100%{ transform:rotate(calc(var(--a) + 360deg)) translateX(var(--r)); opacity:0 } }
+.is-breathing .orb-aura{ animation:none; opacity:.9; transition:opacity 1.3s ease; }
+.is-breathing .orb-core{ animation:none; }
+
+.cue{ font-size:23px; font-weight:600; min-height:30px; margin-top:4px; }
 .cue-sub{ color:var(--mut); font-size:14px; min-height:20px; }
 .patterns{ display:inline-flex; gap:6px; margin-top:22px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); border-radius:999px; padding:5px; }
 .pat{ border:none; background:transparent; color:var(--mut); font:inherit; font-size:13px; font-weight:600; padding:8px 16px; border-radius:999px; cursor:pointer; transition:background .15s,color .15s; }
 .pat:hover{ color:var(--ink); }
 .pat.is-on{ background:rgba(183,155,255,.22); color:var(--ink); }
 .pat-cap{ margin-top:10px; font-size:12.5px; color:var(--faint); letter-spacing:.02em; }
-.controls{ display:inline-flex; align-items:center; gap:16px; margin-top:18px; }
-.btn-primary{ padding:13px 32px; border-radius:999px; border:none; cursor:pointer; font:inherit; font-weight:600; font-size:15px; color:#1a1030; background:linear-gradient(180deg,#e7deff,#b79bff); box-shadow:0 10px 30px rgba(150,116,255,.4); transition:transform .15s ease, box-shadow .15s ease; }
-.btn-primary:hover{ transform:translateY(-1px); box-shadow:0 14px 36px rgba(150,116,255,.5); }
+.controls{ display:inline-flex; align-items:center; gap:14px; margin-top:18px; }
+.btn-primary{ padding:14px 34px; border-radius:999px; border:none; cursor:pointer; font:inherit; font-weight:700; font-size:15px; color:#1a1030; background:linear-gradient(180deg,#efe7ff,#b79bff); box-shadow:0 12px 34px rgba(150,116,255,.45); transition:transform .15s ease, box-shadow .15s ease; }
+.btn-primary:hover{ transform:translateY(-1px); box-shadow:0 16px 40px rgba(150,116,255,.55); }
 .btn-primary:active{ transform:translateY(0); }
-.timer{ color:var(--faint); font-variant-numeric:tabular-nums; font-size:14px; min-width:38px; text-align:left; }
+.icon-btn{ width:46px; height:46px; border-radius:50%; border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.06); color:var(--ink); font-size:17px; cursor:pointer; transition:background .15s, border-color .15s; }
+.icon-btn:hover{ background:rgba(255,255,255,.12); }
+.icon-btn[aria-pressed="true"]{ background:rgba(183,155,255,.24); border-color:rgba(183,155,255,.5); }
+.timer{ color:var(--faint); font-variant-numeric:tabular-nums; font-size:14px; min-width:36px; text-align:left; }
 .webapp-note{ margin:22px 0 0; font-size:13px; color:var(--faint); }
 
-.features{ display:grid; gap:12px; margin:40px 0 0; }
-.feature{ display:flex; gap:14px; align-items:flex-start; text-align:left; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:16px 18px; }
-.feature .fi{ font-size:20px; flex-shrink:0; line-height:1.5; }
+.chips{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:40px 0 0; }
+.chip{ font-size:13px; font-weight:600; color:var(--ink); background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-radius:999px; padding:9px 16px; }
+.chip span{ color:var(--lav); }
+
+.sec{ margin-top:58px; }
+.sec-h{ text-align:center; font-size:clamp(22px,5vw,30px); font-weight:800; letter-spacing:-.02em; color:#fff; margin:0 0 8px; }
+.sec-sub{ text-align:center; color:var(--mut); max-width:460px; margin:0 auto 26px; font-size:15px; }
+
+.steps{ display:grid; gap:14px; }
+.step{ display:flex; gap:16px; align-items:flex-start; background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.08); border-radius:18px; padding:18px 20px; }
+.step-n{ flex-shrink:0; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px; color:#1a1030; background:linear-gradient(180deg,#e7deff,#b79bff); }
+.step b{ display:block; color:var(--ink); font-size:15.5px; margin-bottom:2px; }
+.step p{ margin:0; font-size:13.5px; }
+
+.rhythms{ display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); }
+.rhythm{ background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:18px; padding:20px; text-align:left; }
+.rhythm .rt{ font-weight:700; color:var(--ink); font-size:16px; }
+.rhythm .rr{ color:var(--lav); font-size:12.5px; font-weight:600; letter-spacing:.03em; margin:3px 0 8px; }
+.rhythm p{ margin:0; font-size:13px; }
+
+.features{ display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
+.feature{ display:flex; gap:14px; align-items:flex-start; text-align:left; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:18px; }
+.feature .fi{ font-size:21px; flex-shrink:0; line-height:1.4; }
 .feature b{ display:block; font-weight:600; font-size:15px; color:var(--ink); margin-bottom:2px; }
 .feature p{ margin:0; font-size:13.5px; }
 
-.appstore{ text-align:center; margin-top:38px; }
-.badge{ display:inline-block; padding:11px 22px; border-radius:999px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.16); font-weight:600; font-size:14px; color:var(--ink); }
-.hint{ max-width:430px; margin:14px auto 0; font-size:13px; color:var(--faint); }
+.cta{ margin-top:60px; text-align:center; background:radial-gradient(120% 130% at 50% 0%, rgba(138,108,240,.22), rgba(255,255,255,.02) 70%); border:1px solid rgba(183,155,255,.2); border-radius:26px; padding:44px 28px; }
+.cta h2{ font-size:clamp(24px,5.5vw,32px); font-weight:800; letter-spacing:-.02em; color:#fff; margin:0 0 10px; }
+.cta p{ max-width:440px; margin:0 auto 22px; }
+.badge{ display:inline-block; padding:12px 24px; border-radius:999px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); font-weight:700; font-size:14px; color:var(--ink); }
+.cta .hint{ max-width:430px; margin:16px auto 0; font-size:13px; color:var(--faint); }
 
-@media (max-width:520px){ .orb-wrap{ height:264px; } .borb{ width:162px; height:162px; } .orb-ring{ width:256px; height:256px; } .orb-ring.r2{ width:204px; height:204px; } }
-@media (prefers-reduced-motion: reduce){ .borb{ transition:none; } }
+@media (max-width:520px){
+  .orb-wrap{ height:300px; } .orb-stage{ width:168px; height:168px; } .orb-core{ width:160px; height:160px; }
+  .orb-aura{ width:280px; height:280px; } .orb-ring{ width:268px; height:268px; } .orb-ring.r2{ width:208px; height:208px; }
+}
+@media (prefers-reduced-motion: reduce){
+  .orb-stage{ transition:none; }
+  .orb-core,.orb-aura,.orb-sheen,.orb-particles span{ animation:none !important; }
+}
 </style></head>
 <body><div class="wrap">${body}
 <footer><div>Lull · a <a href="https://tinybirdbigdreams.com">Tiny Bird, Big Dreams</a> app · <a href="/privacy">Privacy</a></div></footer>
@@ -108,16 +153,29 @@ const LANDING = SHELL("Lull — a minute to breathe", `
 </div>
 
 <section class="hero">
-  <p class="kicker">a minute to breathe</p>
-  <h1 class="hero-h1">Find your calm in<br/>a single breath.</h1>
-  <p class="hero-sub">Lull is one glowing sphere that grows as you breathe in and softens as you breathe out. No noise, no accounts, no pressure — just a pocket of quiet whenever you need one.</p>
+  <span class="kicker">a minute to breathe</span>
+  <h1 class="hero-h1">Calm is<br/><em>one breath away.</em></h1>
+  <p class="hero-sub">Meet Lull — a single glowing orb that breathes with you, paired with sound that melts the noise away. No sign‑ups. No streaks. No catch. Just press play and feel your shoulders drop.</p>
 </section>
 
 <section class="breathe" aria-label="Breathing exercise">
   <div class="orb-wrap">
     <div class="orb-ring" aria-hidden="true"></div>
     <div class="orb-ring r2" aria-hidden="true"></div>
-    <div id="orb" class="borb" role="button" tabindex="0" aria-label="Start or stop the breathing exercise"></div>
+    <div id="orb" class="orb-stage" role="button" tabindex="0" aria-label="Start or stop the breathing exercise">
+      <div class="orb-aura" aria-hidden="true"></div>
+      <div class="orb-core" aria-hidden="true">
+        <span class="orb-sheen"></span>
+        <span class="orb-spec"></span>
+      </div>
+      <div class="orb-particles" aria-hidden="true">
+        <span style="--a:20deg;--r:118px;--d:13s;--dl:0s"></span>
+        <span style="--a:150deg;--r:132px;--d:17s;--dl:-4s"></span>
+        <span style="--a:255deg;--r:110px;--d:15s;--dl:-9s"></span>
+        <span style="--a:310deg;--r:140px;--d:19s;--dl:-2s"></span>
+        <span style="--a:95deg;--r:126px;--d:21s;--dl:-12s"></span>
+      </div>
+    </div>
   </div>
   <div class="cue" id="cue" aria-live="polite">Ready when you are</div>
   <div class="cue-sub" id="cueSub">tap the orb to begin</div>
@@ -129,43 +187,117 @@ const LANDING = SHELL("Lull — a minute to breathe", `
   <div class="pat-cap" id="patCap">in 4 · hold 2 · out 6</div>
   <div class="controls">
     <button id="beginBtn" class="btn-primary" type="button">Begin</button>
+    <button id="soundBtn" class="icon-btn" type="button" aria-pressed="false" aria-label="Turn sound on"><span id="soundIcon">🔈</span></button>
     <span class="timer" id="timer">0:00</span>
   </div>
-  <p class="webapp-note">The web version of Lull, running right here — no install needed. Or add it to your home screen.</p>
+  <p class="webapp-note">Yes — this is the real app, running right here. Free, in your browser, no install needed.</p>
 </section>
 
-<section class="features">
-  <div class="feature"><span class="fi" aria-hidden="true">🫧</span><div><b>Just breathe</b><p>Follow the orb. In as it grows, out as it softens. That's the whole app.</p></div></div>
-  <div class="feature"><span class="fi" aria-hidden="true">🎛️</span><div><b>Your pace</b><p>Calm, box breathing, or 4‑7‑8 — pick the rhythm that settles you.</p></div></div>
-  <div class="feature"><span class="fi" aria-hidden="true">🔒</span><div><b>No account, ever</b><p>Open it and exhale. Nothing to sign up for, nothing to remember.</p></div></div>
-  <div class="feature"><span class="fi" aria-hidden="true">✈️</span><div><b>Works fully offline</b><p>Add it to your home screen and it runs with no connection at all.</p></div></div>
+<div class="chips">
+  <span class="chip"><span>✦</span> 100% free</span>
+  <span class="chip"><span>✦</span> No account</span>
+  <span class="chip"><span>✦</span> Works offline</span>
+  <span class="chip"><span>✦</span> Zero ads &amp; tracking</span>
+</div>
+
+<section class="sec">
+  <h2 class="sec-h">Three taps to calmer.</h2>
+  <p class="sec-sub">No tutorial, no setup. The whole app is one beautiful breath you can take anywhere.</p>
+  <div class="steps">
+    <div class="step"><div class="step-n">1</div><div><b>Open Lull</b><p>It loads instantly — no account, no paywall, no "allow notifications."</p></div></div>
+    <div class="step"><div class="step-n">2</div><div><b>Breathe with the orb</b><p>In as it grows, out as it softens. Turn on sound and let the tone carry you.</p></div></div>
+    <div class="step"><div class="step-n">3</div><div><b>Feel the shift</b><p>A minute of slow breathing is often enough to settle a racing heart and a busy head.</p></div></div>
+  </div>
 </section>
 
-<section class="appstore">
+<section class="sec">
+  <h2 class="sec-h">Find your rhythm.</h2>
+  <p class="sec-sub">Pick the pattern that fits the moment — they're all built into the orb above.</p>
+  <div class="rhythms">
+    <div class="rhythm"><div class="rt">Calm</div><div class="rr">in 4 · hold 2 · out 6</div><p>An easy everyday reset. Longer exhales help signal your body that it's safe to relax.</p></div>
+    <div class="rhythm"><div class="rt">Box</div><div class="rr">4 · 4 · 4 · 4</div><p>A steady, even square — a favourite for focus before something that matters.</p></div>
+    <div class="rhythm"><div class="rt">4‑7‑8</div><div class="rr">in 4 · hold 7 · out 8</div><p>The classic wind‑down. Lovely for easing into sleep at the end of the day.</p></div>
+  </div>
+</section>
+
+<section class="sec">
+  <h2 class="sec-h">Built to disappear.</h2>
+  <p class="sec-sub">No feed, no badges, no guilt. Lull does one thing — and gets out of your way.</p>
+  <div class="features">
+    <div class="feature"><span class="fi" aria-hidden="true">🌌</span><div><b>A living orb</b><p>Soft glow, drifting light, sound that breathes with you. Genuinely lovely to look at.</p></div></div>
+    <div class="feature"><span class="fi" aria-hidden="true">🔉</span><div><b>Calm you can hear</b><p>An optional ambient tone and gentle breath sounds — synthesized, never noisy.</p></div></div>
+    <div class="feature"><span class="fi" aria-hidden="true">✈️</span><div><b>Works anywhere</b><p>Add it to your home screen and it runs with zero connection. Plane, subway, anywhere.</p></div></div>
+    <div class="feature"><span class="fi" aria-hidden="true">🛡️</span><div><b>Private by design</b><p>No account, no analytics, nothing leaves your device. Ever. Promise.</p></div></div>
+  </div>
+</section>
+
+<section class="cta">
+  <h2>Carry the calm in your pocket.</h2>
+  <p>The native app is on its way to the App Store. Until then, the full experience lives right here — and it's free forever on the web.</p>
   <span class="badge">📱 Coming soon to the App Store</span>
-  <p class="hint">Love it here? On your phone, tap Share → “Add to Home Screen” for a real Lull icon and one‑tap, offline calm.</p>
+  <p class="hint">On your phone: tap Share → “Add to Home Screen” for a real Lull icon and one‑tap, offline calm today.</p>
 </section>
 
 <script>
 (function(){
   function byId(i){ return document.getElementById(i); }
   var orb=byId('orb'), cue=byId('cue'), sub=byId('cueSub'), btn=byId('beginBtn'),
-      timerEl=byId('timer'), cap=byId('patCap'), body=document.body;
+      soundBtn=byId('soundBtn'), soundIcon=byId('soundIcon'), timerEl=byId('timer'),
+      cap=byId('patCap'), body=document.body;
   if(!orb||!btn) return;
+
+  /* ---- ambient sound engine (Web Audio, all synthesized) ---- */
+  var Audio2=(function(){
+    var ctx=null, master=null, breathGain=null, on=false, running=false, ready=false;
+    function build(){
+      if(ready) return;
+      var AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+      ctx=new AC();
+      master=ctx.createGain(); master.gain.value=0.00001; master.connect(ctx.destination);
+      var lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=440;
+      var droneG=ctx.createGain(); droneG.gain.value=0.05; lp.connect(droneG); droneG.connect(master);
+      [96,144,192].forEach(function(f,i){ var o=ctx.createOscillator(); o.type='sine'; o.frequency.value=f;
+        var g=ctx.createGain(); g.gain.value=i===0?0.55:0.22; o.connect(g); g.connect(lp); o.start(); });
+      var len=Math.floor(ctx.sampleRate*2), buf=ctx.createBuffer(1,len,ctx.sampleRate), d=buf.getChannelData(0), last=0;
+      for(var i=0;i<len;i++){ var w=Math.random()*2-1; last=(last+0.02*w)/1.02; d[i]=last*3.2; }
+      var ns=ctx.createBufferSource(); ns.buffer=buf; ns.loop=true;
+      var bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=620; bp.Q.value=0.7;
+      breathGain=ctx.createGain(); breathGain.gain.value=0.0;
+      ns.connect(bp); bp.connect(breathGain); breathGain.connect(master); ns.start();
+      ready=true;
+    }
+    function setMaster(v,t){ if(!ctx) return; var n=ctx.currentTime; master.gain.cancelScheduledValues(n); master.gain.linearRampToValueAtTime(Math.max(0.00001,v), n+(t||0.5)); }
+    function chime(freq){ if(!on||!running||!ctx) return; var o=ctx.createOscillator(); o.type='sine'; o.frequency.value=freq;
+      var g=ctx.createGain(); g.gain.value=0; o.connect(g); g.connect(master); var n=ctx.currentTime;
+      g.gain.linearRampToValueAtTime(0.10,n+0.05); g.gain.exponentialRampToValueAtTime(0.0008,n+1.7); o.start(n); o.stop(n+1.8); }
+    return {
+      arm:function(){ build(); if(!ctx) return false; if(ctx.state==='suspended') ctx.resume(); on=true; if(running) setMaster(0.9,0.6); return true; },
+      mute:function(){ on=false; setMaster(0.00001,0.4); },
+      isOn:function(){ return on; },
+      supported:function(){ return !!(window.AudioContext||window.webkitAudioContext); },
+      session:function(go){ running=go; if(go){ if(on) setMaster(0.9,0.6); } else { if(breathGain&&ctx){ breathGain.gain.cancelScheduledValues(ctx.currentTime); breathGain.gain.linearRampToValueAtTime(0.0,ctx.currentTime+0.6);} setMaster(0.00001,0.7); } },
+      phase:function(kind,durMs){ if(!on||!running||!ctx||!breathGain) return; var n=ctx.currentTime, t=durMs/1000; breathGain.gain.cancelScheduledValues(n);
+        if(kind==='in'){ chime(528); breathGain.gain.linearRampToValueAtTime(0.13, n+t*0.9); }
+        else if(kind==='out'){ chime(384); breathGain.gain.linearRampToValueAtTime(0.02, n+t*0.95); }
+        else { breathGain.gain.linearRampToValueAtTime(0.05, n+0.4); } }
+    };
+  })();
+
+  /* ---- breathing engine ---- */
   var patterns={
     calm:{label:'in 4 · hold 2 · out 6', phases:[
-      {name:'Breathe in', sub:'fill up slowly', dur:4000, scale:1.18},
-      {name:'Hold',       sub:'soft and easy',  dur:2000, scale:1.18},
-      {name:'Breathe out',sub:'let it all go',  dur:6000, scale:0.6}]},
+      {name:'Breathe in', sub:'fill up slowly', dur:4000, scale:1.18, k:'in'},
+      {name:'Hold',       sub:'soft and easy',  dur:2000, scale:1.18, k:'hold'},
+      {name:'Breathe out',sub:'let it all go',  dur:6000, scale:0.6,  k:'out'}]},
     box:{label:'in 4 · hold 4 · out 4 · hold 4', phases:[
-      {name:'Breathe in', sub:'fill up slowly',  dur:4000, scale:1.18},
-      {name:'Hold',       sub:'soft and easy',   dur:4000, scale:1.18},
-      {name:'Breathe out',sub:'let it all go',   dur:4000, scale:0.6},
-      {name:'Hold',       sub:'stay with it',    dur:4000, scale:0.6}]},
+      {name:'Breathe in', sub:'fill up slowly',  dur:4000, scale:1.18, k:'in'},
+      {name:'Hold',       sub:'soft and easy',   dur:4000, scale:1.18, k:'hold'},
+      {name:'Breathe out',sub:'let it all go',   dur:4000, scale:0.6,  k:'out'},
+      {name:'Hold',       sub:'stay with it',    dur:4000, scale:0.6,  k:'hold'}]},
     '478':{label:'in 4 · hold 7 · out 8', phases:[
-      {name:'Breathe in', sub:'through the nose', dur:4000, scale:1.18},
-      {name:'Hold',       sub:'gently',           dur:7000, scale:1.18},
-      {name:'Breathe out',sub:'slow and long',    dur:8000, scale:0.6}]}
+      {name:'Breathe in', sub:'through the nose', dur:4000, scale:1.18, k:'in'},
+      {name:'Hold',       sub:'gently',           dur:7000, scale:1.18, k:'hold'},
+      {name:'Breathe out',sub:'slow and long',    dur:8000, scale:0.6,  k:'out'}]}
   };
   var current='calm', running=false, t=null, tick=null, started=0;
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -174,24 +306,27 @@ const LANDING = SHELL("Lull — a minute to breathe", `
     var ph=patterns[current].phases, p=ph[i];
     cue.textContent=p.name; sub.textContent=p.sub;
     if(!reduce){ orb.style.transitionDuration=(p.dur/1000)+'s'; orb.style.transform='scale('+p.scale+')'; }
+    Audio2.phase(p.k, p.dur);
     t=setTimeout(function(){ setPhase((i+1)%ph.length); }, p.dur);
   }
   function fmt(s){ var m=Math.floor(s/60), x=s%60; return m+':'+(x<10?'0':'')+x; }
   function start(){
     running=true; started=Date.now();
     btn.textContent='Stop'; body.classList.add('is-breathing');
-    setPhase(0);
+    Audio2.session(true); setPhase(0);
     tick=setInterval(function(){ timerEl.textContent=fmt(Math.floor((Date.now()-started)/1000)); }, 250);
   }
   function stop(){
     running=false; clearTimeout(t); clearInterval(tick);
     btn.textContent='Begin'; body.classList.remove('is-breathing');
+    Audio2.session(false);
     cue.textContent='Nicely done'; sub.textContent='tap to go again'; timerEl.textContent='0:00'; rest();
   }
   function toggle(){ running ? stop() : start(); }
   btn.addEventListener('click', toggle);
   orb.addEventListener('click', toggle);
   orb.addEventListener('keydown', function(e){ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); toggle(); } });
+
   var pats=document.querySelectorAll('.pat');
   for(var k=0;k<pats.length;k++){
     pats[k].addEventListener('click', function(){
@@ -202,6 +337,15 @@ const LANDING = SHELL("Lull — a minute to breathe", `
       if(running){ clearTimeout(t); setPhase(0); }
     });
   }
+
+  if(soundBtn){
+    if(!Audio2.supported()){ soundBtn.style.display='none'; }
+    soundBtn.addEventListener('click', function(){
+      if(Audio2.isOn()){ Audio2.mute(); soundBtn.setAttribute('aria-pressed','false'); soundBtn.setAttribute('aria-label','Turn sound on'); soundIcon.textContent='🔈'; }
+      else { var ok=Audio2.arm(); if(ok){ soundBtn.setAttribute('aria-pressed','true'); soundBtn.setAttribute('aria-label','Turn sound off'); soundIcon.textContent='🔊'; } }
+    });
+  }
+
   rest();
   if('serviceWorker' in navigator){ window.addEventListener('load', function(){ navigator.serviceWorker.register('/sw.js').catch(function(){}); }); }
 })();
