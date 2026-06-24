@@ -162,7 +162,17 @@ footer a{color:var(--mut)}
 @media (prefers-reduced-motion: reduce){
   .orb,.aura,.s2,.ripple,.fx .aurora,.fx .mote{animation:none!important}
 }
+
+/* scroll reveals (only when JS is on, and motion is allowed) */
+@media (prefers-reduced-motion: no-preference){
+  .js .sec > h2, .js .sec > .lede, .js .mode, .js .theme, .js .step, .js .feature, .js .faq details, .js .maker, .js .final{
+    opacity:0; transform:translateY(28px) scale(.985);
+    transition:opacity .8s cubic-bezier(.22,.9,.3,1), transform .8s cubic-bezier(.22,.9,.3,1);
+  }
+  .js .in{opacity:1 !important; transform:none !important}
+}
 </style>
+<script>document.documentElement.className+=' js';</script>
 </head>
 <body>
 <div class="fx" aria-hidden="true">
@@ -303,4 +313,23 @@ footer a{color:var(--mut)}
 </section>
 
 <footer>Lull · a <a href="https://tinybirdbigdreams.com">Tiny Bird, Big Dreams</a> app · <a href="/privacy">Privacy</a></footer>
-</div></body></html>
+</div>
+<script>
+(function(){
+  var d=document; d.documentElement.classList.add('js');
+  var sel='.sec > h2, .sec > .lede, .mode, .theme, .step, .feature, .faq details, .maker, .final';
+  var els=[].slice.call(d.querySelectorAll(sel));
+  els.forEach(function(el){
+    var i=0,p=el.previousElementSibling;
+    while(p){ if(p.matches&&p.matches(sel)) i++; p=p.previousElementSibling; }
+    if(i) el.style.transitionDelay=Math.min(i*70,420)+'ms';
+  });
+  var rm=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(rm||!('IntersectionObserver' in window)){ els.forEach(function(el){el.classList.add('in');}); return; }
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+  },{threshold:0.08,rootMargin:'0px 0px -8% 0px'});
+  els.forEach(function(el){ io.observe(el); });
+})();
+</script>
+</body></html>
