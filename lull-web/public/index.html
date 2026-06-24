@@ -74,6 +74,20 @@ p{color:var(--mut);margin:0 0 14px}
 @keyframes aura{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:.74;transform:scale(1.07)}}
 @keyframes swirl{to{transform:rotate(360deg)}}
 
+/* breathing ripples emanating from the orb (synced to the 7s breath) */
+.ripple{position:absolute;width:204px;height:204px;border-radius:50%;border:1px solid rgba(183,155,255,.4);opacity:0;pointer-events:none;animation:ripple 7s ease-out infinite}
+.ripple.r2{animation-delay:2.33s}.ripple.r3{animation-delay:4.66s}
+@keyframes ripple{0%{transform:scale(.86);opacity:.5}60%{opacity:.14}100%{transform:scale(2.15);opacity:0}}
+
+/* fixed ambient fx layer: slow aurora drift + rising light motes */
+.fx{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.fx .aurora{position:absolute;inset:-20%;filter:blur(10px);animation:aurora 28s ease-in-out infinite alternate;
+  background:radial-gradient(36% 42% at 22% 28%,rgba(138,108,240,.18),transparent 60%),radial-gradient(40% 46% at 80% 70%,rgba(255,158,125,.11),transparent 62%),radial-gradient(34% 40% at 65% 22%,rgba(116,170,255,.11),transparent 60%)}
+.fx .mote{position:absolute;bottom:-12px;border-radius:50%;background:radial-gradient(circle,rgba(223,210,255,.95),rgba(150,116,255,0) 70%);opacity:0;animation:rise linear infinite}
+@keyframes aurora{0%{transform:translate3d(-3%,-2%,0) scale(1)}100%{transform:translate3d(3%,3%,0) scale(1.1)}}
+@keyframes rise{0%{transform:translateY(0) translateX(0) scale(.7);opacity:0}12%{opacity:.7}88%{opacity:.45}100%{transform:translateY(-112vh) translateX(26px) scale(1);opacity:0}}
+.wrap{position:relative;z-index:1}
+
 /* CTAs */
 .cta-row{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:6px}
 .btn{display:inline-flex;align-items:center;gap:8px;padding:15px 30px;border-radius:999px;font-weight:700;font-size:15.5px;cursor:pointer;border:none;transition:transform .15s ease,box-shadow .25s ease,filter .25s ease}
@@ -146,11 +160,27 @@ footer a{color:var(--mut)}
   .ring.a{width:262px;height:262px}.ring.b{width:202px;height:202px}
 }
 @media (prefers-reduced-motion: reduce){
-  .orb,.aura,.s2{animation:none!important}
+  .orb,.aura,.s2,.ripple,.fx .aurora,.fx .mote{animation:none!important}
 }
 </style>
 </head>
-<body><div class="wrap">
+<body>
+<div class="fx" aria-hidden="true">
+  <div class="aurora"></div>
+  <span class="mote" style="left:5%;width:4px;height:4px;animation-duration:21s;animation-delay:-2s"></span>
+  <span class="mote" style="left:14%;width:3px;height:3px;animation-duration:27s;animation-delay:-9s"></span>
+  <span class="mote" style="left:22%;width:5px;height:5px;animation-duration:18s;animation-delay:-13s"></span>
+  <span class="mote" style="left:31%;width:3px;height:3px;animation-duration:24s;animation-delay:-5s"></span>
+  <span class="mote" style="left:40%;width:4px;height:4px;animation-duration:30s;animation-delay:-17s"></span>
+  <span class="mote" style="left:48%;width:6px;height:6px;animation-duration:20s;animation-delay:-1s"></span>
+  <span class="mote" style="left:56%;width:3px;height:3px;animation-duration:26s;animation-delay:-11s"></span>
+  <span class="mote" style="left:64%;width:4px;height:4px;animation-duration:22s;animation-delay:-7s"></span>
+  <span class="mote" style="left:72%;width:5px;height:5px;animation-duration:17s;animation-delay:-14s"></span>
+  <span class="mote" style="left:80%;width:3px;height:3px;animation-duration:29s;animation-delay:-4s"></span>
+  <span class="mote" style="left:88%;width:4px;height:4px;animation-duration:23s;animation-delay:-19s"></span>
+  <span class="mote" style="left:95%;width:3px;height:3px;animation-duration:25s;animation-delay:-8s"></span>
+</div>
+<div class="wrap">
 
 <div class="topbar">
   <div class="word">LULL</div>
@@ -165,6 +195,7 @@ footer a{color:var(--mut)}
   <div class="stage" aria-hidden="true">
     <div class="ring a"></div><div class="ring b"></div>
     <div class="aura"></div>
+    <span class="ripple"></span><span class="ripple r2"></span><span class="ripple r3"></span>
     <a class="orb" href="/app" aria-label="Open the Lull web app">
       <span class="core"><span class="base"></span><span class="s1"></span><span class="s2"></span><span class="core2"></span>
         <span class="l1"></span><span class="irid"></span><span class="fres"></span><span class="g1"></span><span class="g2"></span></span>
@@ -173,7 +204,6 @@ footer a{color:var(--mut)}
 
   <div class="cta-row">
     <a class="btn primary" href="/app">Open the web app →</a>
-    <a class="btn ghost" href="#install">Add to home screen</a>
   </div>
   <p class="under">It's the real app, free, right in your browser — nothing to install.</p>
 
@@ -239,7 +269,7 @@ footer a{color:var(--mut)}
   <div class="features">
     <div class="feature"><span class="fi">🌌</span><div><b>A living orb</b><p>Liquid-glass light that drifts and breathes. Genuinely lovely to just watch.</p></div></div>
     <div class="feature"><span class="fi">🔉</span><div><b>Calm you can hear</b><p>Optional ambient tones and breath sounds — synthesized, never noisy.</p></div></div>
-    <div class="feature"><span class="fi">✈️</span><div><b>Works anywhere</b><p>Add it to your home screen and it runs fully offline. Plane, subway, anywhere.</p></div></div>
+    <div class="feature"><span class="fi">✈️</span><div><b>Works offline</b><p>No connection needed — it keeps running on a plane, in a tunnel, anywhere.</p></div></div>
     <div class="feature"><span class="fi">🛡️</span><div><b>Private by design</b><p>No account, no analytics, nothing leaves your device. Ever. Promise.</p></div></div>
     <div class="feature"><span class="fi">♿</span><div><b>Gentle by default</b><p>Honors Reduce Motion and rated 4+ — safe and soothing for everyone.</p></div></div>
     <div class="feature"><span class="fi">💜</span><div><b>Free, truly</b><p>The whole experience is free on the web. No trial timer, no upsell wall.</p></div></div>
@@ -258,7 +288,7 @@ footer a{color:var(--mut)}
   <h2>Good to know.</h2>
   <p class="lede">A few quick answers.</p>
   <details><summary>Is it really free?</summary><p>Yes. The full web app is free, forever, with no account and no ads. A native version is on the way to the App Store.</p></details>
-  <details><summary>Do I need to install anything?</summary><p>No. Tap “Open the web app” and you're breathing in seconds. If you'd like a real app icon and offline access, add it to your home screen (see below).</p></details>
+  <details><summary>Do I need to install anything?</summary><p>No. Tap “Open the web app” and you're breathing in seconds — nothing to download, no account, no setup.</p></details>
   <details><summary>Does it collect any data?</summary><p>None. Lull has no analytics, no tracking, and no servers storing anything about you. It runs entirely on your device. <a href="/privacy">Read the privacy policy →</a></p></details>
   <details><summary>Will there be an iPhone app?</summary><p>Yes — the native iOS app is in submission. The web app already gives you the complete experience in the meantime.</p></details>
 </section>
@@ -270,7 +300,6 @@ footer a{color:var(--mut)}
     <a class="btn primary" href="/app">Open the web app →</a>
     <span class="badge">📱 Coming soon to the App Store</span>
   </div>
-  <p class="hint">On iPhone: open the app, then tap <b>Share</b> → <b>“Add to Home Screen”</b> for a real Lull icon and one-tap, offline calm.</p>
 </section>
 
 <footer>Lull · a <a href="https://tinybirdbigdreams.com">Tiny Bird, Big Dreams</a> app · <a href="/privacy">Privacy</a></footer>
