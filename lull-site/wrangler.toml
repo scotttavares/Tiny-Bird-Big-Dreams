@@ -1,0 +1,8 @@
+name = "lull-site"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# Binds the subdomain AND creates the DNS record automatically on `wrangler deploy`
+[[routes]]
+pattern = "lull.tinybirdbigdreams.com"
+custom_domain = true
