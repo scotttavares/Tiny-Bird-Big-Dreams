@@ -461,6 +461,7 @@ export default function Lull() {
               <div style={{ position: "absolute", textAlign: "center", zIndex: 6, pointerEvents: "none" }}>
                 {active ? (<div style={{ fontSize: 29, fontWeight: 200, letterSpacing: 1, textShadow: "0 2px 22px rgba(0,0,0,0.65)" }}>{phaseLabel}</div>)
                   : sleepDone ? null : (<>
+                    <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 6, textIndent: 6, opacity: 0.5, marginBottom: 10, textShadow: "0 2px 14px rgba(0,0,0,0.6)" }}>LULL</div>
                     <div style={{ fontSize: 22, fontWeight: 300, letterSpacing: 0.5, textShadow: "0 2px 20px rgba(0,0,0,0.6)" }}>{pats[patternId].name}</div>
                     <div style={{ fontSize: 12, letterSpacing: 3, opacity: 0.75, marginTop: 4, textShadow: "0 1px 14px rgba(0,0,0,0.6)" }}>{pats[patternId].ratio}</div></>)}
               </div>
