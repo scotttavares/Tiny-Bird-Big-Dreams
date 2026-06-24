@@ -76,7 +76,7 @@ const PRIVACY = SHELL("Lull — Privacy Policy", `
 <h2>Changes</h2>
 <p>If Lull’s data practices ever change, this page will be updated with a new effective date.</p>
 <h2>Contact</h2>
-<p style="margin-bottom:0">Questions? Email <a href="mailto:${CONTACT}">${CONTACT}</a>.</p>
+<p style="margin-bottom:0">Questions? <a href="https://tinybirdbigdreams.com/#contact">Get in touch through our contact form</a>.</p>
 </div>`);
 
 const headers = { "content-type":"text/html; charset=utf-8", "x-content-type-options":"nosniff", "referrer-policy":"no-referrer", "cache-control":"public, max-age=3600" };
