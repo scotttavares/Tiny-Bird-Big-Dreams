@@ -28,14 +28,16 @@ jobs:
         with:
           node-version: '22'
 
-      # wrangler v4 for Workers static assets + run_worker_first. No project
-      # install/build needed — the bundle in public/assets/ is prebuilt.
+      # Deploy with wrangler v4 (Workers static assets + run_worker_first).
+      # Use a native working-directory + npx (not wrangler-action) so the CWD is
+      # exactly lull-web and the config is lull-web/wrangler.toml (assets ./public,
+      # 13 files) — NOT the repo-root wrangler.jsonc (assets ".") — and so no
+      # node_modules is created inside the asset tree.
       - name: Deploy Worker (wrangler deploy, static assets)
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          workingDirectory: lull-web
-          wranglerVersion: '4.104.0'
+        working-directory: lull-web
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx --yes wrangler@4.104.0 deploy --config wrangler.toml
 
       - name: Verify live URLs (/, /app, /privacy)
         run: |
