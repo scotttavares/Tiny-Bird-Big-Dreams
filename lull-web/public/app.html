@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"/>
+<title>Lull</title>
+<meta name="description" content="Lull — a minute to breathe. A living orb that breathes with you, with calming sound. Free, offline, no account."/>
+<meta name="color-scheme" content="dark"/>
+<meta name="theme-color" content="#0a0613"/>
+<link rel="manifest" href="/manifest.webmanifest"/>
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
+<link rel="icon" href="/favicon-32.png" sizes="32x32"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Lull"/>
+<style>
+  html,body{height:100%;margin:0;background:#0a0613;}
+  body{overflow:hidden;overscroll-behavior:none;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;touch-action:manipulation;}
+  #root{min-height:100%;}
+  /* pre-hydration backdrop so the first paint isn't black */
+  #boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(120% 120% at 50% 18%,#1c1133 0%,#0a0613 60%,#070410 100%);
+    color:#f3efff;font:600 14px/1 -apple-system,system-ui,sans-serif;letter-spacing:.42em;text-indent:.42em;opacity:.0;animation:bootIn .6s ease .15s forwards;}
+  @keyframes bootIn{to{opacity:.7}}
+</style>
+</head>
+<body>
+  <div id="boot">LULL</div>
+  <div id="root"></div>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function(){ navigator.serviceWorker.register('/sw.js').catch(function(){}); });
+    }
+  </script>
+  <script src="/assets/lull.js" defer></script>
+  <script>
+    // remove the boot splash once the app has mounted
+    (function(){
+      var tries=0, t=setInterval(function(){
+        var r=document.getElementById('root'); tries++;
+        if((r && r.childNodes.length) || tries>40){ var b=document.getElementById('boot'); if(b) b.remove(); clearInterval(t); }
+      },80);
+    })();
+  </script>
+</body>
+</html>

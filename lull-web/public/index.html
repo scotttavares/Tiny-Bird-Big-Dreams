@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>Lull — a minute to breathe</title>
+<meta name="description" content="Lull is a pocket of calm: a living liquid-glass orb that breathes with you, with soundscapes for focus and sleep. Free, no account, fully offline. Try the web app now."/>
+<meta name="color-scheme" content="dark"/>
+<meta name="theme-color" content="#0a0613"/>
+<link rel="manifest" href="/manifest.webmanifest"/>
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
+<link rel="icon" href="/favicon-32.png" sizes="32x32"/>
+<meta name="apple-mobile-web-app-title" content="Lull"/>
+<meta property="og:title" content="Lull — a minute to breathe"/>
+<meta property="og:description" content="A living liquid-glass orb that breathes with you, with soundscapes for focus and sleep. Free, no account, fully offline."/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://lull.tinybirdbigdreams.com/"/>
+<meta property="og:image" content="https://lull.tinybirdbigdreams.com/icon-512.png"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<style>
+:root{
+  --bg0:#1c1133; --bg1:#0a0613; --bg2:#070410;
+  --ink:#f6f3ff; --mut:rgba(243,239,255,.64); --faint:rgba(243,239,255,.42);
+  --lav:#bfa9ff; --lav2:#8a6cf0; --coral:#ff9e7d;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{min-height:100vh;color:var(--ink);
+  background:radial-gradient(130% 95% at 50% 4%, var(--bg0), var(--bg1) 46%, var(--bg2) 100%);
+  background-attachment:fixed;
+  font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+.wrap{max-width:760px;margin:0 auto;padding:30px 24px 90px}
+a{color:var(--lav);text-decoration:none}a:hover{text-decoration:underline}
+p{color:var(--mut);margin:0 0 14px}
+
+/* topbar */
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:26px}
+.word{font-size:15px;letter-spacing:.46em;text-indent:.46em;font-weight:800;opacity:.92}
+.top-privacy{font-size:13px;color:var(--mut)}
+
+/* hero */
+.hero{text-align:center;padding-top:8px}
+.kicker{display:inline-block;text-transform:uppercase;letter-spacing:.28em;text-indent:.28em;font-size:11px;color:var(--lav);
+  margin:0 0 18px;padding:6px 15px;border:1px solid rgba(183,155,255,.28);border-radius:999px}
+.hero h1{font-size:clamp(34px,9vw,58px);line-height:1.04;font-weight:800;letter-spacing:-.03em;margin:0 0 16px;color:#fff}
+.hero h1 em{font-style:normal;background:linear-gradient(116deg,#efe7ff,#b79bff 42%,#8a6cf0);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero .sub{max-width:500px;margin:0 auto;color:var(--mut);font-size:clamp(15px,2.5vw,17.5px)}
+
+/* hero orb (liquid glass) */
+.stage{position:relative;height:320px;display:flex;align-items:center;justify-content:center;margin:8px 0 4px}
+.ring{position:absolute;border-radius:50%;border:1px solid rgba(183,155,255,.12)}
+.ring.a{width:300px;height:300px}.ring.b{width:226px;height:226px;border-color:rgba(183,155,255,.07)}
+.aura{position:absolute;width:330px;height:330px;border-radius:50%;
+  background:radial-gradient(circle,rgba(150,116,255,.5) 0%,rgba(138,108,240,.18) 42%,transparent 68%);
+  filter:blur(20px);animation:aura 7s ease-in-out infinite;pointer-events:none}
+.orb{position:relative;width:204px;height:204px;border-radius:50%;cursor:pointer;display:block;
+  animation:breath 7s ease-in-out infinite;will-change:transform;-webkit-tap-highlight-color:transparent}
+.orb .core{position:absolute;inset:0;border-radius:50%;overflow:hidden;
+  box-shadow:inset 0 0 44px rgba(0,0,0,.55),inset 0 1px 14px rgba(255,255,255,.12)}
+.orb .base{position:absolute;inset:0;background:#0a0713}
+.orb .s1{position:absolute;inset:-10%;background:radial-gradient(circle at 42% 40%,#c9b8ff,transparent 38%),radial-gradient(circle at 60% 56%,#7aa6ff,transparent 36%);filter:blur(11px);opacity:.85}
+.orb .s2{position:absolute;inset:-10%;background:radial-gradient(circle at 55% 62%,#ffb1a0,transparent 26%),radial-gradient(circle at 38% 64%,#b58cff,transparent 30%);filter:blur(13px);opacity:.6;mix-blend-mode:screen;animation:swirl 26s linear infinite}
+.orb .core2{position:absolute;inset:18%;border-radius:50%;background:radial-gradient(circle at 46% 42%,#efe6ff,#b79bff55 46%,transparent 70%);filter:blur(6px)}
+.orb .l1{position:absolute;inset:0;border-radius:50%;z-index:4;background:radial-gradient(circle at 33% 25%,rgba(255,255,255,.30),rgba(255,255,255,0) 42%)}
+.orb .irid{position:absolute;inset:0;border-radius:50%;z-index:5;
+  background:conic-gradient(from 200deg at 50% 50%,#ff6ea6,#ffd98a,#9bff9e,#74d4ff,#b88cff,#ff6ea6);
+  -webkit-mask-image:radial-gradient(closest-side,transparent 68%,#000 85%,#000 95%,transparent 100%);
+  mask-image:radial-gradient(closest-side,transparent 68%,#000 85%,#000 95%,transparent 100%);
+  mix-blend-mode:screen;filter:blur(2px);opacity:.5}
+.orb .fres{position:absolute;inset:0;border-radius:50%;z-index:6;box-shadow:inset 0 6px 16px -5px rgba(255,255,255,.55),inset 0 -11px 22px -8px rgba(255,255,255,.3),inset 0 0 0 1.5px rgba(255,255,255,.28),inset 0 0 12px rgba(255,255,255,.1)}
+.orb .g1{position:absolute;inset:0;border-radius:50%;z-index:7;background:radial-gradient(circle at 31% 23%,rgba(255,255,255,.55),rgba(255,255,255,0) 13%)}
+.orb .g2{position:absolute;inset:0;border-radius:50%;z-index:7;background:radial-gradient(circle at 67% 73%,rgba(255,255,255,.4),rgba(255,255,255,0) 7%)}
+@keyframes breath{0%,100%{transform:scale(.92)}50%{transform:scale(1.02)}}
+@keyframes aura{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:.74;transform:scale(1.07)}}
+@keyframes swirl{to{transform:rotate(360deg)}}
+
+/* CTAs */
+.cta-row{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:6px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:15px 30px;border-radius:999px;font-weight:700;font-size:15.5px;cursor:pointer;border:none;transition:transform .15s ease,box-shadow .25s ease,filter .25s ease}
+.btn.primary{color:#1a1030;background:linear-gradient(180deg,#efe7ff,#b79bff);box-shadow:0 14px 38px rgba(150,116,255,.5)}
+.btn.primary:hover{transform:translateY(-1px);box-shadow:0 18px 46px rgba(150,116,255,.62);text-decoration:none}
+.btn.ghost{color:var(--ink);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.18)}
+.btn.ghost:hover{background:rgba(255,255,255,.12);text-decoration:none}
+.under{margin-top:14px;font-size:13px;color:var(--faint)}
+
+.chips{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:34px 0 0}
+.chip{font-size:12.5px;font-weight:600;color:var(--ink);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:9px 15px}
+.chip i{font-style:normal;color:var(--lav)}
+
+/* sections */
+.sec{margin-top:64px}
+.sec h2{text-align:center;font-size:clamp(23px,5.2vw,31px);font-weight:800;letter-spacing:-.02em;color:#fff;margin:0 0 8px}
+.sec .lede{text-align:center;color:var(--mut);max-width:480px;margin:0 auto 28px;font-size:15px}
+
+.two{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.mode{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:20px;padding:24px 24px 22px;text-align:left}
+.mode .tag{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--lav);font-weight:700}
+.mode h3{margin:8px 0 6px;font-size:19px;color:#fff;font-weight:700}
+.mode p{margin:0 0 14px;font-size:14px}
+.mode ul{margin:0;padding:0;list-style:none}
+.mode li{font-size:13.5px;color:var(--mut);padding:5px 0 5px 22px;position:relative}
+.mode li:before{content:"";position:absolute;left:0;top:11px;width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,var(--lav),var(--coral))}
+
+.themes{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.theme{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:18px;padding:20px;text-align:center}
+.dot{width:64px;height:64px;border-radius:50%;margin:0 auto 12px;position:relative;box-shadow:0 10px 30px rgba(0,0,0,.45),inset 0 0 0 1.5px rgba(255,255,255,.28)}
+.dot:after{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 200deg,#ff6ea6,#ffd98a,#9bff9e,#74d4ff,#b88cff,#ff6ea6);-webkit-mask-image:radial-gradient(closest-side,transparent 64%,#000 86%,transparent 100%);mask-image:radial-gradient(closest-side,transparent 64%,#000 86%,transparent 100%);mix-blend-mode:screen;opacity:.55}
+.dot.aurora{background:radial-gradient(circle at 34% 30%,#efe6ff,#9d8cff 52%,#3a2a78 100%)}
+.dot.tide{background:radial-gradient(circle at 34% 30%,#e8feff,#6fe0ff 50%,#0a4458 100%)}
+.dot.sunfire{background:radial-gradient(circle at 34% 30%,#ffe6f2,#ff8cc8 48%,#7a2440 100%)}
+.theme b{display:block;color:#fff;font-size:15px;margin-bottom:3px}
+.theme p{margin:0;font-size:13px}
+
+.steps{display:grid;gap:14px}
+.step{display:flex;gap:16px;align-items:flex-start;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:18px 20px}
+.step .n{flex-shrink:0;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#1a1030;background:linear-gradient(180deg,#e7deff,#b79bff)}
+.step b{display:block;color:var(--ink);font-size:15.5px;margin-bottom:2px}.step p{margin:0;font-size:13.5px}
+
+.features{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(225px,1fr))}
+.feature{display:flex;gap:14px;align-items:flex-start;text-align:left;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:18px}
+.feature .fi{font-size:21px;flex-shrink:0}.feature b{display:block;font-weight:600;font-size:15px;color:var(--ink);margin-bottom:2px}.feature p{margin:0;font-size:13.5px}
+
+.maker{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:22px;padding:28px;text-align:center}
+.maker p{max-width:520px;margin:0 auto 12px;font-size:15px}
+.maker .sig{color:var(--faint);font-size:13px;margin:0}
+
+.faq details{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:4px 18px;margin-bottom:10px}
+.faq summary{cursor:pointer;list-style:none;padding:14px 0;font-weight:600;color:var(--ink);font-size:15px;display:flex;justify-content:space-between;align-items:center}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary:after{content:"+";color:var(--lav);font-size:20px;line-height:1}
+.faq details[open] summary:after{content:"\2013"}
+.faq p{font-size:14px;padding:0 0 14px}
+
+.final{margin-top:64px;text-align:center;background:radial-gradient(125% 130% at 50% 0%,rgba(138,108,240,.24),rgba(255,255,255,.02) 70%);border:1px solid rgba(183,155,255,.2);border-radius:28px;padding:48px 28px}
+.final h2{font-size:clamp(25px,5.8vw,34px);font-weight:800;letter-spacing:-.02em;color:#fff;margin:0 0 10px}
+.final p{max-width:450px;margin:0 auto 22px}
+.final-cta{display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:4px}
+.badge{display:inline-block;padding:11px 22px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);font-weight:700;font-size:13.5px;color:var(--ink)}
+.final .hint{max-width:440px;margin:18px auto 0;font-size:13px;color:var(--faint)}
+
+footer{text-align:center;margin-top:60px;color:var(--faint);font-size:13px}
+footer a{color:var(--mut)}
+
+@media (max-width:520px){
+  .stage{height:286px}.orb{width:172px;height:172px}.aura{width:286px;height:286px}
+  .ring.a{width:262px;height:262px}.ring.b{width:202px;height:202px}
+}
+@media (prefers-reduced-motion: reduce){
+  .orb,.aura,.s2{animation:none!important}
+}
+</style>
+</head>
+<body><div class="wrap">
+
+<div class="topbar">
+  <div class="word">LULL</div>
+  <a class="top-privacy" href="/privacy">Privacy</a>
+</div>
+
+<section class="hero">
+  <span class="kicker">a minute to breathe</span>
+  <h1>Calm is<br/><em>one breath away.</em></h1>
+  <p class="sub">Lull is a single living orb that breathes with you — paired with sound that quiets the noise. No sign-ups, no streaks, no catch. Press one button and feel your shoulders drop.</p>
+
+  <div class="stage" aria-hidden="true">
+    <div class="ring a"></div><div class="ring b"></div>
+    <div class="aura"></div>
+    <a class="orb" href="/app" aria-label="Open the Lull web app">
+      <span class="core"><span class="base"></span><span class="s1"></span><span class="s2"></span><span class="core2"></span>
+        <span class="l1"></span><span class="irid"></span><span class="fres"></span><span class="g1"></span><span class="g2"></span></span>
+    </a>
+  </div>
+
+  <div class="cta-row">
+    <a class="btn primary" href="/app">Open the web app →</a>
+    <a class="btn ghost" href="#install">Add to home screen</a>
+  </div>
+  <p class="under">It's the real app, free, right in your browser — nothing to install.</p>
+
+  <div class="chips">
+    <span class="chip"><i>✦</i> 100% free</span>
+    <span class="chip"><i>✦</i> No account</span>
+    <span class="chip"><i>✦</i> Works offline</span>
+    <span class="chip"><i>✦</i> Zero ads &amp; tracking</span>
+  </div>
+</section>
+
+<section class="sec">
+  <h2>Two ways to settle.</h2>
+  <p class="lede">Whether you need to focus now or drift off later, Lull has a rhythm for it.</p>
+  <div class="two">
+    <div class="mode">
+      <div class="tag">Breathe</div>
+      <h3>Reset in a minute or three</h3>
+      <p>Follow the orb — expand as you inhale, soften as you exhale. Pick the pattern that fits the moment.</p>
+      <ul>
+        <li><b>Calm</b> · 4-7-8, the classic wind-down</li>
+        <li><b>Steady</b> · box breathing for focus</li>
+        <li><b>Ease</b> · a gentle 4-6 for anytime</li>
+      </ul>
+    </div>
+    <div class="mode">
+      <div class="tag">Sleep</div>
+      <h3>Drift off in the dark</h3>
+      <p>A dimmed palette and slow, lengthening exhales coax your body toward rest. Set it and let the orb fade with you.</p>
+      <ul>
+        <li><b>Drift</b> · long 4-8 exhales</li>
+        <li><b>Calm</b> · soft and slow</li>
+        <li>15, 30 or 60 minutes, then silence</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="sec">
+  <h2>Choose your glass.</h2>
+  <p class="lede">Three hand-tuned orbs, each with its own liquid-glass personality and light.</p>
+  <div class="themes">
+    <div class="theme"><div class="dot aurora"></div><b>Aurora</b><p>Soft, dreamy violet — the everyday calm.</p></div>
+    <div class="theme"><div class="dot tide"></div><b>Tide</b><p>A clear iridescent bubble of cool blues.</p></div>
+    <div class="theme"><div class="dot sunfire"></div><b>Sunfire</b><p>Warm, glossy molten light at dusk.</p></div>
+  </div>
+  <p class="lede" style="margin-top:22px">Add a layer of synthesized sound — <b>Bowls</b>, <b>Handpan</b>, or <b>Binaural</b> tones — generated live, so there's nothing to download and nothing to loop.</p>
+</section>
+
+<section class="sec">
+  <h2>Three taps to calmer.</h2>
+  <p class="lede">No tutorial, no setup. The whole app is one beautiful breath you can take anywhere.</p>
+  <div class="steps">
+    <div class="step"><div class="n">1</div><div><b>Open Lull</b><p>It loads instantly — no account, no paywall, no "allow notifications."</p></div></div>
+    <div class="step"><div class="n">2</div><div><b>Breathe with the orb</b><p>In as it grows, out as it softens. Add sound and let the tone carry you.</p></div></div>
+    <div class="step"><div class="n">3</div><div><b>Feel the shift</b><p>A minute of slow breathing is often enough to settle a racing heart and a busy head.</p></div></div>
+  </div>
+</section>
+
+<section class="sec">
+  <h2>Built to disappear.</h2>
+  <p class="lede">No feed, no badges, no guilt. Lull does one thing — and gets out of your way.</p>
+  <div class="features">
+    <div class="feature"><span class="fi">🌌</span><div><b>A living orb</b><p>Liquid-glass light that drifts and breathes. Genuinely lovely to just watch.</p></div></div>
+    <div class="feature"><span class="fi">🔉</span><div><b>Calm you can hear</b><p>Optional ambient tones and breath sounds — synthesized, never noisy.</p></div></div>
+    <div class="feature"><span class="fi">✈️</span><div><b>Works anywhere</b><p>Add it to your home screen and it runs fully offline. Plane, subway, anywhere.</p></div></div>
+    <div class="feature"><span class="fi">🛡️</span><div><b>Private by design</b><p>No account, no analytics, nothing leaves your device. Ever. Promise.</p></div></div>
+    <div class="feature"><span class="fi">♿</span><div><b>Gentle by default</b><p>Honors Reduce Motion and rated 4+ — safe and soothing for everyone.</p></div></div>
+    <div class="feature"><span class="fi">💜</span><div><b>Free, truly</b><p>The whole experience is free on the web. No trial timer, no upsell wall.</p></div></div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="maker">
+    <h2 style="margin-bottom:12px">Made by one person, in the open.</h2>
+    <p>Lull is built by a solo maker under <a href="https://tinybirdbigdreams.com">Tiny Bird, Big Dreams</a> — a tiny studio shipping small, calm, beautifully-crafted apps. No investors, no growth team, no dark patterns. Just one breath, made with care.</p>
+    <p class="sig">— Tiny Bird, Big Dreams</p>
+  </div>
+</section>
+
+<section class="sec faq">
+  <h2>Good to know.</h2>
+  <p class="lede">A few quick answers.</p>
+  <details><summary>Is it really free?</summary><p>Yes. The full web app is free, forever, with no account and no ads. A native version is on the way to the App Store.</p></details>
+  <details><summary>Do I need to install anything?</summary><p>No. Tap “Open the web app” and you're breathing in seconds. If you'd like a real app icon and offline access, add it to your home screen (see below).</p></details>
+  <details><summary>Does it collect any data?</summary><p>None. Lull has no analytics, no tracking, and no servers storing anything about you. It runs entirely on your device. <a href="/privacy">Read the privacy policy →</a></p></details>
+  <details><summary>Will there be an iPhone app?</summary><p>Yes — the native iOS app is in submission. The web app already gives you the complete experience in the meantime.</p></details>
+</section>
+
+<section class="final" id="install">
+  <h2>Carry the calm in your pocket.</h2>
+  <p>The full experience lives right here, free on the web. The native app is on its way too.</p>
+  <div class="final-cta">
+    <a class="btn primary" href="/app">Open the web app →</a>
+    <span class="badge">📱 Coming soon to the App Store</span>
+  </div>
+  <p class="hint">On iPhone: open the app, then tap <b>Share</b> → <b>“Add to Home Screen”</b> for a real Lull icon and one-tap, offline calm.</p>
+</section>
+
+<footer>Lull · a <a href="https://tinybirdbigdreams.com">Tiny Bird, Big Dreams</a> app · <a href="/privacy">Privacy</a></footer>
+</div></body></html>

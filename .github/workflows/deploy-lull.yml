@@ -1,8 +1,10 @@
 name: Deploy Lull Worker
 
-# Deploys the standalone lull-site Cloudflare Worker (lull.tinybirdbigdreams.com)
-# from GitHub's runners, which have open network access to the Cloudflare API.
-# Requires a repository secret: CLOUDFLARE_API_TOKEN
+# Deploys the lull-web static-assets Worker (lull.tinybirdbigdreams.com) from
+# GitHub's runners, which have open network access to the Cloudflare API
+# (this repo's other environments are egress-restricted from api.cloudflare.com).
+# The app bundle is prebuilt at lull-web/public/assets/lull.js — no build step.
+# Requires repository secret CLOUDFLARE_API_TOKEN
 #   (perms: Workers Scripts: Edit, Workers Routes: Edit, DNS: Edit)
 
 on:
@@ -10,7 +12,7 @@ on:
   push:
     branches: [main, claude/youthful-cannon-lnxnuz]
     paths:
-      - 'lull-site/**'
+      - 'lull-web/**'
       - '.github/workflows/deploy-lull.yml'
 
 jobs:
@@ -26,18 +28,20 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Deploy Worker (wrangler deploy)
+      # wrangler v4 for Workers static assets + run_worker_first. No project
+      # install/build needed — the bundle in public/assets/ is prebuilt.
+      - name: Deploy Worker (wrangler deploy, static assets)
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          workingDirectory: lull-site
+          workingDirectory: lull-web
+          wranglerVersion: '4.104.0'
 
-      - name: Verify live URLs (HTTP 200 + expected text)
+      - name: Verify live URLs (/, /app, /privacy)
         run: |
           set -uo pipefail
           check() {
             url="$1"; needle="$2"; code="000"; body=""
-            # Retry up to ~4 min to absorb first-time SSL cert provisioning on the new custom domain.
             for i in $(seq 1 24); do
               code=$(curl -sS -o /tmp/body -w '%{http_code}' --max-time 20 "$url" || echo "000")
               body=$(cat /tmp/body 2>/dev/null || true)
@@ -61,7 +65,8 @@ jobs:
             return 1
           }
           rc=0
-          check "https://lull.tinybirdbigdreams.com"         "a minute to breathe" || rc=1
-          check "https://lull.tinybirdbigdreams.com/privacy"  "Privacy Policy"      || rc=1
+          check "https://lull.tinybirdbigdreams.com/"        "a minute to breathe" || rc=1
+          check "https://lull.tinybirdbigdreams.com/app"     "lull.js"             || rc=1
+          check "https://lull.tinybirdbigdreams.com/privacy" "Privacy Policy"      || rc=1
           if [ "$rc" = "0" ]; then echo "All checks passed."; fi
           exit "$rc"
