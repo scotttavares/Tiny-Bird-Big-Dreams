@@ -333,7 +333,7 @@ export default function Lull() {
   const pats = PATTERNS[mode];
 
   const root = { minHeight: "100vh", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden", background: night ? th.rootNight : th.rootDay, color: "#F3EFFF", fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif', WebkitFontSmoothing: "antialiased", transition: "background 1.4s ease" };
-  const frame = { position: "relative", zIndex: 2, width: "100%", maxWidth: 460, minHeight: "100vh", padding: "26px 26px 40px", display: "flex", flexDirection: "column", alignItems: "center" };
+  const frame = { position: "relative", zIndex: 2, width: "100%", maxWidth: 460, minHeight: "min(100vh, 820px)", padding: "26px 26px 40px", display: "flex", flexDirection: "column", alignItems: "center" };
   const css = `
     * { box-sizing: border-box; }
     body { margin: 0; }
