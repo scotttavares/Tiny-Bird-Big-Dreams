@@ -27,8 +27,10 @@ npx expo start          # scan the QR code with the Expo Go app, or press i / a
 ## Ship to TestFlight with Codemagic (no Mac needed)
 
 The whole iOS build, signing, and upload happens on Codemagic's macOS cloud
-runners, driven by [`codemagic.yaml`](./codemagic.yaml). You only need an Apple
-Developer account and an App Store Connect API key.
+runners, driven by [`codemagic.yaml`](../codemagic.yaml) **at the repository root**
+(Codemagic only reads the config from the repo root; it points back into this
+folder via `working_directory: orbit`). You only need an Apple Developer account
+and an App Store Connect API key.
 
 ### 1. App Store Connect API key (this is what replaces Xcode signing)
 1. [App Store Connect](https://appstoreconnect.apple.com) → **Users and Access →
@@ -48,29 +50,29 @@ Developer account and an App Store Connect API key.
 2. **Teams → Integrations → Apple Developer Portal** → add the App Store Connect
    API key (Issuer ID + Key ID + `.p8`). **Name it `Orbit ASC API key`** so it
    matches the `app_store_connect:` line in `codemagic.yaml` (or rename both).
-3. Edit `codemagic.yaml`:
-   - set `APP_STORE_APPLE_ID` to the numeric Apple ID from step 2.
-   - change the bundle id everywhere if you used a different one.
+3. `codemagic.yaml` (repo root) is already set with `APP_STORE_APPLE_ID` and the
+   bundle id — only change them if you use different ones.
 4. Start the **`ios-testflight`** workflow. Codemagic will: install deps →
    `expo prebuild` → `pod install` → fetch signing files from your API key →
    build the IPA → upload to TestFlight.
 
 That's it — no local macOS, no manual certificates/profiles.
 
-> **Subfolder note:** Orbit lives in `orbit/` inside this repo, so the workflow
-> sets `working_directory: orbit`. If you later move Orbit to its own repo, drop
-> `working_directory` and put `codemagic.yaml` at that repo's root.
+> **Subfolder note:** Orbit lives in `orbit/` but `codemagic.yaml` sits at the
+> **repo root** (Codemagic requires that) and reaches in via
+> `working_directory: orbit`. If you later move Orbit to its own repo, that
+> `codemagic.yaml` is already at the right place — you can drop `working_directory`.
 
 ---
 
 ## Project structure
 
 ```
+codemagic.yaml         iOS CI/CD → TestFlight (at repo ROOT; working_directory: orbit)
 orbit/
   App.tsx              App shell: theme, state-driven screen router, tab bar, overlays
   index.ts             Expo entry point
   app.json             Expo config (bundle id, name, etc.)
-  codemagic.yaml       iOS CI/CD → TestFlight
   src/
     theme.ts           Dark/light palettes (ported from the prototype's CSS vars)
     types.ts           Contact, Group, Screen types
