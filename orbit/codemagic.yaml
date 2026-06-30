@@ -30,7 +30,7 @@ workflows:
         XCODE_WORKSPACE: "ios/Orbit.xcworkspace"
         XCODE_SCHEME: "Orbit"
         # Numeric Apple ID of the app in App Store Connect (App Information → General).
-        APP_STORE_APPLE_ID: 0000000000
+        APP_STORE_APPLE_ID: 6785966852
       node: 20
       xcode: 16.0
       cocoapods: default
