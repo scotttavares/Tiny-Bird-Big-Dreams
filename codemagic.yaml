@@ -15,8 +15,9 @@
 #      Generate one locally:   openssl genrsa 2048
 #      Copy the whole output (the -----BEGIN/END----- block included) into a
 #      Codemagic environment variable named exactly  CERTIFICATE_PRIVATE_KEY,
-#      and mark it **Secure**. The signing step below feeds it to
-#      `fetch-signing-files --certificate-key`.
+#      mark it **Secure**, and put it in a variable group named  orbit_signing
+#      (that group is imported under `environment.groups` below). The signing
+#      step feeds it to `fetch-signing-files --certificate-key`.
 #
 # This project lives in the `orbit/` subfolder of the repo, so every workflow
 # sets `working_directory: orbit`.
@@ -30,6 +31,11 @@ workflows:
     integrations:
       app_store_connect: Orbit ASC API key
     environment:
+      groups:
+        # Create this variable group in the Codemagic UI and add the Secure
+        # variable CERTIFICATE_PRIVATE_KEY to it (see header, step 4). A yaml
+        # workflow only sees UI variables whose group is imported here.
+        - orbit_signing
       vars:
         BUNDLE_ID: "com.tinybirdbigdreams.orbit"
         XCODE_WORKSPACE: "ios/Orbit.xcworkspace"

@@ -60,7 +60,10 @@ and an App Store Connect API key.
    - Copy the **entire** output, including the `-----BEGIN…-----` / `-----END…-----`
      lines.
    - Codemagic → your app → **Environment variables** → add
-     `CERTIFICATE_PRIVATE_KEY` = *(paste)*, tick **Secure**, and save.
+     `CERTIFICATE_PRIVATE_KEY` = *(paste)*, tick **Secure**, set the **group**
+     to `orbit_signing`, and save. (`codemagic.yaml` imports that group under
+     `environment.groups`; a YAML workflow only sees UI variables whose group is
+     imported.)
 4. `codemagic.yaml` (repo root) is already set with `APP_STORE_APPLE_ID` and the
    bundle id — only change them if you use different ones.
 5. Start the **`ios-testflight`** workflow. Codemagic will: install deps →
