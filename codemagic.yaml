@@ -96,7 +96,15 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        submit_to_testflight: true
-        # Flip to true (and add a beta group) once you're ready for testers:
-        # beta_groups:
-        #   - Internal Testers
+        # Upload only. The build lands in App Store Connect → TestFlight as
+        # "Ready to Submit" and is automatically available to anyone in an
+        # Internal Testing group (no review needed) — add yourself once.
+        #
+        # We deliberately omit `submit_to_testflight: true`: that post-upload
+        # "App Store distribution" step waits on Apple's processing and tries to
+        # auto-distribute, which fails the whole build when the build is still
+        # processing or no beta group exists (even though the upload succeeded).
+        # To auto-push to EXTERNAL testers later, create a group and add:
+        #   submit_to_testflight: true
+        #   beta_groups:
+        #     - Your External Group
