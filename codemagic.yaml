@@ -9,6 +9,14 @@
 #   3. In App Store Connect, create the app with bundle id
 #      com.tinybirdbigdreams.orbit and copy its numeric Apple ID into
 #      APP_STORE_APPLE_ID below.
+#   4. Add a PERSISTENT signing private key so every build reuses the SAME
+#      distribution certificate (this is what makes the build repeatable —
+#      without it Codemagic mints a throwaway cert each run and signing breaks).
+#      Generate one locally:   openssl genrsa 2048
+#      Copy the whole output (the -----BEGIN/END----- block included) into a
+#      Codemagic environment variable named exactly  CERTIFICATE_PRIVATE_KEY,
+#      and mark it **Secure**. The signing step below feeds it to
+#      `fetch-signing-files --certificate-key`.
 #
 # This project lives in the `orbit/` subfolder of the repo, so every workflow
 # sets `working_directory: orbit`.
@@ -45,12 +53,26 @@ workflows:
           cd ios
           LATEST_BUILD=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo "0")
           agvtool new-version -all $(($LATEST_BUILD + 1))
-      - name: Set up code signing (create cert + profile via API key, then apply)
+      - name: Set up code signing (persistent cert from CERTIFICATE_PRIVATE_KEY)
         script: |
-          # Done in a script (not the prep-time ios_signing block) so a brand-new
-          # app's cert + profile get CREATED (--create) rather than only fetched.
+          set -e
+          if [ -z "$CERTIFICATE_PRIVATE_KEY" ]; then
+            echo "❌ CERTIFICATE_PRIVATE_KEY is not set."
+            echo "   Add it as a Secure environment variable in Codemagic"
+            echo "   (generate with: openssl genrsa 2048). See this file's header."
+            exit 1
+          fi
           keychain initialize
-          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          # Pinning --certificate-key to our own persistent private key is the
+          # whole trick: the distribution certificate is derived from THIS key,
+          # so it's identical on every build. --create makes the cert + App Store
+          # provisioning profile the first time; every later build reuses them.
+          # (Done in a script, not the prep-time ios_signing block, so --create
+          # can run for a brand-new app that has no profile yet.)
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
+            --create
           keychain add-certificates
           xcode-project use-profiles
       - name: Build IPA
