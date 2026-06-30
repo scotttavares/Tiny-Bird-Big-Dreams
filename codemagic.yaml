@@ -43,7 +43,11 @@ workflows:
         # Numeric Apple ID of the app in App Store Connect (App Information → General).
         APP_STORE_APPLE_ID: 6785966852
       node: 20
-      xcode: 16.0
+      # Apple rejects uploads not built with the current iOS SDK
+      # ("built with the iOS 18 SDK … must be iOS 26 SDK or later"). `latest`
+      # pins Codemagic's newest stable Xcode (and its bundled iOS SDK), which
+      # is what App Store Connect requires.
+      xcode: latest
       cocoapods: default
     scripts:
       - name: Install JS dependencies
