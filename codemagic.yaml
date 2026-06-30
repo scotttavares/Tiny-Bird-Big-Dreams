@@ -22,9 +22,6 @@ workflows:
     integrations:
       app_store_connect: Orbit ASC API key
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.tinybirdbigdreams.orbit
       vars:
         BUNDLE_ID: "com.tinybirdbigdreams.orbit"
         XCODE_WORKSPACE: "ios/Orbit.xcworkspace"
@@ -43,8 +40,11 @@ workflows:
         script: |
           cd ios
           pod install
-      - name: Set up code signing (managed by App Store Connect API key)
+      - name: Set up code signing (fetch/create cert + profile via App Store Connect API key)
         script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          keychain add-certificates
           xcode-project use-profiles
       - name: Increment build number
         script: |
