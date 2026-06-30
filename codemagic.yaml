@@ -1,0 +1,110 @@
+# Codemagic CI/CD — builds the Orbit iOS app on Codemagic's macOS cloud and
+# uploads it to TestFlight / App Store Connect. No Mac or Xcode required locally.
+#
+# ONE-TIME SETUP (all in the Codemagic web UI — see orbit/README.md for detail):
+#   1. Add this repo as an app in Codemagic.
+#   2. Teams → Integrations → Apple Developer Portal: upload your App Store
+#      Connect API key (Issuer ID, Key ID, .p8). Name the integration so it
+#      matches `app_store_connect:` below (here: "Orbit ASC API key").
+#   3. In App Store Connect, create the app with bundle id
+#      com.tinybirdbigdreams.orbit and copy its numeric Apple ID into
+#      APP_STORE_APPLE_ID below.
+#   4. Add a PERSISTENT signing private key so every build reuses the SAME
+#      distribution certificate (this is what makes the build repeatable —
+#      without it Codemagic mints a throwaway cert each run and signing breaks).
+#      Generate one locally:   openssl genrsa 2048
+#      Copy the whole output (the -----BEGIN/END----- block included) into a
+#      Codemagic environment variable named exactly  CERTIFICATE_PRIVATE_KEY,
+#      mark it **Secure**, and put it in a variable group named  orbit_signing
+#      (that group is imported under `environment.groups` below). The signing
+#      step feeds it to `fetch-signing-files --certificate-key`.
+#
+# This project lives in the `orbit/` subfolder of the repo, so every workflow
+# sets `working_directory: orbit`.
+
+workflows:
+  ios-testflight:
+    name: Orbit iOS → TestFlight
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    working_directory: orbit
+    integrations:
+      app_store_connect: Orbit ASC API key
+    environment:
+      groups:
+        # Create this variable group in the Codemagic UI and add the Secure
+        # variable CERTIFICATE_PRIVATE_KEY to it (see header, step 4). A yaml
+        # workflow only sees UI variables whose group is imported here.
+        - orbit_signing
+      vars:
+        BUNDLE_ID: "com.tinybirdbigdreams.orbit"
+        XCODE_WORKSPACE: "ios/Orbit.xcworkspace"
+        XCODE_SCHEME: "Orbit"
+        # Numeric Apple ID of the app in App Store Connect (App Information → General).
+        APP_STORE_APPLE_ID: 6785966852
+      node: 20
+      # Apple rejects uploads not built with the current iOS SDK
+      # ("built with the iOS 18 SDK … must be iOS 26 SDK or later"). `latest`
+      # pins Codemagic's newest stable Xcode (and its bundled iOS SDK), which
+      # is what App Store Connect requires.
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Install JS dependencies
+        script: npm ci
+      - name: Generate native iOS project (Expo prebuild)
+        script: npx expo prebuild --platform ios --clean --no-install
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios
+          pod install
+      - name: Increment build number
+        script: |
+          cd ios
+          LATEST_BUILD=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo "0")
+          agvtool new-version -all $(($LATEST_BUILD + 1))
+      - name: Set up code signing (persistent cert from CERTIFICATE_PRIVATE_KEY)
+        script: |
+          set -e
+          if [ -z "$CERTIFICATE_PRIVATE_KEY" ]; then
+            echo "❌ CERTIFICATE_PRIVATE_KEY is not set."
+            echo "   Add it as a Secure environment variable in Codemagic"
+            echo "   (generate with: openssl genrsa 2048). See this file's header."
+            exit 1
+          fi
+          keychain initialize
+          # Pinning --certificate-key to our own persistent private key is the
+          # whole trick: the distribution certificate is derived from THIS key,
+          # so it's identical on every build. --create makes the cert + App Store
+          # provisioning profile the first time; every later build reuses them.
+          # (Done in a script, not the prep-time ios_signing block, so --create
+          # can run for a brand-new app that has no profile yet.)
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
+      - name: Build IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Upload only. The build lands in App Store Connect → TestFlight as
+        # "Ready to Submit" and is automatically available to anyone in an
+        # Internal Testing group (no review needed) — add yourself once.
+        #
+        # We deliberately omit `submit_to_testflight: true`: that post-upload
+        # "App Store distribution" step waits on Apple's processing and tries to
+        # auto-distribute, which fails the whole build when the build is still
+        # processing or no beta group exists (even though the upload succeeded).
+        # To auto-push to EXTERNAL testers later, create a group and add:
+        #   submit_to_testflight: true
+        #   beta_groups:
+        #     - Your External Group
