@@ -10,7 +10,10 @@
     "ios": {
       "bundleIdentifier": "com.tinybirdbigdreams.orbit",
       "buildNumber": "1",
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.tinybirdbigdreams.orbit"

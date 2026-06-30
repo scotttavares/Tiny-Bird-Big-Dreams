@@ -116,6 +116,7 @@ Codemagic → **Start new build** → **Select branch:** the active dev branch
 | `❌ CERTIFICATE_PRIVATE_KEY is not set` | Build started before the env var was saved | Save the var, start a fresh build |
 | `could not create certificate` / cert limit reached | Leftover keyless distribution certs fill Apple's limit | Apple Developer → Certificates → revoke old **Distribution** certs you don't hold the key for (safe; doesn't unpublish shipped apps), re-run |
 | `Bundle React Native code and images … exited with status code 65` + `The required package 'X' cannot be found` | A runtime dep is missing from `package.json`/lockfile (e.g. `expo-asset`, `expo-constants`, `expo-file-system`, `expo-keep-awake`) | `cd orbit && npm install X@<sdk-version>`, verify with `npx expo export --platform ios`, commit `package.json` + `package-lock.json` |
+| `Publishing failed :\| Failed to publish Orbit.ipa to App Store Connect` (Build IPA ✅, only Publishing ❌) | Export-compliance gate: `submit_to_testflight` needs `ITSAppUsesNonExemptEncryption` set, which Expo omits by default | Add `ios.infoPlist.ITSAppUsesNonExemptEncryption: false` in `app.json` (true if you ship non-exempt crypto); verify it lands via `npx expo prebuild` → `grep ITSAppUsesNonExemptEncryption ios/Orbit/Info.plist` |
 | `codemagic.yaml not found` in the build dialog | Wrong branch selected | Pick the branch holding the root `codemagic.yaml` |
 | `integration 'Orbit ASC API key' does not exist` | API key integration missing/misnamed | Add it in Teams → Integrations with that exact name |
 
