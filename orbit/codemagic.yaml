@@ -1,0 +1,68 @@
+# Codemagic CI/CD — builds the Orbit iOS app on Codemagic's macOS cloud and
+# uploads it to TestFlight / App Store Connect. No Mac or Xcode required locally.
+#
+# ONE-TIME SETUP (all in the Codemagic web UI — see orbit/README.md for detail):
+#   1. Add this repo as an app in Codemagic.
+#   2. Teams → Integrations → Apple Developer Portal: upload your App Store
+#      Connect API key (Issuer ID, Key ID, .p8). Name the integration so it
+#      matches `app_store_connect:` below (here: "Orbit ASC API key").
+#   3. In App Store Connect, create the app with bundle id
+#      com.tinybirdbigdreams.orbit and copy its numeric Apple ID into
+#      APP_STORE_APPLE_ID below.
+#
+# This project lives in the `orbit/` subfolder of the repo, so every workflow
+# sets `working_directory: orbit`.
+
+workflows:
+  ios-testflight:
+    name: Orbit iOS → TestFlight
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    working_directory: orbit
+    integrations:
+      app_store_connect: Orbit ASC API key
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.tinybirdbigdreams.orbit
+      vars:
+        BUNDLE_ID: "com.tinybirdbigdreams.orbit"
+        XCODE_WORKSPACE: "ios/Orbit.xcworkspace"
+        XCODE_SCHEME: "Orbit"
+        # Numeric Apple ID of the app in App Store Connect (App Information → General).
+        APP_STORE_APPLE_ID: 0000000000
+      node: 20
+      xcode: 16.0
+      cocoapods: default
+    scripts:
+      - name: Install JS dependencies
+        script: npm ci
+      - name: Generate native iOS project (Expo prebuild)
+        script: npx expo prebuild --platform ios --clean --no-install
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios
+          pod install
+      - name: Set up code signing (managed by App Store Connect API key)
+        script: |
+          xcode-project use-profiles
+      - name: Increment build number
+        script: |
+          cd ios
+          LATEST_BUILD=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo "0")
+          agvtool new-version -all $(($LATEST_BUILD + 1))
+      - name: Build IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # Flip to true (and add a beta group) once you're ready for testers:
+        # beta_groups:
+        #   - Internal Testers
