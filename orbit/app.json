@@ -11,13 +11,20 @@
       "bundleIdentifier": "com.tinybirdbigdreams.orbit",
       "buildNumber": "1",
       "supportsTablet": false,
+      "appleTeamId": "23D9BZ3692",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "entitlements": {
+        "com.apple.security.application-groups": ["group.com.tinybirdbigdreams.orbit"]
       }
     },
     "android": {
       "package": "com.tinybirdbigdreams.orbit"
     },
-    "plugins": []
+    "plugins": [
+      "@bacons/apple-targets",
+      "./plugins/withLocalNotificationsOnly"
+    ]
   }
 }

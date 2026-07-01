@@ -1,10 +1,12 @@
 import 'react-native-gesture-handler';
 import React, { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useStore } from './src/store';
+import { refreshWeeklyReportIfEnabled } from './src/notifications';
+import { syncWidget } from './src/widget';
 import { THEMES } from './src/theme';
 import TabBar from './src/ui/TabBar';
 import Toast from './src/ui/Toast';
@@ -30,6 +32,33 @@ export default function App() {
     }, 8000);
     return () => clearInterval(t);
   }, [driftTick]);
+
+  // keep the home-screen widget's snapshot in sync whenever the orbit changes
+  useEffect(() => {
+    let prev = useStore.getState().contacts;
+    syncWidget(Object.values(prev), Date.now());
+    return useStore.subscribe((state) => {
+      if (state.contacts !== prev) {
+        prev = state.contacts;
+        syncWidget(Object.values(prev), Date.now());
+      }
+    });
+  }, []);
+
+  // on launch and every time the app returns to the foreground, refresh the
+  // weekly gravity report copy (if enabled) and the widget with the latest orbit
+  useEffect(() => {
+    const refresh = () => {
+      const list = Object.values(useStore.getState().contacts);
+      void refreshWeeklyReportIfEnabled(list);
+      syncWidget(list, Date.now());
+    };
+    refresh();
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') refresh();
+    });
+    return () => sub.remove();
+  }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

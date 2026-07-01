@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, ScrollView, Switch, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../store';
 import { THEMES } from '../theme';
+import { scheduleWeeklyReport, cancelWeeklyReport, isWeeklyScheduled } from '../notifications';
 
 export default function SettingsScreen() {
   const theme = THEMES[useStore((s) => s.theme)];
@@ -11,13 +12,26 @@ export default function SettingsScreen() {
   const setScreen = useStore((s) => s.setScreen);
   const showToast = useStore((s) => s.showToast);
 
+  const contacts = useStore((s) => s.contacts);
   const [weekend, setWeekend] = useState(true);
   const [badges, setBadges] = useState(true);
+  const [weeklyReport, setWeeklyReport] = useState(false);
   const speeds = ['Gentle', 'Steady', 'Brisk'];
-  const freqs = ['Low', 'Medium', 'High'];
   const [speed, setSpeed] = useState(0);
-  const [freq, setFreq] = useState(0);
   const card = { backgroundColor: theme.card, borderColor: theme.border };
+
+  useEffect(() => { isWeeklyScheduled().then(setWeeklyReport); }, []);
+  const onToggleWeekly = async (on: boolean) => {
+    if (on) {
+      const ok = await scheduleWeeklyReport(Object.values(contacts));
+      setWeeklyReport(ok);
+      showToast(ok ? 'Weekly report on — gentle, Sundays' : 'Allow notifications to enable this');
+    } else {
+      await cancelWeeklyReport();
+      setWeeklyReport(false);
+      showToast('Weekly report off');
+    }
+  };
 
   const Row = ({ title, sub, right, onPress, top }: { title: string; sub?: string; right?: React.ReactNode; onPress?: () => void; top?: boolean }) => (
     <Pressable disabled={!onPress} onPress={onPress}
@@ -56,7 +70,7 @@ export default function SettingsScreen() {
 
           <Text style={[styles.sect, { color: theme.faint, marginTop: 22 }]}>QUIET NOTIFICATIONS</Text>
           <View style={[styles.cardList, card]}>
-            <Row title="Nudge Frequency" sub="Max 1 alert per week" right={<Value v={freqs[freq]} />} onPress={() => setFreq((freq + 1) % 3)} />
+            <Row title="Weekly Gravity Report" sub="One gentle Sunday nudge about who's drifting" right={sw(weeklyReport, onToggleWeekly)} />
             <Row title="Subtle Badges" sub="No red dots, only soft glows" right={sw(badges, setBadges)} top />
           </View>
 
@@ -67,7 +81,7 @@ export default function SettingsScreen() {
 
           <Text style={[styles.sect, { color: theme.faint, marginTop: 22 }]}>WIDGETS</Text>
           <View style={[styles.cardList, card]}>
-            <Row title="Home Screen Widget" sub="A real WidgetKit extension — coming soon" right={<Value v="" />} onPress={() => showToast('Native widget is on the roadmap')} />
+            <Row title="Home Screen Widget" sub="Long-press your home screen → + → Orbit" right={<Value v="" />} onPress={() => showToast('Add Orbit from your home screen: long-press → +')} />
           </View>
 
           <Text style={[styles.sect, { color: theme.faint, marginTop: 22 }]}>DATA</Text>
