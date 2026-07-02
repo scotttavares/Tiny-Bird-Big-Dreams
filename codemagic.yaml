@@ -80,18 +80,14 @@ workflows:
           # (Done in a script, not the prep-time ios_signing block, so --create
           # can run for a brand-new app that has no profile yet.)
           #
-          # Sign BOTH the app and its WidgetKit extension. The widget is a
-          # separate bundle id ("$BUNDLE_ID.widget") and needs its own profile.
-          # NOTE: both App IDs use the App Group group.com.tinybirdbigdreams.orbit
-          # — enable "App Groups" on both in the Apple Developer portal and create
-          # that group once (see orbit/README.md), or signing will reject the
-          # entitlement.
-          for id in "$BUNDLE_ID" "$BUNDLE_ID.widget"; do
-            app-store-connect fetch-signing-files "$id" \
-              --type IOS_APP_STORE \
-              --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
-              --create
-          done
+          # NOTE: the home-screen widget is temporarily disabled (see app.json —
+          # the @bacons/apple-targets plugin is commented out) while we ship the
+          # crash fix. When the widget comes back, also sign its extension:
+          #   for id in "$BUNDLE_ID" "$BUNDLE_ID.widget"; do fetch-signing-files ...
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
+            --create
           keychain add-certificates
           xcode-project use-profiles
       - name: Build IPA
