@@ -10,6 +10,7 @@ import { syncWidget } from './src/widget';
 import { THEMES } from './src/theme';
 import TabBar from './src/ui/TabBar';
 import Toast from './src/ui/Toast';
+import ErrorBoundary from './src/ui/ErrorBoundary';
 import OrbitScreen from './src/screens/OrbitScreen';
 import TodayScreen from './src/screens/TodayScreen';
 import PeopleScreen from './src/screens/PeopleScreen';
@@ -63,21 +64,23 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <SafeAreaView style={[styles.root, { backgroundColor: theme.bg }]} edges={['top', 'bottom']}>
-          <StatusBar style={themeName === 'dark' ? 'light' : 'dark'} />
-          <View style={{ flex: 1 }}>
-            {screen === 'orbit' && <OrbitScreen />}
-            {screen === 'today' && <TodayScreen />}
-            {screen === 'people' && <PeopleScreen />}
-            {screen === 'contact' && <ContactScreen />}
-            {screen === 'settings' && <SettingsScreen />}
-          </View>
-          {screen !== 'contact' && <TabBar />}
-          <Onboarding />
-          <AddSheet />
-          <ActionSheet />
-          <Toast />
-        </SafeAreaView>
+        <ErrorBoundary>
+          <SafeAreaView style={[styles.root, { backgroundColor: theme.bg }]} edges={['top', 'bottom']}>
+            <StatusBar style={themeName === 'dark' ? 'light' : 'dark'} />
+            <View style={{ flex: 1 }}>
+              {screen === 'orbit' && <OrbitScreen />}
+              {screen === 'today' && <TodayScreen />}
+              {screen === 'people' && <PeopleScreen />}
+              {screen === 'contact' && <ContactScreen />}
+              {screen === 'settings' && <SettingsScreen />}
+            </View>
+            {screen !== 'contact' && <TabBar />}
+            <Onboarding />
+            <AddSheet />
+            <ActionSheet />
+            <Toast />
+          </SafeAreaView>
+        </ErrorBoundary>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
