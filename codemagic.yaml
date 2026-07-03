@@ -51,7 +51,22 @@ workflows:
       cocoapods: default
     scripts:
       - name: Install JS dependencies
-        script: npm ci
+        script: |
+          npm ci
+          # patch-package applies our patches via the postinstall hook. The most
+          # important one fixes an iOS 26 launch crash in React Native's
+          # TurboModule layer (facebook/react-native#54859): an async void native
+          # method that throws on iOS 26 was rethrown on a GCD queue with nothing
+          # to catch it, aborting the app ~0.3s after launch. Assert the patch
+          # actually landed — a silent miss is the difference between a working
+          # app and a hard launch crash.
+          RN_TM="node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm"
+          if ! grep -q "react-native#54859" "$RN_TM"; then
+            echo "❌ RN TurboModule iOS-26 patch NOT applied (patch-package postinstall did not run)."
+            echo "   Expected marker 'react-native#54859' in $RN_TM"
+            exit 1
+          fi
+          echo "✅ RN TurboModule iOS-26 crash patch is present."
       - name: Generate native iOS project (Expo prebuild)
         script: npx expo prebuild --platform ios --clean --no-install
       - name: Install CocoaPods dependencies
