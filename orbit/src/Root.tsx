@@ -1,48 +1,39 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  useFrameCallback,
-  withRepeat,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated';
+import { Text, StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 
-// ⚠️ TEMPORARY DIAGNOSTIC #2 ⚠️
-// Renders ONLY Reanimated (a shared value + animated style + withRepeat, plus
-// useFrameCallback — the exact APIs the app uses), and nothing else (no gestures,
-// no gradient, no screens). This pinpoints the native launch crash:
-//   • Text PULSES ("Reanimated OK") → Reanimated is healthy; the crash is in
-//     gesture-handler / expo-linear-gradient / the screens. I bisect those next.
-//   • White-screens and quits → Reanimated itself is the crash (a native/JSI
-//     issue), and I pin/repair it.
+// ⚠️ TEMPORARY DIAGNOSTIC #3 ⚠️
+// Reanimated is confirmed healthy. This renders the app's native "shell" — the
+// four remaining native libraries — with no screens/store:
+//   gesture-handler (GestureHandlerRootView), safe-area-context (SafeAreaProvider),
+//   expo-linear-gradient, @expo/vector-icons.
+//   • "Shell OK ✓" appears → all four are fine; the crash is app-level code
+//     (a screen / the store / notifications-widget module load) which I can read
+//     and fix directly.
+//   • White flash / crash → one of these four native libs is the culprit, and I
+//     bisect that small set.
 export default function Root() {
-  const op = useSharedValue(0.25);
-  const frames = useSharedValue(0);
-  useFrameCallback((info) => {
-    frames.value += info.timeSincePreviousFrame ?? 16;
-  });
-  React.useEffect(() => {
-    op.value = withRepeat(withTiming(1, { duration: 900, easing: Easing.inOut(Easing.quad) }), -1, true);
-  }, [op]);
-  const style = useAnimatedStyle(() => ({ opacity: op.value }));
-
   return (
-    <View style={styles.wrap}>
-      <Animated.View style={style}>
-        <Text style={styles.title}>Reanimated OK ✓</Text>
-      </Animated.View>
-      <Text style={styles.sub}>
-        Diagnostic. If this text is pulsing, the animation engine works and the crash is elsewhere.
-        If you got a white flash instead, Reanimated is the culprit. Tell Claude which.
-      </Text>
-    </View>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.wrap} edges={['top', 'bottom']}>
+          <StatusBar style="light" />
+          <LinearGradient colors={['#20264a', '#0A0C16']} style={StyleSheet.absoluteFill} />
+          <Ionicons name="planet-outline" size={46} color="#7b6ef6" />
+          <Text style={styles.title}>Shell OK ✓</Text>
+          <Text style={styles.sub}>gesture-handler · safe-area · gradient · icons all loaded.</Text>
+        </SafeAreaView>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: '#0A0C16', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 34 },
-  title: { color: '#EDEFF7', fontSize: 26, fontWeight: '800', marginBottom: 16, textAlign: 'center' },
-  sub: { color: '#949ab2', fontSize: 13.5, textAlign: 'center', lineHeight: 20 },
+  wrap: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0A0C16', paddingHorizontal: 34, gap: 14 },
+  title: { color: '#EDEFF7', fontSize: 24, fontWeight: '800', textAlign: 'center' },
+  sub: { color: '#949ab2', fontSize: 13, textAlign: 'center' },
 });
