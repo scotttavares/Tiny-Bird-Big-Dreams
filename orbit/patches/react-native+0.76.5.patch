@@ -1,8 +1,63 @@
 diff --git a/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm b/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
-index 2678b19..e982b0f 100644
+index 2678b19..ce240fb 100644
 --- a/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
 +++ b/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
-@@ -346,7 +346,14 @@ id ObjCTurboModule::performMethodInvocation(
+@@ -32,6 +32,54 @@ using namespace facebook;
+ using namespace facebook::react;
+ using namespace facebook::react::TurboModuleConvertUtils;
+ 
++// ─── Orbit iOS 26 launch-crash diagnostic (react-native#54859) ─────────────
++// On iOS 26 a native module aborts the app during TurboModule setup by throwing
++// an exception that goes uncaught on a background queue. The default terminate
++// path leaves only "abort() called" in the crash report — no class, no reason.
++// This installs a std::terminate handler (before main, via a constructor) that
++// recovers the in-flight exception, formats its type/reason/stack, and writes
++// it to Documents/orbit_last_crash.txt so the JS layer can display it on the
++// next launch. Diagnostic only — remove once the culprit module is identified.
++#include <exception>
++static std::terminate_handler g_orbitPrevTerminate = nullptr;
++static void orbitTerminateHandler()
++{
++  @autoreleasepool {
++    NSString *desc = @"(terminate called with no active exception)";
++    try {
++      std::exception_ptr ep = std::current_exception();
++      if (ep) {
++        std::rethrow_exception(ep);
++      }
++    } catch (NSException *ns) {
++      NSArray *stack = [ns callStackSymbols] ?: @[];
++      desc = [NSString stringWithFormat:@"NSException: %@\nreason: %@\n\nstack:\n%@",
++                                        [ns name] ?: @"(nil)",
++                                        [ns reason] ?: @"(nil)",
++                                        [stack componentsJoinedByString:@"\n"]];
++    } catch (const std::exception &ex) {
++      desc = [NSString stringWithFormat:@"std::exception: %s", ex.what()];
++    } catch (...) {
++      desc = @"unknown exception (neither NSException nor std::exception)";
++    }
++    NSLog(@"[ORBIT-CRASH] %@", desc);
++    @try {
++      NSString *path = [NSHomeDirectory() stringByAppendingPathComponent:@"Documents/orbit_last_crash.txt"];
++      [desc writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:NULL];
++    } @catch (...) {
++    }
++  }
++  if (g_orbitPrevTerminate) {
++    g_orbitPrevTerminate();
++  }
++  abort();
++}
++__attribute__((constructor)) static void orbitInstallTerminateHandler()
++{
++  g_orbitPrevTerminate = std::set_terminate(&orbitTerminateHandler);
++}
++// ───────────────────────────────────────────────────────────────────────────
++
+ static int32_t getUniqueId()
+ {
+   static int32_t counter = 0;
+@@ -346,7 +394,14 @@ id ObjCTurboModule::performMethodInvocation(
      @try {
        [inv invokeWithTarget:strongModule];
      } @catch (NSException *exception) {
@@ -18,7 +73,7 @@ index 2678b19..e982b0f 100644
      } @finally {
        [retainedObjectsForInvocation removeAllObjects];
      }
-@@ -409,7 +416,15 @@ void ObjCTurboModule::performVoidMethodInvocation(
+@@ -409,7 +464,15 @@ void ObjCTurboModule::performVoidMethodInvocation(
      @try {
        [inv invokeWithTarget:strongModule];
      } @catch (NSException *exception) {

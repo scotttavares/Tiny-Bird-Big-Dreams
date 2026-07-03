@@ -113,6 +113,11 @@ workflows:
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
+      # dSYMs — kept so a crashing build's stack frames can be symbolicated
+      # offline (llvm-symbolizer) if the on-device crash capture ever misses.
+      - build/ios/ipa/*.app.dSYM
+      - build/ios/**/*.dSYM
+      - build/ios/**/*.dSYM.zip
     publishing:
       app_store_connect:
         auth: integration
