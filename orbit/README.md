@@ -102,6 +102,8 @@ orbit/
     orbit.ts           radius()/ringDur() math, orbit names, group colors
     data.ts            Seed contacts
     store.ts           Zustand store: contacts, theme, navigation, all actions
+    notifications.ts   Weekly "gravity report" local notification (expo-notifications)
+    widget.ts          Writes the orbit snapshot to the shared App Group for the widget
     ui/
       Avatar.tsx       Photo avatar with initials fallback + drift/fav indicators
       TabBar.tsx       Bottom tab bar
@@ -118,6 +120,13 @@ orbit/
       Onboarding.tsx   First-run intro
       AddSheet.tsx     Add someone to your orbit
       ActionSheet.tsx  Per-contact options (favorite, anchor, move, drift speed…)
+  targets/
+    widget/            WidgetKit home-screen widget (@bacons/apple-targets)
+      index.swift      SwiftUI widget: reads the App Group snapshot, renders drifters
+      expo-target.config.js  Target type/bundle id/App Group (linked in on prebuild)
+  plugins/
+    withLocalNotificationsOnly.js  Strips the push (aps-environment) entitlement —
+                                   Orbit only uses local notifications
 ```
 
 ## Status / roadmap
@@ -127,8 +136,27 @@ Ported from the HTML prototype:
 - ✅ Today (daily nudge + glance), People (search + groups), Contact, Settings
 - ✅ Onboarding, Add-to-orbit, per-contact options, live drift, theming
 
-Next (native-only, intentionally deferred):
-- ⏳ **Home-screen widget** — a real WidgetKit extension (Swift) wired via an Expo
-  config plugin. The in-app widget *preview* from the prototype can come along too.
-- ⏳ Push notifications for the weekly "gravity report"
+Native features:
+- ✅ **Weekly gravity report** — a gentle, once-a-week local notification naming who's
+  drifting (`src/notifications.ts`), toggled in Settings. Local only, no push server.
+- ✅ **Home-screen widget** — a real WidgetKit extension (`targets/widget/index.swift`)
+  via `@bacons/apple-targets`; the app shares "who's drifting" through an App Group
+  (`src/widget.ts`). **Needs a one-time App Group setup — see below.**
+
+Next (intentionally deferred):
 - ⏳ Contacts import, Claude-powered openers / "catch me up", iCloud sync
+
+### Home-screen widget — one-time App Group setup
+The widget reads the app's data through the App Group
+`group.com.tinybirdbigdreams.orbit`. App Groups can't be created from CI, so once,
+in the [Apple Developer portal](https://developer.apple.com/account/resources):
+1. **Identifiers → App Groups → +** → create `group.com.tinybirdbigdreams.orbit`.
+2. **Identifiers → App IDs** → for both `com.tinybirdbigdreams.orbit` **and**
+   `com.tinybirdbigdreams.orbit.widget` (the widget App ID is auto-registered by the
+   build's `fetch-signing-files --create` on first run), enable the **App Groups**
+   capability and assign that group.
+
+`codemagic.yaml` already fetches an App Store profile for both bundle ids. If the
+first widget build fails signing on the App Group entitlement, it's because step 2
+hadn't been done yet for the widget App ID — do it and re-run. (Same
+build-then-configure rhythm as the certificate setup.)

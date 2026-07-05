@@ -51,7 +51,22 @@ workflows:
       cocoapods: default
     scripts:
       - name: Install JS dependencies
-        script: npm ci
+        script: |
+          npm ci
+          # patch-package applies our patches via the postinstall hook. The most
+          # important one fixes an iOS 26 launch crash in React Native's
+          # TurboModule layer (facebook/react-native#54859): an async void native
+          # method that throws on iOS 26 was rethrown on a GCD queue with nothing
+          # to catch it, aborting the app ~0.3s after launch. Assert the patch
+          # actually landed — a silent miss is the difference between a working
+          # app and a hard launch crash.
+          RN_TM="node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm"
+          if ! grep -q "react-native#54859" "$RN_TM"; then
+            echo "❌ RN TurboModule iOS-26 patch NOT applied (patch-package postinstall did not run)."
+            echo "   Expected marker 'react-native#54859' in $RN_TM"
+            exit 1
+          fi
+          echo "✅ RN TurboModule iOS-26 crash patch is present."
       - name: Generate native iOS project (Expo prebuild)
         script: npx expo prebuild --platform ios --clean --no-install
       - name: Install CocoaPods dependencies
@@ -79,6 +94,11 @@ workflows:
           # provisioning profile the first time; every later build reuses them.
           # (Done in a script, not the prep-time ios_signing block, so --create
           # can run for a brand-new app that has no profile yet.)
+          #
+          # NOTE: the home-screen widget is temporarily disabled (see app.json —
+          # the @bacons/apple-targets plugin is commented out) while we ship the
+          # crash fix. When the widget comes back, also sign its extension:
+          #   for id in "$BUNDLE_ID" "$BUNDLE_ID.widget"; do fetch-signing-files ...
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
             --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
@@ -93,6 +113,11 @@ workflows:
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
+      # dSYMs — kept so a crashing build's stack frames can be symbolicated
+      # offline (llvm-symbolizer) if the on-device crash capture ever misses.
+      - build/ios/ipa/*.app.dSYM
+      - build/ios/**/*.dSYM
+      - build/ios/**/*.dSYM.zip
     publishing:
       app_store_connect:
         auth: integration
