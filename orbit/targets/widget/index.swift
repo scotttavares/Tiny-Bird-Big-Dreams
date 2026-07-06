@@ -10,9 +10,10 @@ struct OrbitPerson: Codable, Identifiable {
   let name: String
   let initials: String
   let ring: Int
+  let angle: Double
   let color: String
   let drift: Bool
-  var id: String { "\(name)-\(ring)" }
+  var id: String { "\(name)-\(ring)-\(Int(angle))" }
 }
 
 struct OrbitPayload: Codable {
@@ -23,12 +24,14 @@ struct OrbitPayload: Codable {
 
 private let samplePayload = OrbitPayload(
   updatedAt: 0,
-  driftCount: 2,
+  driftCount: 3,
   people: [
-    OrbitPerson(name: "Sarah", initials: "SA", ring: 4, color: "#7b6ef6", drift: true),
-    OrbitPerson(name: "Mom", initials: "MO", ring: 1, color: "#ef6196", drift: false),
-    OrbitPerson(name: "Leo", initials: "LE", ring: 3, color: "#f1973f", drift: true),
-    OrbitPerson(name: "Priya", initials: "PR", ring: 2, color: "#36b08f", drift: false),
+    OrbitPerson(name: "Sarah", initials: "SA", ring: 2, angle: -20, color: "#7b6ef6", drift: false),
+    OrbitPerson(name: "Mom", initials: "MO", ring: 1, angle: 150, color: "#ef6196", drift: false),
+    OrbitPerson(name: "Leo", initials: "LE", ring: 3, angle: 60, color: "#f1973f", drift: true),
+    OrbitPerson(name: "Priya", initials: "PR", ring: 2, angle: 118, color: "#36b08f", drift: false),
+    OrbitPerson(name: "Marcus", initials: "MA", ring: 4, angle: -102, color: "#f1973f", drift: true),
+    OrbitPerson(name: "Nina", initials: "NI", ring: 4, angle: 205, color: "#ef6196", drift: true),
   ]
 )
 
@@ -79,81 +82,107 @@ extension Color {
   }
 }
 
+private let youGrad = LinearGradient(
+  colors: [Color(hex: "#8E7BFF"), Color(hex: "#6C5CE7")],
+  startPoint: .topLeading, endPoint: .bottomTrailing
+)
+private let amber = Color(hex: "#E8A24A")
 private let accent = Color(hex: "#7b6ef6")
 
-// MARK: - Subviews
+// MARK: - Orbit drawing
 
 struct PersonDot: View {
   let person: OrbitPerson
+  let size: CGFloat
   var body: some View {
-    VStack(spacing: 4) {
+    ZStack {
+      Circle().fill(Color(hex: person.color).opacity(0.92))
+      Text(String(person.initials.prefix(2)))
+        .font(.system(size: size * 0.4, weight: .bold))
+        .foregroundColor(.white)
+      if person.drift {
+        Circle().stroke(amber, lineWidth: 2)
+      }
+    }
+    .frame(width: size, height: size)
+  }
+}
+
+struct OrbitCanvas: View {
+  let payload: OrbitPayload
+  let dotSize: CGFloat
+
+  var body: some View {
+    GeometryReader { geo in
+      let w = geo.size.width
+      let h = geo.size.height
+      let center = CGPoint(x: w / 2, y: h / 2)
+      let maxR = min(w, h) / 2 - dotSize / 2 - 3
+      let maxRing = max(3, payload.people.map { $0.ring }.max() ?? 3)
+
       ZStack {
-        Circle().fill(Color(hex: person.color).opacity(0.9))
-        Text(person.initials)
-          .font(.system(size: 13, weight: .bold))
-          .foregroundColor(.white)
-        if person.drift {
-          Circle().stroke(Color(hex: "#E8A24A"), lineWidth: 2)
+        // concentric rings
+        ForEach(1...maxRing, id: \.self) { r in
+          let d = 2 * maxR * CGFloat(r) / CGFloat(maxRing)
+          Circle()
+            .stroke(Color.white.opacity(r == 1 ? 0.16 : 0.08), lineWidth: 1)
+            .frame(width: d, height: d)
+            .position(center)
+        }
+
+        // "You" core
+        Circle()
+          .fill(youGrad)
+          .frame(width: dotSize * 1.15, height: dotSize * 1.15)
+          .position(center)
+
+        // people, placed by ring (radius) + angle
+        ForEach(payload.people) { p in
+          let rr = maxR * CGFloat(p.ring) / CGFloat(maxRing)
+          let rad = p.angle * Double.pi / 180
+          PersonDot(person: p, size: dotSize)
+            .position(x: center.x + CGFloat(cos(rad)) * rr,
+                      y: center.y + CGFloat(sin(rad)) * rr)
         }
       }
-      .frame(width: 40, height: 40)
-      Text(person.name)
-        .font(.system(size: 11, weight: .medium))
-        .foregroundColor(.secondary)
-        .lineLimit(1)
     }
   }
 }
 
-struct Header: View {
-  var body: some View {
-    HStack(spacing: 6) {
-      ZStack {
-        Circle().stroke(accent.opacity(0.5), lineWidth: 1.5).frame(width: 16, height: 16)
-        Circle().fill(accent).frame(width: 6, height: 6).offset(x: 8)
-      }
-      Text("Orbit")
-        .font(.system(size: 14, weight: .bold))
-        .foregroundColor(.primary)
-    }
-  }
-}
-
-// MARK: - Widget content
+// MARK: - Widget view
 
 struct OrbitWidgetView: View {
   @Environment(\.widgetFamily) var family
   let entry: OrbitEntry
 
-  private var summary: String {
-    let n = entry.payload.driftCount
-    if n == 0 { return "Everyone's close" }
-    return n == 1 ? "1 person drifting" : "\(n) people drifting"
-  }
-
   var body: some View {
-    let people = entry.payload.people
-    let shown = family == .systemSmall ? Array(people.prefix(2)) : Array(people.prefix(4))
-    return VStack(alignment: .leading, spacing: 10) {
-      HStack {
-        Header()
-        Spacer()
-        if entry.payload.driftCount > 0 {
-          Text("\(entry.payload.driftCount)")
-            .font(.system(size: 13, weight: .bold))
-            .foregroundColor(Color(hex: "#E8A24A"))
+    let compact = family == .systemSmall
+    ZStack {
+      OrbitCanvas(payload: entry.payload, dotSize: compact ? 22 : 26)
+
+      VStack(spacing: 0) {
+        HStack(spacing: 5) {
+          ZStack {
+            Circle().stroke(accent.opacity(0.6), lineWidth: 1.5).frame(width: 13, height: 13)
+            Circle().fill(accent).frame(width: 5, height: 5).offset(x: 6.5)
+          }
+          Text("Orbit").font(.system(size: 12, weight: .bold)).foregroundColor(.white.opacity(0.92))
+          Spacer()
+          if entry.payload.driftCount > 0 {
+            Text("\(entry.payload.driftCount)")
+              .font(.system(size: 12, weight: .bold))
+              .foregroundColor(amber)
+          }
+        }
+        Spacer(minLength: 0)
+        if entry.payload.people.isEmpty {
+          Text("Add people in Orbit")
+            .font(.system(size: 11, weight: .medium))
+            .foregroundColor(.white.opacity(0.5))
+            .padding(.bottom, 2)
         }
       }
-      Text(summary)
-        .font(.system(size: 12, weight: .semibold))
-        .foregroundColor(.secondary)
-      Spacer(minLength: 0)
-      HStack(spacing: family == .systemSmall ? 10 : 16) {
-        ForEach(shown) { PersonDot(person: $0) }
-        Spacer(minLength: 0)
-      }
     }
-    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     .widgetBackgroundCompat()
   }
 }
@@ -163,9 +192,9 @@ extension View {
   @ViewBuilder
   func widgetBackgroundCompat() -> some View {
     if #available(iOS 17.0, *) {
-      self.padding(14).containerBackground(for: .widget) { Color(hex: "#0A0C16") }
+      self.padding(12).containerBackground(for: .widget) { Color(hex: "#0A0C16") }
     } else {
-      self.padding(14).background(Color(hex: "#0A0C16"))
+      self.padding(12).background(Color(hex: "#0A0C16"))
     }
   }
 }
@@ -179,7 +208,7 @@ struct OrbitWidget: Widget {
       OrbitWidgetView(entry: entry)
     }
     .configurationDisplayName("Orbit")
-    .description("See who's drifting to the edge of your orbit — and pull them back.")
+    .description("Your orbit at a glance — who's drifting to the edge.")
     .supportedFamilies([.systemSmall, .systemMedium])
   }
 }

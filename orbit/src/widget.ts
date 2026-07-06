@@ -10,14 +10,15 @@ import { GROUP_COLOR } from './orbit';
 // Swift widget reads from.
 export const APP_GROUP = 'group.com.tinybirdbigdreams.orbit';
 const KEY = 'orbit';
-const MAX_PEOPLE = 4;
+const MAX_PEOPLE = 8;
 
 const storage = new ExtensionStorage(APP_GROUP);
 
 export interface WidgetPerson {
   name: string;      // first name
   initials: string;
-  ring: number;
+  ring: number;      // 1 = closest; larger = farther out
+  angle: number;     // position around the ring, degrees (for the orbit widget)
   color: string;     // group color hex
   drift: boolean;
 }
@@ -41,6 +42,7 @@ export function buildWidgetPayload(contacts: Contact[], now: number): WidgetPayl
       name: c.name.trim().split(/\s+/)[0],
       initials: c.initials,
       ring: c.ring,
+      angle: c.angle,
       color: GROUP_COLOR[c.group],
       drift: c.drift && !c.snoozed,
     })),
