@@ -8,6 +8,7 @@ import { useStore } from './src/store';
 import { refreshWeeklyReportIfEnabled } from './src/notifications';
 import { syncWidget } from './src/widget';
 import { THEMES } from './src/theme';
+import OrbitLogo from './src/ui/OrbitLogo';
 import TabBar from './src/ui/TabBar';
 import Toast from './src/ui/Toast';
 import ErrorBoundary from './src/ui/ErrorBoundary';
@@ -25,6 +26,7 @@ export default function App() {
   const theme = THEMES[themeName];
   const screen = useStore((s) => s.screen);
   const driftTick = useStore((s) => s.driftTick);
+  const hydrated = useStore((s) => s.hydrated);
 
   // live drift: while you're on the orbit screen, people slowly drift outward over time
   useEffect(() => {
@@ -61,6 +63,18 @@ export default function App() {
     return () => sub.remove();
   }, []);
 
+  // Wait for persisted contacts to load from disk before rendering, so a
+  // returning user never sees an empty orbit flash before their people appear.
+  if (!hydrated) {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <View style={[styles.root, styles.splash, { backgroundColor: theme.bg }]}>
+          <OrbitLogo color={theme.accent} textColor={theme.text} fontSize={30} />
+        </View>
+      </GestureHandlerRootView>
+    );
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -86,4 +100,7 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({ root: { flex: 1 } });
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  splash: { alignItems: 'center', justifyContent: 'center' },
+});

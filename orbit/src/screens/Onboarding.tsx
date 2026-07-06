@@ -16,6 +16,8 @@ export default function Onboarding() {
   const theme = THEMES[useStore((s) => s.theme)];
   const onboarded = useStore((s) => s.onboarded);
   const dismiss = useStore((s) => s.dismissOnboarding);
+  const openAdd = useStore((s) => s.openAdd);
+  const start = () => { dismiss(); openAdd(); };
   if (onboarded) return null;
 
   return (
@@ -40,8 +42,11 @@ export default function Onboarding() {
           ))}
         </View>
 
-        <Pressable style={[styles.cta, { backgroundColor: theme.accent2 }]} onPress={dismiss}>
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Enter your orbit</Text>
+        <Pressable style={[styles.cta, { backgroundColor: theme.accent2 }]} onPress={start}>
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Add your first person</Text>
+        </Pressable>
+        <Pressable style={styles.skip} onPress={dismiss} hitSlop={10}>
+          <Text style={{ color: theme.dim, fontSize: 13.5, fontWeight: '600' }}>Skip for now</Text>
         </Pressable>
       </View>
     </Animated.View>
@@ -55,4 +60,5 @@ const styles = StyleSheet.create({
     shadowColor: '#6C5CE7', shadowOpacity: 0.5, shadowRadius: 24, shadowOffset: { width: 0, height: 14 },
   },
   cta: { width: '100%', borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
+  skip: { marginTop: 14, paddingVertical: 6 },
 });
