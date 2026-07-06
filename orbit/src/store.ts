@@ -17,12 +17,13 @@ interface State {
   onboarded: boolean;
   hydrated: boolean;
   toast: string | null;
-  sheet: 'add' | 'action' | null;
+  sheet: 'add' | 'action' | 'import' | null;
 
   setScreen: (s: Screen) => void;
   openContact: (id: string) => void;
   openAdd: () => void;
   openActions: () => void;
+  openImport: () => void;
   closeSheet: () => void;
   setTheme: (t: ThemeName) => void;
   toggleTheme: () => void;
@@ -33,6 +34,7 @@ interface State {
   addContact: (input: { name: string; role?: string; ring: number; group: GroupName }) => void;
   updateContact: (id: string, patch: Partial<Contact>) => void;
   removeContact: (id: string) => void;
+  importContacts: (people: { name: string; photo?: string | null }[]) => number;
   loadSampleOrbit: () => void;
   resetOrbit: () => void;
 
@@ -75,6 +77,7 @@ export const useStore = create<State>()(
       openContact: (id) => set({ currentId: id, screen: 'contact', sheet: null }),
       openAdd: () => set({ sheet: 'add' }),
       openActions: () => set({ sheet: 'action' }),
+      openImport: () => set({ sheet: 'import' }),
       closeSheet: () => set({ sheet: null }),
       setTheme: (theme) => set({ theme }),
       toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
@@ -112,6 +115,29 @@ export const useStore = create<State>()(
           delete next[id];
           return { contacts: next, screen: 'orbit', currentId: null };
         }),
+
+      // Add many people at once from the iPhone address book. Places them on the
+      // inner rings with spread-out angles so they start close, then drift over
+      // time like everyone else. Returns how many were actually added.
+      importContacts: (people) => {
+        const next = { ...get().contacts };
+        let added = 0;
+        for (const p of people) {
+          const name = p.name.trim();
+          if (!name) continue;
+          const id = 'c' + Date.now() + '_' + addCounter;
+          const angle = ((addCounter++) * 87 + 30) % 360 - 180;
+          const ring = (added % 2) + 1;
+          next[id] = {
+            id, name, initials: initialsOf(name), grad: 'g-' + (name.length % 5),
+            role: 'From Contacts', unit: 'just now',
+            ring, angle, drift: driftOf(ring), photo: p.photo ?? null, group: 'Friends',
+          };
+          added++;
+        }
+        set({ contacts: next });
+        return added;
+      },
 
       // Load the demo people so a first-time user can see how Orbit feels.
       loadSampleOrbit: () => set({ contacts: seedMap() }),

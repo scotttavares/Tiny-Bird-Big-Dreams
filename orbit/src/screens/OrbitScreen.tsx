@@ -18,6 +18,7 @@ export default function OrbitScreen() {
   const openContact = useStore((s) => s.openContact);
   const showToast = useStore((s) => s.showToast);
   const loadSample = useStore((s) => s.loadSampleOrbit);
+  const openImport = useStore((s) => s.openImport);
 
   const list = Object.values(contacts);
   const driftCount = list.filter((c) => c.drift).length;
@@ -65,17 +66,18 @@ export default function OrbitScreen() {
             Add the people who matter — they’ll orbit around you, gently drifting outward as time passes.
           </Text>
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
-            <Pressable onPress={openAdd} style={[styles.emptyBtn, { backgroundColor: theme.accent2 }]}>
-              <Ionicons name="add" size={17} color="#fff" />
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13.5 }}>Add someone</Text>
+            <Pressable onPress={openImport} style={[styles.emptyBtn, { flex: 1, backgroundColor: theme.accent2 }]}>
+              <Ionicons name="people" size={16} color="#fff" />
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13.5 }}>Import Contacts</Text>
             </Pressable>
-            <Pressable
-              onPress={() => { loadSample(); showToast('Loaded a sample orbit ✨'); }}
-              style={[styles.emptyBtn, styles.emptyGhost, { borderColor: theme.border2 }]}
-            >
-              <Text style={{ color: theme.dim, fontWeight: '600', fontSize: 13.5 }}>See a sample</Text>
+            <Pressable onPress={openAdd} style={[styles.emptyBtn, styles.emptyGhost, { flex: 1, borderColor: theme.border2 }]}>
+              <Ionicons name="add" size={17} color={theme.dim} />
+              <Text style={{ color: theme.dim, fontWeight: '600', fontSize: 13.5 }}>Add manually</Text>
             </Pressable>
           </View>
+          <Pressable onPress={() => { loadSample(); showToast('Loaded a sample orbit ✨'); }} style={{ marginTop: 10, alignSelf: 'flex-start' }} hitSlop={6}>
+            <Text style={{ color: theme.faint, fontSize: 12.5, fontWeight: '600' }}>or see a sample orbit</Text>
+          </Pressable>
         </View>
       ) : nudge ? (
         <View style={[styles.driftcard, { backgroundColor: light ? '#fff' : '#171b2c', borderColor: light ? theme.border : 'rgba(255,255,255,0.09)' }]}>

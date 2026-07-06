@@ -13,7 +13,8 @@
       "supportsTablet": false,
       "appleTeamId": "23D9BZ3692",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSContactsUsageDescription": "Orbit uses your contacts so you can add the people you care about to your orbit. Your contacts stay on your device."
       },
       "entitlements": {
         "com.apple.security.application-groups": ["group.com.tinybirdbigdreams.orbit"]

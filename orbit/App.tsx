@@ -20,6 +20,7 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import Onboarding from './src/screens/Onboarding';
 import AddSheet from './src/screens/AddSheet';
 import ActionSheet from './src/screens/ActionSheet';
+import ContactsImport from './src/screens/ContactsImport';
 
 export default function App() {
   const themeName = useStore((s) => s.theme);
@@ -92,6 +93,7 @@ export default function App() {
             <Onboarding />
             <AddSheet />
             <ActionSheet />
+            <ContactsImport />
             <Toast />
           </SafeAreaView>
         </ErrorBoundary>

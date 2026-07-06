@@ -12,6 +12,7 @@ export default function SettingsScreen() {
   const setScreen = useStore((s) => s.setScreen);
   const showToast = useStore((s) => s.showToast);
   const resetOrbit = useStore((s) => s.resetOrbit);
+  const openImport = useStore((s) => s.openImport);
 
   const confirmClear = () =>
     Alert.alert(
@@ -97,7 +98,7 @@ export default function SettingsScreen() {
 
           <Text style={[styles.sect, { color: theme.faint, marginTop: 22 }]}>DATA</Text>
           <View style={[styles.cardList, card]}>
-            <Row title="Import from Contacts" sub="Pull people from your address book" right={<Value v="Soon" />} onPress={() => showToast('Contacts import is coming soon')} />
+            <Row title="Import from Contacts" sub="Pull people from your address book" right={<Ionicons name="chevron-forward" size={15} color={theme.dim} />} onPress={openImport} />
             <Row title="Clear Orbit Data" sub="Remove everyone and start fresh" right={null} onPress={confirmClear} top />
           </View>
           <Text style={{ textAlign: 'center', color: theme.faint, fontSize: 11, paddingVertical: 18 }}>Orbit · gravity for the people who matter</Text>
