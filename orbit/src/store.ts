@@ -47,13 +47,28 @@ interface State {
   setNote: (id: string, note: string) => void;
   setGroup: (id: string, group: GroupName) => void;
   setReminder: (id: string, reminder: string | null) => void;
-  driftTick: () => void;
+  settleDrift: () => void;
 }
 
 const seedMap = (): Record<string, Contact> =>
   Object.fromEntries(SEED.map((c) => [c.id, { ...c }]));
 
 const driftOf = (ring: number, anchored?: boolean) => ring >= 3 && !anchored;
+
+// ── Real-time drift ────────────────────────────────────────────────────────
+// Drift reflects how long it's been since you last connected — not a fast
+// timer. A person moves out one ring every WEEKS_PER_RING weeks (by their
+// per-person speed), and reconnecting pulls them back to the center.
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const WEEKS_PER_RING: Record<Speed, number> = { Gentle: 3, Steady: 2, Brisk: 1 };
+// Backdate a "last contacted" time so a person shows at `ring` right now.
+const backdateFor = (ring: number, speed: Speed = 'Steady') =>
+  Date.now() - (ring - 1) * WEEKS_PER_RING[speed] * WEEK_MS;
+// Which ring a person belongs on now, given when you last connected.
+const ringFromElapsed = (lastContactAt: number, speed: Speed = 'Steady') => {
+  const weeks = (Date.now() - lastContactAt) / WEEK_MS;
+  return Math.min(6, Math.max(1, 1 + Math.floor(weeks / WEEKS_PER_RING[speed])));
+};
 
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 let addCounter = 0;
@@ -101,6 +116,7 @@ export const useStore = create<State>()(
               id, name, initials: initialsOf(name), grad,
               role: role?.trim() || 'New connection', unit: 'just now',
               ring, angle, drift: driftOf(ring), photo: null, group,
+              lastContactAt: backdateFor(ring),
             },
           },
         }));
@@ -132,6 +148,7 @@ export const useStore = create<State>()(
             id, name, initials: initialsOf(name), grad: 'g-' + (name.length % 5),
             role: 'From Contacts', unit: 'just now',
             ring, angle, drift: driftOf(ring), photo: p.photo ?? null, group: 'Friends',
+            lastContactAt: backdateFor(ring),
           };
           added++;
         }
@@ -148,15 +165,15 @@ export const useStore = create<State>()(
         set((s) => {
           const c = s.contacts[id];
           if (!c) return s;
-          const ring = Math.max(1, c.ring - 1);
-          return { contacts: { ...s.contacts, [id]: { ...c, ring, unit: 'just now', drift: driftOf(ring, c.anchored) } } };
+          // Reconnecting brings someone back to the center and resets their clock.
+          return { contacts: { ...s.contacts, [id]: { ...c, ring: 1, unit: 'just now', drift: false, lastContactAt: Date.now() } } };
         }),
 
       moveOrbit: (id, ring) =>
         set((s) => {
           const c = s.contacts[id];
           if (!c) return s;
-          return { contacts: { ...s.contacts, [id]: { ...c, ring, unit: 'moved just now', drift: driftOf(ring, c.anchored) } } };
+          return { contacts: { ...s.contacts, [id]: { ...c, ring, unit: 'moved just now', drift: driftOf(ring, c.anchored), lastContactAt: backdateFor(ring, c.speed) } } };
         }),
 
       toggleFav: (id) =>
@@ -178,21 +195,24 @@ export const useStore = create<State>()(
       setGroup: (id, group) => get().updateContact(id, { group }),
       setReminder: (id, reminder) => get().updateContact(id, { reminder }),
 
-      driftTick: () =>
+      // Recompute everyone's ring from real elapsed time since last contact.
+      // Called on launch and when the app returns to the foreground — so drift
+      // reflects days passing, not a fast in-session timer. Anchored people and
+      // any without a timestamp (e.g. the sample orbit) are left untouched.
+      settleDrift: () =>
         set((s) => {
-          // weight by per-person drift speed: Brisk drifts ~3x, Gentle ~1x
-          const weighted: string[] = [];
+          let changed = false;
+          const next = { ...s.contacts };
           for (const c of Object.values(s.contacts)) {
-            if (c.ring < 5 && !c.anchored) {
-              const w = c.speed === 'Brisk' ? 3 : c.speed === 'Gentle' ? 1 : 2;
-              for (let k = 0; k < w; k++) weighted.push(c.id);
+            if (c.lastContactAt == null || c.anchored) continue;
+            const ring = ringFromElapsed(c.lastContactAt, c.speed);
+            const drift = ring >= 3;
+            if (ring !== c.ring || drift !== c.drift) {
+              next[c.id] = { ...c, ring, drift };
+              changed = true;
             }
           }
-          if (!weighted.length) return s;
-          const id = weighted[Math.floor(Math.random() * weighted.length)];
-          const c = s.contacts[id];
-          const ring = c.ring + 1;
-          return { contacts: { ...s.contacts, [id]: { ...c, ring, drift: driftOf(ring, c.anchored) } } };
+          return changed ? { contacts: next } : s;
         }),
     }),
     {

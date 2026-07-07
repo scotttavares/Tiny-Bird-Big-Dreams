@@ -26,16 +26,7 @@ export default function App() {
   const themeName = useStore((s) => s.theme);
   const theme = THEMES[themeName];
   const screen = useStore((s) => s.screen);
-  const driftTick = useStore((s) => s.driftTick);
   const hydrated = useStore((s) => s.hydrated);
-
-  // live drift: while you're on the orbit screen, people slowly drift outward over time
-  useEffect(() => {
-    const t = setInterval(() => {
-      if (useStore.getState().screen === 'orbit') driftTick();
-    }, 8000);
-    return () => clearInterval(t);
-  }, [driftTick]);
 
   // keep the home-screen widget's snapshot in sync whenever the orbit changes
   useEffect(() => {
@@ -53,6 +44,7 @@ export default function App() {
   // weekly gravity report copy (if enabled) and the widget with the latest orbit
   useEffect(() => {
     const refresh = () => {
+      useStore.getState().settleDrift();
       const list = Object.values(useStore.getState().contacts);
       void refreshWeeklyReportIfEnabled(list);
       syncWidget(list, Date.now());

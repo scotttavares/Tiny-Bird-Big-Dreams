@@ -20,4 +20,5 @@ export interface Contact {
   speed?: Speed;         // per-person drift speed
   note?: string;
   reminder?: string | null;
+  lastContactAt?: number; // ms timestamp of last contact; drives real-time drift
 }
