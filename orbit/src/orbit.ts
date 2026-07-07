@@ -24,7 +24,25 @@ export const PROMPTS = [
   "Who's been on your mind lately?",
 ];
 
-export const roleLine = (c: Contact) => `${c.role} · ${ORBIT_NAME[c.ring] ?? 'Orbit'} (${c.unit})`;
+// Human "time since you last connected", from the real timestamp.
+export function sinceLabel(lastContactAt?: number): string {
+  if (lastContactAt == null) return '';
+  const days = Math.floor((Date.now() - lastContactAt) / (24 * 60 * 60 * 1000));
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days} days`;
+  const weeks = Math.floor(days / 7);
+  if (days < 30) return weeks === 1 ? '1 week' : `${weeks} weeks`;
+  const months = Math.floor(days / 30);
+  if (days < 365) return months === 1 ? '1 month' : `${months} months`;
+  const years = Math.floor(days / 365);
+  return years === 1 ? '1 year' : `${years} years`;
+}
+
+export const roleLine = (c: Contact) => {
+  const since = c.lastContactAt != null ? sinceLabel(c.lastContactAt) : c.unit;
+  return `${c.role} · ${ORBIT_NAME[c.ring] ?? 'Orbit'} (${since})`;
+};
 
 export const initialsOf = (name: string) =>
   name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
