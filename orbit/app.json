@@ -6,6 +6,7 @@
     "orientation": "portrait",
     "scheme": "orbit",
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
     "newArchEnabled": false,
     "ios": {
       "bundleIdentifier": "com.tinybirdbigdreams.orbit",
