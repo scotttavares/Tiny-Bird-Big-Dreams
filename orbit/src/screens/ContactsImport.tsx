@@ -7,7 +7,7 @@ import { useStore } from '../store';
 import { THEMES } from '../theme';
 import { initialsOf } from '../orbit';
 
-type Row = { id: string; name: string; photo: string | null };
+type Row = { id: string; name: string; photo: string | null; phone: string | null };
 type Phase = 'loading' | 'denied' | 'ready';
 
 // Full-screen picker: request Contacts permission, list the address book, and
@@ -39,7 +39,7 @@ export default function ContactsImport() {
           return;
         }
         const { data } = await Contacts.getContactsAsync({
-          fields: [Contacts.Fields.Name, Contacts.Fields.Image],
+          fields: [Contacts.Fields.Name, Contacts.Fields.Image, Contacts.Fields.PhoneNumbers],
           sort: Contacts.SortTypes.FirstName,
         });
         if (!alive) return;
@@ -51,7 +51,7 @@ export default function ContactsImport() {
           const key = name.toLowerCase();
           if (seen.has(key)) continue; // collapse duplicate names
           seen.add(key);
-          list.push({ id: c.id ?? key, name, photo: c.image?.uri ?? null });
+          list.push({ id: c.id ?? key, name, photo: c.image?.uri ?? null, phone: c.phoneNumbers?.[0]?.number ?? null });
         }
         setRows(list);
         setPhase('ready');
@@ -82,7 +82,7 @@ export default function ContactsImport() {
   const doImport = () => {
     const picked = rows.filter((r) => selected.has(r.id));
     if (!picked.length) return;
-    const n = importContacts(picked.map((r) => ({ name: r.name, photo: r.photo })));
+    const n = importContacts(picked.map((r) => ({ name: r.name, photo: r.photo, phone: r.phone })));
     showToast(`Added ${n} ${n === 1 ? 'person' : 'people'} to your orbit ✨`);
     close();
   };

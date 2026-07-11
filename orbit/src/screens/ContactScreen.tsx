@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Avatar from '../ui/Avatar';
 import { useStore } from '../store';
@@ -21,6 +21,20 @@ export default function ContactScreen() {
 
   if (!c) return <View style={{ flex: 1 }} />;
   const card = { backgroundColor: theme.card, borderColor: theme.border };
+
+  // Text or call the person via the OS. Reaching out counts as reconnecting,
+  // so we pull them back toward the center.
+  const reach = (scheme: 'sms' | 'tel') => {
+    const num = (c.phone ?? '').replace(/[^\d+*#]/g, '');
+    if (!num) {
+      showToast(`No number saved for ${c.name.split(' ')[0]}`);
+      return;
+    }
+    pull(c.id);
+    Linking.openURL(`${scheme}:${num}`).catch(() =>
+      showToast(scheme === 'sms' ? "Couldn't open Messages" : "Couldn't start the call"),
+    );
+  };
   const tl = TIMELINE[c.id] || [['You thought of ' + c.name.split(' ')[0], '2 weeks ago'], ['Caught up over text', '1 month ago'], ['Added to Orbit', '']];
   const chips: string[] = [];
   if (c.fav) chips.push('⭐ Favorite');
@@ -43,10 +57,10 @@ export default function ContactScreen() {
         </View>
 
         <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 18 }}>
-          <Pressable style={[styles.btn, { backgroundColor: theme.accent2 }]} onPress={() => showToast('Opening messages…')}>
+          <Pressable style={[styles.btn, { backgroundColor: theme.accent2 }]} onPress={() => reach('sms')}>
             <Ionicons name="chatbubble-outline" size={18} color="#fff" /><Text style={styles.btnT}>Send a Text</Text>
           </Pressable>
-          <Pressable style={[styles.btn, { backgroundColor: theme.card2, borderWidth: 1, borderColor: theme.border }]} onPress={() => showToast('Calling…')}>
+          <Pressable style={[styles.btn, { backgroundColor: theme.card2, borderWidth: 1, borderColor: theme.border }]} onPress={() => reach('tel')}>
             <Ionicons name="call-outline" size={18} color={theme.text} /><Text style={[styles.btnT, { color: theme.text }]}>Quick Call</Text>
           </Pressable>
         </View>

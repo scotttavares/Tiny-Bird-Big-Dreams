@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import OrbitMap from './OrbitMap';
 import OrbitLogo from '../ui/OrbitLogo';
@@ -19,6 +19,7 @@ export default function OrbitScreen() {
   const showToast = useStore((s) => s.showToast);
   const loadSample = useStore((s) => s.loadSampleOrbit);
   const openImport = useStore((s) => s.openImport);
+  const pull = useStore((s) => s.pull);
 
   const list = Object.values(contacts);
   const driftCount = list.filter((c) => c.drift).length;
@@ -93,7 +94,13 @@ export default function OrbitScreen() {
               <Text style={{ color: '#9aa0b6', fontSize: 18 }}>✕</Text>
             </Pressable>
           </View>
-          <Pressable onPress={() => openContact(nudge.id)}
+          <Pressable
+            onPress={() => {
+              const num = (nudge.phone ?? '').replace(/[^\d+*#]/g, '');
+              if (!num) return openContact(nudge.id);
+              pull(nudge.id);
+              Linking.openURL('sms:' + num).catch(() => openContact(nudge.id));
+            }}
             style={[styles.qt, { backgroundColor: light ? theme.accentSoft : 'rgba(255,255,255,0.10)', borderColor: light ? 'rgba(108,92,231,0.28)' : 'rgba(255,255,255,0.12)' }]}>
             <Ionicons name="chatbubble-outline" size={16} color={light ? theme.accent2 : '#cdd1e2'} />
             <Text style={{ fontSize: 13.5, color: light ? theme.accent2 : '#cdd1e2' }}>Quick Text</Text>

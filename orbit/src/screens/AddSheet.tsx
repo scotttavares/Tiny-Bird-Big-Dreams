@@ -19,15 +19,16 @@ export default function AddSheet() {
 
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
+  const [phone, setPhone] = useState('');
   const [group, setGroup] = useState<GroupName>('Friends');
   const [ring, setRing] = useState<number>(2);
 
   const submit = () => {
     const n = name.trim();
     if (!n) return;
-    add({ name: n, role, ring, group });
+    add({ name: n, role, ring, group, phone: phone.trim() || null });
     showToast(`Added ${n.split(' ')[0]} to your orbit ✨`);
-    setName(''); setRole(''); setGroup('Friends'); setRing(2);
+    setName(''); setRole(''); setPhone(''); setGroup('Friends'); setRing(2);
     close();
   };
 
@@ -44,6 +45,7 @@ export default function AddSheet() {
       </View>
       <Field label="Name"><TextField value={name} onChangeText={setName} placeholder="e.g. Priya" /></Field>
       <Field label="Relationship (optional)"><TextField value={role} onChangeText={setRole} placeholder="e.g. Old friend" /></Field>
+      <Field label="Phone (optional)"><TextField value={phone} onChangeText={setPhone} placeholder="For Send a Text / Quick Call" keyboardType="phone-pad" /></Field>
       <Field label="Constellation"><Seg options={GROUPS} value={group} onChange={setGroup} /></Field>
       <Field label="Starting orbit — 1 closest · 6 farthest"><Seg options={RINGS} value={ring} onChange={setRing} /></Field>
       <Pressable style={[styles.cta, { backgroundColor: theme.accent2 }]} onPress={submit}>

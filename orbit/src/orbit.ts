@@ -3,12 +3,15 @@ import type { Contact, GroupName } from './types';
 // Ring geometry + revolution speed (ported from the prototype).
 export const FIELD = 340;
 export const CENTER = FIELD / 2;
-export const radius = (n: number) => 42 + (n - 1) * 48;          // px from centre
+// Ring 6 sits much farther out — "beyond the galaxy" — so a year-plus of
+// silence reads as a real distance you have to reach across.
+export const radius = (n: number) => 42 + (n - 1) * 48 + (n >= 6 ? 60 : 0); // px from centre
 export const ringDur = (n: number) => 34 + n * 16;               // seconds per revolution (outer = slower)
 
+// Each ring is a time-since-last-contact bucket.
 export const ORBIT_NAME: Record<number, string> = {
-  1: 'Inner orbit', 2: 'Mid orbit', 3: 'Outer orbit',
-  4: 'Distant orbit', 5: 'Far orbit', 6: 'Fringe orbit',
+  1: 'Within 2 weeks', 2: 'Within a month', 3: 'Within 3 months',
+  4: 'Within 6 months', 5: 'Within a year', 6: 'Beyond the galaxy',
 };
 
 export const GROUPS: GroupName[] = ['Family', 'Friends', 'Work', 'Other'];

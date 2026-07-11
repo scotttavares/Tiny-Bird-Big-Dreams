@@ -13,6 +13,7 @@ export interface Contact {
   angle: number;         // starting angle on the ring, degrees
   drift: boolean;        // drifting outward / overdue
   photo?: string | null;
+  phone?: string | null;   // for Send a Text / Quick Call (from Contacts or manual)
   group: GroupName;
   fav?: boolean;
   anchored?: boolean;    // exempt from drift
