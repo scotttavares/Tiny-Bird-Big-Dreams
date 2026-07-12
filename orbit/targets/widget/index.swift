@@ -216,59 +216,62 @@ struct SmallStatView: View {
   }
 }
 
-// MARK: - Medium: numbers + text, with who's drifting
+// MARK: - Medium: the orbit on the left, who's drifting on the right
 
-struct MediumStatView: View {
+struct MediumOrbitView: View {
   let payload: OrbitPayload
   var total: Int { totalOf(payload) }
   var drifters: [OrbitPerson] { payload.people.filter { $0.drift } }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      HStack(spacing: 5) {
-        OrbitMark()
-        Text("Orbit").font(.system(size: 12, weight: .bold)).foregroundColor(.white.opacity(0.9))
-      }
-      Spacer(minLength: 6)
-      HStack(alignment: .center, spacing: 16) {
-        VStack(alignment: .leading, spacing: 1) {
-          Text("\(payload.driftCount)")
-            .font(.system(size: 44, weight: .heavy))
-            .foregroundColor(payload.driftCount > 0 ? amber : .white)
-          Text(payload.driftCount == 1 ? "person drifting" : "people drifting")
-            .font(.system(size: 12.5, weight: .semibold)).foregroundColor(.white.opacity(0.85))
-          Text("\(total) in your orbit")
-            .font(.system(size: 11.5, weight: .medium)).foregroundColor(.white.opacity(0.45))
-        }
-        .frame(width: 118, alignment: .leading)
+    GeometryReader { geo in
+      let side = geo.size.height
+      HStack(spacing: 14) {
+        OrbitCanvas(payload: payload, dotSize: 22)
+          .frame(width: side, height: side)
 
-        Rectangle().fill(Color.white.opacity(0.08)).frame(width: 1)
-
-        VStack(alignment: .leading, spacing: 7) {
-          if drifters.isEmpty {
-            Text(total == 0 ? "Add people in Orbit" : "Everyone's close right now ✨")
-              .font(.system(size: 13, weight: .medium)).foregroundColor(.white.opacity(0.55))
-          } else {
-            ForEach(Array(drifters.prefix(3))) { p in
-              HStack(spacing: 8) {
-                Circle().fill(Color(hex: p.color)).frame(width: 8, height: 8)
-                Text(p.name)
-                  .font(.system(size: 13.5, weight: .semibold)).foregroundColor(.white.opacity(0.92))
-                  .lineLimit(1)
-                Spacer(minLength: 4)
-                Text(ringLabel(p.ring))
-                  .font(.system(size: 12, weight: .medium)).foregroundColor(.white.opacity(0.5))
-              }
-            }
-            if drifters.count > 3 {
-              Text("+\(drifters.count - 3) more")
-                .font(.system(size: 11.5, weight: .medium)).foregroundColor(.white.opacity(0.4))
+        VStack(alignment: .leading, spacing: 0) {
+          HStack(spacing: 5) {
+            OrbitMark()
+            Text("Orbit").font(.system(size: 12, weight: .bold)).foregroundColor(.white.opacity(0.9))
+            Spacer()
+            if payload.driftCount > 0 {
+              Text("\(payload.driftCount)").font(.system(size: 12, weight: .bold)).foregroundColor(amber)
             }
           }
+          Spacer(minLength: 8)
+          if total == 0 {
+            Text("Add people\nin Orbit")
+              .font(.system(size: 13, weight: .medium)).foregroundColor(.white.opacity(0.55))
+          } else if drifters.isEmpty {
+            Text("Everyone's close\nright now ✨")
+              .font(.system(size: 13, weight: .medium)).foregroundColor(.white.opacity(0.6))
+          } else {
+            Text("DRIFTING AWAY")
+              .font(.system(size: 10.5, weight: .bold)).foregroundColor(.white.opacity(0.4))
+              .padding(.bottom, 6)
+            VStack(alignment: .leading, spacing: 7) {
+              ForEach(Array(drifters.prefix(3))) { p in
+                HStack(spacing: 8) {
+                  Circle().fill(Color(hex: p.color)).frame(width: 8, height: 8)
+                  Text(p.name)
+                    .font(.system(size: 13.5, weight: .semibold)).foregroundColor(.white.opacity(0.92))
+                    .lineLimit(1)
+                  Spacer(minLength: 4)
+                  Text(ringLabel(p.ring))
+                    .font(.system(size: 12, weight: .medium)).foregroundColor(.white.opacity(0.5))
+                }
+              }
+              if drifters.count > 3 {
+                Text("+\(drifters.count - 3) more")
+                  .font(.system(size: 11.5, weight: .medium)).foregroundColor(.white.opacity(0.4))
+              }
+            }
+          }
+          Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
       }
-      Spacer(minLength: 0)
     }
   }
 }
@@ -312,7 +315,7 @@ struct OrbitWidgetView: View {
       switch family {
       case .systemSmall: SmallStatView(payload: entry.payload)
       case .systemLarge: LargeOrbitView(payload: entry.payload)
-      default: MediumStatView(payload: entry.payload)
+      default: MediumOrbitView(payload: entry.payload)
       }
     }
     .widgetBackgroundCompat()
