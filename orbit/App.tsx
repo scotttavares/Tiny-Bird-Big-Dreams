@@ -22,6 +22,7 @@ import AddSheet from './src/screens/AddSheet';
 import ActionSheet from './src/screens/ActionSheet';
 import ContactsImport from './src/screens/ContactsImport';
 import ReachSheet from './src/screens/ReachSheet';
+import LogSheet from './src/screens/LogSheet';
 
 export default function App() {
   const themeName = useStore((s) => s.theme);
@@ -88,6 +89,7 @@ export default function App() {
             <ActionSheet />
             <ContactsImport />
             <ReachSheet />
+            <LogSheet />
             <Toast />
           </SafeAreaView>
         </ErrorBoundary>

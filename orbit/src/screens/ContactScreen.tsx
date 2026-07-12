@@ -4,11 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Avatar from '../ui/Avatar';
 import { useStore } from '../store';
 import { THEMES } from '../theme';
-import { roleLine } from '../orbit';
-
-const TIMELINE: Record<string, [string, string][]> = {
-  david: [['You thought of David', '3 weeks ago'], ['Grabbed coffee downtown', '3 months ago'], ['Added to Orbit', '']],
-};
+import { roleLine, sinceLabel } from '../orbit';
 
 export default function ContactScreen() {
   const theme = THEMES[useStore((s) => s.theme)];
@@ -17,6 +13,8 @@ export default function ContactScreen() {
   const setScreen = useStore((s) => s.setScreen);
   const openActions = useStore((s) => s.openActions);
   const openReach = useStore((s) => s.openReach);
+  const openLog = useStore((s) => s.openLog);
+  const logInteraction = useStore((s) => s.logInteraction);
   const pull = useStore((s) => s.pull);
   const showToast = useStore((s) => s.showToast);
 
@@ -40,7 +38,10 @@ export default function ContactScreen() {
     pull(c.id);
     Linking.openURL(`tel:${num}`).catch(() => showToast("Couldn't start the call"));
   };
-  const tl = TIMELINE[c.id] || [['You thought of ' + c.name.split(' ')[0], '2 weeks ago'], ['Caught up over text', '1 month ago'], ['Added to Orbit', '']];
+  const tl: [string, string][] = [
+    ...(c.log ?? []).map((e) => [e.label, sinceLabel(e.at)] as [string, string]),
+    ['Added to Orbit', ''],
+  ];
   const chips: string[] = [];
   if (c.fav) chips.push('⭐ Favorite');
   if (c.reminder) chips.push('⏰ ' + c.reminder);
@@ -91,11 +92,11 @@ export default function ContactScreen() {
         <View style={{ padding: 20 }}>
           <Text style={[styles.sect, { color: theme.faint }]}>QUIET CHECK-IN</Text>
           <View style={[styles.cardList, card]}>
-            <Pressable style={styles.row} onPress={() => { pull(c.id); showToast('Logged an external interaction — pulled closer ✨'); }}>
+            <Pressable style={styles.row} onPress={() => openLog(c.id)}>
               <View style={[styles.emo, { backgroundColor: theme.accentSoft }]}><Text style={{ fontSize: 17 }}>👋</Text></View>
-              <View style={{ flex: 1 }}><Text style={{ fontWeight: '600', fontSize: 14, color: theme.text }}>Log an external interaction</Text><Text style={{ color: theme.dim, fontSize: 12, marginTop: 2 }}>Ran into them or chatted elsewhere.</Text></View>
+              <View style={{ flex: 1 }}><Text style={{ fontWeight: '600', fontSize: 14, color: theme.text }}>Log an external interaction</Text><Text style={{ color: theme.dim, fontSize: 12, marginTop: 2 }}>Met up, called, ran into them…</Text></View>
             </Pressable>
-            <Pressable style={[styles.row, { borderTopWidth: 1, borderTopColor: theme.border }]} onPress={() => { pull(c.id); showToast('You thought of them — pulled closer ✨'); }}>
+            <Pressable style={[styles.row, { borderTopWidth: 1, borderTopColor: theme.border }]} onPress={() => { logInteraction(c.id, 'Thought of you'); showToast('You thought of them — pulled closer ✨'); }}>
               <View style={[styles.emo, { backgroundColor: theme.accentSoft }]}><Text style={{ fontSize: 17 }}>💭</Text></View>
               <View style={{ flex: 1 }}><Text style={{ fontWeight: '600', fontSize: 14, color: theme.text }}>Just thought of them</Text><Text style={{ color: theme.dim, fontSize: 12, marginTop: 2 }}>Pulls them slightly closer without contact.</Text></View>
             </Pressable>

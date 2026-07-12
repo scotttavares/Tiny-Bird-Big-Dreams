@@ -22,4 +22,10 @@ export interface Contact {
   note?: string;
   reminder?: string | null;
   lastContactAt?: number; // ms timestamp of last contact; drives real-time drift
+  log?: LogEntry[];       // recent interactions, newest first (see RECENT GRAVITY)
+}
+
+export interface LogEntry {
+  at: number;    // ms timestamp
+  label: string; // what the interaction was, e.g. "Met up", "Called"
 }

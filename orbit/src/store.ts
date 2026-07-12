@@ -17,8 +17,9 @@ interface State {
   onboarded: boolean;
   hydrated: boolean;
   toast: string | null;
-  sheet: 'add' | 'action' | 'import' | 'reach' | null;
+  sheet: 'add' | 'action' | 'import' | 'reach' | 'log' | null;
   reachId: string | null;
+  logId: string | null;
 
   setScreen: (s: Screen) => void;
   openContact: (id: string) => void;
@@ -26,6 +27,8 @@ interface State {
   openActions: () => void;
   openImport: () => void;
   openReach: (id: string) => void;
+  openLog: (id: string) => void;
+  logInteraction: (id: string, label: string) => void;
   closeSheet: () => void;
   setTheme: (t: ThemeName) => void;
   toggleTheme: () => void;
@@ -94,6 +97,7 @@ export const useStore = create<State>()(
       toast: null,
       sheet: null,
       reachId: null,
+      logId: null,
 
       setScreen: (screen) => set({ screen }),
       openContact: (id) => set({ currentId: id, screen: 'contact', sheet: null }),
@@ -101,6 +105,18 @@ export const useStore = create<State>()(
       openActions: () => set({ sheet: 'action' }),
       openImport: () => set({ sheet: 'import' }),
       openReach: (id) => set({ sheet: 'reach', reachId: id }),
+      openLog: (id) => set({ sheet: 'log', logId: id }),
+
+      // Record what a check-in actually was and pull the person back to center.
+      // The entry shows up in RECENT GRAVITY on their profile.
+      logInteraction: (id, label) =>
+        set((s) => {
+          const c = s.contacts[id];
+          if (!c) return s;
+          const log = [{ at: Date.now(), label }, ...(c.log ?? [])].slice(0, 12);
+          return { contacts: { ...s.contacts, [id]: { ...c, ring: 1, unit: 'just now', drift: false, lastContactAt: Date.now(), log } } };
+        }),
+
       closeSheet: () => set({ sheet: null }),
       setTheme: (theme) => set({ theme }),
       toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),

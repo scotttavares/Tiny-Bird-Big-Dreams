@@ -25,6 +25,7 @@ export interface WidgetPerson {
 export interface WidgetPayload {
   updatedAt: number;
   driftCount: number;
+  total: number;      // everyone in the orbit (people[] is capped for drawing)
   people: WidgetPerson[];
 }
 
@@ -38,6 +39,7 @@ export function buildWidgetPayload(contacts: Contact[], now: number): WidgetPayl
   return {
     updatedAt: now,
     driftCount: drifters.length,
+    total: contacts.length,
     people: ordered.map((c) => ({
       name: c.name.trim().split(/\s+/)[0],
       initials: c.initials,
