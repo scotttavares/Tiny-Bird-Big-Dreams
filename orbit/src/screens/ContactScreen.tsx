@@ -16,24 +16,29 @@ export default function ContactScreen() {
   const c = useStore((s) => (id ? s.contacts[id] : undefined));
   const setScreen = useStore((s) => s.setScreen);
   const openActions = useStore((s) => s.openActions);
+  const openReach = useStore((s) => s.openReach);
   const pull = useStore((s) => s.pull);
   const showToast = useStore((s) => s.showToast);
 
   if (!c) return <View style={{ flex: 1 }} />;
   const card = { backgroundColor: theme.card, borderColor: theme.border };
 
-  // Text or call the person via the OS. Reaching out counts as reconnecting,
-  // so we pull them back toward the center.
-  const reach = (scheme: 'sms' | 'tel') => {
+  // Reaching out counts as reconnecting, so it pulls the person back toward the
+  // center. Texting opens a chooser (Messages / WhatsApp / Telegram / …) via the
+  // reach sheet; calling dials straight through the OS.
+  const numberOr = (warn: boolean) => {
     const num = (c.phone ?? '').replace(/[^\d+*#]/g, '');
-    if (!num) {
-      showToast(`No number saved for ${c.name.split(' ')[0]}`);
-      return;
-    }
+    if (!num && warn) showToast(`No number saved for ${c.name.split(' ')[0]}`);
+    return num;
+  };
+  const text = () => {
+    if (numberOr(true)) openReach(c.id);
+  };
+  const call = () => {
+    const num = numberOr(true);
+    if (!num) return;
     pull(c.id);
-    Linking.openURL(`${scheme}:${num}`).catch(() =>
-      showToast(scheme === 'sms' ? "Couldn't open Messages" : "Couldn't start the call"),
-    );
+    Linking.openURL(`tel:${num}`).catch(() => showToast("Couldn't start the call"));
   };
   const tl = TIMELINE[c.id] || [['You thought of ' + c.name.split(' ')[0], '2 weeks ago'], ['Caught up over text', '1 month ago'], ['Added to Orbit', '']];
   const chips: string[] = [];
@@ -57,10 +62,10 @@ export default function ContactScreen() {
         </View>
 
         <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 18 }}>
-          <Pressable style={[styles.btn, { backgroundColor: theme.accent2 }]} onPress={() => reach('sms')}>
+          <Pressable style={[styles.btn, { backgroundColor: theme.accent2 }]} onPress={text}>
             <Ionicons name="chatbubble-outline" size={18} color="#fff" /><Text style={styles.btnT}>Send a Text</Text>
           </Pressable>
-          <Pressable style={[styles.btn, { backgroundColor: theme.card2, borderWidth: 1, borderColor: theme.border }]} onPress={() => reach('tel')}>
+          <Pressable style={[styles.btn, { backgroundColor: theme.card2, borderWidth: 1, borderColor: theme.border }]} onPress={call}>
             <Ionicons name="call-outline" size={18} color={theme.text} /><Text style={[styles.btnT, { color: theme.text }]}>Quick Call</Text>
           </Pressable>
         </View>

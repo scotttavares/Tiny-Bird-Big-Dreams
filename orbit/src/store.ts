@@ -17,13 +17,15 @@ interface State {
   onboarded: boolean;
   hydrated: boolean;
   toast: string | null;
-  sheet: 'add' | 'action' | 'import' | null;
+  sheet: 'add' | 'action' | 'import' | 'reach' | null;
+  reachId: string | null;
 
   setScreen: (s: Screen) => void;
   openContact: (id: string) => void;
   openAdd: () => void;
   openActions: () => void;
   openImport: () => void;
+  openReach: (id: string) => void;
   closeSheet: () => void;
   setTheme: (t: ThemeName) => void;
   toggleTheme: () => void;
@@ -91,12 +93,14 @@ export const useStore = create<State>()(
       hydrated: false,
       toast: null,
       sheet: null,
+      reachId: null,
 
       setScreen: (screen) => set({ screen }),
       openContact: (id) => set({ currentId: id, screen: 'contact', sheet: null }),
       openAdd: () => set({ sheet: 'add' }),
       openActions: () => set({ sheet: 'action' }),
       openImport: () => set({ sheet: 'import' }),
+      openReach: (id) => set({ sheet: 'reach', reachId: id }),
       closeSheet: () => set({ sheet: null }),
       setTheme: (theme) => set({ theme }),
       toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
