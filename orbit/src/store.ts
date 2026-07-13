@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Contact, GroupName, Screen, Speed } from './types';
 import type { ThemeName } from './theme';
 import { SEED } from './data';
-import { initialsOf } from './orbit';
+import { initialsOf, phoneKey, nameKey } from './orbit';
 import { fileStorage } from './persist';
 
 type FilterGroup = 'All' | GroupName;
@@ -39,7 +39,7 @@ interface State {
   addContact: (input: { name: string; role?: string; ring: number; group: GroupName; phone?: string | null }) => void;
   updateContact: (id: string, patch: Partial<Contact>) => void;
   removeContact: (id: string) => void;
-  importContacts: (people: { name: string; photo?: string | null; phone?: string | null }[]) => number;
+  importContacts: (people: { name: string; photo?: string | null; phone?: string | null }[]) => { added: number; skipped: number };
   loadSampleOrbit: () => void;
   resetOrbit: () => void;
 
@@ -160,11 +160,25 @@ export const useStore = create<State>()(
       // inner rings with spread-out angles so they start close, then drift over
       // time like everyone else. Returns how many were actually added.
       importContacts: (people) => {
+        const current = Object.values(get().contacts);
         const next = { ...get().contacts };
+        // Skip anyone already in the orbit — and collapse duplicates within this
+        // same batch — matching on phone (strong) or normalized name (fallback).
+        const seenPhones = new Set(current.map((c) => phoneKey(c.phone)).filter(Boolean));
+        const seenNames = new Set(current.map((c) => nameKey(c.name)));
         let added = 0;
+        let skipped = 0;
         for (const p of people) {
           const name = p.name.trim();
           if (!name) continue;
+          const pk = phoneKey(p.phone);
+          const nk = nameKey(name);
+          if ((pk && seenPhones.has(pk)) || seenNames.has(nk)) {
+            skipped++;
+            continue;
+          }
+          if (pk) seenPhones.add(pk);
+          seenNames.add(nk);
           const id = 'c' + Date.now() + '_' + addCounter;
           const angle = ((addCounter++) * 87 + 30) % 360 - 180;
           const ring = (added % 2) + 1;
@@ -177,7 +191,7 @@ export const useStore = create<State>()(
           added++;
         }
         set({ contacts: next });
-        return added;
+        return { added, skipped };
       },
 
       // Load the demo people so a first-time user can see how Orbit feels.

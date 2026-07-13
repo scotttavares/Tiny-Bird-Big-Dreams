@@ -49,3 +49,27 @@ export const roleLine = (c: Contact) => {
 
 export const initialsOf = (name: string) =>
   name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+
+// ── Duplicate detection ──────────────────────────────────────────────────────
+// Used to warn before the same person lands in the orbit twice. Phone is the
+// strong signal (last 10 digits, tolerant of country-code formatting); the
+// normalized name is the fallback when there's no number to compare.
+export const phoneKey = (phone?: string | null): string => {
+  const d = (phone ?? '').replace(/\D/g, '');
+  return d.length >= 7 ? d.slice(-10) : d;
+};
+export const nameKey = (name: string): string => name.trim().toLowerCase().replace(/\s+/g, ' ');
+
+/** The existing contact that `person` looks like a duplicate of, or null. */
+export function matchExisting(
+  contacts: Contact[],
+  person: { name: string; phone?: string | null },
+): Contact | null {
+  const pk = phoneKey(person.phone);
+  const nk = nameKey(person.name);
+  for (const c of contacts) {
+    if (pk && phoneKey(c.phone) === pk) return c;
+    if (nk && nameKey(c.name) === nk) return c;
+  }
+  return null;
+}

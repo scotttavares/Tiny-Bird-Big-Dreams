@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
 import Sheet from '../ui/Sheet';
 import Avatar from '../ui/Avatar';
 import { Field, TextField, Seg } from '../ui/form';
 import { useStore } from '../store';
 import { THEMES } from '../theme';
-import { ORBIT_NAME, initialsOf, GROUPS } from '../orbit';
+import { ORBIT_NAME, initialsOf, GROUPS, matchExisting } from '../orbit';
 import type { GroupName } from '../types';
 
 const RINGS: number[] = [1, 2, 3, 4, 5, 6];
@@ -15,6 +15,7 @@ export default function AddSheet() {
   const open = useStore((s) => s.sheet === 'add');
   const close = useStore((s) => s.closeSheet);
   const add = useStore((s) => s.addContact);
+  const contacts = useStore((s) => s.contacts);
   const showToast = useStore((s) => s.showToast);
 
   const [name, setName] = useState('');
@@ -26,10 +27,27 @@ export default function AddSheet() {
   const submit = () => {
     const n = name.trim();
     if (!n) return;
-    add({ name: n, role, ring, group, phone: phone.trim() || null });
-    showToast(`Added ${n.split(' ')[0]} to your orbit ✨`);
-    setName(''); setRole(''); setPhone(''); setGroup('Friends'); setRing(2);
-    close();
+    const commit = () => {
+      add({ name: n, role, ring, group, phone: phone.trim() || null });
+      showToast(`Added ${n.split(' ')[0]} to your orbit ✨`);
+      setName(''); setRole(''); setPhone(''); setGroup('Friends'); setRing(2);
+      close();
+    };
+    // Warn before the same person lands in the orbit twice — but let them
+    // override in case it really is a different person with the same name.
+    const dup = matchExisting(Object.values(contacts), { name: n, phone: phone.trim() || null });
+    if (dup) {
+      Alert.alert(
+        'Already in your orbit',
+        `${dup.name} is already someone you're keeping close. Add them again anyway?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Add anyway', style: 'destructive', onPress: commit },
+        ],
+      );
+      return;
+    }
+    commit();
   };
 
   return (

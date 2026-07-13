@@ -5,7 +5,7 @@ import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../store';
 import { THEMES } from '../theme';
-import { initialsOf } from '../orbit';
+import { initialsOf, phoneKey, nameKey } from '../orbit';
 
 type Row = { id: string; name: string; photo: string | null; phone: string | null };
 type Phase = 'loading' | 'denied' | 'ready';
@@ -17,6 +17,7 @@ export default function ContactsImport() {
   const open = useStore((s) => s.sheet === 'import');
   const close = useStore((s) => s.closeSheet);
   const importContacts = useStore((s) => s.importContacts);
+  const contacts = useStore((s) => s.contacts);
   const showToast = useStore((s) => s.showToast);
 
   const [phase, setPhase] = useState<Phase>('loading');
@@ -69,6 +70,23 @@ export default function ContactsImport() {
     return q ? rows.filter((r) => r.name.toLowerCase().includes(q)) : rows;
   }, [rows, query]);
 
+  // People already in the orbit — matched by phone or name — so we can flag them
+  // as "In orbit" and stop them being added a second time.
+  const existing = useMemo(() => {
+    const phones = new Set<string>();
+    const names = new Set<string>();
+    for (const c of Object.values(contacts)) {
+      const p = phoneKey(c.phone);
+      if (p) phones.add(p);
+      names.add(nameKey(c.name));
+    }
+    return { phones, names };
+  }, [contacts]);
+  const isAdded = (r: Row) => {
+    const p = phoneKey(r.phone);
+    return (!!p && existing.phones.has(p)) || existing.names.has(nameKey(r.name));
+  };
+
   if (!open) return null;
 
   const toggle = (id: string) =>
@@ -82,8 +100,14 @@ export default function ContactsImport() {
   const doImport = () => {
     const picked = rows.filter((r) => selected.has(r.id));
     if (!picked.length) return;
-    const n = importContacts(picked.map((r) => ({ name: r.name, photo: r.photo, phone: r.phone })));
-    showToast(`Added ${n} ${n === 1 ? 'person' : 'people'} to your orbit ✨`);
+    const { added, skipped } = importContacts(picked.map((r) => ({ name: r.name, photo: r.photo, phone: r.phone })));
+    if (added === 0) {
+      showToast('Already in your orbit');
+    } else if (skipped > 0) {
+      showToast(`Added ${added} · ${skipped} already in your orbit`);
+    } else {
+      showToast(`Added ${added} ${added === 1 ? 'person' : 'people'} to your orbit ✨`);
+    }
     close();
   };
 
@@ -138,9 +162,14 @@ export default function ContactsImport() {
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 28 }}
             renderItem={({ item }) => {
+              const added = isAdded(item);
               const on = selected.has(item.id);
               return (
-                <Pressable onPress={() => toggle(item.id)} style={[styles.row, { borderBottomColor: theme.border }]}>
+                <Pressable
+                  onPress={() => toggle(item.id)}
+                  disabled={added}
+                  style={[styles.row, { borderBottomColor: theme.border }, added ? { opacity: 0.5 } : null]}
+                >
                   {item.photo ? (
                     <Image source={{ uri: item.photo }} style={styles.pic} />
                   ) : (
@@ -149,9 +178,15 @@ export default function ContactsImport() {
                     </View>
                   )}
                   <Text style={{ flex: 1, color: theme.text, fontSize: 15 }} numberOfLines={1}>{item.name}</Text>
-                  <View style={[styles.check, { borderColor: on ? theme.accent : theme.border2, backgroundColor: on ? theme.accent : 'transparent' }]}>
-                    {on ? <Ionicons name="checkmark" size={15} color="#fff" /> : null}
-                  </View>
+                  {added ? (
+                    <View style={[styles.pill, { borderColor: theme.border2 }]}>
+                      <Text style={{ color: theme.dim, fontSize: 11.5, fontWeight: '700' }}>In orbit</Text>
+                    </View>
+                  ) : (
+                    <View style={[styles.check, { borderColor: on ? theme.accent : theme.border2, backgroundColor: on ? theme.accent : 'transparent' }]}>
+                      {on ? <Ionicons name="checkmark" size={15} color="#fff" /> : null}
+                    </View>
+                  )}
                 </Pressable>
               );
             }}
@@ -172,4 +207,5 @@ const styles = StyleSheet.create({
   pic: { width: 40, height: 40, borderRadius: 20 },
   picFallback: { alignItems: 'center', justifyContent: 'center' },
   check: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  pill: { borderWidth: 1, borderRadius: 999, paddingVertical: 4, paddingHorizontal: 10 },
 });
