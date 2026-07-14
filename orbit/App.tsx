@@ -8,6 +8,7 @@ import { useStore } from './src/store';
 import { refreshWeeklyReportIfEnabled } from './src/notifications';
 import { syncWidget } from './src/widget';
 import { THEMES } from './src/theme';
+import OrbitLogo from './src/ui/OrbitLogo';
 import TabBar from './src/ui/TabBar';
 import Toast from './src/ui/Toast';
 import ErrorBoundary from './src/ui/ErrorBoundary';
@@ -19,20 +20,15 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import Onboarding from './src/screens/Onboarding';
 import AddSheet from './src/screens/AddSheet';
 import ActionSheet from './src/screens/ActionSheet';
+import ContactsImport from './src/screens/ContactsImport';
+import ReachSheet from './src/screens/ReachSheet';
+import LogSheet from './src/screens/LogSheet';
 
 export default function App() {
   const themeName = useStore((s) => s.theme);
   const theme = THEMES[themeName];
   const screen = useStore((s) => s.screen);
-  const driftTick = useStore((s) => s.driftTick);
-
-  // live drift: while you're on the orbit screen, people slowly drift outward over time
-  useEffect(() => {
-    const t = setInterval(() => {
-      if (useStore.getState().screen === 'orbit') driftTick();
-    }, 8000);
-    return () => clearInterval(t);
-  }, [driftTick]);
+  const hydrated = useStore((s) => s.hydrated);
 
   // keep the home-screen widget's snapshot in sync whenever the orbit changes
   useEffect(() => {
@@ -50,6 +46,7 @@ export default function App() {
   // weekly gravity report copy (if enabled) and the widget with the latest orbit
   useEffect(() => {
     const refresh = () => {
+      useStore.getState().settleDrift();
       const list = Object.values(useStore.getState().contacts);
       void refreshWeeklyReportIfEnabled(list);
       syncWidget(list, Date.now());
@@ -60,6 +57,18 @@ export default function App() {
     });
     return () => sub.remove();
   }, []);
+
+  // Wait for persisted contacts to load from disk before rendering, so a
+  // returning user never sees an empty orbit flash before their people appear.
+  if (!hydrated) {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <View style={[styles.root, styles.splash, { backgroundColor: theme.bg }]}>
+          <OrbitLogo color={theme.accent} textColor={theme.text} fontSize={30} />
+        </View>
+      </GestureHandlerRootView>
+    );
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -78,6 +87,9 @@ export default function App() {
             <Onboarding />
             <AddSheet />
             <ActionSheet />
+            <ContactsImport />
+            <ReachSheet />
+            <LogSheet />
             <Toast />
           </SafeAreaView>
         </ErrorBoundary>
@@ -86,4 +98,7 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({ root: { flex: 1 } });
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  splash: { alignItems: 'center', justifyContent: 'center' },
+});

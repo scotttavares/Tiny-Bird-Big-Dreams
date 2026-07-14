@@ -1,14 +1,10 @@
 import React from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Avatar from '../ui/Avatar';
 import { useStore } from '../store';
 import { THEMES } from '../theme';
-import { roleLine } from '../orbit';
-
-const TIMELINE: Record<string, [string, string][]> = {
-  david: [['You thought of David', '3 weeks ago'], ['Grabbed coffee downtown', '3 months ago'], ['Added to Orbit', '']],
-};
+import { roleLine, sinceLabel } from '../orbit';
 
 export default function ContactScreen() {
   const theme = THEMES[useStore((s) => s.theme)];
@@ -16,12 +12,47 @@ export default function ContactScreen() {
   const c = useStore((s) => (id ? s.contacts[id] : undefined));
   const setScreen = useStore((s) => s.setScreen);
   const openActions = useStore((s) => s.openActions);
+  const openReach = useStore((s) => s.openReach);
+  const openLog = useStore((s) => s.openLog);
+  const logInteraction = useStore((s) => s.logInteraction);
   const pull = useStore((s) => s.pull);
   const showToast = useStore((s) => s.showToast);
 
   if (!c) return <View style={{ flex: 1 }} />;
   const card = { backgroundColor: theme.card, borderColor: theme.border };
-  const tl = TIMELINE[c.id] || [['You thought of ' + c.name.split(' ')[0], '2 weeks ago'], ['Caught up over text', '1 month ago'], ['Added to Orbit', '']];
+
+  // Reaching out counts as reconnecting, so it pulls the person back toward the
+  // center. Texting opens a chooser (Messages / WhatsApp / Telegram / …) via the
+  // reach sheet; calling dials straight through the OS.
+  const phoneNum = (c.phone ?? '').replace(/[^\d+*#]/g, '');
+  const hasNum = phoneNum.length > 0;
+  const text = () => {
+    if (hasNum) openReach(c.id);
+  };
+  // Phone call on devices that can dial (iPhone); FaceTime on those that can't
+  // (iPad / iPod touch have no cellular voice, so tel: is a no-op there).
+  const call = async () => {
+    if (!hasNum) return;
+    pull(c.id);
+    const tel = `tel:${phoneNum}`;
+    try {
+      if (await Linking.canOpenURL(tel)) {
+        await Linking.openURL(tel);
+        return;
+      }
+    } catch {
+      // fall through to FaceTime
+    }
+    try {
+      await Linking.openURL(`facetime-audio:${phoneNum}`);
+    } catch {
+      showToast("This device can't place calls — try from your iPhone");
+    }
+  };
+  const tl: [string, string][] = [
+    ...(c.log ?? []).map((e) => [e.label, sinceLabel(e.at)] as [string, string]),
+    ['Added to Orbit', ''],
+  ];
   const chips: string[] = [];
   if (c.fav) chips.push('⭐ Favorite');
   if (c.reminder) chips.push('⏰ ' + c.reminder);
@@ -42,13 +73,38 @@ export default function ContactScreen() {
           <Text style={{ color: theme.dim, fontSize: 13.5, marginTop: 4 }}>{roleLine(c)}</Text>
         </View>
 
-        <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 18 }}>
-          <Pressable style={[styles.btn, { backgroundColor: theme.accent2 }]} onPress={() => showToast('Opening messages…')}>
-            <Ionicons name="chatbubble-outline" size={18} color="#fff" /><Text style={styles.btnT}>Send a Text</Text>
-          </Pressable>
-          <Pressable style={[styles.btn, { backgroundColor: theme.card2, borderWidth: 1, borderColor: theme.border }]} onPress={() => showToast('Calling…')}>
-            <Ionicons name="call-outline" size={18} color={theme.text} /><Text style={[styles.btnT, { color: theme.text }]}>Quick Call</Text>
-          </Pressable>
+        <View style={{ paddingHorizontal: 20, paddingTop: 18 }}>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <Pressable
+              disabled={!hasNum}
+              onPress={text}
+              style={[styles.btn, hasNum ? { backgroundColor: theme.accent2 } : { backgroundColor: theme.card2, opacity: 0.55 }]}
+            >
+              <Ionicons name="chatbubble-outline" size={18} color={hasNum ? '#fff' : theme.faint} />
+              <Text style={[styles.btnT, { color: hasNum ? '#fff' : theme.faint }]}>Send a Text</Text>
+            </Pressable>
+            <Pressable
+              disabled={!hasNum}
+              onPress={call}
+              style={[styles.btn, hasNum
+                ? { backgroundColor: theme.accentSoft, borderWidth: 1, borderColor: theme.accent }
+                : { backgroundColor: theme.card2, borderWidth: 1, borderColor: theme.border, opacity: 0.55 }]}
+            >
+              <Ionicons name="call-outline" size={18} color={hasNum ? theme.accent : theme.faint} />
+              <Text style={[styles.btnT, { color: hasNum ? theme.accent : theme.faint }]}>Quick Call</Text>
+            </Pressable>
+          </View>
+          {hasNum ? (
+            <View style={styles.numRow}>
+              <Ionicons name="call" size={12} color={theme.faint} />
+              <Text style={{ color: theme.dim, fontSize: 12.5 }}>{c.phone}</Text>
+            </View>
+          ) : (
+            <Pressable onPress={openActions} style={styles.numRow} hitSlop={6}>
+              <Ionicons name="alert-circle-outline" size={13} color={theme.faint} />
+              <Text style={{ color: theme.faint, fontSize: 12.5 }}>No number saved — tap to add one</Text>
+            </Pressable>
+          )}
         </View>
 
         {chips.length > 0 || c.note ? (
@@ -72,11 +128,11 @@ export default function ContactScreen() {
         <View style={{ padding: 20 }}>
           <Text style={[styles.sect, { color: theme.faint }]}>QUIET CHECK-IN</Text>
           <View style={[styles.cardList, card]}>
-            <Pressable style={styles.row} onPress={() => { pull(c.id); showToast('Logged an external interaction — pulled closer ✨'); }}>
+            <Pressable style={styles.row} onPress={() => openLog(c.id)}>
               <View style={[styles.emo, { backgroundColor: theme.accentSoft }]}><Text style={{ fontSize: 17 }}>👋</Text></View>
-              <View style={{ flex: 1 }}><Text style={{ fontWeight: '600', fontSize: 14, color: theme.text }}>Log an external interaction</Text><Text style={{ color: theme.dim, fontSize: 12, marginTop: 2 }}>Ran into them or chatted elsewhere.</Text></View>
+              <View style={{ flex: 1 }}><Text style={{ fontWeight: '600', fontSize: 14, color: theme.text }}>Log an external interaction</Text><Text style={{ color: theme.dim, fontSize: 12, marginTop: 2 }}>Met up, called, ran into them…</Text></View>
             </Pressable>
-            <Pressable style={[styles.row, { borderTopWidth: 1, borderTopColor: theme.border }]} onPress={() => { pull(c.id); showToast('You thought of them — pulled closer ✨'); }}>
+            <Pressable style={[styles.row, { borderTopWidth: 1, borderTopColor: theme.border }]} onPress={() => { logInteraction(c.id, 'Thought of you'); showToast('You thought of them — pulled closer ✨'); }}>
               <View style={[styles.emo, { backgroundColor: theme.accentSoft }]}><Text style={{ fontSize: 17 }}>💭</Text></View>
               <View style={{ flex: 1 }}><Text style={{ fontWeight: '600', fontSize: 14, color: theme.text }}>Just thought of them</Text><Text style={{ color: theme.dim, fontSize: 12, marginTop: 2 }}>Pulls them slightly closer without contact.</Text></View>
             </Pressable>
@@ -106,6 +162,7 @@ const styles = StyleSheet.create({
   badgeT: { color: '#3a2406', fontSize: 10.5, fontWeight: '800', letterSpacing: 0.6 },
   btn: { flex: 1, borderRadius: 16, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
   btnT: { color: '#fff', fontWeight: '700', fontSize: 14.5 },
+  numRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10 },
   metachip: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 11, borderRadius: 999 },
   note: { borderRadius: 14, borderWidth: 1, padding: 12 },
   sect: { fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 9, marginLeft: 4 },

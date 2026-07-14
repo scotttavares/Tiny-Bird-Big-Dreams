@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, ScrollView, Switch, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ScrollView, Switch, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../store';
 import { THEMES } from '../theme';
@@ -11,6 +11,18 @@ export default function SettingsScreen() {
   const toggleTheme = useStore((s) => s.toggleTheme);
   const setScreen = useStore((s) => s.setScreen);
   const showToast = useStore((s) => s.showToast);
+  const resetOrbit = useStore((s) => s.resetOrbit);
+  const openImport = useStore((s) => s.openImport);
+
+  const confirmClear = () =>
+    Alert.alert(
+      'Clear your orbit?',
+      'This removes everyone from your orbit. This can’t be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Clear', style: 'destructive', onPress: () => { resetOrbit(); showToast('Your orbit is clear'); } },
+      ],
+    );
 
   const contacts = useStore((s) => s.contacts);
   const [weekend, setWeekend] = useState(true);
@@ -86,9 +98,8 @@ export default function SettingsScreen() {
 
           <Text style={[styles.sect, { color: theme.faint, marginTop: 22 }]}>DATA</Text>
           <View style={[styles.cardList, card]}>
-            <Row title="Sync from Contacts" right={<Value v="Updated today" />} onPress={() => showToast('Synced from Contacts')} />
-            <Row title="Export Connection History" onPress={() => showToast('Exporting…')} top />
-            <Row title="Clear Orbit Data" right={null} onPress={() => showToast('Hold to confirm — your orbit is safe')} top />
+            <Row title="Import from Contacts" sub="Pull people from your address book" right={<Ionicons name="chevron-forward" size={15} color={theme.dim} />} onPress={openImport} />
+            <Row title="Clear Orbit Data" sub="Remove everyone and start fresh" right={null} onPress={confirmClear} top />
           </View>
           <Text style={{ textAlign: 'center', color: theme.faint, fontSize: 11, paddingVertical: 18 }}>Orbit · gravity for the people who matter</Text>
         </View>

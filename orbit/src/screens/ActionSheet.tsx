@@ -21,6 +21,7 @@ export default function ActionSheet() {
   const setSpeed = useStore((s) => s.setSpeed);
   const setGroup = useStore((s) => s.setGroup);
   const setNote = useStore((s) => s.setNote);
+  const setPhone = useStore((s) => s.setPhone);
   const toggleFav = useStore((s) => s.toggleFav);
   const toggleAnchor = useStore((s) => s.toggleAnchor);
   const toggleSnooze = useStore((s) => s.toggleSnooze);
@@ -58,6 +59,14 @@ export default function ActionSheet() {
       </View>
 
       <View style={{ height: 16 }} />
+      <Field label="Phone — for Send a Text / Quick Call">
+        <TextField
+          value={c.phone ?? ''}
+          onChangeText={(t) => setPhone(c.id, t.trim() || null)}
+          placeholder="Add a number to text or call"
+          keyboardType="phone-pad"
+        />
+      </Field>
       <Field label="Move to orbit"><Seg options={RINGS} value={c.ring} onChange={(n) => { moveOrbit(c.id, n); showToast('Moved'); }} /></Field>
       <Field label="Drift speed — for this person"><Seg options={SPEEDS} value={c.speed ?? 'Steady'} onChange={(sp) => setSpeed(c.id, sp)} /></Field>
       <Field label="Constellation"><Seg options={GROUPS} value={c.group} onChange={(g) => setGroup(c.id, g)} /></Field>

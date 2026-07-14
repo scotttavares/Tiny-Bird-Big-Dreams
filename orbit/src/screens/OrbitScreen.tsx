@@ -17,6 +17,9 @@ export default function OrbitScreen() {
   const openAdd = useStore((s) => s.openAdd);
   const openContact = useStore((s) => s.openContact);
   const showToast = useStore((s) => s.showToast);
+  const loadSample = useStore((s) => s.loadSampleOrbit);
+  const openImport = useStore((s) => s.openImport);
+  const openReach = useStore((s) => s.openReach);
 
   const list = Object.values(contacts);
   const driftCount = list.filter((c) => c.drift).length;
@@ -57,7 +60,27 @@ export default function OrbitScreen() {
 
       <OrbitMap contacts={list} onOpen={openContact} />
 
-      {nudge ? (
+      {list.length === 0 ? (
+        <View style={[styles.driftcard, { backgroundColor: light ? '#fff' : '#171b2c', borderColor: light ? theme.border : 'rgba(255,255,255,0.09)' }]}>
+          <Text style={{ fontWeight: '800', fontSize: 16, color: light ? theme.text : '#fff' }}>Your orbit is empty</Text>
+          <Text style={{ fontSize: 13, marginTop: 4, lineHeight: 18, color: light ? theme.dim : '#b9bed0' }}>
+            Add the people who matter — they’ll orbit around you, gently drifting outward as time passes.
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
+            <Pressable onPress={openImport} style={[styles.emptyBtn, { flex: 1, backgroundColor: theme.accent2 }]}>
+              <Ionicons name="people" size={16} color="#fff" />
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13.5 }}>Import Contacts</Text>
+            </Pressable>
+            <Pressable onPress={openAdd} style={[styles.emptyBtn, styles.emptyGhost, { flex: 1, borderColor: theme.border2 }]}>
+              <Ionicons name="add" size={17} color={theme.dim} />
+              <Text style={{ color: theme.dim, fontWeight: '600', fontSize: 13.5 }}>Add manually</Text>
+            </Pressable>
+          </View>
+          <Pressable onPress={() => { loadSample(); showToast('Loaded a sample orbit ✨'); }} style={{ marginTop: 10, alignSelf: 'flex-start' }} hitSlop={6}>
+            <Text style={{ color: theme.faint, fontSize: 12.5, fontWeight: '600' }}>or see a sample orbit</Text>
+          </Pressable>
+        </View>
+      ) : nudge ? (
         <View style={[styles.driftcard, { backgroundColor: light ? '#fff' : '#171b2c', borderColor: light ? theme.border : 'rgba(255,255,255,0.09)' }]}>
           <View style={{ flexDirection: 'row', gap: 11, alignItems: 'flex-start' }}>
             <Avatar grad={nudge.grad} initials={nudge.initials} photo={nudge.photo} size={38} cutout={light ? '#fff' : '#171b2c'} />
@@ -71,7 +94,12 @@ export default function OrbitScreen() {
               <Text style={{ color: '#9aa0b6', fontSize: 18 }}>✕</Text>
             </Pressable>
           </View>
-          <Pressable onPress={() => openContact(nudge.id)}
+          <Pressable
+            onPress={() => {
+              const num = (nudge.phone ?? '').replace(/[^\d+*#]/g, '');
+              if (!num) return openContact(nudge.id);
+              openReach(nudge.id);
+            }}
             style={[styles.qt, { backgroundColor: light ? theme.accentSoft : 'rgba(255,255,255,0.10)', borderColor: light ? 'rgba(108,92,231,0.28)' : 'rgba(255,255,255,0.12)' }]}>
             <Ionicons name="chatbubble-outline" size={16} color={light ? theme.accent2 : '#cdd1e2'} />
             <Text style={{ fontSize: 13.5, color: light ? theme.accent2 : '#cdd1e2' }}>Quick Text</Text>
@@ -90,4 +118,6 @@ const styles = StyleSheet.create({
   gdot: { width: 7, height: 7, borderRadius: 3.5, marginRight: 6 },
   driftcard: { marginHorizontal: 16, marginBottom: 12, borderRadius: 22, borderWidth: 1, padding: 16 },
   qt: { marginTop: 13, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 13, paddingVertical: 11, paddingHorizontal: 14 },
+  emptyBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 13, paddingVertical: 12, paddingHorizontal: 16 },
+  emptyGhost: { borderWidth: 1, backgroundColor: 'transparent' },
 });

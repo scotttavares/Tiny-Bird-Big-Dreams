@@ -6,6 +6,7 @@
     "orientation": "portrait",
     "scheme": "orbit",
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
     "newArchEnabled": false,
     "ios": {
       "bundleIdentifier": "com.tinybirdbigdreams.orbit",
@@ -13,7 +14,9 @@
       "supportsTablet": false,
       "appleTeamId": "23D9BZ3692",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSContactsUsageDescription": "Orbit uses your contacts so you can add the people you care about to your orbit. Your contacts stay on your device.",
+        "LSApplicationQueriesSchemes": ["sms", "tel", "whatsapp", "tg", "sgnl", "viber"]
       },
       "entitlements": {
         "com.apple.security.application-groups": ["group.com.tinybirdbigdreams.orbit"]

@@ -28,6 +28,16 @@ workflows:
     max_build_duration: 90
     instance_type: mac_mini_m2
     working_directory: orbit
+    # Auto-build on every push to a claude/* dev branch (requires the repo's
+    # Codemagic webhook to be connected — it is, since manual builds work). This
+    # is what makes a plain `git push` kick off a TestFlight build with no click.
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: 'claude/*'
+          include: true
+          source: true
     integrations:
       app_store_connect: Orbit ASC API key
     environment:

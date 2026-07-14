@@ -13,6 +13,7 @@ export interface Contact {
   angle: number;         // starting angle on the ring, degrees
   drift: boolean;        // drifting outward / overdue
   photo?: string | null;
+  phone?: string | null;   // for Send a Text / Quick Call (from Contacts or manual)
   group: GroupName;
   fav?: boolean;
   anchored?: boolean;    // exempt from drift
@@ -20,4 +21,11 @@ export interface Contact {
   speed?: Speed;         // per-person drift speed
   note?: string;
   reminder?: string | null;
+  lastContactAt?: number; // ms timestamp of last contact; drives real-time drift
+  log?: LogEntry[];       // recent interactions, newest first (see RECENT GRAVITY)
+}
+
+export interface LogEntry {
+  at: number;    // ms timestamp
+  label: string; // what the interaction was, e.g. "Met up", "Called"
 }
