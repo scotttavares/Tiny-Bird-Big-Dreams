@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Orbit — Stay Connected | Tiny Bird, Big Dreams</title>
+<meta name="description" content="Orbit turns staying in touch into something you can see. The people who matter orbit around you and gently drift away when life gets busy — a small hello pulls them back. Private, on-device, no account." />
+<meta property="og:title" content="Orbit — Stay Connected" />
+<meta property="og:description" content="The people who matter orbit around you and drift away when life gets busy. A small hello pulls them back in. Private by design." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://www.tinybirdbigdreams.com/orbit" />
+<meta property="og:image" content="https://www.tinybirdbigdreams.com/assets/og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Orbit — Stay Connected" />
+<meta name="twitter:description" content="The people who matter orbit around you and drift away when life gets busy. A small hello pulls them back in." />
+<meta name="twitter:image" content="https://www.tinybirdbigdreams.com/assets/og-image.png" />
+<link rel="icon" href="/favicon.ico" />
+<link rel="manifest" href="site.webmanifest" />
+<meta name="theme-color" content="#0E0A18" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,300;1,9..144,400&family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,700;0,900;1,400&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/site.css?v=2" />
+<style>
+  /* Orbit accent (violet, matching the app) layered over the studio system */
+  :root { --orbit:#7b6ef6; --orbit-2:#8A6CF0; }
+  .hero--orbit { background:radial-gradient(ellipse 120% 80% at 50% -10%, #2a2350 0%, #0E0A18 60%); }
+  .hero--orbit::after { background:radial-gradient(ellipse 70% 60% at 50% 110%, rgba(123,110,246,.28) 0%, rgba(138,108,240,.12) 45%, transparent 70%); }
+  h1 em.v-em { color:var(--orbit); }
+  .orbit-stage { width:clamp(260px,64vw,360px); height:clamp(260px,64vw,360px); margin:36px auto 0; animation:fadeUp 1s ease both .6s; }
+  .orbit-svg { width:100%; height:100%; filter:drop-shadow(0 18px 55px rgba(123,110,246,.30)); animation:float 7s ease-in-out infinite; }
+  .cta-row { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-top:32px; animation:fadeUp .9s ease both .55s; }
+  .app-badge {
+    display:inline-flex; align-items:center; gap:10px;
+    background:#fff; color:var(--dusk);
+    padding:12px 22px; border-radius:14px; text-decoration:none;
+    font-weight:600; font-size:14px; letter-spacing:.01em;
+    transition:transform .2s, box-shadow .2s; box-shadow:0 8px 30px rgba(0,0,0,.35);
+  }
+  .app-badge:hover { transform:translateY(-2px); box-shadow:0 14px 40px rgba(0,0,0,.45); }
+  .app-badge.soon { background:rgba(255,255,255,.08); color:rgba(251,247,242,.7); box-shadow:none; border:1px solid rgba(255,255,255,.14); cursor:default; }
+  .app-badge.soon:hover { transform:none; }
+  .ghost-link { display:inline-flex; align-items:center; gap:7px; color:rgba(251,247,242,.55); text-decoration:none; font-size:13px; font-weight:600; padding:12px 14px; transition:color .2s; }
+  .ghost-link:hover { color:var(--cream); }
+  .card--orbit::before { background:var(--orbit); }
+  .ring-cap { display:inline-block; font-size:10px; font-weight:600; letter-spacing:.04em; color:var(--orbit-2); background:rgba(123,110,246,.1); padding:3px 9px; border-radius:100px; margin-top:10px; }
+  /* private-by-design band */
+  .privacy-band { background:var(--dusk); padding:clamp(56px,9vw,90px) clamp(20px,6vw,56px); position:relative; overflow:hidden; }
+  .privacy-inner { max-width:760px; margin:0 auto; text-align:center; position:relative; z-index:2; }
+  .privacy-band::before { content:''; position:absolute; top:-160px; left:50%; transform:translateX(-50%); width:520px; height:520px; border-radius:50%; background:radial-gradient(circle,rgba(123,110,246,.16),transparent 70%); pointer-events:none; }
+  .privacy-band h2 { font-family:'Fraunces',serif; font-size:clamp(26px,4.5vw,44px); font-weight:700; color:var(--cream); letter-spacing:-.03em; line-height:1.08; margin-bottom:18px; }
+  .privacy-band h2 em { font-style:italic; font-weight:300; color:var(--orbit); }
+  .privacy-band p { font-size:15px; line-height:1.8; color:rgba(251,247,242,.5); max-width:560px; margin:0 auto 26px; }
+  .privacy-chips { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  .privacy-chip { font-size:12px; font-weight:500; color:rgba(251,247,242,.72); background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-radius:100px; padding:8px 16px; }
+</style>
+</head>
+<body>
+
+<!-- ══════════ HERO ══════════ -->
+<section class="hero hero--orbit" style="min-height:auto;">
+  <div id="stars"></div>
+
+  <nav>
+    <a href="index.html" class="logo-mark" style="text-decoration:none;">
+      <div class="logo-icon">
+        <svg viewBox="0 0 52 52" fill="none" width="100%" height="100%">
+          <rect width="52" height="52" fill="#2C1F3E"/>
+          <ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/>
+          <ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/>
+          <path d="M18 29 Q12 21 20 27" fill="#d08010"/>
+          <path d="M42 28 Q49 21 44 32" fill="#d08010"/>
+          <circle cx="20" cy="22" r="9.5" fill="#E8A022"/>
+          <path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/>
+          <circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/>
+          <circle cx="17.5" cy="19" r="1" fill="white"/>
+          <path d="M22 13 Q23.5 8.5 25 8 Q24.5 12 23 14.5Z" fill="#d08010"/>
+          <path d="M24.5 13.5 Q26 9 27.5 8.5 Q27 12.5 25.5 15Z" fill="#E8A022"/>
+          <path d="M27 14 Q28.5 9.5 30 9 Q29.5 13 28 15.5Z" fill="#d08010"/>
+        </svg>
+      </div>
+      <div class="logo-text-wrap">
+        <div class="logo-t1">Tiny Bird</div>
+        <div class="logo-rule"></div>
+        <div class="logo-t2">Big Dreams</div>
+        <div class="logo-rule"></div>
+        <div class="logo-t3">App Studio</div>
+      </div>
+    </a>
+
+    <ul class="nav-links">
+      <li><a href="apps.html">Apps</a></li>
+      <li><a href="index.html#studio">Studio</a></li>
+      <li><a href="index.html#brand">Brand</a></li>
+      <li><a href="index.html#contact" class="nav-cta">Say Hello</a></li>
+    </ul>
+
+    <button class="hamburger" id="ham" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="apps.html" onclick="closeMob()">Apps</a>
+    <a href="index.html#studio" onclick="closeMob()">Studio</a>
+    <a href="index.html#brand" onclick="closeMob()">Brand</a>
+    <a href="index.html#contact" class="m-cta" onclick="closeMob()">Say Hello</a>
+  </div>
+
+  <div class="hero-body" style="flex:none; padding-top:clamp(18px,3vw,32px); padding-bottom:clamp(48px,8vw,84px);">
+    <div class="pill">
+      <span class="pill-dot"></span>
+      New in the nest
+    </div>
+    <h1 style="font-size:clamp(40px,10vw,96px);">The people who<br/><em class="v-em">matter, in view.</em></h1>
+    <p class="hero-sub" style="max-width:500px;">Life gets busy, and the people we love quietly drift to the edges. Orbit makes staying in touch something you can see — a gentle nudge, not another obligation.</p>
+
+    <!-- Orbit graphic -->
+    <div class="orbit-stage">
+      <svg class="orbit-svg" viewBox="0 0 360 360" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="An orbit of people around you">
+        <defs>
+          <radialGradient id="core" cx="42%" cy="38%" r="65%">
+            <stop offset="0%" stop-color="#b9aefc"/>
+            <stop offset="55%" stop-color="#7b6ef6"/>
+            <stop offset="100%" stop-color="#5a46d6"/>
+          </radialGradient>
+          <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#7b6ef6" stop-opacity=".55"/>
+            <stop offset="100%" stop-color="#7b6ef6" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <!-- rings -->
+        <circle cx="180" cy="180" r="72"  stroke="rgba(251,247,242,.16)" stroke-width="1.5"/>
+        <circle cx="180" cy="180" r="118" stroke="rgba(251,247,242,.10)" stroke-width="1.5"/>
+        <circle cx="180" cy="180" r="160" stroke="rgba(251,247,242,.07)" stroke-width="1.5"/>
+        <!-- core glow + you -->
+        <circle cx="180" cy="180" r="120" fill="url(#coreGlow)"/>
+        <circle cx="180" cy="180" r="40" fill="url(#core)"/>
+        <text x="180" y="185" text-anchor="middle" font-family="Fraunces, serif" font-size="15" font-weight="700" fill="#fff">You</text>
+        <!-- people on the rings (studio palette) -->
+        <g font-family="DM Sans, sans-serif" font-size="15" font-weight="700" fill="#fff" text-anchor="middle">
+          <g><circle cx="180" cy="62"  r="22" fill="#8A6CF0"/><text x="180" y="67">M</text></g>
+          <g><circle cx="298" cy="180" r="20" fill="#E85D3A"/><text x="298" y="185">S</text></g>
+          <g><circle cx="118" cy="298" r="20" fill="#E8A022"/><text x="118" y="303">L</text></g>
+          <g><circle cx="62"  cy="180" r="20" fill="#4A7C59"/><text x="62"  y="185">J</text></g>
+          <g>
+            <circle cx="286" cy="286" r="21" fill="#7BAFD4"/>
+            <circle cx="286" cy="286" r="21" fill="none" stroke="#E8A022" stroke-width="2.5"/>
+            <text x="286" y="291">D</text>
+          </g>
+        </g>
+      </svg>
+    </div>
+
+    <div class="cta-row">
+      <!-- Once live, replace with: <a class="app-badge" href="https://apps.apple.com/app/idXXXXXXXXX"> ... </a> -->
+      <span class="app-badge soon">
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.18 8.53c-.02-1.72 1.4-2.54 1.46-2.58-.8-1.16-2.03-1.32-2.47-1.34-1.05-.11-2.05.62-2.58.62-.53 0-1.35-.6-2.22-.59-1.14.02-2.2.66-2.79 1.68-1.19 2.07-.3 5.12.86 6.8.57.82 1.24 1.74 2.12 1.7.85-.03 1.17-.55 2.2-.55s1.32.55 2.22.53c.92-.02 1.5-.83 2.06-1.66.65-.95.92-1.87.93-1.92-.02-.01-1.78-.68-1.8-2.71l-.01.02zM9.62 3.51c.47-.57.79-1.36.7-2.15-.68.03-1.5.45-1.99 1.02-.44.5-.82 1.31-.72 2.08.76.06 1.53-.39 2.01-.95z"/></svg>
+        Coming soon to the App Store
+      </span>
+      <a href="#how" class="ghost-link">
+        See how it works
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M4 9l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<svg class="wave-svg" viewBox="0 0 1440 80" preserveAspectRatio="none">
+  <path d="M0,0 C360,80 1080,0 1440,60 L1440,0 L0,0Z" fill="#2C1F3E"/>
+</svg>
+
+<!-- ══════════ HOW IT WORKS ══════════ -->
+<div style="background:var(--cream);" id="how">
+  <div class="section">
+    <div class="section-label reveal">How it works</div>
+    <h2 class="section-title reveal">Gravity for the<br/><em>people you love</em></h2>
+    <div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr));">
+
+      <div class="card card--orbit reveal" style="--accent:var(--orbit);">
+        <div class="card-icon" style="--ibg:#EEEBFE;">🪐</div>
+        <div class="card-title">Add your people</div>
+        <p class="card-desc">Add the ones who matter by hand, or pull them straight from your Contacts. They start close, right beside you.</p>
+      </div>
+
+      <div class="card card--orbit reveal" style="--accent:var(--orbit);">
+        <div class="card-icon" style="--ibg:#EEEBFE;">⏳</div>
+        <div class="card-title">Watch them drift</div>
+        <p class="card-desc">Each ring is a stretch of time. The longer it’s been since you connected, the further out a person drifts.</p>
+        <span class="ring-cap">2 weeks · a month · 3 · 6 · a year</span>
+      </div>
+
+      <div class="card card--orbit reveal" style="--accent:var(--orbit);">
+        <div class="card-icon" style="--ibg:#EEEBFE;">💬</div>
+        <div class="card-title">Reach out in a tap</div>
+        <p class="card-desc">Send a text through your favorite messenger, or start a call — and they slide right back to the center.</p>
+      </div>
+
+      <div class="card card--orbit reveal" style="--accent:var(--orbit);">
+        <div class="card-icon" style="--ibg:#EEEBFE;">✨</div>
+        <div class="card-title">Log the little moments</div>
+        <p class="card-desc">Ran into them? Grabbed coffee? Log it, and they move closer — right there in their timeline.</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PRIVATE BY DESIGN ══════════ -->
+<div class="privacy-band">
+  <div class="privacy-inner reveal">
+    <h2>Private <em>by design</em></h2>
+    <p>Orbit has no account and no cloud. Your people, your notes, your history — everything lives on your device and never leaves it. No ads. No tracking. No sign-up.</p>
+    <div class="privacy-chips">
+      <span class="privacy-chip">🔒 On-device only</span>
+      <span class="privacy-chip">🙅 No account</span>
+      <span class="privacy-chip">📵 No tracking</span>
+      <span class="privacy-chip">🏠 Home Screen widget</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ CTA ══════════ -->
+<div class="cta-band">
+  <div class="cta-inner reveal">
+    <h2>Keep the people<br/><em>who matter close.</em></h2>
+    <p>Orbit is coming soon to the App Store. Want a heads-up when it lands? Say hello and I’ll let you know.</p>
+    <a href="index.html#contact" class="btn btn-dark" style="font-size:14px;padding:15px 36px;">
+      Say Hello
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+        <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+  </div>
+</div>
+
+<!-- ══════════ FOOTER ══════════ -->
+<footer>
+  <a href="index.html" class="logo-mark" style="text-decoration:none;">
+    <div class="logo-icon" style="width:40px;height:40px;border-radius:11px;">
+      <svg viewBox="0 0 52 52" fill="none" width="100%" height="100%">
+        <rect width="52" height="52" fill="#2C1F3E"/>
+        <ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/>
+        <circle cx="20" cy="22" r="9.5" fill="#E8A022"/>
+        <circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/>
+        <circle cx="17.5" cy="19" r="1" fill="white"/>
+      </svg>
+    </div>
+    <div class="logo-text-wrap">
+      <div class="logo-t1" style="font-size:15px;">Tiny Bird</div>
+      <div class="logo-rule"></div>
+      <div class="logo-t2" style="font-size:13px;">Big Dreams</div>
+      <div class="logo-rule"></div>
+      <div class="logo-t3">App Studio</div>
+    </div>
+  </a>
+
+  <div class="footer-links">
+    <div class="footer-col">
+      <div class="footer-col-title">Orbit</div>
+      <ul>
+        <li><a href="orbit.html">Overview</a></li>
+        <li><a href="orbit-support.html">Support</a></li>
+        <li><a href="orbit-privacy.html">Privacy</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <div class="footer-col-title">Studio</div>
+      <ul>
+        <li><a href="apps.html">All Apps</a></li>
+        <li><a href="index.html#studio">Our Story</a></li>
+        <li><a href="index.html#contact">Say Hello</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <div class="footer-col-title">Legal</div>
+      <ul>
+        <li><a href="orbit-privacy.html">Orbit Privacy</a></li>
+        <li><a href="terms.html">Terms of Use</a></li>
+        <li><a href="privacy.html#ai">AI Disclosure</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <p class="fc">&copy; 2026 Tiny Bird, Big Dreams. Built by one person and one AI. All rights reserved.</p>
+    <p class="fc" style="margin-top:6px;font-size:10px;">Made with Claude &middot; Shipped from scratch</p>
+  </div>
+</footer>
+
+<button id="backToTop" aria-label="Back to top">
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 14V4M4 9l5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</button>
+<script src="assets/site.js?v=2"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b0b9b5a0ff9345038eb0ab5e85b9ac3d"}'></script>
+</body>
+</html>
