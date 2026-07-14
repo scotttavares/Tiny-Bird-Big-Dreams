@@ -29,10 +29,25 @@ export default function ContactScreen() {
   const text = () => {
     if (hasNum) openReach(c.id);
   };
-  const call = () => {
+  // Phone call on devices that can dial (iPhone); FaceTime on those that can't
+  // (iPad / iPod touch have no cellular voice, so tel: is a no-op there).
+  const call = async () => {
     if (!hasNum) return;
     pull(c.id);
-    Linking.openURL(`tel:${phoneNum}`).catch(() => showToast("Couldn't start the call"));
+    const tel = `tel:${phoneNum}`;
+    try {
+      if (await Linking.canOpenURL(tel)) {
+        await Linking.openURL(tel);
+        return;
+      }
+    } catch {
+      // fall through to FaceTime
+    }
+    try {
+      await Linking.openURL(`facetime-audio:${phoneNum}`);
+    } catch {
+      showToast("This device can't place calls — try from your iPhone");
+    }
   };
   const tl: [string, string][] = [
     ...(c.log ?? []).map((e) => [e.label, sinceLabel(e.at)] as [string, string]),
