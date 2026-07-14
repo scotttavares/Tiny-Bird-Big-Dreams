@@ -24,19 +24,15 @@ export default function ContactScreen() {
   // Reaching out counts as reconnecting, so it pulls the person back toward the
   // center. Texting opens a chooser (Messages / WhatsApp / Telegram / …) via the
   // reach sheet; calling dials straight through the OS.
-  const numberOr = (warn: boolean) => {
-    const num = (c.phone ?? '').replace(/[^\d+*#]/g, '');
-    if (!num && warn) showToast(`No number saved for ${c.name.split(' ')[0]}`);
-    return num;
-  };
+  const phoneNum = (c.phone ?? '').replace(/[^\d+*#]/g, '');
+  const hasNum = phoneNum.length > 0;
   const text = () => {
-    if (numberOr(true)) openReach(c.id);
+    if (hasNum) openReach(c.id);
   };
   const call = () => {
-    const num = numberOr(true);
-    if (!num) return;
+    if (!hasNum) return;
     pull(c.id);
-    Linking.openURL(`tel:${num}`).catch(() => showToast("Couldn't start the call"));
+    Linking.openURL(`tel:${phoneNum}`).catch(() => showToast("Couldn't start the call"));
   };
   const tl: [string, string][] = [
     ...(c.log ?? []).map((e) => [e.label, sinceLabel(e.at)] as [string, string]),
@@ -62,13 +58,38 @@ export default function ContactScreen() {
           <Text style={{ color: theme.dim, fontSize: 13.5, marginTop: 4 }}>{roleLine(c)}</Text>
         </View>
 
-        <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 18 }}>
-          <Pressable style={[styles.btn, { backgroundColor: theme.accent2 }]} onPress={text}>
-            <Ionicons name="chatbubble-outline" size={18} color="#fff" /><Text style={styles.btnT}>Send a Text</Text>
-          </Pressable>
-          <Pressable style={[styles.btn, { backgroundColor: theme.card2, borderWidth: 1, borderColor: theme.border }]} onPress={call}>
-            <Ionicons name="call-outline" size={18} color={theme.text} /><Text style={[styles.btnT, { color: theme.text }]}>Quick Call</Text>
-          </Pressable>
+        <View style={{ paddingHorizontal: 20, paddingTop: 18 }}>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <Pressable
+              disabled={!hasNum}
+              onPress={text}
+              style={[styles.btn, hasNum ? { backgroundColor: theme.accent2 } : { backgroundColor: theme.card2, opacity: 0.55 }]}
+            >
+              <Ionicons name="chatbubble-outline" size={18} color={hasNum ? '#fff' : theme.faint} />
+              <Text style={[styles.btnT, { color: hasNum ? '#fff' : theme.faint }]}>Send a Text</Text>
+            </Pressable>
+            <Pressable
+              disabled={!hasNum}
+              onPress={call}
+              style={[styles.btn, hasNum
+                ? { backgroundColor: theme.accentSoft, borderWidth: 1, borderColor: theme.accent }
+                : { backgroundColor: theme.card2, borderWidth: 1, borderColor: theme.border, opacity: 0.55 }]}
+            >
+              <Ionicons name="call-outline" size={18} color={hasNum ? theme.accent : theme.faint} />
+              <Text style={[styles.btnT, { color: hasNum ? theme.accent : theme.faint }]}>Quick Call</Text>
+            </Pressable>
+          </View>
+          {hasNum ? (
+            <View style={styles.numRow}>
+              <Ionicons name="call" size={12} color={theme.faint} />
+              <Text style={{ color: theme.dim, fontSize: 12.5 }}>{c.phone}</Text>
+            </View>
+          ) : (
+            <Pressable onPress={openActions} style={styles.numRow} hitSlop={6}>
+              <Ionicons name="alert-circle-outline" size={13} color={theme.faint} />
+              <Text style={{ color: theme.faint, fontSize: 12.5 }}>No number saved — tap to add one</Text>
+            </Pressable>
+          )}
         </View>
 
         {chips.length > 0 || c.note ? (
@@ -126,6 +147,7 @@ const styles = StyleSheet.create({
   badgeT: { color: '#3a2406', fontSize: 10.5, fontWeight: '800', letterSpacing: 0.6 },
   btn: { flex: 1, borderRadius: 16, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
   btnT: { color: '#fff', fontWeight: '700', fontSize: 14.5 },
+  numRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10 },
   metachip: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 11, borderRadius: 999 },
   note: { borderRadius: 14, borderWidth: 1, padding: 12 },
   sect: { fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 9, marginLeft: 4 },

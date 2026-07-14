@@ -52,6 +52,7 @@ interface State {
   setNote: (id: string, note: string) => void;
   setGroup: (id: string, group: GroupName) => void;
   setReminder: (id: string, reminder: string | null) => void;
+  setPhone: (id: string, phone: string | null) => void;
   settleDrift: () => void;
 }
 
@@ -232,6 +233,7 @@ export const useStore = create<State>()(
       setNote: (id, note) => get().updateContact(id, { note }),
       setGroup: (id, group) => get().updateContact(id, { group }),
       setReminder: (id, reminder) => get().updateContact(id, { reminder }),
+      setPhone: (id, phone) => get().updateContact(id, { phone }),
 
       // Recompute everyone's ring from real elapsed time since last contact.
       // Called on launch and when the app returns to the foreground — so drift
