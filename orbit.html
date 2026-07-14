@@ -25,8 +25,24 @@
   .hero--orbit { background:radial-gradient(ellipse 120% 80% at 50% -10%, #2a2350 0%, #0E0A18 60%); }
   .hero--orbit::after { background:radial-gradient(ellipse 70% 60% at 50% 110%, rgba(123,110,246,.28) 0%, rgba(138,108,240,.12) 45%, transparent 70%); }
   h1 em.v-em { color:var(--orbit); }
-  .orbit-stage { width:clamp(260px,64vw,360px); height:clamp(260px,64vw,360px); margin:36px auto 0; animation:fadeUp 1s ease both .6s; }
-  .orbit-svg { width:100%; height:100%; filter:drop-shadow(0 18px 55px rgba(123,110,246,.30)); animation:float 7s ease-in-out infinite; }
+  .orbit-stage { animation:fadeUp 1s ease both .6s; }
+  .orbit { position:relative; width:clamp(280px,66vw,360px); aspect-ratio:1; margin:34px auto 0; }
+  .orbit .ring { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); border-radius:50%; border:1.5px solid rgba(251,247,242,.09); }
+  .orbit .ring.r1 { width:42%; height:42%; border-color:rgba(251,247,242,.15); }
+  .orbit .ring.r2 { width:66%; height:66%; }
+  .orbit .ring.r3 { width:92%; height:92%; border-color:rgba(251,247,242,.06); }
+  .you { position:absolute; top:50%; left:50%; width:23%; height:23%; transform:translate(-50%,-50%); border-radius:50%; background:radial-gradient(circle at 42% 38%, #b9aefc, #7b6ef6 55%, #5a46d6 100%); border:3px solid #8E7BFF; box-shadow:0 0 44px rgba(123,110,246,.5); display:flex; align-items:center; justify-content:center; z-index:2; }
+  .you span { font-family:'Fraunces',serif; font-weight:700; color:#fff; font-size:clamp(13px,3.4vw,17px); }
+  /* each person rides an invisible layer that spins around the centre; the face
+     counter-spins at the same rate so it stays upright while it orbits */
+  .orbiter { position:absolute; inset:0; animation:spin var(--dur,40s) linear infinite; animation-delay:var(--delay,0s); }
+  @keyframes spin { from { transform:rotate(0); } to { transform:rotate(360deg); } }
+  .face { position:absolute; left:50%; top:calc(50% - var(--r,33%)); width:clamp(38px,11vw,46px); height:clamp(38px,11vw,46px); transform:translate(-50%,-50%); border-radius:50%; border:3px solid var(--ring,#8A6CF0); background:var(--bg,#6a52c8); overflow:hidden; box-shadow:0 5px 16px rgba(0,0,0,.45); animation:spin-rev var(--dur,40s) linear infinite; animation-delay:var(--delay,0s); }
+  @keyframes spin-rev { from { transform:translate(-50%,-50%) rotate(0); } to { transform:translate(-50%,-50%) rotate(-360deg); } }
+  .face b { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:15px; font-family:'DM Sans',sans-serif; }
+  .face img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .face.drift { box-shadow:0 5px 16px rgba(0,0,0,.45), 0 0 0 3px #E8A022; }
+  @media (prefers-reduced-motion: reduce) { .orbiter, .face { animation:none !important; } }
   .cta-row { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-top:32px; animation:fadeUp .9s ease both .55s; }
   .app-badge {
     display:inline-flex; align-items:center; gap:10px;
@@ -113,94 +129,42 @@
     <h1 style="font-size:clamp(40px,10vw,96px);">The people who<br/><em class="v-em">matter, in view.</em></h1>
     <p class="hero-sub" style="max-width:500px;">Life gets busy, and the people we love quietly drift to the edges. Orbit makes staying in touch something you can see — a gentle nudge, not another obligation.</p>
 
-    <!-- Orbit graphic -->
+    <!-- Orbit graphic — the people circle around You -->
     <div class="orbit-stage">
-      <svg class="orbit-svg" viewBox="0 0 360 360" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" role="img" aria-label="An orbit of people around you">
-        <defs>
-          <radialGradient id="core" cx="42%" cy="38%" r="65%">
-            <stop offset="0%" stop-color="#b9aefc"/>
-            <stop offset="55%" stop-color="#7b6ef6"/>
-            <stop offset="100%" stop-color="#5a46d6"/>
-          </radialGradient>
-          <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#7b6ef6" stop-opacity=".55"/>
-            <stop offset="100%" stop-color="#7b6ef6" stop-opacity="0"/>
-          </radialGradient>
-          <clipPath id="fM"><circle cx="180" cy="62"  r="22"/></clipPath>
-          <clipPath id="fS"><circle cx="298" cy="180" r="22"/></clipPath>
-          <clipPath id="fL"><circle cx="118" cy="298" r="22"/></clipPath>
-          <clipPath id="fJ"><circle cx="62"  cy="180" r="22"/></clipPath>
-          <clipPath id="fD"><circle cx="286" cy="286" r="22"/></clipPath>
-          <clipPath id="youClip"><circle cx="180" cy="180" r="40"/></clipPath>
-        </defs>
-        <!-- rings -->
-        <circle cx="180" cy="180" r="72"  stroke="rgba(251,247,242,.16)" stroke-width="1.5"/>
-        <circle cx="180" cy="180" r="118" stroke="rgba(251,247,242,.10)" stroke-width="1.5"/>
-        <circle cx="180" cy="180" r="160" stroke="rgba(251,247,242,.07)" stroke-width="1.5"/>
+      <div class="orbit" role="img" aria-label="People orbiting around you">
+        <span class="ring r1"></span>
+        <span class="ring r2"></span>
+        <span class="ring r3"></span>
 
-        <!-- ═══ people, with friendly faces ═══ -->
-        <!-- M · violet -->
-        <g clip-path="url(#fM)">
-          <circle cx="180" cy="62" r="22" fill="#3a2a20"/>
-          <ellipse cx="180" cy="66" rx="17" ry="18" fill="#e8b58c"/>
-          <circle cx="174" cy="63" r="1.9" fill="#2b2333"/><circle cx="186" cy="63" r="1.9" fill="#2b2333"/>
-          <path d="M174 71 Q180 76 186 71" stroke="#7a4a3a" stroke-width="1.8" stroke-linecap="round" fill="none"/>
-        </g>
-        <circle cx="180" cy="62" r="22" fill="none" stroke="#8A6CF0" stroke-width="3"/>
-        <!-- S · coral -->
-        <g clip-path="url(#fS)">
-          <circle cx="298" cy="180" r="22" fill="#b5502f"/>
-          <ellipse cx="298" cy="184" rx="17" ry="18" fill="#f1c9a5"/>
-          <circle cx="292" cy="181" r="1.9" fill="#2b2333"/><circle cx="304" cy="181" r="1.9" fill="#2b2333"/>
-          <path d="M292 189 Q298 194 304 189" stroke="#8a4a34" stroke-width="1.8" stroke-linecap="round" fill="none"/>
-        </g>
-        <circle cx="298" cy="180" r="22" fill="none" stroke="#E85D3A" stroke-width="3"/>
-        <!-- L · gold -->
-        <g clip-path="url(#fL)">
-          <circle cx="118" cy="298" r="22" fill="#caa24e"/>
-          <ellipse cx="118" cy="301" rx="18" ry="19" fill="#e7a977"/>
-          <circle cx="112" cy="299" r="1.9" fill="#2b2333"/><circle cx="124" cy="299" r="1.9" fill="#2b2333"/>
-          <path d="M112 307 Q118 312 124 307" stroke="#8a5a34" stroke-width="1.8" stroke-linecap="round" fill="none"/>
-        </g>
-        <circle cx="118" cy="298" r="22" fill="none" stroke="#E8A022" stroke-width="3"/>
-        <!-- J · green -->
-        <g clip-path="url(#fJ)">
-          <circle cx="62" cy="180" r="22" fill="#241a12"/>
-          <ellipse cx="62" cy="184" rx="16.5" ry="18" fill="#8a5a3c"/>
-          <circle cx="56" cy="181" r="1.9" fill="#1c140e"/><circle cx="68" cy="181" r="1.9" fill="#1c140e"/>
-          <path d="M56 189 Q62 194 68 189" stroke="#5a3826" stroke-width="1.8" stroke-linecap="round" fill="none"/>
-        </g>
-        <circle cx="62" cy="180" r="22" fill="none" stroke="#4A7C59" stroke-width="3"/>
-        <!-- D · sky, drifting (glasses + amber halo) -->
-        <g clip-path="url(#fD)">
-          <circle cx="286" cy="286" r="22" fill="#6b4a2f"/>
-          <ellipse cx="286" cy="289" rx="17" ry="18" fill="#eac2a0"/>
-          <circle cx="280" cy="285" r="1.7" fill="#2b2333"/><circle cx="292" cy="285" r="1.7" fill="#2b2333"/>
-          <path d="M281 294 Q286 298 291 294" stroke="#7a5236" stroke-width="1.8" stroke-linecap="round" fill="none"/>
-        </g>
-        <g stroke="#2b2333" stroke-width="1.4" fill="none">
-          <circle cx="280" cy="285" r="4.3"/><circle cx="292" cy="285" r="4.3"/><path d="M284.3 285 h3.4"/>
-        </g>
-        <circle cx="286" cy="286" r="22" fill="none" stroke="#7BAFD4" stroke-width="3"/>
-        <circle cx="286" cy="286" r="26.5" fill="none" stroke="#E8A022" stroke-width="2.5" opacity=".9"/>
+        <div class="orbiter" style="--dur:36s;--delay:0s">
+          <div class="face" style="--ring:#8A6CF0;--bg:#6a52c8;--r:33%">
+            <b>M</b><img alt="" src="https://randomuser.me/api/portraits/women/65.jpg" onerror="this.remove()">
+          </div>
+        </div>
+        <div class="orbiter" style="--dur:26s;--delay:-3s">
+          <div class="face" style="--ring:#E85D3A;--bg:#b5502f;--r:21%">
+            <b>S</b><img alt="" src="https://randomuser.me/api/portraits/women/44.jpg" onerror="this.remove()">
+          </div>
+        </div>
+        <div class="orbiter" style="--dur:36s;--delay:-18s">
+          <div class="face" style="--ring:#4A7C59;--bg:#3c6349;--r:33%">
+            <b>J</b><img alt="" src="https://randomuser.me/api/portraits/women/68.jpg" onerror="this.remove()">
+          </div>
+        </div>
+        <div class="orbiter" style="--dur:50s;--delay:-31s">
+          <div class="face" style="--ring:#E8A022;--bg:#b57e1c;--r:45%">
+            <b>L</b><img alt="" src="https://randomuser.me/api/portraits/men/75.jpg" onerror="this.remove()">
+          </div>
+        </div>
+        <div class="orbiter" style="--dur:50s;--delay:-6s">
+          <div class="face drift" style="--ring:#7BAFD4;--bg:#4e7fa0;--r:45%">
+            <b>D</b><img alt="" src="https://randomuser.me/api/portraits/men/32.jpg" onerror="this.remove()">
+          </div>
+        </div>
 
-        <!-- core glow -->
-        <circle cx="180" cy="180" r="120" fill="url(#coreGlow)"/>
-        <!-- YOU — tap to add your own face -->
-        <g id="youGroup" style="cursor:pointer">
-          <circle cx="180" cy="180" r="40" fill="url(#core)"/>
-          <image id="youPhoto" x="140" y="140" width="80" height="80" clip-path="url(#youClip)" preserveAspectRatio="xMidYMid slice" href="" style="display:none"/>
-          <circle cx="180" cy="180" r="40" fill="none" stroke="#8E7BFF" stroke-width="3"/>
-          <text id="youText" x="180" y="185" text-anchor="middle" font-family="Fraunces, serif" font-size="15" font-weight="700" fill="#fff">You</text>
-          <g id="youBadge">
-            <circle cx="207" cy="207" r="12" fill="#8E7BFF" stroke="#141024" stroke-width="2"/>
-            <path d="M207 202.5 v9 M202.5 207 h9" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-          </g>
-        </g>
-      </svg>
+        <div class="you"><span>You</span></div>
+      </div>
     </div>
-    <p id="youHint" style="text-align:center;margin-top:12px;font-size:12.5px;color:rgba(251,247,242,.42);">Tap the center to add your own face</p>
-    <input type="file" id="youInput" accept="image/*" hidden />
 
     <div class="cta-row">
       <!-- Once live, replace with: <a class="app-badge" href="https://apps.apple.com/app/idXXXXXXXXX"> ... </a> -->
@@ -341,33 +305,6 @@
 <button id="backToTop" aria-label="Back to top">
   <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 14V4M4 9l5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 </button>
-<script>
-  /* Let a visitor drop their own face into the center of the orbit.
-     Fully client-side — the photo is read in-browser and never uploaded. */
-  (function () {
-    var input = document.getElementById('youInput');
-    var group = document.getElementById('youGroup');
-    var photo = document.getElementById('youPhoto');
-    var text  = document.getElementById('youText');
-    var hint  = document.getElementById('youHint');
-    if (!input || !group || !photo) return;
-    group.addEventListener('click', function () { input.click(); });
-    input.addEventListener('change', function () {
-      var f = input.files && input.files[0];
-      if (!f) return;
-      var reader = new FileReader();
-      reader.onload = function (e) {
-        var url = e.target.result;
-        photo.setAttribute('href', url);
-        photo.setAttributeNS('http://www.w3.org/1999/xlink', 'href', url);
-        photo.style.display = '';
-        if (text) text.style.display = 'none';
-        if (hint) hint.textContent = 'That’s you at the center ✨';
-      };
-      reader.readAsDataURL(f);
-    });
-  })();
-</script>
 <script src="assets/site.js?v=2"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b0b9b5a0ff9345038eb0ab5e85b9ac3d"}'></script>
 </body>
