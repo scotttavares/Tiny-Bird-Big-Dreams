@@ -12,7 +12,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin" />
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="assets/orbit.css?v=2" />
+<link rel="stylesheet" href="assets/orbit.css?v=3" />
+<script>try{var t=localStorage.getItem('orbit-theme');if(t&&t!=='red')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body>
 
@@ -39,6 +40,12 @@
       <li><a href="orbit-support.html">Support</a></li>
       <li><a href="orbit-privacy.html">Privacy</a></li>
     </ul>
+    <div class="theme-switch" role="group" aria-label="Site color theme">
+      <button type="button" class="ts-dot ts-red" data-set="red" aria-label="Coral" aria-pressed="true"></button>
+      <button type="button" class="ts-dot ts-yellow" data-set="yellow" aria-label="Gold" aria-pressed="false"></button>
+      <button type="button" class="ts-dot ts-green" data-set="green" aria-label="Green" aria-pressed="false"></button>
+      <button type="button" class="ts-dot ts-blue" data-set="blue" aria-label="Blue" aria-pressed="false"></button>
+    </div>
     <button class="hamburger" id="ham" aria-label="Menu" aria-expanded="false">
       <span></span><span></span><span></span>
     </button>
@@ -139,6 +146,26 @@
       a.addEventListener('click', function () {
         menu.classList.remove('open');
         ham.setAttribute('aria-expanded', 'false');
+      });
+    });
+  })();
+
+  // ── Site color theme switcher (the four color balls) ──────────────────────
+  (function () {
+    var root = document.documentElement;
+    var dots = document.querySelectorAll('.ts-dot');
+    if (!dots.length) return;
+    function apply(name) {
+      if (name && name !== 'red') root.setAttribute('data-theme', name); else root.removeAttribute('data-theme');
+      dots.forEach(function (d) { d.setAttribute('aria-pressed', d.getAttribute('data-set') === (name || 'red') ? 'true' : 'false'); });
+    }
+    var saved; try { saved = localStorage.getItem('orbit-theme'); } catch (e) {}
+    apply(saved || root.getAttribute('data-theme') || 'red');
+    dots.forEach(function (d) {
+      d.addEventListener('click', function () {
+        var n = d.getAttribute('data-set');
+        apply(n);
+        try { localStorage.setItem('orbit-theme', n); } catch (e) {}
       });
     });
   })();
