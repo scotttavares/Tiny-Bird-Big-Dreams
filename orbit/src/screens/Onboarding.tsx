@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import OrbitLogo from '../ui/OrbitLogo';
 import { useStore } from '../store';
-import { THEMES, YOU_GRAD } from '../theme';
+import { THEMES } from '../theme';
 
 const BULLETS: [string, string, string][] = [
   ['🪐', 'People drift outward over time', 'The longer since you connected, the farther they orbit.'],
@@ -26,10 +26,10 @@ export default function Onboarding() {
 
   return (
     <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(300)} style={StyleSheet.absoluteFill}>
-      <LinearGradient colors={theme.name === 'dark' ? ['#20264a', theme.bg] : ['#e7e3ff', theme.bg]} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={theme.dark ? ['#20264a', theme.bg] : [theme.bg2, theme.bg]} style={StyleSheet.absoluteFill} />
       <View style={styles.center}>
-        <View style={styles.logo}>
-          <LinearGradient colors={YOU_GRAD} start={{ x: 0.3, y: 0.2 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+        <View style={[styles.logo, { shadowColor: theme.accent2 }]}>
+          <LinearGradient colors={theme.youGrad} start={{ x: 0.3, y: 0.2 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
         </View>
         <OrbitLogo color={theme.accent} textColor={theme.text} fontSize={30} />
         <Text style={{ color: theme.dim, fontSize: 14, marginTop: 8 }}>Gravity for the people who matter.</Text>

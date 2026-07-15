@@ -25,7 +25,7 @@ export default function OrbitScreen() {
   const driftCount = list.filter((c) => c.drift).length;
   const nudgeId = pickNudgeId(contacts);
   const nudge = nudgeId ? contacts[nudgeId] : null;
-  const light = theme.name === 'light';
+  const light = !theme.dark;
 
   const chips: ('All' | GroupName)[] = ['All', ...GROUPS.filter((g) => list.some((c) => c.group === g))];
 

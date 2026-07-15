@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, ScrollView, Switch, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useStore } from '../store';
-import { THEMES } from '../theme';
+import { THEMES, THEME_OPTIONS } from '../theme';
 import { scheduleWeeklyReport, cancelWeeklyReport, isWeeklyScheduled } from '../notifications';
 
 export default function SettingsScreen() {
   const theme = THEMES[useStore((s) => s.theme)];
-  const dark = useStore((s) => s.theme) === 'dark';
-  const toggleTheme = useStore((s) => s.toggleTheme);
+  const themeName = useStore((s) => s.theme);
+  const setTheme = useStore((s) => s.setTheme);
   const setScreen = useStore((s) => s.setScreen);
   const showToast = useStore((s) => s.showToast);
   const resetOrbit = useStore((s) => s.resetOrbit);
@@ -87,8 +88,25 @@ export default function SettingsScreen() {
           </View>
 
           <Text style={[styles.sect, { color: theme.faint, marginTop: 22 }]}>APPEARANCE</Text>
-          <View style={[styles.cardList, card]}>
-            <Row title="Dark Sky" sub="Switch between night and day" right={sw(dark, toggleTheme)} />
+          <View style={[styles.cardList, card, { padding: 16 }]}>
+            <Text style={{ fontWeight: '600', fontSize: 14, color: theme.text }}>Theme</Text>
+            <Text style={{ color: theme.dim, fontSize: 12, marginTop: 2 }}>The dark sky, or one of four colors</Text>
+            <View style={styles.themeRow}>
+              {THEME_OPTIONS.map((opt) => {
+                const active = themeName === opt.name;
+                return (
+                  <Pressable key={opt.name} onPress={() => setTheme(opt.name)} style={styles.swatchWrap} hitSlop={6}>
+                    <View style={[styles.swatch, { borderColor: active ? theme.accent : theme.border2, borderWidth: active ? 3 : 2 }]}>
+                      <LinearGradient colors={opt.swatch} start={{ x: 0.2, y: 0.1 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+                      {active ? (
+                        <View style={styles.swatchCheck}><Ionicons name="checkmark" size={20} color="#fff" /></View>
+                      ) : null}
+                    </View>
+                    <Text style={{ fontSize: 11.5, fontWeight: '600', color: active ? theme.text : theme.dim }}>{opt.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
 
           <Text style={[styles.sect, { color: theme.faint, marginTop: 22 }]}>WIDGETS</Text>
@@ -115,4 +133,8 @@ const styles = StyleSheet.create({
   sect: { fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 9, marginLeft: 4 },
   cardList: { borderRadius: 18, borderWidth: 1, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 13, padding: 14, minHeight: 56 },
+  themeRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 },
+  swatchWrap: { alignItems: 'center', gap: 7 },
+  swatch: { width: 46, height: 46, borderRadius: 23, overflow: 'hidden' },
+  swatchCheck: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
 });
