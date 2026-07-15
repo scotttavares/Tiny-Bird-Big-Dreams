@@ -267,15 +267,20 @@ const styles = StyleSheet.create({
   gdot: { width: 7, height: 7, borderRadius: 3.5, marginRight: 5 },
   nm: { fontSize: 11.5, fontWeight: '600' },
   youWrap: {
-    position: 'absolute', left: CENTER - 32, top: CENTER - 32, width: 64, height: 64, borderRadius: 32,
+    position: 'absolute', left: CENTER - 34, top: CENTER - 34, width: 68, height: 68, borderRadius: 34,
     backgroundColor: '#6C5CE7', alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#6C5CE7', shadowOpacity: 0.5, shadowRadius: 18, shadowOffset: { width: 0, height: 10 },
+    shadowColor: '#6C5CE7', shadowOpacity: 0.5, shadowRadius: 20, shadowOffset: { width: 0, height: 10 },
   },
-  you: { width: 64, height: 64, borderRadius: 32, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
-  youText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  // Crisp white ring around the gradient core — the clean, premium "You" look
+  // from the website, readable on every colorway (and the dark night sky).
+  you: {
+    width: 68, height: 68, borderRadius: 34, overflow: 'hidden',
+    borderWidth: 3, borderColor: '#fff', alignItems: 'center', justifyContent: 'center',
+  },
+  youText: { color: '#fff', fontWeight: '700', fontSize: 14, letterSpacing: 0.2 },
   youBadge: {
-    position: 'absolute', right: -2, bottom: -2, width: 22, height: 22, borderRadius: 11,
-    backgroundColor: '#8E7BFF', borderWidth: 2, alignItems: 'center', justifyContent: 'center',
+    position: 'absolute', right: -1, bottom: -1, width: 22, height: 22, borderRadius: 11,
+    backgroundColor: '#8E7BFF', borderWidth: 2.5, alignItems: 'center', justifyContent: 'center',
   },
   zoomctl: { position: 'absolute', right: 12, bottom: 12, gap: 6 },
   zbtn: { width: 36, height: 36, borderRadius: 11, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },

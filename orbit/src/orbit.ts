@@ -3,9 +3,11 @@ import type { Contact, GroupName } from './types';
 // Ring geometry + revolution speed (ported from the prototype).
 export const FIELD = 340;
 export const CENTER = FIELD / 2;
+// Ring 1 starts well clear of the "You" core so the closest people orbit with
+// breathing room (never sitting on top of you), matching the website's layout.
 // Ring 6 sits much farther out — "beyond the galaxy" — so a year-plus of
 // silence reads as a real distance you have to reach across.
-export const radius = (n: number) => 42 + (n - 1) * 48 + (n >= 6 ? 60 : 0); // px from centre
+export const radius = (n: number) => 72 + (n - 1) * 46 + (n >= 6 ? 52 : 0); // px from centre
 export const ringDur = (n: number) => 34 + n * 16;               // seconds per revolution (outer = slower)
 
 // Each ring is a time-since-last-contact bucket.
