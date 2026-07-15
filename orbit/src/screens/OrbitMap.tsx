@@ -11,7 +11,7 @@ import * as FileSystem from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
 import Avatar from '../ui/Avatar';
 import { FIELD, CENTER, radius, ringDur, GROUP_COLOR } from '../orbit';
-import { THEMES, YOU_GRAD, type Theme } from '../theme';
+import { THEMES, type Theme } from '../theme';
 import { useStore } from '../store';
 import type { Contact } from '../types';
 
@@ -204,25 +204,25 @@ export default function OrbitMap({ contacts, onOpen }: { contacts: Contact[]; on
               <View key={n} style={{
                 position: 'absolute', width: d, height: d, borderRadius: d / 2,
                 left: CENTER - radius(n), top: CENTER - radius(n),
-                borderWidth: theme.name === 'light' ? 1.4 : 1,
+                borderWidth: theme.dark ? 1 : 1.4,
                 borderColor: n === 1 ? theme.ring : theme.ringFaint,
               }} />
             );
           })}
 
           <GestureDetector gesture={youTap}>
-            <Animated.View style={[styles.youWrap, youStyle]}>
+            <Animated.View style={[styles.youWrap, youStyle, { backgroundColor: theme.accent2, shadowColor: theme.accent2 }]}>
               <View style={styles.you}>
                 {mePhoto ? (
                   <Image source={{ uri: mePhoto }} style={StyleSheet.absoluteFill} />
                 ) : (
                   <>
-                    <LinearGradient colors={YOU_GRAD} start={{ x: 0.3, y: 0.2 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+                    <LinearGradient colors={theme.youGrad} start={{ x: 0.3, y: 0.2 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
                     <Text style={styles.youText}>You</Text>
                   </>
                 )}
               </View>
-              <View style={[styles.youBadge, { borderColor: theme.bg }]}>
+              <View style={[styles.youBadge, { borderColor: theme.bg, backgroundColor: theme.accent }]}>
                 <Ionicons name="camera" size={11} color="#fff" />
               </View>
             </Animated.View>

@@ -132,7 +132,7 @@ export const useStore = create<State>()(
 
       closeSheet: () => set({ sheet: null }),
       setTheme: (theme) => set({ theme }),
-      toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
+      toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'coral' : 'dark' })),
       setFilter: (activeGroup) => set({ activeGroup }),
       dismissOnboarding: () => set({ onboarded: true }),
 
@@ -269,7 +269,12 @@ export const useStore = create<State>()(
     }),
     {
       name: 'orbit-store',
-      version: 1,
+      version: 2,
+      // Older builds stored theme 'light'; it's now the 'coral' colorway.
+      migrate: (persisted: any) => {
+        if (persisted && persisted.theme === 'light') persisted.theme = 'coral';
+        return persisted;
+      },
       storage: createJSONStorage(() => fileStorage),
       // Only durable data is written to disk — not ephemeral UI (screen, sheets,
       // toast, filter). Actions are recreated from the initializer on each launch.
