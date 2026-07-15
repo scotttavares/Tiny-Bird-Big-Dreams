@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useStore } from '../store';
 import { THEMES, THEME_OPTIONS } from '../theme';
 import { scheduleWeeklyReport, cancelWeeklyReport, isWeeklyScheduled } from '../notifications';
+import { exportBackup, importBackup } from '../backup';
 
 export default function SettingsScreen() {
   const theme = THEMES[useStore((s) => s.theme)];
@@ -14,6 +15,8 @@ export default function SettingsScreen() {
   const showToast = useStore((s) => s.showToast);
   const resetOrbit = useStore((s) => s.resetOrbit);
   const openImport = useStore((s) => s.openImport);
+  const restoreBackup = useStore((s) => s.restoreBackup);
+  const [busy, setBusy] = useState(false);
 
   const confirmClear = () =>
     Alert.alert(
@@ -22,6 +25,51 @@ export default function SettingsScreen() {
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Clear', style: 'destructive', onPress: () => { resetOrbit(); showToast('Your orbit is clear'); } },
+      ],
+    );
+
+  // Write a portable backup file and open the share sheet (save to Files /
+  // iCloud Drive, AirDrop, email…). Photos are embedded so it works on a new phone.
+  const onBackup = async () => {
+    if (busy) return;
+    setBusy(true);
+    showToast('Preparing your backup…');
+    try {
+      const r = await exportBackup(useStore.getState());
+      if (r === 'unavailable') showToast('Sharing isn’t available on this device');
+    } catch {
+      showToast('Couldn’t create the backup');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Pick a backup file and replace the current orbit with it (after confirming).
+  const onRestore = () =>
+    Alert.alert(
+      'Restore from backup?',
+      'This replaces your current orbit with the people and settings saved in the backup file.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Choose file',
+          onPress: async () => {
+            if (busy) return;
+            setBusy(true);
+            try {
+              const payload = await importBackup();
+              if (payload) {
+                restoreBackup(payload);
+                const n = Object.keys(payload.contacts).length;
+                showToast(`Restored ${n} ${n === 1 ? 'person' : 'people'} ✨`);
+              }
+            } catch (e: any) {
+              showToast(e?.message ?? 'Couldn’t read that backup');
+            } finally {
+              setBusy(false);
+            }
+          },
+        },
       ],
     );
 
@@ -113,6 +161,15 @@ export default function SettingsScreen() {
           <View style={[styles.cardList, card]}>
             <Row title="Home Screen Widget" sub="Long-press your home screen → + → Orbit" right={<Value v="" />} onPress={() => showToast('Add Orbit from your home screen: long-press → +')} />
           </View>
+
+          <Text style={[styles.sect, { color: theme.faint, marginTop: 22 }]}>BACKUP</Text>
+          <View style={[styles.cardList, card]}>
+            <Row title="Back up my orbit" sub="Save everyone + settings to a file you keep" right={<Ionicons name="share-outline" size={18} color={theme.dim} />} onPress={onBackup} />
+            <Row title="Restore from backup" sub="Bring your orbit back on a new phone or after reinstalling" right={<Ionicons name="chevron-forward" size={15} color={theme.dim} />} onPress={onRestore} top />
+          </View>
+          <Text style={{ color: theme.faint, fontSize: 11.5, lineHeight: 16, marginTop: 8, marginLeft: 4, marginRight: 4 }}>
+            Orbit keeps everything on your device — no account, no cloud. A backup file is the private way to move to a new phone or delete the app safely.
+          </Text>
 
           <Text style={[styles.sect, { color: theme.faint, marginTop: 22 }]}>DATA</Text>
           <View style={[styles.cardList, card]}>
