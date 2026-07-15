@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Contact, GroupName, Screen, Speed } from './types';
-import type { ThemeName } from './theme';
+import { THEMES, type ThemeName } from './theme';
 import { SEED } from './data';
 import { initialsOf, phoneKey, nameKey } from './orbit';
 import { fileStorage } from './persist';
+import type { RestorePayload } from './backup';
 
 type FilterGroup = 'All' | GroupName;
 
@@ -45,6 +46,7 @@ interface State {
   importContacts: (people: { name: string; photo?: string | null; phone?: string | null }[]) => { added: number; skipped: number };
   loadSampleOrbit: () => void;
   resetOrbit: () => void;
+  restoreBackup: (payload: RestorePayload) => void;
 
   pull: (id: string) => void;            // pull closer (one ring inward)
   moveOrbit: (id: string, ring: number) => void;
@@ -211,6 +213,26 @@ export const useStore = create<State>()(
       loadSampleOrbit: () => set({ contacts: seedMap() }),
       // Wipe the orbit back to empty (used by "Start over" in Settings).
       resetOrbit: () => set({ contacts: {}, screen: 'orbit', currentId: null }),
+
+      // Replace the orbit from a restored backup file. Photos have already been
+      // written to local files by the importer, so we just swap state in. An
+      // unknown/legacy theme (e.g. the old "light") falls back safely.
+      restoreBackup: (payload) =>
+        set((s) => {
+          const theme: ThemeName =
+            payload.theme === ('light' as ThemeName) ? 'coral'
+            : payload.theme && THEMES[payload.theme] ? payload.theme
+            : s.theme;
+          return {
+            contacts: payload.contacts ?? {},
+            theme,
+            onboarded: payload.onboarded ?? true,
+            mePhoto: payload.mePhoto ?? s.mePhoto,
+            screen: 'orbit',
+            currentId: null,
+            sheet: null,
+          };
+        }),
 
       pull: (id) =>
         set((s) => {
