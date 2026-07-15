@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -88,15 +88,20 @@ function FloatingHeart({ color, delay, onDone }: { color: string; delay: number;
   );
 }
 
-// Overlay that watches the store's heartPing and, while the orbit is on screen,
-// releases a little burst of hearts whenever you reconnect with someone.
+// Last reconnect pulse we've celebrated. Module scope so it survives the orbit
+// mounting/unmounting within a session: each pulse plays exactly once — including
+// when you land back on the orbit right after reconnecting from a contact's screen.
+let lastHeartN = 0;
+
+// Overlay that watches the store's heartPing and releases a burst of hearts when
+// you reconnect — whether the orbit is already open or you return to it just after.
 function HeartFX() {
   const ping = useStore((s) => s.heartPing);
   const [hearts, setHearts] = useState<{ id: number; color: string; delay: number }[]>([]);
-  const seen = useRef(ping?.n ?? 0);
   useEffect(() => {
-    if (!ping || ping.n <= seen.current) return; // ignore stale pings (e.g. on mount)
-    seen.current = ping.n;
+    if (!ping || ping.n <= lastHeartN) return;
+    lastHeartN = ping.n;
+    if (Date.now() - ping.at > 30000) return; // pulse too old (app was away) — mark seen, don't replay
     const base = ping.n * 10;
     setHearts((h) => [
       ...h,
