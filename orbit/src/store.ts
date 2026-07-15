@@ -21,6 +21,7 @@ interface State {
   reachId: string | null;
   logId: string | null;
   mePhoto: string | null;     // your own photo at the center of the orbit
+  heartPing: { n: number; color: string } | null;  // pulses a floating heart on the orbit when you reconnect
 
   setScreen: (s: Screen) => void;
   setMePhoto: (uri: string | null) => void;
@@ -85,6 +86,12 @@ const backdateFor = (ring: number) => Date.now() - (RING_START_DAYS[ring] ?? 0) 
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 let addCounter = 0;
 
+// A little heart floats up on the orbit whenever you reconnect with someone —
+// a quiet check-in or a text. Each pulse gets a random, pleasing color.
+const HEART_COLORS = ['#FF5A7A', '#FF7A59', '#F0654E', '#F5A623', '#FF6FB5', '#7C5CFF', '#4CC38A', '#3AA5FF'];
+let heartN = 0;
+const nextHeart = () => ({ n: ++heartN, color: HEART_COLORS[Math.floor(Math.random() * HEART_COLORS.length)] });
+
 export const useStore = create<State>()(
   persist(
     (set, get) => ({
@@ -102,6 +109,7 @@ export const useStore = create<State>()(
       reachId: null,
       logId: null,
       mePhoto: null,
+      heartPing: null,
 
       setScreen: (screen) => set({ screen }),
       setMePhoto: (uri) => set({ mePhoto: uri }),
@@ -119,7 +127,7 @@ export const useStore = create<State>()(
           const c = s.contacts[id];
           if (!c) return s;
           const log = [{ at: Date.now(), label }, ...(c.log ?? [])].slice(0, 12);
-          return { contacts: { ...s.contacts, [id]: { ...c, ring: 1, unit: 'just now', drift: false, lastContactAt: Date.now(), log } } };
+          return { contacts: { ...s.contacts, [id]: { ...c, ring: 1, unit: 'just now', drift: false, lastContactAt: Date.now(), log } }, heartPing: nextHeart() };
         }),
 
       closeSheet: () => set({ sheet: null }),
@@ -209,7 +217,7 @@ export const useStore = create<State>()(
           const c = s.contacts[id];
           if (!c) return s;
           // Reconnecting brings someone back to the center and resets their clock.
-          return { contacts: { ...s.contacts, [id]: { ...c, ring: 1, unit: 'just now', drift: false, lastContactAt: Date.now() } } };
+          return { contacts: { ...s.contacts, [id]: { ...c, ring: 1, unit: 'just now', drift: false, lastContactAt: Date.now() } }, heartPing: nextHeart() };
         }),
 
       moveOrbit: (id, ring) =>
