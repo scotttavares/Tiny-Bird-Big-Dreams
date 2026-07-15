@@ -145,7 +145,7 @@ h1.hero-h .warm { background: var(--sun); -webkit-background-clip: text; backgro
   position: absolute; left: 50%; top: calc(50% - var(--r, 34%));
   width: clamp(46px, 10vw, 60px); height: clamp(46px, 10vw, 60px);
   transform: translate(-50%,-50%); border-radius: 50%;
-  border: 3px solid #fff; background: var(--fbg, var(--sun-soft));
+  border: 3px solid #fff; background-color: #F0DAC8; background-size: cover; background-position: center;
   overflow: hidden; box-shadow: 0 10px 22px -8px rgba(120,60,30,.5);
   animation: spin-rev var(--dur, 40s) linear infinite; animation-delay: var(--delay, 0s);
 }
@@ -176,7 +176,7 @@ h1.hero-h .warm { background: var(--sun); -webkit-background-clip: text; backgro
   border-radius: 22px; padding: 16px; box-shadow: var(--shadow-sm);
   display: flex; gap: 14px; align-items: center;
 }
-.moment .mface { width: 54px; height: 54px; flex: none; border-radius: 16px; overflow: hidden; position: relative; background: var(--fbg, var(--sun-soft)); box-shadow: inset 0 0 0 1px rgba(0,0,0,.04); }
+.moment .mface { width: 54px; height: 54px; flex: none; border-radius: 50%; overflow: hidden; position: relative; background-color: #F0DAC8; background-size: cover; background-position: center; box-shadow: inset 0 0 0 1px rgba(0,0,0,.04); }
 .moment .mface img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .moment .mface b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 19px; }
 .moment .mtext .mname { font-family: var(--display); font-weight: 600; font-size: 16px; color: var(--ink); }
