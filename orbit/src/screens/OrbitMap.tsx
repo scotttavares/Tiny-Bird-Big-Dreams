@@ -1,11 +1,14 @@
 import React, { useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing,
   useFrameCallback, runOnJS, type SharedValue,
 } from 'react-native-reanimated';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
+import { Ionicons } from '@expo/vector-icons';
 import Avatar from '../ui/Avatar';
 import { FIELD, CENTER, radius, ringDur, GROUP_COLOR } from '../orbit';
 import { THEMES, YOU_GRAD, type Theme } from '../theme';
@@ -62,6 +65,32 @@ function Satellite({ c, elapsed, theme, dimmed, onOpen }: {
 export default function OrbitMap({ contacts, onOpen }: { contacts: Contact[]; onOpen: (id: string) => void }) {
   const theme = THEMES[useStore((s) => s.theme)];
   const activeGroup = useStore((s) => s.activeGroup);
+  const mePhoto = useStore((s) => s.mePhoto);
+  const setMePhoto = useStore((s) => s.setMePhoto);
+  const showToast = useStore((s) => s.showToast);
+
+  // Let the user put their own face at the center. The photo is copied into the
+  // app's document directory (so it persists) and stored on-device only.
+  const pickFace = async () => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) { showToast('Allow photo access to set your face'); return; }
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true, aspect: [1, 1], quality: 0.85,
+      });
+      if (res.canceled || !res.assets?.[0]) return;
+      const dir = FileSystem.documentDirectory ?? '';
+      const dest = `${dir}me-${Date.now()}.jpg`;
+      await FileSystem.copyAsync({ from: res.assets[0].uri, to: dest });
+      const prev = useStore.getState().mePhoto;
+      setMePhoto(dest);
+      if (prev && prev.startsWith(dir)) FileSystem.deleteAsync(prev, { idempotent: true }).catch(() => {});
+    } catch {
+      showToast("Couldn't set your photo");
+    }
+  };
+  const youTap = Gesture.Tap().maxDistance(14).onEnd(() => runOnJS(pickFace)());
 
   // continuous time driving every contact's revolution (UI thread, no re-render)
   const elapsed = useSharedValue(0);
@@ -128,10 +157,23 @@ export default function OrbitMap({ contacts, onOpen }: { contacts: Contact[]; on
             );
           })}
 
-          <Animated.View style={[styles.you, youStyle]}>
-            <LinearGradient colors={YOU_GRAD} start={{ x: 0.3, y: 0.2 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-            <Text style={styles.youText}>You</Text>
-          </Animated.View>
+          <GestureDetector gesture={youTap}>
+            <Animated.View style={[styles.youWrap, youStyle]}>
+              <View style={styles.you}>
+                {mePhoto ? (
+                  <Image source={{ uri: mePhoto }} style={StyleSheet.absoluteFill} />
+                ) : (
+                  <>
+                    <LinearGradient colors={YOU_GRAD} start={{ x: 0.3, y: 0.2 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+                    <Text style={styles.youText}>You</Text>
+                  </>
+                )}
+              </View>
+              <View style={[styles.youBadge, { borderColor: theme.bg }]}>
+                <Ionicons name="camera" size={11} color="#fff" />
+              </View>
+            </Animated.View>
+          </GestureDetector>
 
           {contacts.map((c) => (
             <Satellite key={c.id} c={c} elapsed={elapsed} theme={theme} onOpen={onOpen}
@@ -164,12 +206,17 @@ const styles = StyleSheet.create({
   nameRow: { flexDirection: 'row', alignItems: 'center', marginTop: 5 },
   gdot: { width: 7, height: 7, borderRadius: 3.5, marginRight: 5 },
   nm: { fontSize: 11.5, fontWeight: '600' },
-  you: {
+  youWrap: {
     position: 'absolute', left: CENTER - 32, top: CENTER - 32, width: 64, height: 64, borderRadius: 32,
-    overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#6C5CE7', alignItems: 'center', justifyContent: 'center',
     shadowColor: '#6C5CE7', shadowOpacity: 0.5, shadowRadius: 18, shadowOffset: { width: 0, height: 10 },
   },
+  you: { width: 64, height: 64, borderRadius: 32, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   youText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  youBadge: {
+    position: 'absolute', right: -2, bottom: -2, width: 22, height: 22, borderRadius: 11,
+    backgroundColor: '#8E7BFF', borderWidth: 2, alignItems: 'center', justifyContent: 'center',
+  },
   zoomctl: { position: 'absolute', right: 12, bottom: 12, gap: 6 },
   zbtn: { width: 36, height: 36, borderRadius: 11, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
 });
