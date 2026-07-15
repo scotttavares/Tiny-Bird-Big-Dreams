@@ -1,9 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing,
+  useSharedValue, useAnimatedStyle, withRepeat, withTiming, withDelay, Easing,
   useFrameCallback, runOnJS, type SharedValue,
 } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
@@ -59,6 +59,59 @@ function Satellite({ c, elapsed, theme, dimmed, onOpen }: {
         </Animated.View>
       </Animated.View>
     </Animated.View>
+  );
+}
+
+// A single heart that pops in near the centre, drifts up and fades away, then
+// removes itself. Its color comes from the reconnect pulse.
+function FloatingHeart({ color, delay, onDone }: { color: string; delay: number; onDone: () => void }) {
+  const t = useSharedValue(0);
+  const dx = useMemo(() => Math.random() * 78 - 39, []);
+  const rot = useMemo(() => Math.random() * 22 - 11, []);
+  const size = useMemo(() => 26 + Math.random() * 14, []);
+  useEffect(() => {
+    t.value = withDelay(delay, withTiming(1, { duration: 1500, easing: Easing.out(Easing.quad) }, (fin) => {
+      if (fin) runOnJS(onDone)();
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const style = useAnimatedStyle(() => {
+    const p = t.value;
+    const opacity = p < 0.12 ? p / 0.12 : 1 - (p - 0.12) / 0.88;
+    const scale = 0.4 + Math.min(p * 4, 1) * 0.75;
+    return { opacity, transform: [{ translateY: -p * 150 }, { translateX: dx * p }, { scale }, { rotate: `${rot}deg` }] };
+  });
+  return (
+    <Animated.View style={[styles.heart, style]} pointerEvents="none">
+      <Ionicons name="heart" size={size} color={color} />
+    </Animated.View>
+  );
+}
+
+// Overlay that watches the store's heartPing and, while the orbit is on screen,
+// releases a little burst of hearts whenever you reconnect with someone.
+function HeartFX() {
+  const ping = useStore((s) => s.heartPing);
+  const [hearts, setHearts] = useState<{ id: number; color: string; delay: number }[]>([]);
+  const seen = useRef(ping?.n ?? 0);
+  useEffect(() => {
+    if (!ping || ping.n <= seen.current) return; // ignore stale pings (e.g. on mount)
+    seen.current = ping.n;
+    const base = ping.n * 10;
+    setHearts((h) => [
+      ...h,
+      { id: base, color: ping.color, delay: 0 },
+      { id: base + 1, color: ping.color, delay: 130 },
+      { id: base + 2, color: ping.color, delay: 260 },
+    ]);
+  }, [ping]);
+  const remove = useCallback((id: number) => setHearts((h) => h.filter((x) => x.id !== id)), []);
+  return (
+    <View style={styles.heartLayer} pointerEvents="none">
+      {hearts.map((h) => (
+        <FloatingHeart key={h.id} color={h.color} delay={h.delay} onDone={() => remove(h.id)} />
+      ))}
+    </View>
   );
 }
 
@@ -182,6 +235,8 @@ export default function OrbitMap({ contacts, onOpen }: { contacts: Contact[]; on
         </Animated.View>
       </GestureDetector>
 
+      <HeartFX />
+
       <View style={styles.zoomctl}>
         <Pressable onPress={() => zoomBy(1.3)} style={[styles.zbtn, { backgroundColor: theme.card, borderColor: theme.border2 }]}>
           <Text style={{ color: theme.text, fontSize: 20, fontWeight: '600' }}>+</Text>
@@ -219,4 +274,6 @@ const styles = StyleSheet.create({
   },
   zoomctl: { position: 'absolute', right: 12, bottom: 12, gap: 6 },
   zbtn: { width: 36, height: 36, borderRadius: 11, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  heartLayer: { ...StyleSheet.absoluteFillObject },
+  heart: { position: 'absolute', top: '44%', left: 0, right: 0, alignItems: 'center' },
 });
