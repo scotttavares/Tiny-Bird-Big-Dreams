@@ -20,8 +20,10 @@ interface State {
   sheet: 'add' | 'action' | 'import' | 'reach' | 'log' | null;
   reachId: string | null;
   logId: string | null;
+  mePhoto: string | null;     // your own photo at the center of the orbit
 
   setScreen: (s: Screen) => void;
+  setMePhoto: (uri: string | null) => void;
   openContact: (id: string) => void;
   openAdd: () => void;
   openActions: () => void;
@@ -99,8 +101,10 @@ export const useStore = create<State>()(
       sheet: null,
       reachId: null,
       logId: null,
+      mePhoto: null,
 
       setScreen: (screen) => set({ screen }),
+      setMePhoto: (uri) => set({ mePhoto: uri }),
       openContact: (id) => set({ currentId: id, screen: 'contact', sheet: null }),
       openAdd: () => set({ sheet: 'add' }),
       openActions: () => set({ sheet: 'action' }),
@@ -261,7 +265,7 @@ export const useStore = create<State>()(
       storage: createJSONStorage(() => fileStorage),
       // Only durable data is written to disk — not ephemeral UI (screen, sheets,
       // toast, filter). Actions are recreated from the initializer on each launch.
-      partialize: (s) => ({ contacts: s.contacts, theme: s.theme, onboarded: s.onboarded }),
+      partialize: (s) => ({ contacts: s.contacts, theme: s.theme, onboarded: s.onboarded, mePhoto: s.mePhoto }),
       onRehydrateStorage: () => () => {
         useStore.setState({ hydrated: true });
       },

@@ -16,6 +16,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSContactsUsageDescription": "Orbit uses your contacts so you can add the people you care about to your orbit. Your contacts stay on your device.",
+        "NSPhotoLibraryUsageDescription": "Orbit lets you set your own photo at the center of your orbit. Your photo stays on your device.",
         "LSApplicationQueriesSchemes": ["sms", "tel", "whatsapp", "tg", "sgnl", "viber"]
       },
       "entitlements": {
