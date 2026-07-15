@@ -12,3 +12,8 @@ node_modules/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local agent skills / tooling (not part of the app or site)
+.agents/
+.claude/skills/
+skills-lock.json
