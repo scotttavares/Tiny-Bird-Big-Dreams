@@ -21,7 +21,7 @@ interface State {
   reachId: string | null;
   logId: string | null;
   mePhoto: string | null;     // your own photo at the center of the orbit
-  heartPing: { n: number; color: string } | null;  // pulses a floating heart on the orbit when you reconnect
+  heartPing: { n: number; color: string; at: number } | null;  // pulses a floating heart on the orbit when you reconnect
 
   setScreen: (s: Screen) => void;
   setMePhoto: (uri: string | null) => void;
@@ -90,7 +90,7 @@ let addCounter = 0;
 // a quiet check-in or a text. Each pulse gets a random, pleasing color.
 const HEART_COLORS = ['#FF5A7A', '#FF7A59', '#F0654E', '#F5A623', '#FF6FB5', '#7C5CFF', '#4CC38A', '#3AA5FF'];
 let heartN = 0;
-const nextHeart = () => ({ n: ++heartN, color: HEART_COLORS[Math.floor(Math.random() * HEART_COLORS.length)] });
+const nextHeart = () => ({ n: ++heartN, color: HEART_COLORS[Math.floor(Math.random() * HEART_COLORS.length)], at: Date.now() });
 
 export const useStore = create<State>()(
   persist(
