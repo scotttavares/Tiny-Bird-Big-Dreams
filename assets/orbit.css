@@ -96,7 +96,7 @@ img { max-width: 100%; display: block; }
   position: sticky; top: 0; z-index: 50;
   display: flex; align-items: center; justify-content: space-between;
   padding: 15px clamp(20px, 5vw, 44px);
-  background: rgba(255, 248, 242, .78);
+  background: rgba(255, 255, 255, .85);   /* white nav on every theme */
   backdrop-filter: saturate(150%) blur(16px);
   -webkit-backdrop-filter: saturate(150%) blur(16px);
   border-bottom: 1px solid var(--line);
