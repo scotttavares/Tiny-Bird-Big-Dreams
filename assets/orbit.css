@@ -103,6 +103,15 @@ img { max-width: 100%; display: block; }
 }
 .brand { display: inline-flex; align-items: center; gap: 11px; text-decoration: none; }
 .brand-mark { width: 32px; height: 32px; flex: none; }
+/* Logo mark follows the active theme: gradient core in the header, solid core
+   in the footer, plus the orbit ring and the orbiting dot. The inline SVG
+   colors stay as a coral fallback if the stylesheet hasn't loaded. */
+.brand-mark .bm-1 { stop-color: var(--coral-lt); }
+.brand-mark .bm-2 { stop-color: var(--coral); }
+.brand-mark .bm-3 { stop-color: var(--gold); }
+.brand-mark .bm-ring { stroke: var(--coral); }
+.brand-mark .bm-core { fill: var(--coral); }
+.brand-mark .bm-dot  { fill: var(--gold); }
 .brand-name { font-family: var(--display); font-weight: 700; font-size: 23px; letter-spacing: -.02em; color: var(--ink); }
 .nav-right { display: flex; align-items: center; gap: 4px; }
 .nav-links { display: flex; align-items: center; gap: 2px; list-style: none; }
