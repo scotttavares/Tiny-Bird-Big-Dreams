@@ -30,14 +30,21 @@ export default function App() {
   const screen = useStore((s) => s.screen);
   const hydrated = useStore((s) => s.hydrated);
 
-  // keep the home-screen widget's snapshot in sync whenever the orbit changes
+  // keep the home-screen widget's snapshot in sync whenever the orbit — or the
+  // active theme — changes, so the widget always matches the color style in use
   useEffect(() => {
-    let prev = useStore.getState().contacts;
-    syncWidget(Object.values(prev), Date.now());
+    const push = () => {
+      const s = useStore.getState();
+      syncWidget(Object.values(s.contacts), Date.now(), THEMES[s.theme]);
+    };
+    push();
+    let prevContacts = useStore.getState().contacts;
+    let prevTheme = useStore.getState().theme;
     return useStore.subscribe((state) => {
-      if (state.contacts !== prev) {
-        prev = state.contacts;
-        syncWidget(Object.values(prev), Date.now());
+      if (state.contacts !== prevContacts || state.theme !== prevTheme) {
+        prevContacts = state.contacts;
+        prevTheme = state.theme;
+        push();
       }
     });
   }, []);
@@ -49,7 +56,7 @@ export default function App() {
       useStore.getState().settleDrift();
       const list = Object.values(useStore.getState().contacts);
       void refreshWeeklyReportIfEnabled(list);
-      syncWidget(list, Date.now());
+      syncWidget(list, Date.now(), THEMES[useStore.getState().theme]);
     };
     refresh();
     const sub = AppState.addEventListener('change', (s) => {

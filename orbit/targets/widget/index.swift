@@ -16,11 +16,28 @@ struct OrbitPerson: Codable, Identifiable {
   var id: String { "\(name)-\(ring)-\(Int(angle))" }
 }
 
+// The app's current theme, so the widget matches the color style in use.
+struct WidgetTheme: Codable {
+  let bg: String       // widget background
+  let text: String     // primary text (light on dark themes, dark on light ones)
+  let accent: String   // logo mark / primary accent
+  let drift: String    // "drifting away" highlight (the amber-equivalent)
+  let you0: String     // "You" core gradient, start
+  let you1: String     // "You" core gradient, end
+
+  // Dark "night sky" — used when a snapshot predates theming, or none is stored.
+  static let fallback = WidgetTheme(
+    bg: "#0A0C16", text: "#EDEFF7", accent: "#7b6ef6",
+    drift: "#E8A24A", you0: "#8E7BFF", you1: "#6C5CE7"
+  )
+}
+
 struct OrbitPayload: Codable {
   let updatedAt: Double
   let driftCount: Int
-  let total: Int?        // optional so older cached snapshots still decode
+  let total: Int?             // optional so older cached snapshots still decode
   let people: [OrbitPerson]
+  let theme: WidgetTheme?     // optional so older cached snapshots still decode
 }
 
 private let samplePayload = OrbitPayload(
@@ -34,7 +51,8 @@ private let samplePayload = OrbitPayload(
     OrbitPerson(name: "Priya", initials: "PR", ring: 2, angle: 118, color: "#36b08f", drift: false),
     OrbitPerson(name: "Marcus", initials: "MA", ring: 4, angle: -102, color: "#f1973f", drift: true),
     OrbitPerson(name: "Nina", initials: "NI", ring: 5, angle: 205, color: "#ef6196", drift: true),
-  ]
+  ],
+  theme: nil
 )
 
 private func loadPayload() -> OrbitPayload? {
@@ -55,7 +73,9 @@ struct OrbitEntry: TimelineEntry {
 
 struct Provider: TimelineProvider {
   func placeholder(in context: Context) -> OrbitEntry {
-    OrbitEntry(date: Date(), payload: samplePayload)
+    // Prefer the real (themed) snapshot even for the placeholder, so adding the
+    // widget shows the user's current color style right away.
+    OrbitEntry(date: Date(), payload: loadPayload() ?? samplePayload)
   }
 
   func getSnapshot(in context: Context, completion: @escaping (OrbitEntry) -> Void) {
@@ -84,12 +104,38 @@ extension Color {
   }
 }
 
-private let youGrad = LinearGradient(
-  colors: [Color(hex: "#8E7BFF"), Color(hex: "#6C5CE7")],
-  startPoint: .topLeading, endPoint: .bottomTrailing
-)
-private let amber = Color(hex: "#E8A24A")
-private let accent = Color(hex: "#7b6ef6")
+// Resolved colors for the active theme. Passed down via the environment so each
+// subview can read it without threading a parameter through every initializer.
+struct Palette {
+  let bg: Color
+  let text: Color
+  let accent: Color
+  let drift: Color
+  let you: LinearGradient
+  // primary text at a given opacity (was `.white.opacity(...)` on the dark-only build)
+  func t(_ o: Double) -> Color { text.opacity(o) }
+
+  init(_ th: WidgetTheme) {
+    bg = Color(hex: th.bg)
+    text = Color(hex: th.text)
+    accent = Color(hex: th.accent)
+    drift = Color(hex: th.drift)
+    you = LinearGradient(
+      colors: [Color(hex: th.you0), Color(hex: th.you1)],
+      startPoint: .topLeading, endPoint: .bottomTrailing
+    )
+  }
+}
+
+private struct PaletteKey: EnvironmentKey {
+  static let defaultValue = Palette(.fallback)
+}
+extension EnvironmentValues {
+  var palette: Palette {
+    get { self[PaletteKey.self] }
+    set { self[PaletteKey.self] = newValue }
+  }
+}
 
 // Short "how far out" label — mirrors the app's ring → time buckets.
 private func ringLabel(_ r: Int) -> String {
@@ -108,11 +154,12 @@ private func totalOf(_ p: OrbitPayload) -> Int { p.total ?? p.people.count }
 // MARK: - Header
 
 struct OrbitMark: View {
+  @Environment(\.palette) private var palette
   var size: CGFloat = 13
   var body: some View {
     ZStack {
-      Circle().stroke(accent.opacity(0.6), lineWidth: size / 8.5).frame(width: size, height: size)
-      Circle().fill(accent).frame(width: size * 0.38, height: size * 0.38).offset(x: size / 2)
+      Circle().stroke(palette.accent.opacity(0.6), lineWidth: size / 8.5).frame(width: size, height: size)
+      Circle().fill(palette.accent).frame(width: size * 0.38, height: size * 0.38).offset(x: size / 2)
     }
   }
 }
@@ -120,6 +167,7 @@ struct OrbitMark: View {
 // MARK: - Orbit drawing (large widget)
 
 struct PersonDot: View {
+  @Environment(\.palette) private var palette
   let person: OrbitPerson
   let size: CGFloat
   var body: some View {
@@ -129,7 +177,7 @@ struct PersonDot: View {
         .font(.system(size: size * 0.4, weight: .bold))
         .foregroundColor(.white)
       if person.drift {
-        Circle().stroke(amber, lineWidth: 2)
+        Circle().stroke(palette.drift, lineWidth: 2)
       }
     }
     .frame(width: size, height: size)
@@ -137,6 +185,7 @@ struct PersonDot: View {
 }
 
 struct OrbitCanvas: View {
+  @Environment(\.palette) private var palette
   let payload: OrbitPayload
   let dotSize: CGFloat
 
@@ -152,13 +201,13 @@ struct OrbitCanvas: View {
         ForEach(1...maxRing, id: \.self) { r in
           let d = 2 * maxR * CGFloat(r) / CGFloat(maxRing)
           Circle()
-            .stroke(Color.white.opacity(r == 1 ? 0.16 : 0.08), lineWidth: 1)
+            .stroke(palette.text.opacity(r == 1 ? 0.16 : 0.08), lineWidth: 1)
             .frame(width: d, height: d)
             .position(center)
         }
 
         Circle()
-          .fill(youGrad)
+          .fill(palette.you)
           .frame(width: dotSize * 1.1, height: dotSize * 1.1)
           .position(center)
 
@@ -177,6 +226,7 @@ struct OrbitCanvas: View {
 // MARK: - Small: numbers + text only
 
 struct SmallStatView: View {
+  @Environment(\.palette) private var palette
   let payload: OrbitPayload
   var total: Int { totalOf(payload) }
 
@@ -184,32 +234,32 @@ struct SmallStatView: View {
     VStack(alignment: .leading, spacing: 0) {
       HStack(spacing: 5) {
         OrbitMark()
-        Text("Orbit").font(.system(size: 12, weight: .bold)).foregroundColor(.white.opacity(0.9))
+        Text("Orbit").font(.system(size: 12, weight: .bold)).foregroundColor(palette.t(0.9))
       }
       Spacer(minLength: 0)
       if total == 0 {
         Text("Add people\nin Orbit")
           .font(.system(size: 15, weight: .semibold))
-          .foregroundColor(.white.opacity(0.55))
+          .foregroundColor(palette.t(0.55))
       } else if payload.driftCount > 0 {
         Text("\(payload.driftCount)")
-          .font(.system(size: 46, weight: .heavy)).foregroundColor(amber)
+          .font(.system(size: 46, weight: .heavy)).foregroundColor(palette.drift)
         Text(payload.driftCount == 1 ? "person" : "people")
-          .font(.system(size: 14, weight: .semibold)).foregroundColor(.white.opacity(0.9))
+          .font(.system(size: 14, weight: .semibold)).foregroundColor(palette.t(0.9))
         Text("drifting away")
-          .font(.system(size: 12.5, weight: .medium)).foregroundColor(.white.opacity(0.5))
+          .font(.system(size: 12.5, weight: .medium)).foregroundColor(palette.t(0.5))
       } else {
         Text("\(total)")
-          .font(.system(size: 46, weight: .heavy)).foregroundColor(.white)
+          .font(.system(size: 46, weight: .heavy)).foregroundColor(palette.text)
         Text(total == 1 ? "person close" : "people close")
-          .font(.system(size: 13.5, weight: .semibold)).foregroundColor(.white.opacity(0.9))
+          .font(.system(size: 13.5, weight: .semibold)).foregroundColor(palette.t(0.9))
         Text("all in reach ✨")
-          .font(.system(size: 12.5, weight: .medium)).foregroundColor(.white.opacity(0.5))
+          .font(.system(size: 12.5, weight: .medium)).foregroundColor(palette.t(0.5))
       }
       Spacer(minLength: 0)
       if total > 0 && payload.driftCount > 0 {
         Text("\(total) in your orbit")
-          .font(.system(size: 11.5, weight: .medium)).foregroundColor(.white.opacity(0.4))
+          .font(.system(size: 11.5, weight: .medium)).foregroundColor(palette.t(0.4))
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -219,6 +269,7 @@ struct SmallStatView: View {
 // MARK: - Medium: the orbit on the left, who's drifting on the right
 
 struct MediumOrbitView: View {
+  @Environment(\.palette) private var palette
   let payload: OrbitPayload
   var total: Int { totalOf(payload) }
   var drifters: [OrbitPerson] { payload.people.filter { $0.drift } }
@@ -233,38 +284,38 @@ struct MediumOrbitView: View {
         VStack(alignment: .leading, spacing: 0) {
           HStack(spacing: 5) {
             OrbitMark()
-            Text("Orbit").font(.system(size: 12, weight: .bold)).foregroundColor(.white.opacity(0.9))
+            Text("Orbit").font(.system(size: 12, weight: .bold)).foregroundColor(palette.t(0.9))
             Spacer()
             if payload.driftCount > 0 {
-              Text("\(payload.driftCount)").font(.system(size: 12, weight: .bold)).foregroundColor(amber)
+              Text("\(payload.driftCount)").font(.system(size: 12, weight: .bold)).foregroundColor(palette.drift)
             }
           }
           Spacer(minLength: 8)
           if total == 0 {
             Text("Add people\nin Orbit")
-              .font(.system(size: 13, weight: .medium)).foregroundColor(.white.opacity(0.55))
+              .font(.system(size: 13, weight: .medium)).foregroundColor(palette.t(0.55))
           } else if drifters.isEmpty {
             Text("Everyone's close\nright now ✨")
-              .font(.system(size: 13, weight: .medium)).foregroundColor(.white.opacity(0.6))
+              .font(.system(size: 13, weight: .medium)).foregroundColor(palette.t(0.6))
           } else {
             Text("DRIFTING AWAY")
-              .font(.system(size: 10.5, weight: .bold)).foregroundColor(.white.opacity(0.4))
+              .font(.system(size: 10.5, weight: .bold)).foregroundColor(palette.t(0.4))
               .padding(.bottom, 6)
             VStack(alignment: .leading, spacing: 7) {
               ForEach(Array(drifters.prefix(3))) { p in
                 HStack(spacing: 8) {
                   Circle().fill(Color(hex: p.color)).frame(width: 8, height: 8)
                   Text(p.name)
-                    .font(.system(size: 13.5, weight: .semibold)).foregroundColor(.white.opacity(0.92))
+                    .font(.system(size: 13.5, weight: .semibold)).foregroundColor(palette.t(0.92))
                     .lineLimit(1)
                   Spacer(minLength: 4)
                   Text(ringLabel(p.ring))
-                    .font(.system(size: 12, weight: .medium)).foregroundColor(.white.opacity(0.5))
+                    .font(.system(size: 12, weight: .medium)).foregroundColor(palette.t(0.5))
                 }
               }
               if drifters.count > 3 {
                 Text("+\(drifters.count - 3) more")
-                  .font(.system(size: 11.5, weight: .medium)).foregroundColor(.white.opacity(0.4))
+                  .font(.system(size: 11.5, weight: .medium)).foregroundColor(palette.t(0.4))
               }
             }
           }
@@ -279,6 +330,7 @@ struct MediumOrbitView: View {
 // MARK: - Large: the orbit, drawn big
 
 struct LargeOrbitView: View {
+  @Environment(\.palette) private var palette
   let payload: OrbitPayload
   var total: Int { totalOf(payload) }
 
@@ -286,16 +338,16 @@ struct LargeOrbitView: View {
     VStack(spacing: 10) {
       HStack(spacing: 6) {
         OrbitMark(size: 16)
-        Text("Orbit").font(.system(size: 15, weight: .bold)).foregroundColor(.white.opacity(0.92))
+        Text("Orbit").font(.system(size: 15, weight: .bold)).foregroundColor(palette.t(0.92))
         Spacer()
         Text(payload.driftCount > 0 ? "\(payload.driftCount) drifting away" : "all close ✨")
           .font(.system(size: 13, weight: .semibold))
-          .foregroundColor(payload.driftCount > 0 ? amber : .white.opacity(0.6))
+          .foregroundColor(payload.driftCount > 0 ? palette.drift : palette.t(0.6))
       }
       if total == 0 {
         Spacer()
         Text("Add people in Orbit")
-          .font(.system(size: 15, weight: .medium)).foregroundColor(.white.opacity(0.5))
+          .font(.system(size: 15, weight: .medium)).foregroundColor(palette.t(0.5))
         Spacer()
       } else {
         OrbitCanvas(payload: payload, dotSize: 34)
@@ -311,6 +363,7 @@ struct OrbitWidgetView: View {
   let entry: OrbitEntry
 
   var body: some View {
+    let palette = Palette(entry.payload.theme ?? .fallback)
     Group {
       switch family {
       case .systemSmall: SmallStatView(payload: entry.payload)
@@ -318,18 +371,19 @@ struct OrbitWidgetView: View {
       default: MediumOrbitView(payload: entry.payload)
       }
     }
-    .widgetBackgroundCompat()
+    .environment(\.palette, palette)
+    .widgetBackgroundCompat(palette.bg)
   }
 }
 
 // Handle the iOS 17 containerBackground requirement without breaking iOS 15/16.
 extension View {
   @ViewBuilder
-  func widgetBackgroundCompat() -> some View {
+  func widgetBackgroundCompat(_ bg: Color) -> some View {
     if #available(iOS 17.0, *) {
-      self.padding(14).containerBackground(for: .widget) { Color(hex: "#0A0C16") }
+      self.padding(14).containerBackground(for: .widget) { bg }
     } else {
-      self.padding(14).background(Color(hex: "#0A0C16"))
+      self.padding(14).background(bg)
     }
   }
 }
