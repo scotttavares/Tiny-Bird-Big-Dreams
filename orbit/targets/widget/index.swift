@@ -64,6 +64,22 @@ private func loadPayload() -> OrbitPayload? {
   return try? JSONDecoder().decode(OrbitPayload.self, from: data)
 }
 
+// Advance every person's angle by `deg`, so successive timeline entries show the
+// orbit turned a little further — the closest a home-screen widget gets to
+// "orbiting" (WidgetKit renders static snapshots; it can't animate frame by frame).
+private func rotate(_ p: OrbitPayload, by deg: Double) -> OrbitPayload {
+  OrbitPayload(
+    updatedAt: p.updatedAt,
+    driftCount: p.driftCount,
+    total: p.total,
+    people: p.people.map {
+      OrbitPerson(name: $0.name, initials: $0.initials, ring: $0.ring,
+                  angle: $0.angle + deg, color: $0.color, drift: $0.drift)
+    },
+    theme: p.theme
+  )
+}
+
 // MARK: - Timeline
 
 struct OrbitEntry: TimelineEntry {
@@ -83,10 +99,22 @@ struct Provider: TimelineProvider {
   }
 
   func getTimeline(in context: Context, completion: @escaping (Timeline<OrbitEntry>) -> Void) {
-    let entry = OrbitEntry(date: Date(), payload: loadPayload() ?? samplePayload)
-    // The app calls reloadAllTimelines() on every change; this is just a fallback.
-    let next = Calendar.current.date(byAdding: .hour, value: 4, to: Date()) ?? Date().addingTimeInterval(4 * 3600)
-    completion(Timeline(entries: [entry], policy: .after(next)))
+    let base = loadPayload() ?? samplePayload
+    // A multi-entry timeline lets the orbit turn a little on each refresh
+    // (WidgetKit animates the step on iOS 17+). We advance everyone's angle
+    // across a handful of entries, then ask to reload. The app also reloads on
+    // any real change, which resets the rotation to the latest data.
+    let now = Date()
+    let steps = 6
+    let stepDegrees = 16.0
+    let stepSeconds: TimeInterval = 10 * 60
+    var entries: [OrbitEntry] = []
+    for i in 0..<steps {
+      entries.append(OrbitEntry(date: now.addingTimeInterval(Double(i) * stepSeconds),
+                                payload: rotate(base, by: Double(i) * stepDegrees)))
+    }
+    let refresh = now.addingTimeInterval(Double(steps) * stepSeconds)
+    completion(Timeline(entries: entries, policy: .after(refresh)))
   }
 }
 
@@ -188,6 +216,7 @@ struct OrbitCanvas: View {
   @Environment(\.palette) private var palette
   let payload: OrbitPayload
   let dotSize: CGFloat
+  var trails: Bool = false   // draw comet tails so the orbit reads as in-motion
 
   var body: some View {
     GeometryReader { geo in
@@ -214,6 +243,20 @@ struct OrbitCanvas: View {
         ForEach(payload.people) { p in
           let rr = maxR * CGFloat(p.ring) / CGFloat(maxRing)
           let rad = p.angle * Double.pi / 180
+          // Comet tail: a few fading, shrinking ghosts just behind the person.
+          // Widgets can't run a continuous animation, so this implies the
+          // orbital motion; the timeline also rotates everyone slowly over time.
+          if trails {
+            ForEach(1...3, id: \.self) { k in
+              let ga = (p.angle - Double(k) * 13) * Double.pi / 180
+              let gs = dotSize * (1 - CGFloat(k) * 0.14)
+              Circle()
+                .fill(Color(hex: p.color).opacity(0.30 - Double(k) * 0.08))
+                .frame(width: gs, height: gs)
+                .position(x: center.x + CGFloat(cos(ga)) * rr,
+                          y: center.y + CGFloat(sin(ga)) * rr)
+            }
+          }
           PersonDot(person: p, size: dotSize)
             .position(x: center.x + CGFloat(cos(rad)) * rr,
                       y: center.y + CGFloat(sin(rad)) * rr)
@@ -350,7 +393,7 @@ struct LargeOrbitView: View {
           .font(.system(size: 15, weight: .medium)).foregroundColor(palette.t(0.5))
         Spacer()
       } else {
-        OrbitCanvas(payload: payload, dotSize: 34)
+        OrbitCanvas(payload: payload, dotSize: 34, trails: true)
       }
     }
   }
