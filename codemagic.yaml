@@ -147,3 +147,97 @@ workflows:
         #   submit_to_testflight: true
         #   beta_groups:
         #     - Your External Group
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # RELEASE: build + submit to App Store review in one run.
+  #
+  # Run this MANUALLY from the Codemagic UI when you want to ship a version to
+  # the store (Start new build → Workflow: ios-release). It builds exactly like
+  # ios-testflight, then submits the build to App Review automatically. It has
+  # NO auto-trigger on purpose, so ordinary pushes to claude/* only ever go to
+  # TestFlight — a release is always a deliberate click here.
+  #
+  # Before running: bump `version` in orbit/app.json (e.g. 1.0.1) for anything
+  # after the first release, and make sure the App Store listing (metadata +
+  # screenshots) is filled in — this submits the binary; the listing still lives
+  # in App Store Connect.
+  # ─────────────────────────────────────────────────────────────────────────
+  ios-release:
+    name: Orbit iOS → App Store (submit for review)
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    working_directory: orbit
+    integrations:
+      app_store_connect: Orbit ASC API key
+    environment:
+      groups:
+        - orbit_signing
+      vars:
+        BUNDLE_ID: "com.tinybirdbigdreams.orbit"
+        XCODE_WORKSPACE: "ios/Orbit.xcworkspace"
+        XCODE_SCHEME: "Orbit"
+        APP_STORE_APPLE_ID: 6785966852
+      node: 20
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Install JS dependencies
+        script: |
+          npm ci
+          # Assert the RN iOS-26 TurboModule crash patch actually applied (see
+          # the ios-testflight workflow for the full explanation).
+          RN_TM="node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm"
+          if ! grep -q "react-native#54859" "$RN_TM"; then
+            echo "❌ RN TurboModule iOS-26 patch NOT applied (patch-package postinstall did not run)."
+            exit 1
+          fi
+          echo "✅ RN TurboModule iOS-26 crash patch is present."
+      - name: Generate native iOS project (Expo prebuild)
+        script: npx expo prebuild --platform ios --clean --no-install
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios
+          pod install
+      - name: Increment build number
+        script: |
+          cd ios
+          LATEST_BUILD=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo "0")
+          agvtool new-version -all $(($LATEST_BUILD + 1))
+      - name: Set up code signing (persistent cert from CERTIFICATE_PRIVATE_KEY)
+        script: |
+          set -e
+          if [ -z "$CERTIFICATE_PRIVATE_KEY" ]; then
+            echo "❌ CERTIFICATE_PRIVATE_KEY is not set."
+            exit 1
+          fi
+          keychain initialize
+          # Sign the app and its widget extension (same as ios-testflight).
+          for id in "$BUNDLE_ID" "$BUNDLE_ID.widget"; do
+            app-store-connect fetch-signing-files "$id" \
+              --type IOS_APP_STORE \
+              --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
+              --create
+          done
+          keychain add-certificates
+          xcode-project use-profiles
+      - name: Build IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - build/ios/ipa/*.app.dSYM
+      - build/ios/**/*.dSYM
+      - build/ios/**/*.dSYM.zip
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Upload the build AND submit it to App Store review automatically.
+        submit_to_app_store: true
+        # AFTER_APPROVAL = release to the store the moment Apple approves (fully
+        # hands-off). Change to MANUAL to hold it for a manual "Release" click in
+        # App Store Connect, or SCHEDULED (with earliest_release_date) for a timed
+        # launch.
+        release_type: AFTER_APPROVAL
