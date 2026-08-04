@@ -47,7 +47,7 @@ export default function Onboarding() {
         </View>
 
         <Pressable style={[styles.cta, { backgroundColor: theme.accent2 }]} onPress={start}>
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Import from Contacts</Text>
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Continue</Text>
         </Pressable>
         <Pressable style={styles.skip} onPress={startManual} hitSlop={10}>
           <Text style={{ color: theme.dim, fontSize: 13.5, fontWeight: '600' }}>or add someone by hand</Text>
