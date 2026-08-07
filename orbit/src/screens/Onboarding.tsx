@@ -16,12 +16,11 @@ export default function Onboarding() {
   const theme = THEMES[useStore((s) => s.theme)];
   const onboarded = useStore((s) => s.onboarded);
   const dismiss = useStore((s) => s.dismissOnboarding);
-  const openImport = useStore((s) => s.openImport);
-  const openAdd = useStore((s) => s.openAdd);
-  // Start by pulling real people from Contacts — the fastest way to fill an
-  // orbit. Adding someone by hand stays one tap away for anyone who prefers it.
-  const start = () => { dismiss(); openImport(); };
-  const startManual = () => { dismiss(); openAdd(); };
+  // Pure welcome screen — deliberately NOT wired to any permission request
+  // (App Review 5.1.1(iv): a custom message must never precede a system
+  // permission prompt). "Get Started" just enters the app; the empty-orbit
+  // card offers Import Contacts / Add manually, and the Contacts prompt only
+  // appears when the user explicitly taps Import there (or in Settings).
   if (onboarded) return null;
 
   return (
@@ -46,14 +45,8 @@ export default function Onboarding() {
           ))}
         </View>
 
-        <Pressable style={[styles.cta, { backgroundColor: theme.accent2 }]} onPress={start}>
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Continue</Text>
-        </Pressable>
-        <Pressable style={styles.skip} onPress={startManual} hitSlop={10}>
-          <Text style={{ color: theme.dim, fontSize: 13.5, fontWeight: '600' }}>or add someone by hand</Text>
-        </Pressable>
-        <Pressable style={styles.skipSm} onPress={dismiss} hitSlop={10}>
-          <Text style={{ color: theme.faint, fontSize: 12.5, fontWeight: '600' }}>Skip for now</Text>
+        <Pressable style={[styles.cta, { backgroundColor: theme.accent2 }]} onPress={dismiss}>
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Get Started</Text>
         </Pressable>
       </View>
     </Animated.View>
@@ -67,6 +60,4 @@ const styles = StyleSheet.create({
     shadowColor: '#6C5CE7', shadowOpacity: 0.5, shadowRadius: 24, shadowOffset: { width: 0, height: 14 },
   },
   cta: { width: '100%', borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
-  skip: { marginTop: 14, paddingVertical: 6 },
-  skipSm: { marginTop: 4, paddingVertical: 4 },
 });
