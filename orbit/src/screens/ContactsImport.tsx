@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, TextInput, FlatList, Image, ActivityIndicator, Linking, StyleSheet } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../store';
@@ -14,6 +15,10 @@ type Phase = 'loading' | 'denied' | 'ready';
 // let you multi-select people to drop into your orbit. Contacts stay on-device.
 export default function ContactsImport() {
   const theme = THEMES[useStore((s) => s.theme)];
+  // This screen is an absoluteFill overlay: absolute positioning ignores the
+  // parent SafeAreaView's padding, so apply the insets ourselves or the
+  // Cancel / title / Add header lands under the status bar & Dynamic Island.
+  const insets = useSafeAreaInsets();
   const open = useStore((s) => s.sheet === 'import');
   const close = useStore((s) => s.closeSheet);
   const importContacts = useStore((s) => s.importContacts);
@@ -115,7 +120,7 @@ export default function ContactsImport() {
     <Animated.View
       entering={FadeIn.duration(200)}
       exiting={FadeOut.duration(180)}
-      style={[StyleSheet.absoluteFill, { backgroundColor: theme.bg }]}
+      style={[StyleSheet.absoluteFill, { backgroundColor: theme.bg, paddingTop: insets.top, paddingBottom: insets.bottom }]}
     >
       <View style={styles.head}>
         <Pressable onPress={close} hitSlop={10}>
