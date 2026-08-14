@@ -92,6 +92,11 @@ const DURATIONS = { breathe: [1, 3, 5], sleep: [15, 30, 60] };
 const DEFAULT_PATTERN = { breathe: "calm", sleep: "drift" };
 const DEFAULT_DUR = { breathe: 3, sleep: 15 };
 const SOUND = [{ id: "bowls", name: "Bowls" }, { id: "handpan", name: "Handpan" }, { id: "binaural", name: "Binaural" }];
+const HIST_KEY = "lull.sessions.v1";
+const DAY_MS = 86400000;
+function loadHist() { try { const r = JSON.parse(localStorage.getItem(HIST_KEY) || "[]"); return Array.isArray(r) ? r : []; } catch (e) { return []; } }
+function saveHist(list) { try { localStorage.setItem(HIST_KEY, JSON.stringify(list.slice(-300))); } catch (e) {} }
+function minutesSince(list, sinceMs) { return list.reduce((a, s) => a + (s && s.min && (!sinceMs || s.t >= sinceMs) ? s.min : 0), 0); }
 
 function makeIR(ctx, seconds, decay) {
   const len = Math.floor(ctx.sampleRate * seconds); const buf = ctx.createBuffer(2, len, ctx.sampleRate);
@@ -192,6 +197,8 @@ export default function Lull() {
   const [soundOn, setSoundOn] = useState(true);
   const [scapeId, setScapeId] = useState("bowls");
   const [light, setLight] = useState(false);
+  const [sessions, setSessions] = useState(() => (typeof window !== "undefined" ? loadHist() : []));
+  const [showHistory, setShowHistory] = useState(false);
 
   const [phaseLabel, setPhaseLabel] = useState("Breathe in");
   const [tone, setTone] = useState("cool");
@@ -203,11 +210,12 @@ export default function Lull() {
 
   const phasesRef = useRef([]); const idxRef = useRef(0); const elapsedRef = useRef(0); const targetRef = useRef(0);
   const pausedRef = useRef(false); const phaseTimeout = useRef(null); const tickRef = useRef(null);
-  const soundRef = useRef(soundOn); const modeRef = useRef(mode);
+  const soundRef = useRef(soundOn); const modeRef = useRef(mode); const patternIdRef = useRef(patternId);
   const audioRef = useRef(null); const nodesRef = useRef(null); const scapeRef = useRef(null); const brownRef = useRef(null); const whiteRef = useRef(null); const scapeIdRef = useRef("bowls");
 
   useEffect(() => { soundRef.current = soundOn; }, [soundOn]);
   useEffect(() => { modeRef.current = mode; }, [mode]);
+  useEffect(() => { patternIdRef.current = patternId; }, [patternId]);
   useEffect(() => { scapeIdRef.current = scapeId; }, [scapeId]);
   useEffect(() => { try { if (window.matchMedia) setLight(window.matchMedia("(prefers-color-scheme: light)").matches); } catch (e) {} }, []);
   useEffect(() => { try { const on = light && mode !== "sleep"; document.documentElement.style.colorScheme = on ? "light" : "dark"; const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", on ? "#faf4ee" : "#0a0613"); } catch (e) {} }, [light, mode]);
@@ -282,7 +290,7 @@ export default function Lull() {
   const pauseSession = () => { pausedRef.current = true; setPaused(true); if (phaseTimeout.current) clearTimeout(phaseTimeout.current); setPhaseLabel("Paused"); setOrb({ scale: prefersReduced ? 0.95 : 0.92, dur: 0.8, ease: "ease" }); softenAmbience(); };
   const resumeSession = () => { pausedRef.current = false; setPaused(false); ensureAudio(); if (soundRef.current && !scapeRef.current) buildAmbience(); runPhase(); };
   const goHome = () => { clearTimers(); pausedRef.current = false; setPaused(false); teardownAmbience(0.9); setScreen("home"); setOrb({ scale: LO, dur: 1, ease: "ease" }); setRemaining(durationMin * 60); setProgress(0); };
-  function finishSession() { clearTimers(); pausedRef.current = false; setPaused(false); if (modeRef.current === "breathe") bowl("done"); teardownAmbience(modeRef.current === "sleep" ? 3.4 : 1.6); setScreen("done"); }
+  function finishSession() { clearTimers(); pausedRef.current = false; setPaused(false); if (modeRef.current === "breathe") bowl("done"); teardownAmbience(modeRef.current === "sleep" ? 3.4 : 1.6); try { const entry = { t: Date.now(), mode: modeRef.current, pattern: patternIdRef.current, min: Math.max(1, Math.round(targetRef.current / 60)) }; setSessions((prev) => { const next = [...prev, entry]; saveHist(next); return next; }); } catch (e) {} setScreen("done"); }
   const switchMode = (m) => { if (m === mode) return; clearTimers(); teardownAmbience(0.4); setMode(m); setScreen("home"); setPatternId(DEFAULT_PATTERN[m]); setDurationMin(DEFAULT_DUR[m]); setRemaining(DEFAULT_DUR[m] * 60); setProgress(0); setTone("cool"); setOrb({ scale: LO, dur: 1, ease: "ease" }); };
   const toggleSound = () => {
     ensureAudio(); const next = !soundOn; setSoundOn(next); soundRef.current = next;
@@ -511,6 +519,7 @@ export default function Lull() {
             </div>
             {scapeId === "binaural" && (<p style={{ fontSize: 12, opacity: 0.55, textAlign: "center", margin: "2px 0 0", letterSpacing: 0.3 }}>Best with headphones</p>)}
             <button className="lull-btn lull-cta" onClick={startSession} style={{ ...glassBtn, marginTop: 4 }}>Begin</button>
+            {sessions.length > 0 && (<button className="lull-btn" onClick={() => setShowHistory(true)} style={{ marginTop: 2, padding: "7px 0", fontSize: 12.5, letterSpacing: 0.4, color: inkA(0.5), alignSelf: "center" }}>{(() => { const w = minutesSince(sessions, Date.now() - 7 * DAY_MS); return w > 0 ? `You’ve breathed ${w} min this week` : "Your breaths"; })()}</button>)}
           </div>
         )}
 
@@ -526,6 +535,7 @@ export default function Lull() {
             <div style={{ width: 96, height: 96, borderRadius: "50%", marginBottom: 14, backgroundImage: th.warmGrad, boxShadow: `0 0 60px ${th.ringTo}66` }} />
             <div style={{ fontSize: 28, fontWeight: 300, letterSpacing: 0.5 }}>That's it.</div>
             <p style={{ fontSize: 14, opacity: 0.6, margin: 0, maxWidth: 260 }}>You gave yourself {durationMin} {durationMin === 1 ? "minute" : "minutes"}. Carry it with you.</p>
+            {(() => { const w = minutesSince(sessions, Date.now() - 7 * DAY_MS); return w > 0 ? (<p style={{ fontSize: 12.5, opacity: 0.42, margin: "6px 0 0", letterSpacing: 0.3 }}>{`${w} minutes to breathe this week.`}</p>) : null; })()}
             <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", maxWidth: 240, marginTop: 26 }}>
               <button className="lull-btn lull-cta" onClick={startSession} style={glassBtn}>Again</button>
               <button className="lull-btn" onClick={goHome} style={textBtn}>Done</button>
@@ -533,6 +543,35 @@ export default function Lull() {
           </div>
         )}
       </div>
+
+      {showHistory && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 60, background: night ? th.rootNight : (lightUI ? LIGHT_ROOT : th.rootDay), color: ink, display: "flex", flexDirection: "column", padding: "max(30px, calc(env(safe-area-inset-top) + 12px)) 26px calc(34px + env(safe-area-inset-bottom))", overflowY: "auto" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
+            <span style={{ fontSize: 12, letterSpacing: 5, textTransform: "uppercase", fontWeight: 500, opacity: 0.6 }}>Your breaths</span>
+            <button className="lull-btn" aria-label="Close" onClick={() => setShowHistory(false)} style={{ padding: "6px 4px", opacity: 0.75, fontSize: 15 }}>Done</button>
+          </div>
+          {(() => {
+            const week = minutesSince(sessions, Date.now() - 7 * DAY_MS);
+            const all = minutesSince(sessions);
+            const recent = sessions.slice(-9).reverse();
+            return (<>
+              <div style={{ marginTop: 4 }}>
+                <div style={{ fontSize: 58, fontWeight: 200, letterSpacing: -1, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{week}<span style={{ fontSize: 20, fontWeight: 300, opacity: 0.55, marginLeft: 8 }}>min</span></div>
+                <div style={{ fontSize: 14, opacity: 0.55, marginTop: 8, maxWidth: 300 }}>{week > 0 ? "to breathe, this week" : "A quiet week — your breaths are here when you need them."}</div>
+              </div>
+              <div style={{ fontSize: 13, opacity: 0.42, marginTop: 18, letterSpacing: 0.2 }}>{all} minutes · {sessions.length} {sessions.length === 1 ? "breath" : "breaths"}, all-time</div>
+              <div style={{ marginTop: 24, display: "flex", flexDirection: "column" }}>
+                {recent.map((s, i) => { const d = new Date(s.t); const day = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }); const pn = (PATTERNS[s.mode] && PATTERNS[s.mode][s.pattern] && PATTERNS[s.mode][s.pattern].name) || s.pattern; return (
+                  <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 2px", borderBottom: "1px solid " + wa(0.08) }}>
+                    <span style={{ fontSize: 14 }}>{day}</span>
+                    <span style={{ fontSize: 13, opacity: 0.55 }}>{s.mode === "sleep" ? "Sleep" : pn} · {s.min} min</span>
+                  </div>); })}
+              </div>
+              <div style={{ marginTop: "auto", paddingTop: 30, fontSize: 12.5, opacity: 0.4, textAlign: "center", letterSpacing: 0.3 }}>No streaks. No goals. Just the breaths you’ve taken.</div>
+            </>);
+          })()}
+        </div>
+      )}
 
       {sleepDone && (
         <div onClick={goHome} role="button" aria-label="Exit" style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "#050302", opacity: sleepVeil, transition: "opacity 3.4s ease", cursor: "pointer" }}>
