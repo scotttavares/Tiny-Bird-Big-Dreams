@@ -29,6 +29,10 @@ export default function ContactsImport() {
   const [rows, setRows] = useState<Row[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState('');
+  // iOS 18+ lets people grant access to only a hand-picked subset of contacts.
+  // Without surfacing that, the list silently shows just those few and looks broken.
+  const [limited, setLimited] = useState(false);
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
     if (!open) return;
@@ -44,6 +48,7 @@ export default function ContactsImport() {
           setPhase('denied');
           return;
         }
+        setLimited(perm.accessPrivileges === 'limited');
         const { data } = await Contacts.getContactsAsync({
           fields: [Contacts.Fields.Name, Contacts.Fields.Image, Contacts.Fields.PhoneNumbers],
           sort: Contacts.SortTypes.FirstName,
@@ -68,7 +73,24 @@ export default function ContactsImport() {
     return () => {
       alive = false;
     };
-  }, [open]);
+  }, [open, reload]);
+
+  // Let people widen a "limited" grant without leaving the screen. iOS 18's
+  // picker is preferred when the installed expo-contacts exposes it; otherwise
+  // fall back to the Settings deep link.
+  const grantMore = async () => {
+    const picker = (Contacts as unknown as { presentAccessPickerAsync?: () => Promise<unknown> }).presentAccessPickerAsync;
+    if (typeof picker === 'function') {
+      try {
+        await picker();
+        setReload((n) => n + 1); // re-read the address book with the new selection
+        return;
+      } catch {
+        /* fall through to Settings */
+      }
+    }
+    Linking.openSettings();
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -151,6 +173,15 @@ export default function ContactsImport() {
         </View>
       ) : (
         <>
+          {limited ? (
+            <Pressable onPress={grantMore} style={[styles.limitedBar, { backgroundColor: theme.accentSoft, borderColor: theme.accent }]}>
+              <Ionicons name="information-circle-outline" size={17} color={theme.accent} />
+              <Text style={{ flex: 1, color: theme.text, fontSize: 12.5, lineHeight: 17 }}>
+                You’ve shared only some contacts with Orbit.
+              </Text>
+              <Text style={{ color: theme.accent, fontSize: 12.5, fontWeight: '700' }}>Choose more</Text>
+            </Pressable>
+          ) : null}
           <View style={{ paddingHorizontal: 18, paddingBottom: 8 }}>
             <TextInput
               value={query}
@@ -206,6 +237,7 @@ export default function ContactsImport() {
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingTop: 12, paddingBottom: 12 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
+  limitedBar: { flexDirection: 'row', alignItems: 'center', gap: 9, marginHorizontal: 18, marginBottom: 10, paddingVertical: 11, paddingHorizontal: 13, borderRadius: 12, borderWidth: 1 },
   settingsBtn: { marginTop: 18, borderRadius: 13, paddingVertical: 12, paddingHorizontal: 22 },
   search: { borderWidth: 1, borderRadius: 12, paddingVertical: 11, paddingHorizontal: 14, fontSize: 15 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 1 },

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Sheet from '../ui/Sheet';
 import Avatar from '../ui/Avatar';
 import { Field, TextField, Seg } from '../ui/form';
@@ -17,6 +18,7 @@ export default function AddSheet() {
   const add = useStore((s) => s.addContact);
   const contacts = useStore((s) => s.contacts);
   const showToast = useStore((s) => s.showToast);
+  const openImport = useStore((s) => s.openImport);
 
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
@@ -53,7 +55,16 @@ export default function AddSheet() {
   return (
     <Sheet visible={open} onClose={close}>
       <Text style={[styles.h3, { color: theme.text }]}>Add to your orbit</Text>
-      <Text style={{ color: theme.dim, fontSize: 13, marginBottom: 16 }}>Pick who matters — Orbit keeps the gravity gentle.</Text>
+      <Text style={{ color: theme.dim, fontSize: 13, marginBottom: 14 }}>Pick who matters — Orbit keeps the gravity gentle.</Text>
+      {/* The importer used to be reachable only from the empty-orbit card, which
+          disappears once you have someone — so after the first person there was
+          no way back to Contacts. Keep it one tap away from here too. */}
+      <Pressable onPress={openImport} style={[styles.importBtn, { backgroundColor: theme.accentSoft, borderColor: theme.accent }]}>
+        <Ionicons name="people" size={17} color={theme.accent} />
+        <Text style={{ flex: 1, color: theme.accent, fontWeight: '700', fontSize: 14 }}>Import from Contacts</Text>
+        <Ionicons name="chevron-forward" size={15} color={theme.accent} />
+      </Pressable>
+      <Text style={{ color: theme.faint, fontSize: 12, marginBottom: 14, textAlign: 'center' }}>or add someone by hand below</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 13, marginBottom: 16 }}>
         <Avatar grad={'g-' + (name.length % 5)} initials={name ? initialsOf(name) : '?'} size={52} cutout={theme.bg2} />
         <View>
@@ -76,4 +87,5 @@ export default function AddSheet() {
 const styles = StyleSheet.create({
   h3: { fontSize: 19, fontWeight: '800', marginBottom: 2 },
   cta: { marginTop: 6, borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
+  importBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 14, paddingVertical: 13, paddingHorizontal: 14, marginBottom: 10 },
 });
