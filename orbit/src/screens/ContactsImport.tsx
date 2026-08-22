@@ -113,6 +113,10 @@ export default function ContactsImport() {
     const p = phoneKey(r.phone);
     return (!!p && existing.phones.has(p)) || existing.names.has(nameKey(r.name));
   };
+  // Everyone the app can see is already in the orbit. Without a way out this
+  // reads as "the importer is broken" — it's the dead end most people hit when
+  // iOS only shared a couple of contacts.
+  const nothingToAdd = phase === 'ready' && !query && rows.length > 0 && rows.every(isAdded);
 
   if (!open) return null;
 
@@ -171,7 +175,29 @@ export default function ContactsImport() {
             <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Open Settings</Text>
           </Pressable>
         </View>
-      ) : (
+      ) : nothingToAdd ? (
+          <View style={styles.center}>
+            <Ionicons name="people-outline" size={34} color={theme.dim} />
+            <Text style={{ color: theme.text, fontWeight: '700', fontSize: 15, marginTop: 12, textAlign: 'center' }}>
+              Everyone you’ve shared is already here
+            </Text>
+            <Text style={{ color: theme.dim, fontSize: 13, textAlign: 'center', marginTop: 6, lineHeight: 19, paddingHorizontal: 24 }}>
+              {limited
+                ? 'Orbit can only see the contacts you picked. Share more to add them.'
+                : 'All of your contacts are already in your orbit. You can still add someone by hand.'}
+            </Text>
+            <Pressable onPress={limited ? grantMore : close} style={[styles.settingsBtn, { backgroundColor: theme.accent2 }]}>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+                {limited ? 'Choose more contacts' : 'Done'}
+              </Text>
+            </Pressable>
+            {limited ? (
+              <Pressable onPress={() => Linking.openSettings()} style={{ marginTop: 14 }} hitSlop={8}>
+                <Text style={{ color: theme.faint, fontSize: 12.5, fontWeight: '600' }}>or allow full access in Settings</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : (
         <>
           {limited ? (
             <Pressable onPress={grantMore} style={[styles.limitedBar, { backgroundColor: theme.accentSoft, borderColor: theme.accent }]}>
