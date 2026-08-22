@@ -179,23 +179,23 @@ export default function ContactsImport() {
           <View style={styles.center}>
             <Ionicons name="people-outline" size={34} color={theme.dim} />
             <Text style={{ color: theme.text, fontWeight: '700', fontSize: 15, marginTop: 12, textAlign: 'center' }}>
-              Everyone you’ve shared is already here
+              No one left to import
             </Text>
-            <Text style={{ color: theme.dim, fontSize: 13, textAlign: 'center', marginTop: 6, lineHeight: 19, paddingHorizontal: 24 }}>
-              {limited
-                ? 'Orbit can only see the contacts you picked. Share more to add them.'
-                : 'All of your contacts are already in your orbit. You can still add someone by hand.'}
+            {/* Never gate the way out on `limited`: iOS doesn't always report
+                accessPrivileges, so a restricted grant can look like full access
+                and strand people here. Always offer to widen the selection. */}
+            <Text style={{ color: theme.dim, fontSize: 13, textAlign: 'center', marginTop: 6, lineHeight: 19, paddingHorizontal: 20 }}>
+              Orbit can only see the contacts iOS has shared with it — {rows.length === 1 ? 'just 1 right now' : `${rows.length} right now`}, already in your orbit. If someone’s missing, share more below.
             </Text>
-            <Pressable onPress={limited ? grantMore : close} style={[styles.settingsBtn, { backgroundColor: theme.accent2 }]}>
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
-                {limited ? 'Choose more contacts' : 'Done'}
-              </Text>
+            <Pressable onPress={grantMore} style={[styles.settingsBtn, { backgroundColor: theme.accent2 }]}>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Choose more contacts</Text>
             </Pressable>
-            {limited ? (
-              <Pressable onPress={() => Linking.openSettings()} style={{ marginTop: 14 }} hitSlop={8}>
-                <Text style={{ color: theme.faint, fontSize: 12.5, fontWeight: '600' }}>or allow full access in Settings</Text>
-              </Pressable>
-            ) : null}
+            <Pressable onPress={() => Linking.openSettings()} style={{ marginTop: 14 }} hitSlop={8}>
+              <Text style={{ color: theme.accent, fontSize: 12.5, fontWeight: '700' }}>Allow full access in Settings</Text>
+            </Pressable>
+            <Pressable onPress={close} style={{ marginTop: 16 }} hitSlop={8}>
+              <Text style={{ color: theme.faint, fontSize: 12.5, fontWeight: '600' }}>Done</Text>
+            </Pressable>
           </View>
         ) : (
         <>
@@ -253,6 +253,13 @@ export default function ContactsImport() {
               );
             }}
             ListEmptyComponent={<Text style={{ color: theme.dim, textAlign: 'center', marginTop: 30 }}>No contacts found.</Text>}
+            ListFooterComponent={
+              // Always reachable, even when the list looks healthy — iOS may be
+              // sharing only a subset without the app being told.
+              <Pressable onPress={grantMore} style={{ paddingVertical: 18, alignItems: 'center' }} hitSlop={8}>
+                <Text style={{ color: theme.accent, fontSize: 13, fontWeight: '700' }}>Missing someone? Choose more contacts</Text>
+              </Pressable>
+            }
           />
         </>
       )}
