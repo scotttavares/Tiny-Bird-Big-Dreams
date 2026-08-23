@@ -97,6 +97,11 @@ const DAY_MS = 86400000;
 function loadHist() { try { const r = JSON.parse(localStorage.getItem(HIST_KEY) || "[]"); return Array.isArray(r) ? r : []; } catch (e) { return []; } }
 function saveHist(list) { try { localStorage.setItem(HIST_KEY, JSON.stringify(list.slice(-300))); } catch (e) {} }
 function minutesSince(list, sinceMs) { return list.reduce((a, s) => a + (s && s.min && (!sinceMs || s.t >= sinceMs) ? s.min : 0), 0); }
+const CUSTOM_KEY = "lull.custom.v1";
+function loadCustom() { try { const r = JSON.parse(localStorage.getItem(CUSTOM_KEY) || "null"); return r && typeof r === "object" ? r : null; } catch (e) { return null; } }
+function saveCustom(c) { try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(c)); } catch (e) {} }
+function customRatio(c) { return [c.inhale, c.hold, c.exhale, c.hold2].filter((n) => n > 0).join(" · "); }
+function customPhases(c, HI, LO, night) { const out = [{ key: "inhale", label: "Breathe in", dur: c.inhale, scale: HI, tone: "cool" }]; if (c.hold > 0) out.push({ key: "hold", label: "Hold", dur: c.hold, scale: HI, tone: "cool" }); out.push({ key: "exhale", label: night ? "Let go" : "Breathe out", dur: c.exhale, scale: LO, tone: "warm" }); if (c.hold2 > 0) out.push({ key: "hold", label: "Hold", dur: c.hold2, scale: LO, tone: "warm" }); return out; }
 
 function makeIR(ctx, seconds, decay) {
   const len = Math.floor(ctx.sampleRate * seconds); const buf = ctx.createBuffer(2, len, ctx.sampleRate);
@@ -176,18 +181,29 @@ function createSoundscape(id, ctx, master, reverb, buffers, mode) {
 export default function Lull() {
   const HI = prefersReduced ? 1.06 : 1.18;
   const LO = prefersReduced ? 0.92 : 0.72;
+  const [customPat, setCustomPat] = useState(() => (typeof window !== "undefined" ? loadCustom() : null));
+  const [showCustom, setShowCustom] = useState(false);
+  const [draft, setDraft] = useState({ inhale: 4, hold: 7, exhale: 8, hold2: 0 });
 
-  const PATTERNS = useMemo(() => ({
-    breathe: {
-      calm: { name: "Calm", ratio: "4 · 7 · 8", phases: [{ key: "inhale", label: "Breathe in", dur: 4, scale: HI, tone: "cool" }, { key: "hold", label: "Hold", dur: 7, scale: HI, tone: "cool" }, { key: "exhale", label: "Breathe out", dur: 8, scale: LO, tone: "warm" }] },
-      steady: { name: "Steady", ratio: "4 · 4 · 4 · 4", phases: [{ key: "inhale", label: "Breathe in", dur: 4, scale: HI, tone: "cool" }, { key: "hold", label: "Hold", dur: 4, scale: HI, tone: "cool" }, { key: "exhale", label: "Breathe out", dur: 4, scale: LO, tone: "warm" }, { key: "hold", label: "Hold", dur: 4, scale: LO, tone: "warm" }] },
-      ease: { name: "Ease", ratio: "4 · 6", phases: [{ key: "inhale", label: "Breathe in", dur: 4, scale: HI, tone: "cool" }, { key: "exhale", label: "Breathe out", dur: 6, scale: LO, tone: "warm" }] },
-    },
-    sleep: {
-      drift: { name: "Drift", ratio: "4 · 8", phases: [{ key: "inhale", label: "Breathe in", dur: 4, scale: HI, tone: "cool" }, { key: "exhale", label: "Let go", dur: 8, scale: LO, tone: "warm" }] },
-      calm: { name: "Calm", ratio: "4 · 7 · 8", phases: [{ key: "inhale", label: "Breathe in", dur: 4, scale: HI, tone: "cool" }, { key: "hold", label: "Hold", dur: 7, scale: HI, tone: "cool" }, { key: "exhale", label: "Let go", dur: 8, scale: LO, tone: "warm" }] },
-    },
-  }), [HI, LO]);
+  const PATTERNS = useMemo(() => {
+    const P = {
+      breathe: {
+        calm: { name: "Calm", ratio: "4 · 7 · 8", phases: [{ key: "inhale", label: "Breathe in", dur: 4, scale: HI, tone: "cool" }, { key: "hold", label: "Hold", dur: 7, scale: HI, tone: "cool" }, { key: "exhale", label: "Breathe out", dur: 8, scale: LO, tone: "warm" }] },
+        steady: { name: "Steady", ratio: "4 · 4 · 4 · 4", phases: [{ key: "inhale", label: "Breathe in", dur: 4, scale: HI, tone: "cool" }, { key: "hold", label: "Hold", dur: 4, scale: HI, tone: "cool" }, { key: "exhale", label: "Breathe out", dur: 4, scale: LO, tone: "warm" }, { key: "hold", label: "Hold", dur: 4, scale: LO, tone: "warm" }] },
+        ease: { name: "Ease", ratio: "4 · 6", phases: [{ key: "inhale", label: "Breathe in", dur: 4, scale: HI, tone: "cool" }, { key: "exhale", label: "Breathe out", dur: 6, scale: LO, tone: "warm" }] },
+        coherence: { name: "Coherence", ratio: "5 · 5", phases: [{ key: "inhale", label: "Breathe in", dur: 5, scale: HI, tone: "cool" }, { key: "exhale", label: "Breathe out", dur: 5, scale: LO, tone: "warm" }] },
+      },
+      sleep: {
+        drift: { name: "Drift", ratio: "4 · 8", phases: [{ key: "inhale", label: "Breathe in", dur: 4, scale: HI, tone: "cool" }, { key: "exhale", label: "Let go", dur: 8, scale: LO, tone: "warm" }] },
+        calm: { name: "Calm", ratio: "4 · 7 · 8", phases: [{ key: "inhale", label: "Breathe in", dur: 4, scale: HI, tone: "cool" }, { key: "hold", label: "Hold", dur: 7, scale: HI, tone: "cool" }, { key: "exhale", label: "Let go", dur: 8, scale: LO, tone: "warm" }] },
+      },
+    };
+    if (customPat) {
+      P.breathe.custom = { name: "Yours", ratio: customRatio(customPat), phases: customPhases(customPat, HI, LO, false) };
+      P.sleep.custom = { name: "Yours", ratio: customRatio(customPat), phases: customPhases(customPat, HI, LO, true) };
+    }
+    return P;
+  }, [HI, LO, customPat]);
 
   const [mode, setMode] = useState("breathe");
   const [themeId, setThemeId] = useState("aurora");
@@ -298,6 +314,9 @@ export default function Lull() {
     if (screen === "active") { if (next) buildAmbience(); else teardownAmbience(0.6); }
   };
   const fmt = (s) => { s = Math.max(0, Math.ceil(s)); const m = Math.floor(s / 60); return `${m}:${String(s % 60).padStart(2, "0")}`; };
+  const openCustom = () => { setDraft(customPat || { inhale: 4, hold: 7, exhale: 8, hold2: 0 }); setShowCustom(true); };
+  const saveCustomPat = () => { const c = { inhale: draft.inhale, hold: draft.hold, exhale: draft.exhale, hold2: draft.hold2 }; saveCustom(c); setCustomPat(c); setPatternId("custom"); setShowCustom(false); };
+  const bump = (k, d, lo, hi) => setDraft((p) => ({ ...p, [k]: Math.min(hi, Math.max(lo, (p[k] || 0) + d)) }));
 
   // ---------- visuals ----------
   const th = THEMES[themeId];
@@ -378,8 +397,8 @@ export default function Lull() {
     ::selection { background: rgba(255,158,125,0.35); }
     @media (prefers-reduced-motion: reduce) { .orb-idle,.amb1,.amb2 { animation: none !important; } }
   `;
-  const segWrap = { display: "flex", gap: 8, width: "100%", background: wa(0.05), border: "1px solid " + wa(0.1), borderRadius: 18, padding: 6 };
-  const seg = (sel) => ({ flex: 1, padding: "12px 8px", borderRadius: 13, border: "1px solid transparent", background: sel ? wa(0.12) : "transparent", color: sel ? ink : inkA(0.5), transition: "background .35s ease, color .35s ease", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 });
+  const segWrap = { display: "flex", flexWrap: "wrap", gap: 8, width: "100%", background: wa(0.05), border: "1px solid " + wa(0.1), borderRadius: 18, padding: 6 };
+  const seg = (sel) => ({ flex: "1 1 28%", padding: "12px 8px", borderRadius: 13, border: "1px solid transparent", background: sel ? wa(0.12) : "transparent", color: sel ? ink : inkA(0.5), transition: "background .35s ease, color .35s ease", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 });
   const glassBtn = lightUI ? { "--glow": ringFrom, "--glow2": ringTo, position: "relative", overflow: "hidden", padding: "17px 0", width: "100%", borderRadius: 999, color: "#2a1c55", fontSize: 16.5, fontWeight: 600, letterSpacing: 0.8, background: "linear-gradient(178deg, #efe7ff, #c3acff)", border: "1px solid rgba(120,90,220,0.4)", boxShadow: `0 12px 34px ${ringFrom}33, inset 0 1.4px 0.5px rgba(255,255,255,0.7), inset 0 -8px 18px rgba(120,90,200,0.16)`, transition: "transform .2s cubic-bezier(.2,.8,.2,1), box-shadow .3s ease, filter .45s ease" } : { "--glow": ringFrom, "--glow2": ringTo, position: "relative", overflow: "hidden", padding: "17px 0", width: "100%", borderRadius: 999, color: "#FBFAFF", fontSize: 16.5, fontWeight: 600, letterSpacing: 0.8, boxShadow: `0 14px 46px ${ringFrom}40, 0 6px 18px ${ringTo}30, 0 1px 0 rgba(255,255,255,0.18), inset 0 1.4px 0.5px rgba(255,255,255,0.66), inset 0 -1.2px 1px rgba(255,255,255,0.30), inset 0 0 18px rgba(255,255,255,0.10), inset 0 -14px 26px rgba(0,0,0,0.18)`, transition: "transform .2s cubic-bezier(.2,.8,.2,1), box-shadow .3s ease, filter .45s ease" };
   const textBtn = { padding: "12px 18px", color: inkA(0.5), fontSize: 14, letterSpacing: 0.3 };
 
@@ -510,6 +529,7 @@ export default function Lull() {
             <div style={segWrap}>
               {Object.entries(pats).map(([id, p]) => { const sel = patternId === id; return (<button key={id} className="lull-seg lull-btn" aria-pressed={sel} onClick={() => setPatternId(id)} style={seg(sel)}><span style={{ fontSize: 14, fontWeight: 500 }}>{p.name}</span><span style={{ fontSize: 11, opacity: 0.7, letterSpacing: 1 }}>{p.ratio}</span></button>); })}
             </div>
+            <button className="lull-btn" onClick={openCustom} style={{ alignSelf: "center", padding: "2px 0 0", fontSize: 12.5, letterSpacing: 0.4, color: inkA(0.5) }}>{customPat ? "✎ Edit your pattern" : "✎ Make your own"}</button>
             <div style={segWrap}>
               {DURATIONS[mode].map((m) => { const sel = durationMin === m; const big = m >= 60 ? m / 60 : m; const unit = m >= 60 ? "hr" : "min"; return (<button key={m} className="lull-seg lull-btn" aria-pressed={sel} onClick={() => { setDurationMin(m); setRemaining(m * 60); }} style={seg(sel)}><span style={{ fontSize: 16, fontWeight: 500 }}>{big}</span><span style={{ fontSize: 11, opacity: 0.6, letterSpacing: 1 }}>{unit}</span></button>); })}
             </div>
@@ -543,6 +563,41 @@ export default function Lull() {
           </div>
         )}
       </div>
+
+      {showCustom && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 60, background: night ? th.rootNight : (lightUI ? LIGHT_ROOT : th.rootDay), color: ink, display: "flex", flexDirection: "column", padding: "max(30px, calc(env(safe-area-inset-top) + 12px)) 26px calc(34px + env(safe-area-inset-bottom))", overflowY: "auto" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
+            <span style={{ fontSize: 12, letterSpacing: 5, textTransform: "uppercase", fontWeight: 500, opacity: 0.6 }}>Your pattern</span>
+            <button className="lull-btn" aria-label="Cancel" onClick={() => setShowCustom(false)} style={{ padding: "6px 4px", opacity: 0.75, fontSize: 15 }}>Cancel</button>
+          </div>
+          {(() => {
+            const parts = [draft.inhale, draft.hold, draft.exhale, draft.hold2].filter((n) => n > 0);
+            const total = draft.inhale + draft.hold + draft.exhale + draft.hold2;
+            const rows = [["inhale", "Inhale", 2, 12], ["hold", "Hold", 0, 20], ["exhale", "Exhale", 2, 20], ["hold2", "Hold after", 0, 20]];
+            const stepBtn = { width: 44, height: 44, borderRadius: 14, border: "1px solid " + wa(0.16), background: wa(0.06), color: ink, fontSize: 22, fontWeight: 300, display: "flex", alignItems: "center", justifyContent: "center" };
+            return (<>
+              <div style={{ textAlign: "center", marginBottom: 6 }}>
+                <div style={{ fontSize: 42, fontWeight: 200, letterSpacing: 1, fontVariantNumeric: "tabular-nums" }}>{parts.join(" · ")}</div>
+                <div style={{ fontSize: 13, opacity: 0.5, marginTop: 6 }}>{total}s per breath</div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 22, maxWidth: 340, width: "100%", alignSelf: "center" }}>
+                {rows.map(([k, label, lo, hi]) => (
+                  <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                    <span style={{ fontSize: 15 }}>{label}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <button className="lull-btn" aria-label={`decrease ${label}`} onClick={() => bump(k, -1, lo, hi)} style={stepBtn}>−</button>
+                      <span style={{ minWidth: 34, textAlign: "center", fontSize: 20, fontWeight: 400, fontVariantNumeric: "tabular-nums" }}>{draft[k]}</span>
+                      <button className="lull-btn" aria-label={`increase ${label}`} onClick={() => bump(k, 1, lo, hi)} style={stepBtn}>+</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button className="lull-btn lull-cta" onClick={saveCustomPat} style={{ ...glassBtn, maxWidth: 340, alignSelf: "center", marginTop: 28 }}>Save pattern</button>
+              <div style={{ marginTop: "auto", paddingTop: 24, fontSize: 12.5, opacity: 0.4, textAlign: "center", letterSpacing: 0.3 }}>Set a hold to 0 to skip it. Your pattern stays on this device.</div>
+            </>);
+          })()}
+        </div>
+      )}
 
       {showHistory && (
         <div style={{ position: "fixed", inset: 0, zIndex: 60, background: night ? th.rootNight : (lightUI ? LIGHT_ROOT : th.rootDay), color: ink, display: "flex", flexDirection: "column", padding: "max(30px, calc(env(safe-area-inset-top) + 12px)) 26px calc(34px + env(safe-area-inset-bottom))", overflowY: "auto" }}>
