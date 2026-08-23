@@ -22,6 +22,11 @@ export interface WidgetPerson {
   angle: number;     // position around the ring, degrees (for the orbit widget)
   color: string;     // group color hex
   drift: boolean;
+  // Sent so the widget can age the ring itself while the app stays closed.
+  // Without these it renders whatever was true the last time the app ran.
+  since?: number | null;  // lastContactAt, epoch ms (null = never recorded)
+  anchored?: boolean;     // anchored people never drift outward
+  snoozed?: boolean;      // snoozed people aren't counted as drifting
 }
 // The colors the widget needs to match the app's current theme. Mirrors
 // WidgetTheme in targets/widget/index.swift.
@@ -39,6 +44,10 @@ export interface WidgetPayload {
   total: number;      // everyone in the orbit (people[] is capped for drawing)
   people: WidgetPerson[];
   theme: WidgetTheme; // so the home-screen widget matches the color style in use
+  // people[] is capped at MAX_PEOPLE for drawing, so the widget can't recompute
+  // the headline count from it alone. These cover everyone:
+  driftTimes?: number[];  // lastContactAt for each person eligible to drift
+  driftStatic?: number;   // drifters with no timestamp — they can't be aged
 }
 
 const widgetThemeOf = (t: Theme): WidgetTheme => ({
@@ -52,6 +61,10 @@ export function buildWidgetPayload(contacts: Contact[], now: number, theme: Them
     .filter((c) => !(c.drift && !c.snoozed))
     .sort((a, b) => a.ring - b.ring);
   const ordered = [...drifters, ...rest].slice(0, MAX_PEOPLE);
+  // Anyone who could cross a ring boundary while the app is closed — the widget
+  // re-derives the headline count from these timestamps.
+  const ageable = contacts.filter((c) => !c.anchored && !c.snoozed && c.lastContactAt != null);
+  const driftStatic = drifters.filter((c) => c.lastContactAt == null).length;
   return {
     updatedAt: now,
     driftCount: drifters.length,
@@ -63,8 +76,13 @@ export function buildWidgetPayload(contacts: Contact[], now: number, theme: Them
       angle: c.angle,
       color: GROUP_COLOR[c.group],
       drift: c.drift && !c.snoozed,
+      since: c.lastContactAt ?? null,
+      anchored: !!c.anchored,
+      snoozed: !!c.snoozed,
     })),
     theme: widgetThemeOf(theme),
+    driftTimes: ageable.map((c) => c.lastContactAt as number),
+    driftStatic,
   };
 }
 

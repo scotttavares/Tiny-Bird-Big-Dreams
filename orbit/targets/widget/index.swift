@@ -13,6 +13,12 @@ struct OrbitPerson: Codable, Identifiable {
   let angle: Double
   let color: String
   let drift: Bool
+  // Optional so snapshots written by older builds still decode. When present,
+  // the widget ages the ring itself instead of showing whatever was true when
+  // the app last ran.
+  let since: Double?      // lastContactAt, epoch ms
+  let anchored: Bool?
+  let snoozed: Bool?
   var id: String { "\(name)-\(ring)-\(Int(angle))" }
 }
 
@@ -32,12 +38,49 @@ struct WidgetTheme: Codable {
   )
 }
 
+// Ring buckets, mirroring RING_MAX_DAYS in src/store.ts. Keep the two in step:
+// ring 1 < 2wk, 2 < 1mo, 3 < 3mo, 4 < 6mo, 5 < 1yr, 6 = beyond a year.
+private let ringMaxDays: [Double] = [14, 30, 90, 180, 365]
+
+func ringFrom(since ms: Double, now: Date) -> Int {
+  let days = (now.timeIntervalSince1970 * 1000 - ms) / 86_400_000
+  for (i, maxDays) in ringMaxDays.enumerated() where days < maxDays { return i + 1 }
+  return 6
+}
+
 struct OrbitPayload: Codable {
   let updatedAt: Double
   let driftCount: Int
   let total: Int?             // optional so older cached snapshots still decode
   let people: [OrbitPerson]
   let theme: WidgetTheme?     // optional so older cached snapshots still decode
+  let driftTimes: [Double]?   // lastContactAt for everyone eligible to drift
+  let driftStatic: Int?       // drifters with no timestamp — can't be aged
+
+  /// The payload as it would look at `now`: each person's ring advanced by the
+  /// time that has passed, and the headline count re-derived. Falls back to the
+  /// values the app wrote when a snapshot predates these fields.
+  func aged(at now: Date) -> OrbitPayload {
+    let people = self.people.map { p -> OrbitPerson in
+      guard let since = p.since, p.anchored != true else { return p }
+      let ring = ringFrom(since: since, now: now)
+      return OrbitPerson(
+        name: p.name, initials: p.initials, ring: ring, angle: p.angle,
+        color: p.color, drift: ring >= 3 && p.snoozed != true,
+        since: p.since, anchored: p.anchored, snoozed: p.snoozed
+      )
+    }
+    let count: Int
+    if let times = driftTimes {
+      count = times.filter { ringFrom(since: $0, now: now) >= 3 }.count + (driftStatic ?? 0)
+    } else {
+      count = driftCount
+    }
+    return OrbitPayload(
+      updatedAt: updatedAt, driftCount: count, total: total, people: people,
+      theme: theme, driftTimes: driftTimes, driftStatic: driftStatic
+    )
+  }
 }
 
 private let samplePayload = OrbitPayload(
@@ -45,14 +88,16 @@ private let samplePayload = OrbitPayload(
   driftCount: 3,
   total: 6,
   people: [
-    OrbitPerson(name: "Sarah", initials: "SA", ring: 2, angle: -20, color: "#7b6ef6", drift: false),
-    OrbitPerson(name: "Mom", initials: "MO", ring: 1, angle: 150, color: "#ef6196", drift: false),
-    OrbitPerson(name: "Leo", initials: "LE", ring: 3, angle: 60, color: "#f1973f", drift: true),
-    OrbitPerson(name: "Priya", initials: "PR", ring: 2, angle: 118, color: "#36b08f", drift: false),
-    OrbitPerson(name: "Marcus", initials: "MA", ring: 4, angle: -102, color: "#f1973f", drift: true),
-    OrbitPerson(name: "Nina", initials: "NI", ring: 5, angle: 205, color: "#ef6196", drift: true),
+    OrbitPerson(name: "Sarah", initials: "SA", ring: 2, angle: -20, color: "#7b6ef6", drift: false, since: nil, anchored: false, snoozed: false),
+    OrbitPerson(name: "Mom", initials: "MO", ring: 1, angle: 150, color: "#ef6196", drift: false, since: nil, anchored: false, snoozed: false),
+    OrbitPerson(name: "Leo", initials: "LE", ring: 3, angle: 60, color: "#f1973f", drift: true, since: nil, anchored: false, snoozed: false),
+    OrbitPerson(name: "Priya", initials: "PR", ring: 2, angle: 118, color: "#36b08f", drift: false, since: nil, anchored: false, snoozed: false),
+    OrbitPerson(name: "Marcus", initials: "MA", ring: 4, angle: -102, color: "#f1973f", drift: true, since: nil, anchored: false, snoozed: false),
+    OrbitPerson(name: "Nina", initials: "NI", ring: 5, angle: 205, color: "#ef6196", drift: true, since: nil, anchored: false, snoozed: false),
   ],
-  theme: nil
+  theme: nil,
+  driftTimes: nil,
+  driftStatic: nil
 )
 
 private func loadPayload() -> OrbitPayload? {
@@ -83,14 +128,16 @@ struct Provider: TimelineProvider {
   }
 
   func getTimeline(in context: Context, completion: @escaping (Timeline<OrbitEntry>) -> Void) {
-    let entry = OrbitEntry(date: Date(), payload: loadPayload() ?? samplePayload)
-    // The app calls reloadAllTimelines() whenever the orbit changes, so this is
-    // the fallback for time simply passing while the app is closed. 30 minutes
-    // is about as tight as it's worth asking for: WidgetKit budgets roughly
-    // 40-70 refreshes a day, so a 15-minute request (96/day) gets throttled and
-    // ends up refreshing less reliably than 30.
-    let next = Date().addingTimeInterval(30 * 60)
-    completion(Timeline(entries: [entry], policy: .after(next)))
+    let payload = loadPayload() ?? samplePayload
+    let now = Date()
+    // Pre-render the next few half-hours. The view ages the payload against each
+    // entry's own date, so rings keep advancing even if iOS defers the refresh —
+    // WidgetKit budgets roughly 40-70 refreshes a day, so asking for 15-minute
+    // reloads (96/day) gets throttled and ends up staler than asking for 30.
+    let entries = (0..<8).map { i in
+      OrbitEntry(date: now.addingTimeInterval(Double(i) * 30 * 60), payload: payload)
+    }
+    completion(Timeline(entries: entries, policy: .after(now.addingTimeInterval(30 * 60))))
   }
 }
 
@@ -400,11 +447,14 @@ struct OrbitWidgetView: View {
 
   var body: some View {
     let palette = Palette(entry.payload.theme ?? .fallback)
+    // Age against this entry's own date, not Date(), so each pre-rendered
+    // timeline entry shows the orbit as it stands at the moment it goes live.
+    let payload = entry.payload.aged(at: entry.date)
     Group {
       switch family {
-      case .systemSmall: SmallStatView(payload: entry.payload)
-      case .systemLarge: LargeOrbitView(payload: entry.payload)
-      default: MediumOrbitView(payload: entry.payload)
+      case .systemSmall: SmallStatView(payload: payload)
+      case .systemLarge: LargeOrbitView(payload: payload)
+      default: MediumOrbitView(payload: payload)
       }
     }
     .environment(\.palette, palette)
