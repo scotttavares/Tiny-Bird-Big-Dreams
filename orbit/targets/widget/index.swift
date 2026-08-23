@@ -84,8 +84,12 @@ struct Provider: TimelineProvider {
 
   func getTimeline(in context: Context, completion: @escaping (Timeline<OrbitEntry>) -> Void) {
     let entry = OrbitEntry(date: Date(), payload: loadPayload() ?? samplePayload)
-    // The app calls reloadAllTimelines() on every change; this is just a fallback.
-    let next = Calendar.current.date(byAdding: .hour, value: 4, to: Date()) ?? Date().addingTimeInterval(4 * 3600)
+    // The app calls reloadAllTimelines() whenever the orbit changes, so this is
+    // the fallback for time simply passing while the app is closed. 30 minutes
+    // is about as tight as it's worth asking for: WidgetKit budgets roughly
+    // 40-70 refreshes a day, so a 15-minute request (96/day) gets throttled and
+    // ends up refreshing less reliably than 30.
+    let next = Date().addingTimeInterval(30 * 60)
     completion(Timeline(entries: [entry], policy: .after(next)))
   }
 }
@@ -327,6 +331,67 @@ struct MediumOrbitView: View {
   }
 }
 
+// Large: the same orbit, given room to breathe — a bigger canvas plus a longer
+// list of who's drifting. Static like every home-screen widget (WidgetKit has no
+// continuous animation), but at this size it reads as a real map of your people.
+struct LargeOrbitView: View {
+  @Environment(\.palette) private var palette
+  let payload: OrbitPayload
+  var total: Int { totalOf(payload) }
+  var drifters: [OrbitPerson] { payload.people.filter { $0.drift } }
+
+  var body: some View {
+    GeometryReader { geo in
+      let side = min(geo.size.width, geo.size.height * 0.56)
+      VStack(alignment: .leading, spacing: 10) {
+        HStack(spacing: 6) {
+          OrbitMark()
+          Text("Orbit").font(.system(size: 14, weight: .bold)).foregroundColor(palette.t(0.9))
+          Spacer()
+          if payload.driftCount > 0 {
+            Text("\(payload.driftCount) drifting")
+              .font(.system(size: 12.5, weight: .bold)).foregroundColor(palette.drift)
+          }
+        }
+
+        OrbitCanvas(payload: payload, dotSize: 28)
+          .frame(width: side, height: side)
+          .frame(maxWidth: .infinity, alignment: .center)
+
+        if total == 0 {
+          Text("Add people in Orbit to see them here")
+            .font(.system(size: 13.5, weight: .medium)).foregroundColor(palette.t(0.55))
+        } else if drifters.isEmpty {
+          Text("Everyone's close right now ✨")
+            .font(.system(size: 14, weight: .medium)).foregroundColor(palette.t(0.6))
+        } else {
+          Text("DRIFTING AWAY")
+            .font(.system(size: 10.5, weight: .bold)).foregroundColor(palette.t(0.4))
+          VStack(alignment: .leading, spacing: 8) {
+            ForEach(Array(drifters.prefix(5))) { p in
+              HStack(spacing: 9) {
+                Circle().fill(Color(hex: p.color)).frame(width: 9, height: 9)
+                Text(p.name)
+                  .font(.system(size: 14.5, weight: .semibold)).foregroundColor(palette.t(0.92))
+                  .lineLimit(1)
+                Spacer(minLength: 4)
+                Text(ringLabel(p.ring))
+                  .font(.system(size: 12.5, weight: .medium)).foregroundColor(palette.t(0.5))
+              }
+            }
+            if drifters.count > 5 {
+              Text("+\(drifters.count - 5) more")
+                .font(.system(size: 12, weight: .medium)).foregroundColor(palette.t(0.4))
+            }
+          }
+        }
+        Spacer(minLength: 0)
+      }
+      .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
+    }
+  }
+}
+
 // MARK: - Widget view
 
 struct OrbitWidgetView: View {
@@ -338,6 +403,7 @@ struct OrbitWidgetView: View {
     Group {
       switch family {
       case .systemSmall: SmallStatView(payload: entry.payload)
+      case .systemLarge: LargeOrbitView(payload: entry.payload)
       default: MediumOrbitView(payload: entry.payload)
       }
     }
@@ -368,7 +434,7 @@ struct OrbitWidget: Widget {
     }
     .configurationDisplayName("Orbit")
     .description("Your orbit at a glance — who's drifting to the edge.")
-    .supportedFamilies([.systemSmall, .systemMedium])
+    .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
   }
 }
 
