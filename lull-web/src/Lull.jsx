@@ -386,7 +386,7 @@ export default function Lull() {
     @keyframes driftA5 { 0%{transform:translate(4%,-5%) scale(1.05);} 25%{transform:translate(-7%,-9%) scale(1.12);} 50%{transform:translate(-10%,6%) scale(1);} 75%{transform:translate(7%,9%) scale(1.08);} 100%{transform:translate(4%,-5%) scale(1.05);} }
     /* Slow whole-cluster swirl layered under the individual loops for constant, calm motion. */
     @keyframes bloomSpin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
-    @keyframes hueBreath { 0%,100% { filter: saturate(1) brightness(1);} 50% { filter: saturate(1.22) brightness(1.08);} }
+    @keyframes hueBreath { 0%,100% { filter: saturate(1) brightness(1);} 50% { filter: saturate(1.16) brightness(1.04);} }
     .orb-idle { animation: orbIdle 7s ease-in-out infinite; }
     .amb1 { animation: drift1 24s ease-in-out infinite; }
     .amb2 { animation: drift2 30s ease-in-out infinite; }
@@ -508,10 +508,13 @@ export default function Lull() {
                     in WebKit, so it clips the bloom to a circle on iPhone; overflow:hidden stays for other engines. */}
                 <div style={{ position: "absolute", inset: 0, borderRadius: "50%", overflow: "hidden", zIndex: 2, isolation: "isolate", boxShadow: "inset 0 1px 14px rgba(255,255,255,0.16)", WebkitMaskImage: "radial-gradient(closest-side, #000 99%, transparent 100%)", maskImage: "radial-gradient(closest-side, #000 99%, transparent 100%)" }}>
                   <div style={{ position: "absolute", inset: 0, background: night ? "radial-gradient(circle at 50% 40%, #4a3d7a 0%, #2c2258 55%, #171036 100%)" : "radial-gradient(circle at 50% 40%, #7d68c8 0%, #59459b 54%, #382a74 100%)", transition: "background 1.2s ease", animation: prefersReduced ? "none" : "hueBreath 11s ease-in-out infinite", willChange: "filter" }} />
-                  {th.bloom.map((c, i) => { const pos = [[32,32],[68,62],[60,74],[36,66],[72,32]][i]; const reach = [52,50,48,48,46][i]; const blur = [12,13,13,14,13][i]; const dur = [12,14,10,16,13][i]; const anim = ["driftA1","driftA2","driftA3","driftA4","driftA5"][i]; return (
-                    <div key={i} style={{ position: "absolute", width: "118%", height: "118%", borderRadius: "50%", mixBlendMode: "screen", opacity: (night ? 0.72 : 1) * (i === 4 ? 0.92 : 1), background: `radial-gradient(circle at ${pos[0]}% ${pos[1]}%, rgb(${c[0]},${c[1]},${c[2]}), transparent ${reach}%)`, filter: `blur(${blur}px)`, animation: prefersReduced ? "none" : `${anim} ${dur}s ease-in-out infinite`, willChange: "transform" }} />); })}
-                  {/* slow-rotating aurora sweep: a soft moving sheen so the whole orb reads as flowing, not static */}
-                  <div style={{ position: "absolute", inset: "-12%", borderRadius: "50%", mixBlendMode: "screen", opacity: night ? 0.13 : 0.19, background: "conic-gradient(from 0deg at 50% 50%, rgba(255,255,255,0) 0deg, rgba(214,190,255,0.95) 60deg, rgba(255,255,255,0) 140deg, rgba(176,232,255,0.85) 225deg, rgba(255,255,255,0) 310deg, rgba(255,255,255,0) 360deg)", filter: "blur(18px)", animation: prefersReduced ? "none" : "bloomSpin 40s linear infinite", willChange: "transform" }} />
+                  {/* Rich colour blooms, kept at full strength. Wrapped in a slow-rotating cluster so the whole
+                      constellation visibly swirls, while each bloom also drifts on its own loop — clear motion,
+                      no brightness added (so the colour stays rich instead of washing toward white). */}
+                  <div style={{ position: "absolute", inset: 0, animation: prefersReduced ? "none" : "bloomSpin 30s linear infinite", willChange: "transform" }}>
+                    {th.bloom.map((c, i) => { const pos = [[32,32],[68,62],[60,74],[36,66],[72,32]][i]; const reach = [52,50,48,48,46][i]; const blur = [12,13,13,14,13][i]; const dur = [12,14,10,16,13][i]; const anim = ["driftA1","driftA2","driftA3","driftA4","driftA5"][i]; return (
+                      <div key={i} style={{ position: "absolute", width: "118%", height: "118%", borderRadius: "50%", mixBlendMode: "screen", opacity: (night ? 0.72 : 1) * (i === 4 ? 0.92 : 1), background: `radial-gradient(circle at ${pos[0]}% ${pos[1]}%, rgb(${c[0]},${c[1]},${c[2]}), transparent ${reach}%)`, filter: `blur(${blur}px)`, animation: prefersReduced ? "none" : `${anim} ${dur}s ease-in-out infinite`, willChange: "transform" }} />); })}
+                  </div>
                   <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "radial-gradient(circle at 48% 40%, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0.16) 12%, rgba(255,255,255,0) 30%)", filter: "blur(3px)", zIndex: 3 }} />
                   <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "radial-gradient(circle at 50% 42%, transparent 46%, rgba(20,10,45,0.28) 82%, rgba(12,6,30,0.5) 100%)", zIndex: 3 }} />
                   <div style={{ position: "absolute", width: "26%", height: "20%", left: "22%", top: "16%", borderRadius: "50%", background: "radial-gradient(circle at 40% 40%, rgba(255,255,255,0.85), rgba(255,255,255,0) 70%)", filter: "blur(2px)", zIndex: 4 }} />
