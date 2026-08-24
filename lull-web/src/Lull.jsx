@@ -497,7 +497,11 @@ export default function Lull() {
                   {th.glass.g2 > 0 && (<div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "radial-gradient(circle at 67% 73%, rgba(255,255,255,0.5), rgba(255,255,255,0) 7%)", zIndex: 7, opacity: night ? th.glass.g2 * 0.6 : th.glass.g2 }} />)}
                 </div>
                 {/* Aurora Bloom orb — Direction A (v2) */}
-                <div style={{ position: "absolute", inset: 0, borderRadius: "50%", overflow: "hidden", zIndex: 2, isolation: "isolate", boxShadow: "inset 0 1px 14px rgba(255,255,255,0.16)" }}>
+                {/* NOTE: iOS Safari / WKWebView does NOT clip composited layers (mix-blend-mode / filter /
+                    animated transform — i.e. the bloom blobs below) to a parent's border-radius + overflow:hidden,
+                    so the bloom leaked out as a square. A circular CSS mask IS honored for composited descendants
+                    in WebKit, so it clips the bloom to a circle on iPhone; overflow:hidden stays for other engines. */}
+                <div style={{ position: "absolute", inset: 0, borderRadius: "50%", overflow: "hidden", zIndex: 2, isolation: "isolate", boxShadow: "inset 0 1px 14px rgba(255,255,255,0.16)", WebkitMaskImage: "radial-gradient(closest-side, #000 99%, transparent 100%)", maskImage: "radial-gradient(closest-side, #000 99%, transparent 100%)" }}>
                   <div style={{ position: "absolute", inset: 0, background: night ? "radial-gradient(circle at 50% 40%, #4a3d7a 0%, #2c2258 55%, #171036 100%)" : "radial-gradient(circle at 50% 40%, #7d68c8 0%, #59459b 54%, #382a74 100%)", transition: "background 1.2s ease" }} />
                   {th.bloom.map((c, i) => { const pos = [[32,32],[68,62],[60,74],[36,66],[72,32]][i]; const reach = [52,50,48,48,46][i]; const blur = [12,13,13,14,13][i]; const dur = [15,19,17,21,23][i]; const anim = ["driftA1","driftA2","driftA3","driftA4","driftA2"][i]; return (
                     <div key={i} style={{ position: "absolute", width: "118%", height: "118%", borderRadius: "50%", mixBlendMode: "screen", opacity: (night ? 0.72 : 1) * (i === 4 ? 0.92 : 1), background: `radial-gradient(circle at ${pos[0]}% ${pos[1]}%, rgb(${c[0]},${c[1]},${c[2]}), transparent ${reach}%)`, filter: `blur(${blur}px)`, animation: prefersReduced ? "none" : `${anim} ${dur}s ease-in-out infinite${i === 4 ? " reverse" : ""}`, willChange: "transform" }} />); })}
