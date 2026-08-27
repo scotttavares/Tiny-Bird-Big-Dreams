@@ -32,7 +32,10 @@ export default function App() {
 
   // keep the home-screen widget's snapshot in sync whenever the orbit — or the
   // active theme — changes, so the widget always matches the color style in use
+  // Wait for hydration: before it finishes the store still holds the empty
+  // initial state, and pushing that would blank the widget on every launch.
   useEffect(() => {
+    if (!hydrated) return;
     const push = () => {
       const s = useStore.getState();
       syncWidget(Object.values(s.contacts), Date.now(), THEMES[s.theme]);
@@ -47,11 +50,14 @@ export default function App() {
         push();
       }
     });
-  }, []);
+  }, [hydrated]);
 
   // on launch and every time the app returns to the foreground, refresh the
   // weekly gravity report copy (if enabled) and the widget with the latest orbit
   useEffect(() => {
+    // Same reason: settleDrift() must not run against the pre-hydration store,
+    // or it would persist an empty orbit over the saved one.
+    if (!hydrated) return;
     const refresh = () => {
       useStore.getState().settleDrift();
       const list = Object.values(useStore.getState().contacts);
@@ -63,7 +69,7 @@ export default function App() {
       if (s === 'active') refresh();
     });
     return () => sub.remove();
-  }, []);
+  }, [hydrated]);
 
   // Wait for persisted contacts to load from disk before rendering, so a
   // returning user never sees an empty orbit flash before their people appear.
