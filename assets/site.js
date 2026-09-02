@@ -36,7 +36,16 @@ if(form){
     btn.textContent='Sending…';
     try{
       const res=await fetch(form.action,{method:'POST',body:new FormData(form),headers:{'Accept':'application/json'}});
-      if(res.ok){ form.style.display='none'; document.getElementById('formSuccess').style.display='block'; }
+      if(res.ok){
+        form.style.display='none';
+        const ok=document.getElementById('formSuccess');
+        ok.style.display='block';
+        // Confirm right here, immediately — the server-side banner depends on KV
+        // catching up, which can lag a few seconds behind this submit.
+        if(!document.getElementById('emailNote')){
+          ok.insertAdjacentHTML('afterend','<div id="emailNote" style="background:rgba(232,160,34,.1);border:1px solid rgba(232,160,34,.25);border-radius:16px;padding:20px 28px;margin:24px auto 0;max-width:760px;text-align:center;font-size:14px;color:rgba(251,247,242,.75);line-height:1.75;">🐦&ensp;<strong style="color:#E8A022;">Your message has landed in the nest.</strong>&ensp;We caught it mid-flight and we\'ll swoop back soon.</div>');
+        }
+      }
       else{ throw new Error(); }
     }catch{ document.getElementById('formError').style.display='block'; btn.disabled=false; btn.innerHTML=orig; }
   });

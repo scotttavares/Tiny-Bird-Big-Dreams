@@ -1,0 +1,197 @@
+import React, { useEffect, useState } from 'react';
+import { View, Text, Pressable, ScrollView, Switch, StyleSheet, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useStore } from '../store';
+import { THEMES, THEME_OPTIONS } from '../theme';
+import { scheduleWeeklyReport, cancelWeeklyReport, isWeeklyScheduled } from '../notifications';
+import { exportBackup, importBackup } from '../backup';
+
+export default function SettingsScreen() {
+  const theme = THEMES[useStore((s) => s.theme)];
+  const themeName = useStore((s) => s.theme);
+  const setTheme = useStore((s) => s.setTheme);
+  const setScreen = useStore((s) => s.setScreen);
+  const showToast = useStore((s) => s.showToast);
+  const resetOrbit = useStore((s) => s.resetOrbit);
+  const openImport = useStore((s) => s.openImport);
+  const restoreBackup = useStore((s) => s.restoreBackup);
+  const [busy, setBusy] = useState(false);
+
+  const confirmClear = () =>
+    Alert.alert(
+      'Clear your orbit?',
+      'This removes everyone from your orbit. This can’t be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Clear', style: 'destructive', onPress: () => { resetOrbit(); showToast('Your orbit is clear'); } },
+      ],
+    );
+
+  // Write a portable backup file and open the share sheet (save to Files /
+  // iCloud Drive, AirDrop, email…). Photos are embedded so it works on a new phone.
+  const onBackup = async () => {
+    if (busy) return;
+    setBusy(true);
+    showToast('Preparing your backup…');
+    try {
+      const r = await exportBackup(useStore.getState());
+      if (r === 'unavailable') showToast('Sharing isn’t available on this device');
+    } catch {
+      showToast('Couldn’t create the backup');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Pick a backup file and replace the current orbit with it (after confirming).
+  const onRestore = () =>
+    Alert.alert(
+      'Restore from backup?',
+      'This replaces your current orbit with the people and settings saved in the backup file.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Choose file',
+          onPress: async () => {
+            if (busy) return;
+            setBusy(true);
+            try {
+              const payload = await importBackup();
+              if (payload) {
+                restoreBackup(payload);
+                const n = Object.keys(payload.contacts).length;
+                showToast(`Restored ${n} ${n === 1 ? 'person' : 'people'} ✨`);
+              }
+            } catch (e: any) {
+              showToast(e?.message ?? 'Couldn’t read that backup');
+            } finally {
+              setBusy(false);
+            }
+          },
+        },
+      ],
+    );
+
+  const contacts = useStore((s) => s.contacts);
+  const [weekend, setWeekend] = useState(true);
+  const [badges, setBadges] = useState(true);
+  const [weeklyReport, setWeeklyReport] = useState(false);
+  const speeds = ['Gentle', 'Steady', 'Brisk'];
+  const [speed, setSpeed] = useState(0);
+  const card = { backgroundColor: theme.card, borderColor: theme.border };
+
+  useEffect(() => { isWeeklyScheduled().then(setWeeklyReport); }, []);
+  const onToggleWeekly = async (on: boolean) => {
+    if (on) {
+      const ok = await scheduleWeeklyReport(Object.values(contacts));
+      setWeeklyReport(ok);
+      showToast(ok ? 'Weekly report on — gentle, Sundays' : 'Allow notifications to enable this');
+    } else {
+      await cancelWeeklyReport();
+      setWeeklyReport(false);
+      showToast('Weekly report off');
+    }
+  };
+
+  const Row = ({ title, sub, right, onPress, top }: { title: string; sub?: string; right?: React.ReactNode; onPress?: () => void; top?: boolean }) => (
+    <Pressable disabled={!onPress} onPress={onPress}
+      style={[styles.row, top ? { borderTopWidth: 1, borderTopColor: theme.border } : null]}>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontWeight: '600', fontSize: 14, color: theme.text }}>{title}</Text>
+        {sub ? <Text style={{ color: theme.dim, fontSize: 12, marginTop: 2 }}>{sub}</Text> : null}
+      </View>
+      {right}
+    </Pressable>
+  );
+  const Value = ({ v }: { v: string }) => (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+      <Text style={{ color: theme.dim, fontSize: 13, fontWeight: '600' }}>{v}</Text>
+      <Ionicons name="chevron-forward" size={15} color={theme.dim} />
+    </View>
+  );
+  const sw = (val: boolean, on: (v: boolean) => void) => (
+    <Switch value={val} onValueChange={on} trackColor={{ true: theme.accent, false: theme.border2 }} thumbColor="#fff" />
+  );
+
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={styles.head}>
+        <Text style={[styles.h1, { color: theme.text }]}>Settings</Text>
+        <Pressable onPress={() => setScreen('orbit')}><Text style={{ color: theme.accent, fontWeight: '700', fontSize: 15 }}>Done</Text></Pressable>
+      </View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
+        <Text style={[styles.intro, { color: theme.dim }]}>Orbit is designed to reduce guilt. Adjust how gravity works below to suit your natural social battery.</Text>
+        <View style={{ paddingHorizontal: 20 }}>
+          <Text style={[styles.sect, { color: theme.faint }]}>GRAVITY MECHANICS</Text>
+          <View style={[styles.cardList, card]}>
+            <Row title="Default Drift Speed" sub="How fast contacts move outward" right={<Value v={speeds[speed]} />} onPress={() => setSpeed((speed + 1) % 3)} />
+            <Row title="Slow Drift on Weekends" sub="Pause gravity on your days off" right={sw(weekend, setWeekend)} top />
+          </View>
+
+          <Text style={[styles.sect, { color: theme.faint, marginTop: 22 }]}>QUIET NOTIFICATIONS</Text>
+          <View style={[styles.cardList, card]}>
+            <Row title="Weekly Gravity Report" sub="One gentle Sunday nudge about who's drifting" right={sw(weeklyReport, onToggleWeekly)} />
+            <Row title="Subtle Badges" sub="No red dots, only soft glows" right={sw(badges, setBadges)} top />
+          </View>
+
+          <Text style={[styles.sect, { color: theme.faint, marginTop: 22 }]}>APPEARANCE</Text>
+          <View style={[styles.cardList, card, { padding: 16 }]}>
+            <Text style={{ fontWeight: '600', fontSize: 14, color: theme.text }}>Theme</Text>
+            <Text style={{ color: theme.dim, fontSize: 12, marginTop: 2 }}>The dark sky, or one of four colors</Text>
+            <View style={styles.themeRow}>
+              {THEME_OPTIONS.map((opt) => {
+                const active = themeName === opt.name;
+                return (
+                  <Pressable key={opt.name} onPress={() => setTheme(opt.name)} style={styles.swatchWrap} hitSlop={6}>
+                    <View style={[styles.swatch, { borderColor: active ? theme.accent : theme.border2, borderWidth: active ? 3 : 2 }]}>
+                      <LinearGradient colors={opt.swatch} start={{ x: 0.2, y: 0.1 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+                      {active ? (
+                        <View style={styles.swatchCheck}><Ionicons name="checkmark" size={20} color="#fff" /></View>
+                      ) : null}
+                    </View>
+                    <Text style={{ fontSize: 11.5, fontWeight: '600', color: active ? theme.text : theme.dim }}>{opt.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          <Text style={[styles.sect, { color: theme.faint, marginTop: 22 }]}>WIDGETS</Text>
+          <View style={[styles.cardList, card]}>
+            <Row title="Home Screen Widget" sub="Long-press your home screen → + → Orbit" right={<Value v="" />} onPress={() => showToast('Add Orbit from your home screen: long-press → +')} />
+          </View>
+
+          <Text style={[styles.sect, { color: theme.faint, marginTop: 22 }]}>BACKUP</Text>
+          <View style={[styles.cardList, card]}>
+            <Row title="Back up my orbit" sub="Save everyone + settings to a file you keep" right={<Ionicons name="share-outline" size={18} color={theme.dim} />} onPress={onBackup} />
+            <Row title="Restore from backup" sub="Bring your orbit back on a new phone or after reinstalling" right={<Ionicons name="chevron-forward" size={15} color={theme.dim} />} onPress={onRestore} top />
+          </View>
+          <Text style={{ color: theme.faint, fontSize: 11.5, lineHeight: 16, marginTop: 8, marginLeft: 4, marginRight: 4 }}>
+            Orbit keeps everything on your device — no account, no cloud. A backup file is the private way to move to a new phone or delete the app safely.
+          </Text>
+
+          <Text style={[styles.sect, { color: theme.faint, marginTop: 22 }]}>DATA</Text>
+          <View style={[styles.cardList, card]}>
+            <Row title="Import from Contacts" sub="Pull people from your address book" right={<Ionicons name="chevron-forward" size={15} color={theme.dim} />} onPress={openImport} />
+            <Row title="Clear Orbit Data" sub="Remove everyone and start fresh" right={null} onPress={confirmClear} top />
+          </View>
+          <Text style={{ textAlign: 'center', color: theme.faint, fontSize: 11, paddingVertical: 18 }}>Orbit · gravity for the people who matter</Text>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  head: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  h1: { fontSize: 26, fontWeight: '800' },
+  intro: { fontSize: 13.5, lineHeight: 20, paddingHorizontal: 20, paddingTop: 6, paddingBottom: 18 },
+  sect: { fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 9, marginLeft: 4 },
+  cardList: { borderRadius: 18, borderWidth: 1, overflow: 'hidden' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 13, padding: 14, minHeight: 56 },
+  themeRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 },
+  swatchWrap: { alignItems: 'center', gap: 7 },
+  swatch: { width: 46, height: 46, borderRadius: 23, overflow: 'hidden' },
+  swatchCheck: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+});

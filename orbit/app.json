@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "Orbit",
+    "slug": "orbit",
+    "version": "1.0.1",
+    "orientation": "portrait",
+    "scheme": "orbit",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
+    "newArchEnabled": false,
+    "ios": {
+      "bundleIdentifier": "com.tinybirdbigdreams.orbit",
+      "buildNumber": "1",
+      "supportsTablet": false,
+      "appleTeamId": "23D9BZ3692",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSContactsUsageDescription": "Orbit uses your contacts so you can add the people you care about to your orbit. Your contacts stay on your device.",
+        "NSPhotoLibraryUsageDescription": "Orbit lets you set your own photo at the center of your orbit. Your photo stays on your device.",
+        "LSApplicationQueriesSchemes": ["sms", "tel", "whatsapp", "tg", "sgnl", "viber"]
+      },
+      "entitlements": {
+        "com.apple.security.application-groups": ["group.com.tinybirdbigdreams.orbit"]
+      }
+    },
+    "android": {
+      "package": "com.tinybirdbigdreams.orbit"
+    },
+    "plugins": [
+      "@bacons/apple-targets",
+      "./plugins/withLocalNotificationsOnly"
+    ]
+  }
+}

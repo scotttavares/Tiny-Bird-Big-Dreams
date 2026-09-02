@@ -1,0 +1,243 @@
+# Codemagic CI/CD — builds the Orbit iOS app on Codemagic's macOS cloud and
+# uploads it to TestFlight / App Store Connect. No Mac or Xcode required locally.
+#
+# ONE-TIME SETUP (all in the Codemagic web UI — see orbit/README.md for detail):
+#   1. Add this repo as an app in Codemagic.
+#   2. Teams → Integrations → Apple Developer Portal: upload your App Store
+#      Connect API key (Issuer ID, Key ID, .p8). Name the integration so it
+#      matches `app_store_connect:` below (here: "Orbit ASC API key").
+#   3. In App Store Connect, create the app with bundle id
+#      com.tinybirdbigdreams.orbit and copy its numeric Apple ID into
+#      APP_STORE_APPLE_ID below.
+#   4. Add a PERSISTENT signing private key so every build reuses the SAME
+#      distribution certificate (this is what makes the build repeatable —
+#      without it Codemagic mints a throwaway cert each run and signing breaks).
+#      Generate one locally:   openssl genrsa 2048
+#      Copy the whole output (the -----BEGIN/END----- block included) into a
+#      Codemagic environment variable named exactly  CERTIFICATE_PRIVATE_KEY,
+#      mark it **Secure**, and put it in a variable group named  orbit_signing
+#      (that group is imported under `environment.groups` below). The signing
+#      step feeds it to `fetch-signing-files --certificate-key`.
+#
+# This project lives in the `orbit/` subfolder of the repo, so every workflow
+# sets `working_directory: orbit`.
+
+workflows:
+  ios-testflight:
+    name: Orbit iOS → TestFlight
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    working_directory: orbit
+    # Auto-build on every push to a claude/* dev branch (requires the repo's
+    # Codemagic webhook to be connected — it is, since manual builds work). This
+    # is what makes a plain `git push` kick off a TestFlight build with no click.
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: 'claude/*'
+          include: true
+          source: true
+    integrations:
+      app_store_connect: Orbit ASC API key
+    environment:
+      groups:
+        # Create this variable group in the Codemagic UI and add the Secure
+        # variable CERTIFICATE_PRIVATE_KEY to it (see header, step 4). A yaml
+        # workflow only sees UI variables whose group is imported here.
+        - orbit_signing
+      vars:
+        BUNDLE_ID: "com.tinybirdbigdreams.orbit"
+        XCODE_WORKSPACE: "ios/Orbit.xcworkspace"
+        XCODE_SCHEME: "Orbit"
+        # Numeric Apple ID of the app in App Store Connect (App Information → General).
+        APP_STORE_APPLE_ID: 6785966852
+      node: 20
+      # Apple rejects uploads not built with the current iOS SDK
+      # ("built with the iOS 18 SDK … must be iOS 26 SDK or later"). `latest`
+      # pins Codemagic's newest stable Xcode (and its bundled iOS SDK), which
+      # is what App Store Connect requires.
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Install JS dependencies
+        script: |
+          npm ci
+          # patch-package applies our patches via the postinstall hook. The most
+          # important one fixes an iOS 26 launch crash in React Native's
+          # TurboModule layer (facebook/react-native#54859): an async void native
+          # method that throws on iOS 26 was rethrown on a GCD queue with nothing
+          # to catch it, aborting the app ~0.3s after launch. Assert the patch
+          # actually landed — a silent miss is the difference between a working
+          # app and a hard launch crash.
+          RN_TM="node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm"
+          if ! grep -q "react-native#54859" "$RN_TM"; then
+            echo "❌ RN TurboModule iOS-26 patch NOT applied (patch-package postinstall did not run)."
+            echo "   Expected marker 'react-native#54859' in $RN_TM"
+            exit 1
+          fi
+          echo "✅ RN TurboModule iOS-26 crash patch is present."
+      - name: Generate native iOS project (Expo prebuild)
+        script: npx expo prebuild --platform ios --clean --no-install
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios
+          pod install
+      - name: Increment build number
+        script: |
+          cd ios
+          LATEST_BUILD=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo "0")
+          agvtool new-version -all $(($LATEST_BUILD + 1))
+      - name: Set up code signing (persistent cert from CERTIFICATE_PRIVATE_KEY)
+        script: |
+          set -e
+          if [ -z "$CERTIFICATE_PRIVATE_KEY" ]; then
+            echo "❌ CERTIFICATE_PRIVATE_KEY is not set."
+            echo "   Add it as a Secure environment variable in Codemagic"
+            echo "   (generate with: openssl genrsa 2048). See this file's header."
+            exit 1
+          fi
+          keychain initialize
+          # Pinning --certificate-key to our own persistent private key is the
+          # whole trick: the distribution certificate is derived from THIS key,
+          # so it's identical on every build. --create makes the cert + App Store
+          # provisioning profile the first time; every later build reuses them.
+          # (Done in a script, not the prep-time ios_signing block, so --create
+          # can run for a brand-new app that has no profile yet.)
+          #
+          # Sign BOTH the app and its WidgetKit extension. The widget is a
+          # separate bundle id ("$BUNDLE_ID.widget") and needs its own profile.
+          # Both App IDs share the App Group group.com.tinybirdbigdreams.orbit —
+          # that group and the "App Groups" capability on both IDs must exist in
+          # the Apple Developer portal (set up already), or signing rejects the
+          # entitlement.
+          for id in "$BUNDLE_ID" "$BUNDLE_ID.widget"; do
+            app-store-connect fetch-signing-files "$id" \
+              --type IOS_APP_STORE \
+              --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
+              --create
+          done
+          keychain add-certificates
+          xcode-project use-profiles
+      - name: Build IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      # dSYMs — kept so a crashing build's stack frames can be symbolicated
+      # offline (llvm-symbolizer) if the on-device crash capture ever misses.
+      - build/ios/ipa/*.app.dSYM
+      - build/ios/**/*.dSYM
+      - build/ios/**/*.dSYM.zip
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Upload only. The build lands in App Store Connect → TestFlight as
+        # "Ready to Submit" and is automatically available to anyone in an
+        # Internal Testing group (no review needed) — add yourself once.
+        #
+        # We deliberately omit `submit_to_testflight: true`: that post-upload
+        # "App Store distribution" step waits on Apple's processing and tries to
+        # auto-distribute, which fails the whole build when the build is still
+        # processing or no beta group exists (even though the upload succeeded).
+        # To auto-push to EXTERNAL testers later, create a group and add:
+        #   submit_to_testflight: true
+        #   beta_groups:
+        #     - Your External Group
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # RELEASE: build + submit to App Store review in one run.
+  #
+  # Run this MANUALLY from the Codemagic UI when you want to ship a version to
+  # the store (Start new build → Workflow: ios-release). It builds exactly like
+  # ios-testflight, then submits the build to App Review automatically. It has
+  # NO auto-trigger on purpose, so ordinary pushes to claude/* only ever go to
+  # TestFlight — a release is always a deliberate click here.
+  #
+  # Before running: bump `version` in orbit/app.json (e.g. 1.0.1) for anything
+  # after the first release, and make sure the App Store listing (metadata +
+  # screenshots) is filled in — this submits the binary; the listing still lives
+  # in App Store Connect.
+  # ─────────────────────────────────────────────────────────────────────────
+  ios-release:
+    name: Orbit iOS → App Store (submit for review)
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    working_directory: orbit
+    integrations:
+      app_store_connect: Orbit ASC API key
+    environment:
+      groups:
+        - orbit_signing
+      vars:
+        BUNDLE_ID: "com.tinybirdbigdreams.orbit"
+        XCODE_WORKSPACE: "ios/Orbit.xcworkspace"
+        XCODE_SCHEME: "Orbit"
+        APP_STORE_APPLE_ID: 6785966852
+      node: 20
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Install JS dependencies
+        script: |
+          npm ci
+          # Assert the RN iOS-26 TurboModule crash patch actually applied (see
+          # the ios-testflight workflow for the full explanation).
+          RN_TM="node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm"
+          if ! grep -q "react-native#54859" "$RN_TM"; then
+            echo "❌ RN TurboModule iOS-26 patch NOT applied (patch-package postinstall did not run)."
+            exit 1
+          fi
+          echo "✅ RN TurboModule iOS-26 crash patch is present."
+      - name: Generate native iOS project (Expo prebuild)
+        script: npx expo prebuild --platform ios --clean --no-install
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios
+          pod install
+      - name: Increment build number
+        script: |
+          cd ios
+          LATEST_BUILD=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo "0")
+          agvtool new-version -all $(($LATEST_BUILD + 1))
+      - name: Set up code signing (persistent cert from CERTIFICATE_PRIVATE_KEY)
+        script: |
+          set -e
+          if [ -z "$CERTIFICATE_PRIVATE_KEY" ]; then
+            echo "❌ CERTIFICATE_PRIVATE_KEY is not set."
+            exit 1
+          fi
+          keychain initialize
+          # Sign the app and its widget extension (same as ios-testflight).
+          for id in "$BUNDLE_ID" "$BUNDLE_ID.widget"; do
+            app-store-connect fetch-signing-files "$id" \
+              --type IOS_APP_STORE \
+              --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
+              --create
+          done
+          keychain add-certificates
+          xcode-project use-profiles
+      - name: Build IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - build/ios/ipa/*.app.dSYM
+      - build/ios/**/*.dSYM
+      - build/ios/**/*.dSYM.zip
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Upload the build AND submit it to App Store review automatically.
+        submit_to_app_store: true
+        # AFTER_APPROVAL = release to the store the moment Apple approves (fully
+        # hands-off). Change to MANUAL to hold it for a manual "Release" click in
+        # App Store Connect, or SCHEDULED (with earliest_release_date) for a timed
+        # launch.
+        release_type: AFTER_APPROVAL
