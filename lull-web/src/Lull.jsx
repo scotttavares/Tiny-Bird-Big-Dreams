@@ -515,19 +515,25 @@ export default function Lull() {
                     {th.bloom.map((c, i) => { const pos = [[32,32],[68,62],[60,74],[36,66],[72,32]][i]; const reach = [52,50,48,48,46][i]; const blur = [12,13,13,14,13][i]; const dur = [12,14,10,16,13][i]; const anim = ["driftA1","driftA2","driftA3","driftA4","driftA5"][i]; return (
                       <div key={i} style={{ position: "absolute", width: "118%", height: "118%", borderRadius: "50%", mixBlendMode: "screen", opacity: (night ? 0.72 : 1) * (i === 4 ? 0.92 : 1), background: `radial-gradient(circle at ${pos[0]}% ${pos[1]}%, rgb(${c[0]},${c[1]},${c[2]}), transparent ${reach}%)`, filter: `blur(${blur}px)`, animation: prefersReduced ? "none" : `${anim} ${dur}s ease-in-out infinite`, willChange: "transform" }} />); })}
                   </div>
-                  <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "radial-gradient(circle at 48% 40%, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0.16) 12%, rgba(255,255,255,0) 30%)", filter: "blur(3px)", zIndex: 3 }} />
-                  <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "radial-gradient(circle at 50% 42%, transparent 46%, rgba(20,10,45,0.28) 82%, rgba(12,6,30,0.5) 100%)", zIndex: 3 }} />
+                  {/* top gloss — moved up + softened so it reads as a glass sheen, not a blown-out core over the text */}
+                  <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "radial-gradient(circle at 47% 33%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.12) 13%, rgba(255,255,255,0) 34%)", filter: "blur(4px)", zIndex: 3 }} />
+                  {/* deeper vignette for sphere volume — darker rim + a gentle centre fall-off */}
+                  <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "radial-gradient(circle at 50% 40%, transparent 40%, rgba(16,8,38,0.34) 78%, rgba(9,4,24,0.66) 100%)", zIndex: 3 }} />
                   <div style={{ position: "absolute", width: "26%", height: "20%", left: "22%", top: "16%", borderRadius: "50%", background: "radial-gradient(circle at 40% 40%, rgba(255,255,255,0.85), rgba(255,255,255,0) 70%)", filter: "blur(2px)", zIndex: 4 }} />
                 </div>
-                <div style={{ position: "absolute", inset: 0, borderRadius: "50%", zIndex: 5, pointerEvents: "none", background: "radial-gradient(circle at 50% 50%, transparent 66%, rgba(255,255,255,0.16) 71%, transparent 74%)" }} />
+                <div style={{ position: "absolute", inset: 0, borderRadius: "50%", zIndex: 5, pointerEvents: "none", background: "radial-gradient(circle at 50% 50%, transparent 67%, rgba(255,255,255,0.24) 72%, transparent 77%)" }} />
               </div>
 
-              <div style={{ position: "absolute", textAlign: "center", zIndex: 6, pointerEvents: "none", color: "#F6F2FF" }}>
-                {active ? (<div style={{ fontSize: 29, fontWeight: 200, letterSpacing: 1, textShadow: "0 2px 22px rgba(0,0,0,0.65)" }}>{phaseLabel}</div>)
+              {/* soft dark core behind the readout so it stays legible over the bright, shifting bloom */}
+              <div aria-hidden="true" style={{ position: "absolute", inset: 0, zIndex: 5, pointerEvents: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ width: ORB * 0.66, height: ORB * 0.46, borderRadius: "50%", background: "radial-gradient(ellipse at center, rgba(7,4,18,0.5) 0%, rgba(7,4,18,0.3) 42%, rgba(7,4,18,0) 72%)", filter: "blur(7px)" }} />
+              </div>
+              <div style={{ position: "absolute", textAlign: "center", zIndex: 6, pointerEvents: "none", color: "#F8F5FF" }}>
+                {active ? (<div style={{ fontSize: 30, fontWeight: 300, letterSpacing: 1, textShadow: "0 1px 3px rgba(0,0,0,0.6), 0 2px 22px rgba(0,0,0,0.55)" }}>{phaseLabel}</div>)
                   : sleepDone ? null : (<>
-                    <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 6, textIndent: 6, opacity: 0.5, marginBottom: 10, textShadow: "0 2px 14px rgba(0,0,0,0.6)" }}>LULL</div>
-                    <div style={{ fontSize: 22, fontWeight: 300, letterSpacing: 0.5, textShadow: "0 2px 20px rgba(0,0,0,0.6)" }}>{pats[patternId].name}</div>
-                    <div style={{ fontSize: 12, letterSpacing: 3, opacity: 0.75, marginTop: 4, textShadow: "0 1px 14px rgba(0,0,0,0.6)" }}>{pats[patternId].ratio}</div></>)}
+                    <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 6, textIndent: 6, opacity: 0.62, marginBottom: 10, textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}>LULL</div>
+                    <div style={{ fontSize: 23, fontWeight: 400, letterSpacing: 0.5, textShadow: "0 1px 3px rgba(0,0,0,0.66), 0 2px 18px rgba(0,0,0,0.5)" }}>{pats[patternId].name}</div>
+                    <div style={{ fontSize: 12.5, letterSpacing: 3, opacity: 0.92, marginTop: 4, textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}>{pats[patternId].ratio}</div></>)}
               </div>
             </div>
             <div style={{ fontSize: 15, opacity: 0.65, fontVariantNumeric: "tabular-nums", letterSpacing: 1, minHeight: 22 }}>{active ? fmt(remaining) : ""}</div>
