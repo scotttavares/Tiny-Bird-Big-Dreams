@@ -100,6 +100,26 @@ function minutesSince(list, sinceMs) { return list.reduce((a, s) => a + (s && s.
 const CUSTOM_KEY = "lull.custom.v1";
 function loadCustom() { try { const r = JSON.parse(localStorage.getItem(CUSTOM_KEY) || "null"); return r && typeof r === "object" ? r : null; } catch (e) { return null; } }
 function saveCustom(c) { try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(c)); } catch (e) {} }
+// ---------- orbs ----------
+// The orb you breathe with is a cosmetic choice. "aurora" (the Siri-style glass orb) ships free;
+// others can be unlocked. Purchases are scaffolded locally here — real charging (Apple In-App
+// Purchase on iOS, Stripe on web) is wired separately; `unlockOrb` is the single seam for it.
+const ORBS = {
+  aurora: { name: "Aurora", tag: "Siri-style glass", kind: "image", src: "/assets/orb-glass.webp", white: false, price: 0 },
+  halo: { name: "Halo", tag: "Soft Apple glow", kind: "apple", white: true, price: 0.5 },
+};
+const ORB_ORDER = ["aurora", "halo"];
+const ORB_KEY = "lull.orb.v1";
+const OWNED_KEY = "lull.orbsOwned.v1";
+function loadOrb() { try { const v = localStorage.getItem(ORB_KEY); return v && ORBS[v] ? v : "aurora"; } catch (e) { return "aurora"; } }
+function loadOwned() { try { const r = JSON.parse(localStorage.getItem(OWNED_KEY) || "null"); const list = Array.isArray(r) ? r.filter((id) => ORBS[id]) : []; return list.includes("aurora") ? list : ["aurora", ...list]; } catch (e) { return ["aurora"]; } }
+function fmtPrice(p) { return p ? "$" + p.toFixed(2) : "Free"; }
+function orbChip(id, size) {
+  const o = ORBS[id] || ORBS.aurora;
+  const base = { width: size, height: size, borderRadius: "50%", flex: "0 0 auto", overflow: "hidden", boxShadow: "0 2px 10px rgba(0,0,0,0.22)" };
+  if (o.kind === "image") return <div style={base}><img src={o.src} alt="" draggable="false" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /></div>;
+  return <div style={{ ...base, background: "radial-gradient(circle at 36% 32%, rgba(140,180,255,0.95), transparent 56%), radial-gradient(circle at 70% 38%, rgba(196,155,255,0.92), transparent 56%), radial-gradient(circle at 62% 72%, rgba(255,158,203,0.86), transparent 56%), radial-gradient(circle at 32% 68%, rgba(134,235,205,0.85), transparent 56%), #ffffff" }} />;
+}
 function customRatio(c) { return [c.inhale, c.hold, c.exhale, c.hold2].filter((n) => n > 0).join(" · "); }
 function customPhases(c, HI, LO, night) { const out = [{ key: "inhale", label: "Breathe in", dur: c.inhale, scale: HI, tone: "cool" }]; if (c.hold > 0) out.push({ key: "hold", label: "Hold", dur: c.hold, scale: HI, tone: "cool" }); out.push({ key: "exhale", label: night ? "Let go" : "Breathe out", dur: c.exhale, scale: LO, tone: "warm" }); if (c.hold2 > 0) out.push({ key: "hold", label: "Hold", dur: c.hold2, scale: LO, tone: "warm" }); return out; }
 
@@ -206,7 +226,9 @@ export default function Lull() {
   }, [HI, LO, customPat]);
 
   const [mode, setMode] = useState("breathe");
-  const [orbStyle, setOrbStyle] = useState("glass"); // "glass" | "flow" — Siri-style orb image
+  const [orbId, setOrbId] = useState(loadOrb);          // which orb you breathe with
+  const [ownedOrbs, setOwnedOrbs] = useState(loadOwned); // unlocked orb ids
+  const [orbStoreOpen, setOrbStoreOpen] = useState(false);
   const [themeId, setThemeId] = useState("aurora");
   const [screen, setScreen] = useState("home");
   const [patternId, setPatternId] = useState("calm");
@@ -234,6 +256,13 @@ export default function Lull() {
   useEffect(() => { modeRef.current = mode; }, [mode]);
   useEffect(() => { patternIdRef.current = patternId; }, [patternId]);
   useEffect(() => { scapeIdRef.current = scapeId; }, [scapeId]);
+  useEffect(() => { try { localStorage.setItem(ORB_KEY, orbId); } catch (e) {} }, [orbId]);
+  useEffect(() => { try { localStorage.setItem(OWNED_KEY, JSON.stringify(ownedOrbs)); } catch (e) {} }, [ownedOrbs]);
+  const selectOrb = (id) => { if (ownedOrbs.includes(id)) { setOrbId(id); setOrbStoreOpen(false); } };
+  // Single seam for buying an orb. Today it unlocks locally; real charging (Apple In-App Purchase
+  // on iOS, Stripe on web) drops in here — await the receipt, then unlock on success.
+  const unlockOrb = (id) => { setOwnedOrbs((prev) => (prev.includes(id) ? prev : [...prev, id])); setOrbId(id); };
+  const restoreOrbs = () => { /* real IAP/Stripe restore wires in here */ };
   useEffect(() => { try { if (window.matchMedia) setLight(window.matchMedia("(prefers-color-scheme: light)").matches); } catch (e) {} }, []);
   useEffect(() => { try { const on = light && mode !== "sleep"; document.documentElement.style.colorScheme = on ? "light" : "dark"; const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", on ? "#faf4ee" : "#0a0613"); } catch (e) {} }, [light, mode]);
 
@@ -363,16 +392,27 @@ export default function Lull() {
   const C = 2 * Math.PI * R;
   const pats = PATTERNS[mode];
 
-  const lightUI = light && !night;
-  const orbSrc = orbStyle === "flow" ? "/assets/orb-flow.webp" : "/assets/orb-glass.webp";
+  const selectedOrb = ORBS[orbId] || ORBS.aurora;
+  const onWhite = !!selectedOrb.white && !night;   // Apple-glow orb sits on a clean white ground
+  const daylight = light && !night;                 // user's manual light theme
+  const lightUI = onWhite || daylight;              // dark ink on a white or light ground
+  const orbSrc = selectedOrb.kind === "image" ? selectedOrb.src : null;
   // Melt the image's near-black edge into the ground (both themes) so there's no black disc/halo —
   // on dark it becomes a soft glow, on light the warm ground shows around a soft-edged glass ball.
   const orbMask = "radial-gradient(closest-side, #000 58%, rgba(0,0,0,0.5) 76%, transparent 92%)";
+  // Readout ink/shadow: dark text with a soft white halo on the white ground, light text with a
+  // dark halo on every other ground.
+  const roInk = onWhite ? "#26203f" : "#F8F5FF";
+  const roShadow = onWhite ? "0 1px 2px rgba(255,255,255,0.85)" : "0 1px 3px rgba(0,0,0,0.6)";
+  const roShadowBig = onWhite ? "0 1px 2px rgba(255,255,255,0.9)" : "0 1px 3px rgba(0,0,0,0.66), 0 2px 18px rgba(0,0,0,0.5)";
+  const roShadowActive = onWhite ? "0 1px 2px rgba(255,255,255,0.9)" : "0 1px 3px rgba(0,0,0,0.6), 0 2px 22px rgba(0,0,0,0.55)";
   const ink = lightUI ? "#2b2447" : "#F3EFFF";
   const inkA = (a) => (lightUI ? `rgba(43,36,71,${a})` : `rgba(243,239,255,${a})`);
   const wa = (a) => (lightUI ? `rgba(70,52,120,${a})` : `rgba(255,255,255,${a})`);
   const LIGHT_ROOT = "radial-gradient(125% 110% at 50% 6%, #faf4ee 0%, #f2eaef 55%, #ece1e9 100%)";
-  const root = { minHeight: "100vh", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden", background: night ? th.rootNight : (lightUI ? LIGHT_ROOT : th.rootDay), color: ink, fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif', WebkitFontSmoothing: "antialiased", transition: "background 1.4s ease, color 1.4s ease" };
+  const WHITE_ROOT = "radial-gradient(125% 120% at 50% 4%, #ffffff 0%, #fbfbfe 58%, #f3f3f8 100%)";
+  const groundBg = onWhite ? WHITE_ROOT : (night ? th.rootNight : (daylight ? LIGHT_ROOT : th.rootDay));
+  const root = { minHeight: "100vh", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden", background: groundBg, color: ink, fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif', WebkitFontSmoothing: "antialiased", transition: "background 1.4s ease, color 1.4s ease" };
   const frame = { position: "relative", zIndex: 2, width: "100%", maxWidth: 460, minHeight: "min(100vh, 820px)", padding: "max(26px, calc(env(safe-area-inset-top) + 6px)) 26px calc(40px + env(safe-area-inset-bottom))", display: "flex", flexDirection: "column", alignItems: "center" };
   const css = `
     * { box-sizing: border-box; }
@@ -457,14 +497,14 @@ export default function Lull() {
         </defs>
       </svg>
 
-      <div className="amb1" style={{ position: "absolute", top: "-10%", left: "-15%", width: 520, height: 520, borderRadius: "50%", background: amb1, filter: "blur(20px)", zIndex: 0, transition: "background 1.4s ease" }} />
-      <div className="amb2" style={{ position: "absolute", bottom: "-12%", right: "-18%", width: 560, height: 560, borderRadius: "50%", background: amb2, filter: "blur(20px)", zIndex: 0, transition: "background 1.4s ease" }} />
-      <div style={{ position: "absolute", inset: 0, background: isCool ? tintCool : tintWarm, transition: "background 1.5s ease", zIndex: 1, pointerEvents: "none" }} />
+      <div className="amb1" style={{ position: "absolute", top: "-10%", left: "-15%", width: 520, height: 520, borderRadius: "50%", background: amb1, filter: "blur(20px)", zIndex: 0, opacity: onWhite ? 0 : 1, transition: "background 1.4s ease, opacity 1.2s ease" }} />
+      <div className="amb2" style={{ position: "absolute", bottom: "-12%", right: "-18%", width: 560, height: 560, borderRadius: "50%", background: amb2, filter: "blur(20px)", zIndex: 0, opacity: onWhite ? 0 : 1, transition: "background 1.4s ease, opacity 1.2s ease" }} />
+      <div style={{ position: "absolute", inset: 0, background: isCool ? tintCool : tintWarm, opacity: onWhite ? 0 : 1, transition: "background 1.5s ease, opacity 1.2s ease", zIndex: 1, pointerEvents: "none" }} />
 
       <div style={frame}>
         <div style={{ position: "relative", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 36, marginBottom: 8 }}>
           <span style={{ fontSize: 14, letterSpacing: 6, textTransform: "uppercase", fontWeight: 500, opacity: 0.82, paddingLeft: 6 }}>Lull</span>
-          <button className="lull-btn" aria-label={lightUI ? "Switch to dark" : "Switch to light"} onClick={() => setLight((v) => !v)} style={{ position: "absolute", left: 0, padding: 8, opacity: 0.7, display: night ? "none" : "flex" }}>{lightUI ? <Moon size={19} /> : <Sun size={19} />}</button>
+          <button className="lull-btn" aria-label={lightUI ? "Switch to dark" : "Switch to light"} onClick={() => setLight((v) => !v)} style={{ position: "absolute", left: 0, padding: 8, opacity: 0.7, display: (night || onWhite) ? "none" : "flex" }}>{lightUI ? <Moon size={19} /> : <Sun size={19} />}</button>
           <button className="lull-btn" aria-label={soundOn ? "Mute sound" : "Unmute sound"} aria-pressed={soundOn} onClick={toggleSound} style={{ position: "absolute", right: 0, padding: 8, opacity: 0.7, display: "flex" }}>{soundOn ? <Volume2 size={20} /> : <VolumeX size={20} />}</button>
         </div>
 
@@ -512,26 +552,42 @@ export default function Lull() {
                     idle brightness shimmer, and a breath-brightness during a session (cool/inhale brighter,
                     warm/exhale softer). No mix-blend-mode: the parent's transform isolates it, so we mask the
                     near-black edge to blend into the ground instead. */}
-                <div style={{ position: "absolute", inset: 0, borderRadius: "50%", overflow: "hidden", isolation: "isolate", zIndex: 2, WebkitMaskImage: orbMask, maskImage: orbMask, filter: active ? (isCool ? "brightness(1.13) saturate(1.06)" : "brightness(0.9) saturate(1.0)") : undefined, animation: (idle && !prefersReduced) ? "orbGlow 7s ease-in-out infinite" : "none", transition: active ? `filter ${orb.dur}s ${orb.ease || "ease"}` : "filter 1s ease" }}>
-                  {/* Swirling interior: two copies of the orb slowly counter-rotating and screen-blended,
-                      so the colour ribbons cross and churn instead of the whole ball just scaling.
-                      A fixed specular sits on top so it still reads as a glass sphere, not a spinning disc. */}
-                  <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: "-6%", width: "112%", height: "112%", objectFit: "cover", display: "block", pointerEvents: "none", willChange: "transform", animation: prefersReduced ? "none" : "swirlSpin 46s linear infinite" }} />
-                  <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: "-6%", width: "112%", height: "112%", objectFit: "cover", display: "block", pointerEvents: "none", mixBlendMode: "screen", opacity: 0.45, willChange: "transform", animation: prefersReduced ? "none" : "swirlSpinRev 63s linear infinite" }} />
-                  <div aria-hidden="true" style={{ position: "absolute", inset: 0, borderRadius: "50%", pointerEvents: "none", background: "radial-gradient(58% 52% at 37% 30%, rgba(255,255,255,0.32), rgba(255,255,255,0.06) 42%, transparent 62%)" }} />
-                </div>
+                {selectedOrb.kind === "image" ? (
+                  <div style={{ position: "absolute", inset: 0, borderRadius: "50%", overflow: "hidden", isolation: "isolate", zIndex: 2, WebkitMaskImage: orbMask, maskImage: orbMask, filter: active ? (isCool ? "brightness(1.13) saturate(1.06)" : "brightness(0.9) saturate(1.0)") : undefined, animation: (idle && !prefersReduced) ? "orbGlow 7s ease-in-out infinite" : "none", transition: active ? `filter ${orb.dur}s ${orb.ease || "ease"}` : "filter 1s ease" }}>
+                    {/* Swirling interior: two copies of the orb slowly counter-rotating and screen-blended,
+                        so the colour ribbons cross and churn instead of the whole ball just scaling.
+                        A fixed specular sits on top so it still reads as a glass sphere, not a spinning disc. */}
+                    <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: "-6%", width: "112%", height: "112%", objectFit: "cover", display: "block", pointerEvents: "none", willChange: "transform", animation: prefersReduced ? "none" : "swirlSpin 46s linear infinite" }} />
+                    <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: "-6%", width: "112%", height: "112%", objectFit: "cover", display: "block", pointerEvents: "none", mixBlendMode: "screen", opacity: 0.45, willChange: "transform", animation: prefersReduced ? "none" : "swirlSpinRev 63s linear infinite" }} />
+                    <div aria-hidden="true" style={{ position: "absolute", inset: 0, borderRadius: "50%", pointerEvents: "none", background: "radial-gradient(58% 52% at 37% 30%, rgba(255,255,255,0.32), rgba(255,255,255,0.06) 42%, transparent 62%)" }} />
+                  </div>
+                ) : (
+                  /* Apple-style soft glow orb (coded placeholder). Blurred pastel blobs drift and re-mix
+                     via the driftA loops, melting into the ground through a soft mask — clean on white,
+                     a gentle glow on dark. A generated image can later drop in as another image-kind orb. */
+                  <div style={{ position: "absolute", inset: 0, borderRadius: "50%", overflow: "hidden", zIndex: 2, WebkitMaskImage: "radial-gradient(closest-side, #000 42%, rgba(0,0,0,0.55) 68%, transparent 88%)", maskImage: "radial-gradient(closest-side, #000 42%, rgba(0,0,0,0.55) 68%, transparent 88%)", filter: active ? (isCool ? "brightness(1.07) saturate(1.08)" : "brightness(0.97) saturate(1.0)") : undefined, animation: (idle && !prefersReduced) ? "orbGlow 8s ease-in-out infinite" : "none", transition: active ? `filter ${orb.dur}s ${orb.ease || "ease"}` : "filter 1s ease" }}>
+                    <div style={{ position: "absolute", inset: "-24%", filter: "blur(15px)" }}>
+                      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(38% 38% at 34% 30%, rgba(120,168,255,0.95), transparent 60%)", animation: prefersReduced ? "none" : "driftA1 17s ease-in-out infinite" }} />
+                      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(40% 40% at 70% 33%, rgba(190,146,255,0.92), transparent 60%)", animation: prefersReduced ? "none" : "driftA2 21s ease-in-out infinite" }} />
+                      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(42% 42% at 66% 70%, rgba(255,150,205,0.86), transparent 60%)", animation: prefersReduced ? "none" : "driftA3 19s ease-in-out infinite" }} />
+                      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(40% 40% at 32% 68%, rgba(120,235,205,0.82), transparent 60%)", animation: prefersReduced ? "none" : "driftA4 23s ease-in-out infinite" }} />
+                      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(34% 34% at 50% 50%, rgba(255,214,170,0.72), transparent 56%)", animation: prefersReduced ? "none" : "driftA5 18s ease-in-out infinite" }} />
+                    </div>
+                    <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "radial-gradient(30% 30% at 50% 47%, rgba(255,255,255,0.9), rgba(255,255,255,0) 62%)" }} />
+                  </div>
+                )}
               </div>
 
               {/* soft dark core behind the readout so it stays legible over the bright, shifting bloom */}
               <div aria-hidden="true" style={{ position: "absolute", inset: 0, zIndex: 5, pointerEvents: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <div style={{ width: ORB * 0.66, height: ORB * 0.46, borderRadius: "50%", background: "radial-gradient(ellipse at center, rgba(7,4,18,0.5) 0%, rgba(7,4,18,0.3) 42%, rgba(7,4,18,0) 72%)", filter: "blur(7px)" }} />
+                <div style={{ width: ORB * 0.66, height: ORB * 0.46, borderRadius: "50%", background: "radial-gradient(ellipse at center, rgba(7,4,18,0.5) 0%, rgba(7,4,18,0.3) 42%, rgba(7,4,18,0) 72%)", filter: "blur(7px)", opacity: onWhite ? 0 : 1, transition: "opacity 1s ease" }} />
               </div>
-              <div style={{ position: "absolute", textAlign: "center", zIndex: 6, pointerEvents: "none", color: "#F8F5FF" }}>
-                {active ? (<div style={{ fontSize: 30, fontWeight: 300, letterSpacing: 1, textShadow: "0 1px 3px rgba(0,0,0,0.6), 0 2px 22px rgba(0,0,0,0.55)" }}>{phaseLabel}</div>)
+              <div style={{ position: "absolute", textAlign: "center", zIndex: 6, pointerEvents: "none", color: roInk }}>
+                {active ? (<div style={{ fontSize: 30, fontWeight: 300, letterSpacing: 1, textShadow: roShadowActive }}>{phaseLabel}</div>)
                   : sleepDone ? null : (<>
-                    <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 6, textIndent: 6, opacity: 0.62, marginBottom: 10, textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}>LULL</div>
-                    <div style={{ fontSize: 23, fontWeight: 400, letterSpacing: 0.5, textShadow: "0 1px 3px rgba(0,0,0,0.66), 0 2px 18px rgba(0,0,0,0.5)" }}>{pats[patternId].name}</div>
-                    <div style={{ fontSize: 12.5, letterSpacing: 3, opacity: 0.92, marginTop: 4, textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}>{pats[patternId].ratio}</div></>)}
+                    <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 6, textIndent: 6, opacity: 0.62, marginBottom: 10, textShadow: roShadow }}>LULL</div>
+                    <div style={{ fontSize: 23, fontWeight: 400, letterSpacing: 0.5, textShadow: roShadowBig }}>{pats[patternId].name}</div>
+                    <div style={{ fontSize: 12.5, letterSpacing: 3, opacity: 0.92, marginTop: 4, textShadow: roShadow }}>{pats[patternId].ratio}</div></>)}
               </div>
             </div>
             <div style={{ fontSize: 15, opacity: 0.65, fontVariantNumeric: "tabular-nums", letterSpacing: 1, minHeight: 22 }}>{active ? fmt(remaining) : ""}</div>
@@ -540,10 +596,17 @@ export default function Lull() {
 
         {screen === "home" && (
           <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 12 }}>
+            <button className="lull-btn" aria-label="Choose your orb" onClick={() => setOrbStoreOpen(true)} style={{ alignSelf: "center", display: "flex", alignItems: "center", gap: 9, padding: "6px 13px 6px 6px", borderRadius: 999, background: wa(0.06), border: "1px solid " + wa(0.16), color: ink }}>
+              {orbChip(orbId, 26)}
+              <span style={{ fontSize: 13, fontWeight: 500, letterSpacing: 0.3 }}>{selectedOrb.name}</span>
+              <span style={{ fontSize: 12, opacity: 0.5, letterSpacing: 0.5 }}>Orbs ›</span>
+            </button>
+            {!onWhite && (
             <div style={{ display: "flex", gap: 12, justifyContent: "center", padding: "2px 0 4px" }}>
               {Object.entries(THEMES).map(([id, t]) => { const sel = themeId === id; return (
-                <button key={id} className="lull-dot lull-btn" aria-label={`Orb theme: ${t.name}`} aria-pressed={sel} title={t.name} onClick={() => setThemeId(id)} style={{ width: 30, height: 30, borderRadius: "50%", padding: 0, backgroundImage: t.swatch, border: "1px solid " + wa(0.3), boxShadow: sel ? (lightUI ? "0 0 0 2px rgba(70,50,140,0.8), 0 3px 12px rgba(80,60,140,0.25)" : "0 0 0 2px rgba(255,255,255,0.9), 0 3px 12px rgba(0,0,0,0.45)") : (lightUI ? "0 2px 8px rgba(80,60,140,0.2)" : "0 2px 8px rgba(0,0,0,0.35)"), transform: sel ? "scale(1.14)" : "scale(1)", transition: "transform .2s ease, box-shadow .2s ease" }} />); })}
+                <button key={id} className="lull-dot lull-btn" aria-label={`Orb colour: ${t.name}`} aria-pressed={sel} title={t.name} onClick={() => setThemeId(id)} style={{ width: 30, height: 30, borderRadius: "50%", padding: 0, backgroundImage: t.swatch, border: "1px solid " + wa(0.3), boxShadow: sel ? (lightUI ? "0 0 0 2px rgba(70,50,140,0.8), 0 3px 12px rgba(80,60,140,0.25)" : "0 0 0 2px rgba(255,255,255,0.9), 0 3px 12px rgba(0,0,0,0.45)") : (lightUI ? "0 2px 8px rgba(80,60,140,0.2)" : "0 2px 8px rgba(0,0,0,0.35)"), transform: sel ? "scale(1.14)" : "scale(1)", transition: "transform .2s ease, box-shadow .2s ease" }} />); })}
             </div>
+            )}
             <div style={segWrap}>
               {Object.entries(pats).map(([id, p]) => { const sel = patternId === id; return (<button key={id} className="lull-seg lull-btn" aria-pressed={sel} onClick={() => setPatternId(id)} style={seg(sel)}><span style={{ fontSize: 14, fontWeight: 500 }}>{p.name}</span><span style={{ fontSize: 11, opacity: 0.7, letterSpacing: 1 }}>{p.ratio}</span></button>); })}
             </div>
@@ -582,8 +645,42 @@ export default function Lull() {
         )}
       </div>
 
+      {orbStoreOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 60, background: groundBg, color: ink, display: "flex", flexDirection: "column", padding: "max(30px, calc(env(safe-area-inset-top) + 12px)) 26px calc(34px + env(safe-area-inset-bottom))", overflowY: "auto" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ fontSize: 12, letterSpacing: 5, textTransform: "uppercase", fontWeight: 500, opacity: 0.6 }}>Orbs</span>
+            <button className="lull-btn" aria-label="Done" onClick={() => setOrbStoreOpen(false)} style={{ padding: "6px 4px", opacity: 0.75, fontSize: 15 }}>Done</button>
+          </div>
+          <p style={{ fontSize: 14, lineHeight: 1.5, opacity: 0.6, margin: "0 0 20px", maxWidth: "42ch" }}>Choose the orb you breathe with. Unlocked orbs are yours forever.</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {ORB_ORDER.map((id) => {
+              const o = ORBS[id]; const owned = ownedOrbs.includes(id); const sel = orbId === id;
+              return (
+                <div key={id} style={{ display: "flex", alignItems: "center", gap: 16, padding: 16, borderRadius: 20, background: wa(0.05), border: "1px solid " + (sel ? wa(0.34) : wa(0.12)), boxShadow: sel ? "0 8px 22px -14px rgba(0,0,0,0.55)" : "none", transition: "border-color .2s ease" }}>
+                  {orbChip(id, 66)}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: 0.2 }}>{o.name}</span>
+                      {sel && (<span style={{ fontSize: 11, fontWeight: 600, letterSpacing: 0.5, color: inkA(0.5) }}>· In use</span>)}
+                    </div>
+                    <div style={{ fontSize: 12.5, opacity: 0.55, marginTop: 3 }}>{o.tag}</div>
+                    {!owned && (<div style={{ fontSize: 12.5, fontWeight: 600, opacity: 0.85, marginTop: 6, letterSpacing: 0.2 }}>{fmtPrice(o.price)} · one-time</div>)}
+                  </div>
+                  {owned ? (
+                    <button className="lull-btn" aria-pressed={sel} onClick={() => selectOrb(id)} disabled={sel} style={{ padding: "9px 15px", borderRadius: 999, fontSize: 13, fontWeight: 500, letterSpacing: 0.3, whiteSpace: "nowrap", background: sel ? "transparent" : wa(0.12), border: "1px solid " + (sel ? wa(0.22) : wa(0.22)), color: sel ? inkA(0.6) : ink }}>{sel ? "✓ Selected" : "Select"}</button>
+                  ) : (
+                    <button className="lull-btn" onClick={() => unlockOrb(id)} style={{ padding: "10px 16px", borderRadius: 999, fontSize: 13.5, fontWeight: 600, letterSpacing: 0.3, whiteSpace: "nowrap", color: "#fff", background: "linear-gradient(180deg, #9a86ff 0%, #6f5cff 100%)", boxShadow: "0 8px 18px -9px rgba(111,92,255,0.85)" }}>Unlock</button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <button className="lull-btn" onClick={restoreOrbs} style={{ alignSelf: "center", marginTop: 20, padding: "8px 0", fontSize: 12.5, letterSpacing: 0.4, color: inkA(0.5) }}>Restore purchases</button>
+          <p style={{ fontSize: 11.5, lineHeight: 1.5, opacity: 0.42, textAlign: "center", margin: "6px auto 0", maxWidth: "40ch" }}>One-time purchase, no subscription. Card payments arrive shortly — for now, unlocking is free while we finish setup.</p>
+        </div>
+      )}
       {showCustom && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 60, background: night ? th.rootNight : (lightUI ? LIGHT_ROOT : th.rootDay), color: ink, display: "flex", flexDirection: "column", padding: "max(30px, calc(env(safe-area-inset-top) + 12px)) 26px calc(34px + env(safe-area-inset-bottom))", overflowY: "auto" }}>
+        <div style={{ position: "fixed", inset: 0, zIndex: 60, background: groundBg, color: ink, display: "flex", flexDirection: "column", padding: "max(30px, calc(env(safe-area-inset-top) + 12px)) 26px calc(34px + env(safe-area-inset-bottom))", overflowY: "auto" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
             <span style={{ fontSize: 12, letterSpacing: 5, textTransform: "uppercase", fontWeight: 500, opacity: 0.6 }}>Your pattern</span>
             <button className="lull-btn" aria-label="Cancel" onClick={() => setShowCustom(false)} style={{ padding: "6px 4px", opacity: 0.75, fontSize: 15 }}>Cancel</button>
@@ -618,7 +715,7 @@ export default function Lull() {
       )}
 
       {showHistory && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 60, background: night ? th.rootNight : (lightUI ? LIGHT_ROOT : th.rootDay), color: ink, display: "flex", flexDirection: "column", padding: "max(30px, calc(env(safe-area-inset-top) + 12px)) 26px calc(34px + env(safe-area-inset-bottom))", overflowY: "auto" }}>
+        <div style={{ position: "fixed", inset: 0, zIndex: 60, background: groundBg, color: ink, display: "flex", flexDirection: "column", padding: "max(30px, calc(env(safe-area-inset-top) + 12px)) 26px calc(34px + env(safe-area-inset-bottom))", overflowY: "auto" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
             <span style={{ fontSize: 12, letterSpacing: 5, textTransform: "uppercase", fontWeight: 500, opacity: 0.6 }}>Your breaths</span>
             <button className="lull-btn" aria-label="Close" onClick={() => setShowHistory(false)} style={{ padding: "6px 4px", opacity: 0.75, fontSize: 15 }}>Done</button>
