@@ -104,11 +104,17 @@ function saveCustom(c) { try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(c
 // The orb you breathe with is a cosmetic choice. "aurora" (the Siri-style glass orb) ships free;
 // others can be unlocked. Purchases are scaffolded locally here — real charging (Apple In-App
 // Purchase on iOS, Stripe on web) is wired separately; `unlockOrb` is the single seam for it.
+// kind "image": a generated orb picture (masked, counter-rotating swirl). kind "glow": a coded
+// symmetric ring of the `colors` palette on a white (white:true) or deep (white:false) ground.
 const ORBS = {
   aurora: { name: "Aurora", tag: "Siri-style glass", kind: "image", src: "/assets/orb-glass.webp", white: false, price: 0 },
-  halo: { name: "Halo", tag: "Soft Apple glow", kind: "apple", white: true, price: 0.5 },
+  halo: { name: "Halo", tag: "Soft Apple glow", kind: "glow", white: true, price: 0.5, colors: ["120,168,255", "150,150,255", "196,150,255", "255,150,205", "130,235,205"] },
+  ember: { name: "Ember", tag: "Warm sunrise", kind: "glow", white: true, price: 0.5, colors: ["255,170,120", "255,120,150", "255,205,120", "255,140,185", "255,190,150"] },
+  tide: { name: "Tide", tag: "Deep ocean", kind: "glow", white: false, price: 0.5, colors: ["80,200,255", "70,160,255", "90,240,210", "120,150,255", "110,220,235"] },
+  nebula: { name: "Nebula", tag: "Cosmic violet", kind: "glow", white: false, price: 0.5, colors: ["180,110,255", "120,120,255", "255,110,205", "150,90,255", "110,180,255"] },
+  meadow: { name: "Meadow", tag: "Quiet green", kind: "glow", white: true, price: 0.5, colors: ["120,220,150", "150,235,190", "110,200,255", "200,235,130", "140,225,205"] },
 };
-const ORB_ORDER = ["aurora", "halo"];
+const ORB_ORDER = ["aurora", "halo", "ember", "tide", "nebula", "meadow"];
 const ORB_KEY = "lull.orb.v1";
 const OWNED_KEY = "lull.orbsOwned.v1";
 function loadOrb() { try { const v = localStorage.getItem(ORB_KEY); return v && ORBS[v] ? v : "aurora"; } catch (e) { return "aurora"; } }
@@ -118,7 +124,10 @@ function orbChip(id, size) {
   const o = ORBS[id] || ORBS.aurora;
   const base = { width: size, height: size, borderRadius: "50%", flex: "0 0 auto", overflow: "hidden", boxShadow: "0 2px 10px rgba(0,0,0,0.22)" };
   if (o.kind === "image") return <div style={base}><img src={o.src} alt="" draggable="false" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /></div>;
-  return <div style={{ ...base, background: "radial-gradient(circle at 36% 32%, rgba(140,180,255,0.95), transparent 56%), radial-gradient(circle at 70% 38%, rgba(196,155,255,0.92), transparent 56%), radial-gradient(circle at 62% 72%, rgba(255,158,203,0.86), transparent 56%), radial-gradient(circle at 32% 68%, rgba(134,235,205,0.85), transparent 56%), #ffffff" }} />;
+  const cols = o.colors || ["140,180,255", "196,155,255", "255,158,203", "134,235,205"];
+  const layers = cols.map((c, i, arr) => { const a = (i / arr.length) * Math.PI * 2 - Math.PI / 2; const x = (50 + Math.cos(a) * 24).toFixed(0); const y = (50 + Math.sin(a) * 24).toFixed(0); return `radial-gradient(42% 42% at ${x}% ${y}%, rgba(${c},0.92), transparent 60%)`; });
+  layers.push("radial-gradient(30% 30% at 50% 50%, rgba(255,255,255,0.85), transparent 60%)");
+  return <div style={{ ...base, background: layers.join(", ") + ", " + (o.white ? "#ffffff" : "#0e0b1a") }} />;
 }
 function customRatio(c) { return [c.inhale, c.hold, c.exhale, c.hold2].filter((n) => n > 0).join(" · "); }
 function customPhases(c, HI, LO, night) { const out = [{ key: "inhale", label: "Breathe in", dur: c.inhale, scale: HI, tone: "cool" }]; if (c.hold > 0) out.push({ key: "hold", label: "Hold", dur: c.hold, scale: HI, tone: "cool" }); out.push({ key: "exhale", label: night ? "Let go" : "Breathe out", dur: c.exhale, scale: LO, tone: "warm" }); if (c.hold2 > 0) out.push({ key: "hold", label: "Hold", dur: c.hold2, scale: LO, tone: "warm" }); return out; }
@@ -417,7 +426,7 @@ export default function Lull() {
   const css = `
     * { box-sizing: border-box; }
     body { margin: 0; }
-    @keyframes orbIdle { 0%,100% { transform: scale(0.9);} 50% { transform: scale(0.985);} }
+    @keyframes orbIdle { 0%,100% { transform: scale(0.87);} 50% { transform: scale(1.02);} }
     @keyframes drift1 { 0%,100% { transform: translate(0,0);} 50% { transform: translate(40px,-30px);} }
     @keyframes drift2 { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-50px,40px);} }
     @keyframes swirlSpin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
@@ -562,18 +571,16 @@ export default function Lull() {
                     <div aria-hidden="true" style={{ position: "absolute", inset: 0, borderRadius: "50%", pointerEvents: "none", background: "radial-gradient(58% 52% at 37% 30%, rgba(255,255,255,0.32), rgba(255,255,255,0.06) 42%, transparent 62%)" }} />
                   </div>
                 ) : (
-                  /* Apple-style soft glow orb (coded placeholder). Blurred pastel blobs drift and re-mix
-                     via the driftA loops, melting into the ground through a soft mask — clean on white,
-                     a gentle glow on dark. A generated image can later drop in as another image-kind orb. */
-                  <div style={{ position: "absolute", inset: 0, borderRadius: "50%", overflow: "hidden", zIndex: 2, WebkitMaskImage: "radial-gradient(closest-side, #000 42%, rgba(0,0,0,0.55) 68%, transparent 88%)", maskImage: "radial-gradient(closest-side, #000 42%, rgba(0,0,0,0.55) 68%, transparent 88%)", filter: active ? (isCool ? "brightness(1.07) saturate(1.08)" : "brightness(0.97) saturate(1.0)") : undefined, animation: (idle && !prefersReduced) ? "orbGlow 8s ease-in-out infinite" : "none", transition: active ? `filter ${orb.dur}s ${orb.ease || "ease"}` : "filter 1s ease" }}>
-                    <div style={{ position: "absolute", inset: "-24%", filter: "blur(15px)" }}>
-                      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(38% 38% at 34% 30%, rgba(120,168,255,0.95), transparent 60%)", animation: prefersReduced ? "none" : "driftA1 17s ease-in-out infinite" }} />
-                      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(40% 40% at 70% 33%, rgba(190,146,255,0.92), transparent 60%)", animation: prefersReduced ? "none" : "driftA2 21s ease-in-out infinite" }} />
-                      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(42% 42% at 66% 70%, rgba(255,150,205,0.86), transparent 60%)", animation: prefersReduced ? "none" : "driftA3 19s ease-in-out infinite" }} />
-                      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(40% 40% at 32% 68%, rgba(120,235,205,0.82), transparent 60%)", animation: prefersReduced ? "none" : "driftA4 23s ease-in-out infinite" }} />
-                      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(34% 34% at 50% 50%, rgba(255,214,170,0.72), transparent 56%)", animation: prefersReduced ? "none" : "driftA5 18s ease-in-out infinite" }} />
+                  /* Soft glow orb (coded). A symmetric ring of blurred colour blobs (from the orb's
+                     palette) rotates evenly around a centred core, melting into the ground through a
+                     soft mask — clean on white, a gentle glow on dark. Even by construction (equal
+                     angles), so it never looks lopsided; breathing comes from the wrapper scale.
+                     A generated image can later drop in as an image-kind orb instead. */
+                  <div style={{ position: "absolute", inset: 0, borderRadius: "50%", overflow: "hidden", zIndex: 2, WebkitMaskImage: "radial-gradient(closest-side, #000 46%, rgba(0,0,0,0.55) 70%, transparent 90%)", maskImage: "radial-gradient(closest-side, #000 46%, rgba(0,0,0,0.55) 70%, transparent 90%)", filter: active ? (isCool ? "brightness(1.07) saturate(1.08)" : "brightness(0.97) saturate(1.0)") : undefined, animation: (idle && !prefersReduced) ? "orbGlow 8s ease-in-out infinite" : "none", transition: active ? `filter ${orb.dur}s ${orb.ease || "ease"}` : "filter 1s ease" }}>
+                    <div style={{ position: "absolute", inset: "-20%", filter: "blur(17px)", animation: prefersReduced ? "none" : "bloomSpin 48s linear infinite" }}>
+                      {(selectedOrb.colors || []).map((c, i, arr) => { const a = (i / arr.length) * Math.PI * 2 - Math.PI / 2; const x = (50 + Math.cos(a) * 23).toFixed(1); const y = (50 + Math.sin(a) * 23).toFixed(1); return (<div key={i} style={{ position: "absolute", inset: 0, background: `radial-gradient(40% 40% at ${x}% ${y}%, rgba(${c},0.9), transparent 62%)` }} />); })}
                     </div>
-                    <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "radial-gradient(30% 30% at 50% 47%, rgba(255,255,255,0.9), rgba(255,255,255,0) 62%)" }} />
+                    <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "radial-gradient(30% 30% at 50% 50%, rgba(255,255,255,0.88), rgba(255,255,255,0) 62%)" }} />
                   </div>
                 )}
               </div>
