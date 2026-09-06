@@ -206,6 +206,7 @@ export default function Lull() {
   }, [HI, LO, customPat]);
 
   const [mode, setMode] = useState("breathe");
+  const [orbStyle, setOrbStyle] = useState("glass"); // "glass" | "flow" — Siri-style orb image
   const [themeId, setThemeId] = useState("aurora");
   const [screen, setScreen] = useState("home");
   const [patternId, setPatternId] = useState("calm");
@@ -363,6 +364,10 @@ export default function Lull() {
   const pats = PATTERNS[mode];
 
   const lightUI = light && !night;
+  const orbSrc = orbStyle === "flow" ? "/assets/orb-flow.webp" : "/assets/orb-glass.webp";
+  // Melt the image's near-black edge into the ground (both themes) so there's no black disc/halo —
+  // on dark it becomes a soft glow, on light the warm ground shows around a soft-edged glass ball.
+  const orbMask = "radial-gradient(closest-side, #000 58%, rgba(0,0,0,0.5) 76%, transparent 92%)";
   const ink = lightUI ? "#2b2447" : "#F3EFFF";
   const inkA = (a) => (lightUI ? `rgba(43,36,71,${a})` : `rgba(243,239,255,${a})`);
   const wa = (a) => (lightUI ? `rgba(70,52,120,${a})` : `rgba(255,255,255,${a})`);
@@ -387,6 +392,7 @@ export default function Lull() {
     /* Slow whole-cluster swirl layered under the individual loops for constant, calm motion. */
     @keyframes bloomSpin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
     @keyframes hueBreath { 0%,100% { filter: saturate(1) brightness(1);} 50% { filter: saturate(1.16) brightness(1.04);} }
+    @keyframes orbGlow { 0%,100% { filter: brightness(1) saturate(1);} 50% { filter: brightness(1.09) saturate(1.06);} }
     .orb-idle { animation: orbIdle 7s ease-in-out infinite; }
     .amb1 { animation: drift1 24s ease-in-out infinite; }
     .amb2 { animation: drift2 30s ease-in-out infinite; }
@@ -501,27 +507,12 @@ export default function Lull() {
                   <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: `radial-gradient(circle at ${th.glass.gx}% ${th.glass.gy}%, rgba(255,255,255,${sheenOp * 1.7}), rgba(255,255,255,0) 13%)`, zIndex: 7 }} />
                   {th.glass.g2 > 0 && (<div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "radial-gradient(circle at 67% 73%, rgba(255,255,255,0.5), rgba(255,255,255,0) 7%)", zIndex: 7, opacity: night ? th.glass.g2 * 0.6 : th.glass.g2 }} />)}
                 </div>
-                {/* Aurora Bloom orb — Direction A (v2) */}
-                {/* NOTE: iOS Safari / WKWebView does NOT clip composited layers (mix-blend-mode / filter /
-                    animated transform — i.e. the bloom blobs below) to a parent's border-radius + overflow:hidden,
-                    so the bloom leaked out as a square. A circular CSS mask IS honored for composited descendants
-                    in WebKit, so it clips the bloom to a circle on iPhone; overflow:hidden stays for other engines. */}
-                <div style={{ position: "absolute", inset: 0, borderRadius: "50%", overflow: "hidden", zIndex: 2, isolation: "isolate", boxShadow: "inset 0 1px 14px rgba(255,255,255,0.16)", WebkitMaskImage: "radial-gradient(closest-side, #000 99%, transparent 100%)", maskImage: "radial-gradient(closest-side, #000 99%, transparent 100%)" }}>
-                  <div style={{ position: "absolute", inset: 0, background: night ? "radial-gradient(circle at 50% 40%, #4a3d7a 0%, #2c2258 55%, #171036 100%)" : "radial-gradient(circle at 50% 40%, #7d68c8 0%, #59459b 54%, #382a74 100%)", transition: "background 1.2s ease", animation: prefersReduced ? "none" : "hueBreath 11s ease-in-out infinite", willChange: "filter" }} />
-                  {/* Rich colour blooms, kept at full strength. Wrapped in a slow-rotating cluster so the whole
-                      constellation visibly swirls, while each bloom also drifts on its own loop — clear motion,
-                      no brightness added (so the colour stays rich instead of washing toward white). */}
-                  <div style={{ position: "absolute", inset: 0, animation: prefersReduced ? "none" : "bloomSpin 30s linear infinite", willChange: "transform" }}>
-                    {th.bloom.map((c, i) => { const pos = [[32,32],[68,62],[60,74],[36,66],[72,32]][i]; const reach = [52,50,48,48,46][i]; const blur = [12,13,13,14,13][i]; const dur = [12,14,10,16,13][i]; const anim = ["driftA1","driftA2","driftA3","driftA4","driftA5"][i]; return (
-                      <div key={i} style={{ position: "absolute", width: "118%", height: "118%", borderRadius: "50%", mixBlendMode: "screen", opacity: (night ? 0.72 : 1) * (i === 4 ? 0.92 : 1), background: `radial-gradient(circle at ${pos[0]}% ${pos[1]}%, rgb(${c[0]},${c[1]},${c[2]}), transparent ${reach}%)`, filter: `blur(${blur}px)`, animation: prefersReduced ? "none" : `${anim} ${dur}s ease-in-out infinite`, willChange: "transform" }} />); })}
-                  </div>
-                  {/* top gloss — moved up + softened so it reads as a glass sheen, not a blown-out core over the text */}
-                  <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "radial-gradient(circle at 47% 33%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.12) 13%, rgba(255,255,255,0) 34%)", filter: "blur(4px)", zIndex: 3 }} />
-                  {/* deeper vignette for sphere volume — darker rim + a gentle centre fall-off */}
-                  <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "radial-gradient(circle at 50% 40%, transparent 40%, rgba(16,8,38,0.34) 78%, rgba(9,4,24,0.66) 100%)", zIndex: 3 }} />
-                  <div style={{ position: "absolute", width: "26%", height: "20%", left: "22%", top: "16%", borderRadius: "50%", background: "radial-gradient(circle at 40% 40%, rgba(255,255,255,0.85), rgba(255,255,255,0) 70%)", filter: "blur(2px)", zIndex: 4 }} />
-                </div>
-                <div style={{ position: "absolute", inset: 0, borderRadius: "50%", zIndex: 5, pointerEvents: "none", background: "radial-gradient(circle at 50% 50%, transparent 67%, rgba(255,255,255,0.24) 72%, transparent 77%)" }} />
+                {/* Siri-style orb — the generated image. Circle-masked; on dark it glows on the deep ground, on
+                    light it seats as a glass ball. Breathing scale comes from the parent wrapper; here a gentle
+                    idle brightness shimmer, and a breath-brightness during a session (cool/inhale brighter,
+                    warm/exhale softer). No mix-blend-mode: the parent's transform isolates it, so we mask the
+                    near-black edge to blend into the ground instead. */}
+                <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%", zIndex: 2, display: "block", pointerEvents: "none", WebkitMaskImage: orbMask, maskImage: orbMask, filter: active ? (isCool ? "brightness(1.13) saturate(1.06)" : "brightness(0.9) saturate(1.0)") : undefined, animation: (idle && !prefersReduced) ? "orbGlow 7s ease-in-out infinite" : "none", transition: active ? `filter ${orb.dur}s ${orb.ease || "ease"}` : "filter 1s ease" }} />
               </div>
 
               {/* soft dark core behind the readout so it stays legible over the bright, shifting bloom */}
