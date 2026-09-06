@@ -512,7 +512,14 @@ export default function Lull() {
                     idle brightness shimmer, and a breath-brightness during a session (cool/inhale brighter,
                     warm/exhale softer). No mix-blend-mode: the parent's transform isolates it, so we mask the
                     near-black edge to blend into the ground instead. */}
-                <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%", zIndex: 2, display: "block", pointerEvents: "none", WebkitMaskImage: orbMask, maskImage: orbMask, filter: active ? (isCool ? "brightness(1.13) saturate(1.06)" : "brightness(0.9) saturate(1.0)") : undefined, animation: (idle && !prefersReduced) ? "orbGlow 7s ease-in-out infinite" : "none", transition: active ? `filter ${orb.dur}s ${orb.ease || "ease"}` : "filter 1s ease" }} />
+                <div style={{ position: "absolute", inset: 0, borderRadius: "50%", overflow: "hidden", isolation: "isolate", zIndex: 2, WebkitMaskImage: orbMask, maskImage: orbMask, filter: active ? (isCool ? "brightness(1.13) saturate(1.06)" : "brightness(0.9) saturate(1.0)") : undefined, animation: (idle && !prefersReduced) ? "orbGlow 7s ease-in-out infinite" : "none", transition: active ? `filter ${orb.dur}s ${orb.ease || "ease"}` : "filter 1s ease" }}>
+                  {/* Swirling interior: two copies of the orb slowly counter-rotating and screen-blended,
+                      so the colour ribbons cross and churn instead of the whole ball just scaling.
+                      A fixed specular sits on top so it still reads as a glass sphere, not a spinning disc. */}
+                  <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: "-6%", width: "112%", height: "112%", objectFit: "cover", display: "block", pointerEvents: "none", willChange: "transform", animation: prefersReduced ? "none" : "swirlSpin 46s linear infinite" }} />
+                  <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: "-6%", width: "112%", height: "112%", objectFit: "cover", display: "block", pointerEvents: "none", mixBlendMode: "screen", opacity: 0.45, willChange: "transform", animation: prefersReduced ? "none" : "swirlSpinRev 63s linear infinite" }} />
+                  <div aria-hidden="true" style={{ position: "absolute", inset: 0, borderRadius: "50%", pointerEvents: "none", background: "radial-gradient(58% 52% at 37% 30%, rgba(255,255,255,0.32), rgba(255,255,255,0.06) 42%, transparent 62%)" }} />
+                </div>
               </div>
 
               {/* soft dark core behind the readout so it stays legible over the bright, shifting bloom */}
