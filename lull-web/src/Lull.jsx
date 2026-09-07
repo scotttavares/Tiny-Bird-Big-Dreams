@@ -426,7 +426,7 @@ export default function Lull() {
   const css = `
     * { box-sizing: border-box; }
     body { margin: 0; }
-    @keyframes orbIdle { 0%,100% { transform: scale(0.87);} 50% { transform: scale(1.02);} }
+    @keyframes orbIdle { 0%,100% { transform: scale(0.8);} 50% { transform: scale(1.08);} }
     @keyframes drift1 { 0%,100% { transform: translate(0,0);} 50% { transform: translate(40px,-30px);} }
     @keyframes drift2 { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-50px,40px);} }
     @keyframes swirlSpin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
@@ -442,7 +442,9 @@ export default function Lull() {
     @keyframes bloomSpin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
     @keyframes hueBreath { 0%,100% { filter: saturate(1) brightness(1);} 50% { filter: saturate(1.16) brightness(1.04);} }
     @keyframes orbGlow { 0%,100% { filter: brightness(1) saturate(1);} 50% { filter: brightness(1.09) saturate(1.06);} }
-    .orb-idle { animation: orbIdle 7s ease-in-out infinite; }
+    /* Negative delay starts the breath ~a quarter in (mid-inhale, moving fast) so it never
+       stalls small at the beginning; larger amplitude so the resting breath is clearly visible. */
+    .orb-idle { animation: orbIdle 6.5s ease-in-out -1.6s infinite; }
     .amb1 { animation: drift1 24s ease-in-out infinite; }
     .amb2 { animation: drift2 30s ease-in-out infinite; }
     .lull-btn { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
