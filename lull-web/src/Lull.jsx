@@ -673,7 +673,9 @@ export default function Lull() {
                       {sel && (<span style={{ fontSize: 11, fontWeight: 600, letterSpacing: 0.5, color: inkA(0.5) }}>· In use</span>)}
                     </div>
                     <div style={{ fontSize: 12.5, opacity: 0.55, marginTop: 3 }}>{o.tag}</div>
-                    {!owned && (<div style={{ fontSize: 12.5, fontWeight: 600, opacity: 0.85, marginTop: 6, letterSpacing: 0.2 }}>{fmtPrice(o.price)} · one-time</div>)}
+                    {o.price === 0
+                      ? (<div style={{ fontSize: 12.5, fontWeight: 600, opacity: 0.7, marginTop: 6, letterSpacing: 0.2 }}>Free · always yours</div>)
+                      : (!owned && (<div style={{ fontSize: 12.5, fontWeight: 600, opacity: 0.85, marginTop: 6, letterSpacing: 0.2 }}>{fmtPrice(o.price)} · one-time</div>))}
                   </div>
                   {owned ? (
                     <button className="lull-btn" aria-pressed={sel} onClick={() => selectOrb(id)} disabled={sel} style={{ padding: "9px 15px", borderRadius: 999, fontSize: 13, fontWeight: 500, letterSpacing: 0.3, whiteSpace: "nowrap", background: sel ? "transparent" : wa(0.12), border: "1px solid " + (sel ? wa(0.22) : wa(0.22)), color: sel ? inkA(0.6) : ink }}>{sel ? "✓ Selected" : "Select"}</button>

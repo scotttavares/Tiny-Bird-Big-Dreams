@@ -1,4 +1,4 @@
-const C = 'lull-v18';
+const C = 'lull-v19';
 const ASSETS = ['/', '/app', '/privacy', '/assets/lull.js', '/assets/orb-glass.webp', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/favicon-32.png'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(C).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()).catch(() => {}));
