@@ -1,0 +1,17 @@
+{
+  "name": "lull-site",
+  "private": true,
+  "version": "2.0.0",
+  "description": "Lull — landing + installable web app (Cloudflare Worker + static assets)",
+  "scripts": {
+    "build": "node build.mjs",
+    "deploy": "npm run build && wrangler deploy",
+    "dev": "npm run build && wrangler dev"
+  },
+  "devDependencies": {
+    "esbuild": "0.21.5",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "lucide-react": "0.383.0"
+  }
+}

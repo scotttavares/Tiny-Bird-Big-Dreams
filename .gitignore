@@ -4,3 +4,7 @@
 !.dev.vars.example
 .env*
 !.env.example
+
+# Lull web build deps
+lull-web/node_modules/
+lull-web/package-lock.json
