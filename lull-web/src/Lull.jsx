@@ -397,7 +397,7 @@ export default function Lull() {
   const cA = conic(useCool, stl.armsA, night ? 0.72 : 0.85), wA = conic(useWarm, stl.armsA, night ? 0.74 : 0.85);
   const cB = conic(useCool, stl.armsB, night ? 0.58 : 0.7), wB = conic(useWarm, stl.armsB, night ? 0.6 : 0.7);
 
-  const S = 300, ORB = 200, R = 142;
+  const S = 312, ORB = 264, R = 142;
   const C = 2 * Math.PI * R;
   const pats = PATTERNS[mode];
 
@@ -408,7 +408,7 @@ export default function Lull() {
   const orbSrc = selectedOrb.kind === "image" ? selectedOrb.src : null;
   // Melt the image's near-black edge into the ground (both themes) so there's no black disc/halo —
   // on dark it becomes a soft glow, on light the warm ground shows around a soft-edged glass ball.
-  const orbMask = "radial-gradient(closest-side, #000 58%, rgba(0,0,0,0.5) 76%, transparent 92%)";
+  const orbMask = "radial-gradient(closest-side, #000 74%, rgba(0,0,0,0.42) 90%, transparent 100%)";
   // Readout ink/shadow: dark text with a soft white halo on the white ground, light text with a
   // dark halo on every other ground.
   const roInk = onWhite ? "#26203f" : "#F8F5FF";
@@ -530,7 +530,7 @@ export default function Lull() {
         {showStage && (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, width: "100%", opacity: dim, transition: "opacity 1.2s ease" }}>
             <div style={{ position: "relative", width: S, height: S, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width={S} height={S} style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)" }}>
+              <svg width={S} height={S} style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)", zIndex: 3, pointerEvents: "none" }}>
                 <circle cx={S / 2} cy={S / 2} r={R} fill="none" stroke={inkA(0.14)} strokeWidth={2} />
                 <circle cx={S / 2} cy={S / 2} r={R} fill="none" stroke="url(#ring)" strokeWidth={3} strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - (active ? progress : screen === "done" ? 1 : 0))} style={{ transition: "stroke-dashoffset .3s linear", opacity: active || screen === "done" ? 1 : 0 }} />
                 <defs><linearGradient id="ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor={ringFrom} /><stop offset="100%" stopColor={ringTo} /></linearGradient></defs>
@@ -568,8 +568,8 @@ export default function Lull() {
                     {/* Swirling interior: two copies of the orb slowly counter-rotating and screen-blended,
                         so the colour ribbons cross and churn instead of the whole ball just scaling.
                         A fixed specular sits on top so it still reads as a glass sphere, not a spinning disc. */}
-                    <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: "-6%", width: "112%", height: "112%", objectFit: "cover", display: "block", pointerEvents: "none", willChange: "transform", animation: prefersReduced ? "none" : "swirlSpin 46s linear infinite" }} />
-                    <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: "-6%", width: "112%", height: "112%", objectFit: "cover", display: "block", pointerEvents: "none", mixBlendMode: "screen", opacity: 0.45, willChange: "transform", animation: prefersReduced ? "none" : "swirlSpinRev 63s linear infinite" }} />
+                    <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: "-12%", width: "124%", height: "124%", objectFit: "cover", display: "block", pointerEvents: "none", willChange: "transform", animation: prefersReduced ? "none" : "swirlSpin 46s linear infinite" }} />
+                    <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: "-12%", width: "124%", height: "124%", objectFit: "cover", display: "block", pointerEvents: "none", mixBlendMode: "screen", opacity: 0.45, willChange: "transform", animation: prefersReduced ? "none" : "swirlSpinRev 63s linear infinite" }} />
                     <div aria-hidden="true" style={{ position: "absolute", inset: 0, borderRadius: "50%", pointerEvents: "none", background: "radial-gradient(58% 52% at 37% 30%, rgba(255,255,255,0.32), rgba(255,255,255,0.06) 42%, transparent 62%)" }} />
                   </div>
                 ) : (
@@ -578,9 +578,9 @@ export default function Lull() {
                      soft mask — clean on white, a gentle glow on dark. Even by construction (equal
                      angles), so it never looks lopsided; breathing comes from the wrapper scale.
                      A generated image can later drop in as an image-kind orb instead. */
-                  <div style={{ position: "absolute", inset: 0, borderRadius: "50%", overflow: "hidden", zIndex: 2, WebkitMaskImage: "radial-gradient(closest-side, #000 46%, rgba(0,0,0,0.55) 70%, transparent 90%)", maskImage: "radial-gradient(closest-side, #000 46%, rgba(0,0,0,0.55) 70%, transparent 90%)", filter: active ? (isCool ? "brightness(1.07) saturate(1.08)" : "brightness(0.97) saturate(1.0)") : undefined, animation: (idle && !prefersReduced) ? "orbGlow 8s ease-in-out infinite" : "none", transition: active ? `filter ${orb.dur}s ${orb.ease || "ease"}` : "filter 1s ease" }}>
+                  <div style={{ position: "absolute", inset: 0, borderRadius: "50%", overflow: "hidden", zIndex: 2, WebkitMaskImage: "radial-gradient(closest-side, #000 80%, rgba(0,0,0,0.5) 93%, transparent 100%)", maskImage: "radial-gradient(closest-side, #000 80%, rgba(0,0,0,0.5) 93%, transparent 100%)", filter: active ? (isCool ? "brightness(1.07) saturate(1.08)" : "brightness(0.97) saturate(1.0)") : undefined, animation: (idle && !prefersReduced) ? "orbGlow 8s ease-in-out infinite" : "none", transition: active ? `filter ${orb.dur}s ${orb.ease || "ease"}` : "filter 1s ease" }}>
                     <div style={{ position: "absolute", inset: "-20%", filter: "blur(17px)", animation: prefersReduced ? "none" : "bloomSpin 48s linear infinite" }}>
-                      {(selectedOrb.colors || []).map((c, i, arr) => { const a = (i / arr.length) * Math.PI * 2 - Math.PI / 2; const x = (50 + Math.cos(a) * 23).toFixed(1); const y = (50 + Math.sin(a) * 23).toFixed(1); return (<div key={i} style={{ position: "absolute", inset: 0, background: `radial-gradient(40% 40% at ${x}% ${y}%, rgba(${c},0.9), transparent 62%)` }} />); })}
+                      {(selectedOrb.colors || []).map((c, i, arr) => { const a = (i / arr.length) * Math.PI * 2 - Math.PI / 2; const x = (50 + Math.cos(a) * 29).toFixed(1); const y = (50 + Math.sin(a) * 29).toFixed(1); return (<div key={i} style={{ position: "absolute", inset: 0, background: `radial-gradient(50% 50% at ${x}% ${y}%, rgba(${c},0.92), transparent 66%)` }} />); })}
                     </div>
                     <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "radial-gradient(30% 30% at 50% 50%, rgba(255,255,255,0.88), rgba(255,255,255,0) 62%)" }} />
                   </div>
