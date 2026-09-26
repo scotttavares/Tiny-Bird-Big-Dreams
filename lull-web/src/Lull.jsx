@@ -411,6 +411,8 @@ function createNatureNode(ctx, out, id, level) {
     el,
     setLevel(l) { try { vg.gain.setTargetAtTime(conf.gain * Math.max(0, l), ctx.currentTime, 0.08); } catch (e) {} },
     soften() { try { const t = ctx.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(Math.max(g.gain.value, 0.0001), t); g.gain.linearRampToValueAtTime(0.55, t + 0.6); } catch (e) {} },
+    pause() { try { if (el) el.pause(); } catch (e) {} },
+    resume() { try { if (el) { const p = el.play(); if (p && p.catch) p.catch(() => {}); } } catch (e) {} },
     stop(fade = 1.4) { try { const t = ctx.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(Math.max(g.gain.value, 0.0001), t); g.gain.exponentialRampToValueAtTime(0.0001, t + fade); } catch (e) {} if (el) { setTimeout(() => { try { el.pause(); } catch (e) {} }, (fade + 0.15) * 1000); } },
   };
 }
@@ -420,21 +422,21 @@ function createSoundscape(id, ctx, master, reverb, buffers, mode, selfPlay) {
   if (id && typeof id === "object" && id.mix) {
     const ns = [];
     Object.entries(id.mix).forEach(([sid, lvl]) => { if (NATURE_AUDIO[sid] && lvl > 0) { const n = createNatureNode(ctx, master, sid, lvl); if (n) ns.push(n); } });
-    return { onPhase() {}, onStart() {}, onDone() {}, soften() { ns.forEach((n) => { try { n.soften(); } catch (e) {} }); }, stop(fade = 1.4) { ns.forEach((n) => { try { n.stop(fade); } catch (e) {} }); } };
+    return { onPhase() {}, onStart() {}, onDone() {}, soften() { ns.forEach((n) => { try { n.soften(); } catch (e) {} }); }, pause() { ns.forEach((n) => { try { n.pause(); } catch (e) {} }); }, resume() { ns.forEach((n) => { try { n.resume(); } catch (e) {} }); }, stop(fade = 1.4) { ns.forEach((n) => { try { n.stop(fade); } catch (e) {} }); } };
   }
   // Nature sounds play from a real looping recording via a media element (see createNatureNode).
   if (NATURE_AUDIO[id]) {
     const n = createNatureNode(ctx, master, id, 1);
-    return { onPhase() {}, onStart() {}, onDone() {}, soften() { if (n) n.soften(); }, stop(fade = 1.4) { if (n) n.stop(fade); } };
+    return { onPhase() {}, onStart() {}, onDone() {}, soften() { if (n) n.soften(); }, pause() { if (n) n.pause(); }, resume() { if (n) n.resume(); }, stop(fade = 1.4) { if (n) n.stop(fade); } };
   }
   const bus = ctx.createGain(); bus.gain.value = 1; bus.connect(master);
   const wet = ctx.createGain(); wet.gain.value = 0.4; bus.connect(wet); wet.connect(reverb);
   const bedGain = ctx.createGain(); bedGain.gain.value = 1; bedGain.connect(bus);
-  const timers = []; const srcs = []; const fades = []; let stopped = false; let base = 0.3;
+  const timers = []; const srcs = []; const fades = []; let stopped = false; let paused = false; let base = 0.3;
   const startSrc = (x) => { try { x.start(); } catch (e) {} srcs.push(x); };
-  const every = (fn, delay) => { const tick = () => { if (stopped) return; try { fn(); } catch (e) {} const n = typeof delay === "function" ? delay() : delay; timers.push(setTimeout(tick, n)); }; timers.push(setTimeout(tick, typeof delay === "function" ? delay() : delay)); };
+  const every = (fn, delay) => { const tick = () => { if (stopped) return; if (!paused) { try { fn(); } catch (e) {} } const n = typeof delay === "function" ? delay() : delay; timers.push(setTimeout(tick, n)); }; timers.push(setTimeout(tick, typeof delay === "function" ? delay() : delay)); };
   const swell = (phase) => { const t = ctx.currentTime; let tgt = base; if (phase.key === "inhale") tgt = base * 1.18; else if (phase.key === "exhale") tgt = base * 0.82; const g = bedGain.gain; g.cancelScheduledValues(t); g.setValueAtTime(Math.max(g.value, 0.0001), t); g.linearRampToValueAtTime(Math.max(tgt, 0.0001), t + phase.dur * 0.9); };
-  const api = { onPhase() {}, onStart() {}, onDone() {}, soften() {}, stop(fade = 1.2) { stopped = true; timers.forEach(clearTimeout); const t = ctx.currentTime; [bus, ...fades].forEach((g) => { try { g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(Math.max(g.gain.value, 0.0001), t); g.gain.exponentialRampToValueAtTime(0.0001, t + fade); } catch (e) {} }); srcs.forEach((x) => { try { x.stop(t + fade + 0.1); } catch (e) {} }); } };
+  const api = { onPhase() {}, onStart() {}, onDone() {}, soften() {}, pause() { paused = true; try { const t = ctx.currentTime; bus.gain.cancelScheduledValues(t); bus.gain.setValueAtTime(Math.max(bus.gain.value, 0.0001), t); bus.gain.exponentialRampToValueAtTime(0.0001, t + 0.35); } catch (e) {} }, resume() { paused = false; try { const t = ctx.currentTime; bus.gain.cancelScheduledValues(t); bus.gain.setValueAtTime(Math.max(bus.gain.value, 0.0001), t); bus.gain.exponentialRampToValueAtTime(1, t + 0.4); } catch (e) {} }, stop(fade = 1.2) { stopped = true; timers.forEach(clearTimeout); const t = ctx.currentTime; [bus, ...fades].forEach((g) => { try { g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(Math.max(g.gain.value, 0.0001), t); g.gain.exponentialRampToValueAtTime(0.0001, t + fade); } catch (e) {} }); srcs.forEach((x) => { try { x.stop(t + fade + 0.1); } catch (e) {} }); } };
 
   if (id === "handpan") {
     wet.gain.value = 0.45;
@@ -707,6 +709,8 @@ export default function Lull() {
   const teardownAmbience = (fade = 1.2) => { try { if (scapeRef.current) scapeRef.current.stop(fade); } catch (e) {} scapeRef.current = null; };
   const breathAudio = (phase) => { try { if (scapeRef.current) scapeRef.current.onPhase(phase, modeRef.current); } catch (e) {} };
   const softenAmbience = () => { try { if (scapeRef.current && scapeRef.current.soften) scapeRef.current.soften(); } catch (e) {} };
+  const pauseAmbience = () => { try { if (scapeRef.current && scapeRef.current.pause) scapeRef.current.pause(); } catch (e) {} };
+  const resumeAmbience = () => { try { if (scapeRef.current && scapeRef.current.resume) scapeRef.current.resume(); } catch (e) {} };
   const bowl = (type) => { try { if (!soundRef.current || !scapeRef.current) return; if (type === "start" && scapeRef.current.onStart) scapeRef.current.onStart(); else if (type === "done" && scapeRef.current.onDone) scapeRef.current.onDone(); } catch (e) {} };
 
   // ---------- ambient mixer: play nature beds standalone, blended, each with its own level ----------
@@ -837,8 +841,8 @@ export default function Lull() {
     readyTimers.current.push(setTimeout(() => { setReady(false); beginBreathing(); }, step * 3 + 850));
   };
   const skipReady = () => { readyTimers.current.forEach(clearTimeout); readyTimers.current = []; setReady(false); beginBreathing(); };
-  const pauseSession = () => { pausedRef.current = true; setPaused(true); if (phaseTimeout.current) clearTimeout(phaseTimeout.current); setPhaseLabel("Paused"); setOrb({ scale: prefersReduced ? 0.95 : 0.92, dur: 0.8, ease: "ease" }); softenAmbience(); };
-  const resumeSession = () => { pausedRef.current = false; setPaused(false); ensureAudio(); if (soundRef.current && !scapeRef.current) buildAmbience(); if (soundOnlyRef.current) { setPhaseLabel(""); setOrb({ scale: 0.88, dur: 3, ease: "ease" }); } else runPhase(); };
+  const pauseSession = () => { pausedRef.current = true; setPaused(true); if (phaseTimeout.current) clearTimeout(phaseTimeout.current); setPhaseLabel("Paused"); setOrb({ scale: prefersReduced ? 0.95 : 0.92, dur: 0.8, ease: "ease" }); pauseAmbience(); try { if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused"; } catch (e) {} };
+  const resumeSession = () => { pausedRef.current = false; setPaused(false); ensureAudio(); if (soundRef.current && !scapeRef.current) buildAmbience(); else resumeAmbience(); if (soundOnlyRef.current) { setPhaseLabel(""); setOrb({ scale: 0.88, dur: 3, ease: "ease" }); } else runPhase(); try { if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "playing"; } catch (e) {} };
   const goHome = () => { clearTimers(); setReady(false); pausedRef.current = false; setPaused(false); soundOnlyRef.current = false; sessionScapeRef.current = null; teardownAmbience(0.9); setScreen("home"); setOrb({ scale: LO, dur: 1, ease: "ease" }); setRemaining(durationMin * 60); setProgress(0); try { updateMediaSession(); } catch (e) {} };
   function finishSession() { clearTimers(); pausedRef.current = false; setPaused(false); soundOnlyRef.current = false; sessionScapeRef.current = null; if (modeRef.current !== "sleep") bowl("done"); teardownAmbience(modeRef.current === "sleep" ? 3.4 : 1.6); setMoodAfter(null); try { const entry = { t: Date.now(), mode: modeRef.current, pattern: patternIdRef.current, min: Math.max(1, Math.round(targetRef.current / 60)), moodBefore: (typeof moodBeforeRef.current === "number" ? moodBeforeRef.current : null), moodAfter: null }; setSessions((prev) => { const next = [...prev, entry]; saveHist(next); return next; }); } catch (e) {} setScreen("done"); }
   // A gentle, skippable calm check before breathing → sets moodBefore, then starts. Sleep and SOS
