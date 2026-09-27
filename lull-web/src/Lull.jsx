@@ -1681,7 +1681,8 @@ export default function Lull() {
                     </span>
                   </div>); })}
               </div>
-              <div style={{ marginTop: "auto", paddingTop: 30, display: "flex", gap: 10, justifyContent: "center" }}>
+              <div style={{ marginTop: "auto", paddingTop: 30, display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
+                <button className="lull-btn" onClick={() => { setShowHistory(false); replayOnboard(); }} style={{ padding: "9px 16px", borderRadius: 999, fontSize: 12.5, letterSpacing: 0.3, color: inkA(0.7), background: wa(0.05), border: "1px solid " + wa(0.12) }}>Replay intro</button>
                 <button className="lull-btn" onClick={exportData} style={{ padding: "9px 16px", borderRadius: 999, fontSize: 12.5, letterSpacing: 0.3, color: inkA(0.7), background: wa(0.05), border: "1px solid " + wa(0.12) }}>Export my breaths</button>
                 <button className="lull-btn" onClick={eraseData} style={{ padding: "9px 16px", borderRadius: 999, fontSize: 12.5, letterSpacing: 0.3, color: inkA(0.55), background: "transparent", border: "1px solid " + wa(0.12) }}>Erase everything</button>
               </div>
