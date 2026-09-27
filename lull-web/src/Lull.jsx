@@ -639,6 +639,7 @@ export default function Lull() {
   const [readyN, setReadyN] = useState(3);              // countdown number; 0 shows "Breathe"
   const [readySaying, setReadySaying] = useState("");   // mood-tailored line shown during the pre-roll
   const [moodAfter, setMoodAfter] = useState(null);     // done-screen mood → reveals the calm lift
+  const [welcomeBack, setWelcomeBack] = useState(false); // gentle "welcome back" after a few days away
 
   const [phaseLabel, setPhaseLabel] = useState("Breathe in");
   const [tone, setTone] = useState("cool");
@@ -684,6 +685,8 @@ export default function Lull() {
   useEffect(() => { try { localStorage.setItem(OWNED_KEY, JSON.stringify(ownedOrbs)); } catch (e) {} }, [ownedOrbs]);
   useEffect(() => { try { localStorage.setItem(SOUNDS_OWNED_KEY, JSON.stringify(ownedSounds)); } catch (e) {} }, [ownedSounds]);
   useEffect(() => { try { localStorage.setItem("lull.bundleOwned.v1", bundleOwned ? "1" : "0"); } catch (e) {} }, [bundleOwned]);
+  // Notice a return after a few days away — a warm hello, never a guilt trip. Updates last-seen each open.
+  useEffect(() => { try { const k = "lull.lastSeen.v1"; const prev = parseInt(localStorage.getItem(k) || "0", 10); const now = Date.now(); if (prev && (now - prev) >= 3 * 864e5) setWelcomeBack(true); localStorage.setItem(k, String(now)); } catch (e) {} }, []);
   const selectOrb = (id) => { if (orbOwned(id)) { setOrbId(id); setOrbStoreOpen(false); } };
   // Single seam for buying an orb. Today it unlocks locally; real charging (Apple In-App Purchase
   // on iOS, Stripe on web) drops in here — await the receipt, then unlock on success.
@@ -1116,7 +1119,11 @@ export default function Lull() {
     </div>
   );
 
-  const tagline = active ? `${pats[patternId].name} · ${pats[patternId].ratio}` : night ? "A slow exhale into sleep." : mode === "meditate" ? "A few quiet minutes." : "A minute to breathe.";
+  // A home line that meets you in the moment: a warm hello back if you've been away, else a gentle time-of-day greeting.
+  const _hr = new Date().getHours();
+  const _timeGreet = _hr < 5 ? "Late night. Let's ease toward sleep." : _hr < 12 ? "Good morning. Let's ease in." : _hr < 17 ? "Good afternoon. Take a pause." : _hr < 22 ? "Good evening. Let's slow down." : "Late night. Let's ease toward sleep.";
+  const homeGreet = welcomeBack ? "Welcome back. We're glad you're here." : _timeGreet;
+  const tagline = active ? `${pats[patternId].name} · ${pats[patternId].ratio}` : homeGreet;
 
   return (
     <div style={root}>
@@ -1387,8 +1394,8 @@ export default function Lull() {
                 </div>
               );
               const before = moodBeforeRef.current; let msg;
-              if (typeof before === "number") { const d = moodAfter - before; msg = d >= 2 ? "Much calmer than when you started." : d === 1 ? "A little calmer than when you started." : d === 0 ? (moodAfter >= 4 ? "You held your calm." : "Steady. However you feel is okay.") : "However you feel is okay. You showed up."; }
-              else msg = "Noticed. However you feel is okay.";
+              if (typeof before === "number") { const d = moodAfter - before; msg = d >= 2 ? "That's a real shift. You did that." : d === 1 ? "A little lighter. That counts." : d === 0 ? (moodAfter >= 4 ? "You kept your calm. Beautifully done." : "Steady is enough. However you feel is okay.") : "Some days sit heavier. You still showed up, and that matters."; }
+              else msg = "However you feel, you gave yourself this minute.";
               return (<p style={{ fontSize: 13.5, opacity: 0.62, margin: "12px 0 0", maxWidth: 260, letterSpacing: 0.2 }}>{msg}</p>);
             })()}
             <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", maxWidth: 240, marginTop: 26 }}>
