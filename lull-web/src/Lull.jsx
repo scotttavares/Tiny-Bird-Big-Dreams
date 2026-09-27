@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Volume2, VolumeX, Sun, Moon, CalendarDays, Waves } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
+import { Purchases, LOG_LEVEL } from "@revenuecat/purchases-capacitor";
 
 // Lull — a minute to breathe.  Tiny Bird, Big Dreams.
 // A living smoke-plasma orb (six themes, three swirl styles) that breathes with you.
@@ -258,6 +260,27 @@ const PACKS = {
 };
 const PACK_ORDER = ["swirls", "cosmos", "aura"];
 const BUNDLE = { name: "Everything", tag: "Every orb and sound, plus every future one we add", price: 3.99 };
+
+// ---- In-App Purchases (RevenueCat on iOS; web falls back to local unlock until Stripe lands) ----
+// This is the RevenueCat *public* iOS SDK key (safe to ship in the app). Paste yours (starts with
+// "appl_") before building the release, or purchases stay in local-unlock mode.
+const RC_IOS_KEY = "appl_REPLACE_WITH_YOUR_REVENUECAT_IOS_KEY";
+const RC_ENTITLEMENT_EVERYTHING = "everything"; // RevenueCat entitlement the "Everything" bundle grants
+// Product identifiers — must match App Store Connect AND RevenueCat exactly.
+const IAP_PRODUCTS = {
+  swirls: "com.tinybirdbigdreams.lull.pack.swirls",
+  cosmos: "com.tinybirdbigdreams.lull.pack.cosmos",
+  aura: "com.tinybirdbigdreams.lull.pack.aura",
+  nature: "com.tinybirdbigdreams.lull.pack.nature",
+  everything: "com.tinybirdbigdreams.lull.everything",
+};
+const PRODUCT_TO_UNLOCK = {
+  [IAP_PRODUCTS.swirls]: { kind: "orb", pack: "swirls" },
+  [IAP_PRODUCTS.cosmos]: { kind: "orb", pack: "cosmos" },
+  [IAP_PRODUCTS.aura]: { kind: "orb", pack: "aura" },
+  [IAP_PRODUCTS.nature]: { kind: "sound", pack: "nature" },
+};
+const iapLive = () => Capacitor.isNativePlatform() && RC_IOS_KEY.indexOf("REPLACE") === -1;
 const FREE_ORBS = ORB_ORDER.filter((id) => (ORBS[id].price || 0) === 0); // ship unlocked (Aurora, Bloom)
 const ORB_KEY = "lull.orb.v1";
 const OWNED_KEY = "lull.orbsOwned.v1";
@@ -578,6 +601,7 @@ export default function Lull() {
   const [orbId, setOrbId] = useState(loadOrb);          // which orb you breathe with
   const [ownedOrbs, setOwnedOrbs] = useState(loadOwned); // unlocked orb ids
   const [ownedSounds, setOwnedSounds] = useState(loadOwnedSounds); // unlocked sound ids
+  const [bundleOwned, setBundleOwned] = useState(() => { try { return localStorage.getItem("lull.bundleOwned.v1") === "1"; } catch (e) { return false; } }); // "Everything" owned → unlocks all, incl. future
   const [orbStoreOpen, setOrbStoreOpen] = useState(false);
   const [themeId, setThemeId] = useState("aurora");
   const [screen, setScreen] = useState("home");
@@ -620,6 +644,7 @@ export default function Lull() {
   const soundRef = useRef(soundOn); const modeRef = useRef(mode); const patternIdRef = useRef(patternId);
   const audioRef = useRef(null); const nodesRef = useRef(null); const scapeRef = useRef(null); const brownRef = useRef(null); const whiteRef = useRef(null); const scapeIdRef = useRef("bowls"); const sleepScapeIdRef = useRef("noise");
   const soundOnlyRef = useRef(false); const sessionScapeRef = useRef(null); // sound-only sleep: no breathing, a forced bed
+  const purchasesRef = useRef(null); const iapBusyRef = useRef(false); // RevenueCat handle + in-flight guard
   const particleRef = useRef(null);
   const moodBeforeRef = useRef(null); const pendingStartRef = useRef(null); // carry the pre-session mood + intent through the check-in
   const readyTimers = useRef([]); // pending "get ready" countdown timeouts
@@ -649,14 +674,19 @@ export default function Lull() {
   useEffect(() => { try { localStorage.setItem(ORB_KEY, orbId); } catch (e) {} }, [orbId]);
   useEffect(() => { try { localStorage.setItem(OWNED_KEY, JSON.stringify(ownedOrbs)); } catch (e) {} }, [ownedOrbs]);
   useEffect(() => { try { localStorage.setItem(SOUNDS_OWNED_KEY, JSON.stringify(ownedSounds)); } catch (e) {} }, [ownedSounds]);
-  const selectOrb = (id) => { if (ownedOrbs.includes(id)) { setOrbId(id); setOrbStoreOpen(false); } };
+  useEffect(() => { try { localStorage.setItem("lull.bundleOwned.v1", bundleOwned ? "1" : "0"); } catch (e) {} }, [bundleOwned]);
+  const selectOrb = (id) => { if (orbOwned(id)) { setOrbId(id); setOrbStoreOpen(false); } };
   // Single seam for buying an orb. Today it unlocks locally; real charging (Apple In-App Purchase
   // on iOS, Stripe on web) drops in here — await the receipt, then unlock on success.
   const unlockOrb = (id) => { setOwnedOrbs((prev) => (prev.includes(id) ? prev : [...prev, id])); setOrbId(id); };
-  const restoreOrbs = () => { /* real IAP/Stripe restore wires in here */ };
-  const orbOwned = (id) => ownedOrbs.includes(id);
+  const restoreOrbs = async () => {
+    if (!iapLive() || !purchasesRef.current) return; // web / not configured: nothing to restore
+    try { const { customerInfo } = await purchasesRef.current.restorePurchases(); applyCustomerInfo(customerInfo); try { window.alert("Purchases restored."); } catch (e) {} }
+    catch (e) { try { window.alert("Nothing to restore."); } catch (_) {} }
+  };
+  const orbOwned = (id) => bundleOwned || ownedOrbs.includes(id);
   const packOwned = (p) => p.orbs.every(orbOwned);
-  const soundOwned = (id) => ownedSounds.includes(id);
+  const soundOwned = (id) => bundleOwned || ownedSounds.includes(id);
   const soundPackOwned = (p) => p.sounds.every(soundOwned);
   const allOrbsOwned = ORB_ORDER.every(orbOwned);
   const allSoundsOwned = SOUND.every((s) => soundOwned(s.id));
@@ -675,6 +705,47 @@ export default function Lull() {
   const unlockPack = (packId) => { const p = PACKS[packId]; if (!p) return; setOwnedOrbs((prev) => { const next = [...prev]; p.orbs.forEach((id) => { if (!next.includes(id)) next.push(id); }); return next; }); };
   const unlockSoundPack = (packId) => { const p = SOUND_PACKS[packId]; if (!p) return; setOwnedSounds((prev) => { const next = [...prev]; p.sounds.forEach((id) => { if (!next.includes(id)) next.push(id); }); return next; }); };
   const unlockBundle = () => { setOwnedOrbs([...ORB_ORDER]); setOwnedSounds(SOUND.map((s) => s.id)); };
+  // Reflect a RevenueCat CustomerInfo into what the app has unlocked.
+  const applyCustomerInfo = (info) => {
+    try {
+      if (!info) return;
+      const active = (info.entitlements && info.entitlements.active) || {};
+      if (active[RC_ENTITLEMENT_EVERYTHING]) { setBundleOwned(true); unlockBundle(); return; }
+      const owned = info.allPurchasedProductIdentifiers || (info.nonSubscriptionTransactions || []).map((t) => t.productIdentifier) || [];
+      owned.forEach((pidStr) => { const m = PRODUCT_TO_UNLOCK[pidStr]; if (!m) return; if (m.kind === "orb") unlockPack(m.pack); else unlockSoundPack(m.pack); });
+    } catch (e) {}
+  };
+  const syncPurchases = async () => { try { if (!purchasesRef.current) return; const { customerInfo } = await purchasesRef.current.getCustomerInfo(); applyCustomerInfo(customerInfo); } catch (e) {} };
+  // One buy path for every store button. On iOS it charges through StoreKit/RevenueCat; on web (or
+  // before the key is set) it falls back to the local unlock so nothing breaks.
+  const buyProduct = async (productId, applyLocal) => {
+    if (!iapLive() || !purchasesRef.current) { applyLocal(); return; }
+    if (iapBusyRef.current) return; iapBusyRef.current = true;
+    try {
+      const got = await purchasesRef.current.getProducts({ productIdentifiers: [productId] });
+      const list = (got && (got.products || got)) || [];
+      const product = list.find((p) => (p.identifier || p.productIdentifier) === productId) || list[0];
+      if (!product) throw new Error("product unavailable");
+      const res = await purchasesRef.current.purchaseStoreProduct({ product });
+      applyCustomerInfo(res && res.customerInfo); applyLocal();
+    } catch (e) {
+      const cancelled = e && (e.userCancelled || e.code === "PURCHASE_CANCELLED" || ((e.message || "") + "").toLowerCase().indexOf("cancel") !== -1);
+      if (!cancelled) { try { window.alert("Purchase couldn't be completed. Please try again."); } catch (_) {} }
+    } finally { iapBusyRef.current = false; }
+  };
+  useEffect(() => {
+    let dead = false;
+    (async () => {
+      if (!iapLive()) return;
+      try {
+        await Purchases.configure({ apiKey: RC_IOS_KEY });
+        try { await Purchases.setLogLevel({ level: LOG_LEVEL.WARN }); } catch (e) {}
+        if (dead) return; purchasesRef.current = Purchases;
+        await syncPurchases();
+      } catch (e) {}
+    })();
+    return () => { dead = true; };
+  }, []);
   useEffect(() => { try { if (window.matchMedia) setLight(window.matchMedia("(prefers-color-scheme: light)").matches); } catch (e) {} }, []);
   useEffect(() => { try { document.documentElement.style.colorScheme = "dark"; const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", "#070410"); } catch (e) {} }, []);
 
@@ -1394,7 +1465,7 @@ export default function Lull() {
                   <div style={{ fontSize: 13, lineHeight: 1.5, opacity: 0.72, marginBottom: 15 }}>{BUNDLE.tag}. Unlocked forever.</div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                     <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: 0.2 }}>{fmtPrice(BUNDLE.price)}<span style={{ fontSize: 12, fontWeight: 500, opacity: 0.55 }}> · one time</span></span>
-                    <button className="lull-btn" onClick={unlockBundle} style={{ padding: "11px 22px", borderRadius: 999, fontSize: 14, fontWeight: 700, letterSpacing: 0.3, whiteSpace: "nowrap", color: "#fff", background: "linear-gradient(180deg, #9a86ff 0%, #6f5cff 100%)", boxShadow: "0 10px 22px -10px rgba(111,92,255,0.9)" }}>Unlock all</button>
+                    <button className="lull-btn" onClick={() => buyProduct(IAP_PRODUCTS.everything, () => { setBundleOwned(true); unlockBundle(); })} style={{ padding: "11px 22px", borderRadius: 999, fontSize: 14, fontWeight: 700, letterSpacing: 0.3, whiteSpace: "nowrap", color: "#fff", background: "linear-gradient(180deg, #9a86ff 0%, #6f5cff 100%)", boxShadow: "0 10px 22px -10px rgba(111,92,255,0.9)" }}>Unlock all</button>
                   </div>
                 </div>
                 {PACK_ORDER.map((pid) => {
@@ -1411,7 +1482,7 @@ export default function Lull() {
                           <div style={{ fontSize: 15.5, fontWeight: 600, letterSpacing: 0.2 }}>{p.name}</div>
                           <div style={{ fontSize: 12, opacity: 0.55, marginTop: 3 }}>{p.tag}</div>
                         </div>
-                        <button className="lull-btn" onClick={() => unlockPack(pid)} style={{ padding: "10px 18px", borderRadius: 999, fontSize: 13.5, fontWeight: 600, letterSpacing: 0.3, whiteSpace: "nowrap", color: ink, background: wa(0.12), border: "1px solid " + wa(0.22) }}>{fmtPrice(p.price)}</button>
+                        <button className="lull-btn" onClick={() => buyProduct(IAP_PRODUCTS[pid], () => unlockPack(pid))} style={{ padding: "10px 18px", borderRadius: 999, fontSize: 13.5, fontWeight: 600, letterSpacing: 0.3, whiteSpace: "nowrap", color: ink, background: wa(0.12), border: "1px solid " + wa(0.22) }}>{fmtPrice(p.price)}</button>
                       </div>
                     </div>
                   );
@@ -1430,7 +1501,7 @@ export default function Lull() {
                           <div style={{ fontSize: 15.5, fontWeight: 600, letterSpacing: 0.2 }}>{p.name}</div>
                           <div style={{ fontSize: 12, opacity: 0.55, marginTop: 3 }}>{p.tag}</div>
                         </div>
-                        <button className="lull-btn" onClick={() => unlockSoundPack(pid)} style={{ padding: "10px 18px", borderRadius: 999, fontSize: 13.5, fontWeight: 600, letterSpacing: 0.3, whiteSpace: "nowrap", color: ink, background: wa(0.12), border: "1px solid " + wa(0.22) }}>{fmtPrice(p.price)}</button>
+                        <button className="lull-btn" onClick={() => buyProduct(IAP_PRODUCTS[pid], () => unlockSoundPack(pid))} style={{ padding: "10px 18px", borderRadius: 999, fontSize: 13.5, fontWeight: 600, letterSpacing: 0.3, whiteSpace: "nowrap", color: ink, background: wa(0.12), border: "1px solid " + wa(0.22) }}>{fmtPrice(p.price)}</button>
                       </div>
                     </div>
                   );
@@ -1439,7 +1510,7 @@ export default function Lull() {
             </>
           )}
           <button className="lull-btn" onClick={restoreOrbs} style={{ alignSelf: "center", marginTop: 22, padding: "8px 0", fontSize: 12.5, letterSpacing: 0.4, color: inkA(0.5) }}>Restore purchases</button>
-          <p style={{ fontSize: 11.5, lineHeight: 1.5, opacity: 0.42, textAlign: "center", margin: "6px auto 0", maxWidth: "40ch" }}>One time purchases, no subscription. Card payments arrive shortly. For now, unlocking is free while we finish setup.</p>
+          <p style={{ fontSize: 11.5, lineHeight: 1.5, opacity: 0.42, textAlign: "center", margin: "6px auto 0", maxWidth: "40ch" }}>One time purchases, no subscription. Restore anytime.</p>
         </div>
       )}
       {showCustom && (
