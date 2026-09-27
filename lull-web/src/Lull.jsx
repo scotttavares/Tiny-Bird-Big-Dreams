@@ -540,6 +540,13 @@ function createSoundscape(id, ctx, master, reverb, buffers, mode, selfPlay) {
   return api;
 }
 
+// First-run intro: a few calm slides shown before the home screen, remembered on the device.
+const ONBOARD_SLIDES = [
+  { eyebrow: "You made it here", title: ["Take a breath.", "You're here now."], body: "Whatever you carried in with you, set it down for a minute. This is a small, quiet place that asks nothing of you.", foot: "You don't have to hold it all." },
+  { eyebrow: "Nothing to get right", title: ["Breathe with", "the light."], body: "Watch the orb rise and fall, and let your breath follow. There's no right way to do this, and slower is always enough.", foot: "Be gentle with yourself." },
+  { eyebrow: "When the day winds down", title: ["Drift off", "to calm nights."], body: "Soft rain, distant waves, a warm fire. Let calm sound stay close and carry you into sleep, however far from home you are.", foot: "We're right here with you." },
+];
+
 export default function Lull() {
   const HI = prefersReduced ? 1.06 : 1.18;
   const LO = prefersReduced ? 0.92 : 0.72;
@@ -626,6 +633,8 @@ export default function Lull() {
   const [savingMix, setSavingMix] = useState(false); const [mixName, setMixName] = useState("");
   const [editingPresetId, setEditingPresetId] = useState(null); // when set, the mixer edits this saved mix in place
   const [preCheck, setPreCheck] = useState(false);      // pre-session mood check-in overlay
+  const [onboard, setOnboard] = useState(() => { try { return localStorage.getItem("lull.onboarded.v1") !== "1"; } catch (e) { return false; } }); // first-run intro
+  const [onboardStep, setOnboardStep] = useState(0);
   const [ready, setReady] = useState(false);            // "get ready" 3·2·1 pre-roll overlay
   const [readyN, setReadyN] = useState(3);              // countdown number; 0 shows "Breathe"
   const [readySaying, setReadySaying] = useState("");   // mood-tailored line shown during the pre-roll
@@ -912,6 +921,9 @@ export default function Lull() {
     readyTimers.current.push(setTimeout(() => { setReady(false); beginBreathing(); }, step * 3 + 850));
   };
   const skipReady = () => { readyTimers.current.forEach(clearTimeout); readyTimers.current = []; setReady(false); beginBreathing(); };
+  const finishOnboard = () => { try { localStorage.setItem("lull.onboarded.v1", "1"); } catch (e) {} setOnboard(false); setOnboardStep(0); };
+  const nextOnboard = () => { if (onboardStep < ONBOARD_SLIDES.length - 1) setOnboardStep(onboardStep + 1); else finishOnboard(); };
+  const replayOnboard = () => { setOnboardStep(0); setOnboard(true); };
   const pauseSession = () => { pausedRef.current = true; setPaused(true); if (phaseTimeout.current) clearTimeout(phaseTimeout.current); setPhaseLabel("Paused"); setOrb({ scale: prefersReduced ? 0.95 : 0.92, dur: 0.8, ease: "ease" }); pauseAmbience(); try { if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused"; } catch (e) {} };
   const resumeSession = () => { pausedRef.current = false; setPaused(false); ensureAudio(); if (soundRef.current && !scapeRef.current) buildAmbience(); else resumeAmbience(); if (soundOnlyRef.current) { setPhaseLabel(""); setOrb({ scale: 0.88, dur: 3, ease: "ease" }); } else runPhase(); try { if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "playing"; } catch (e) {} };
   const goHome = () => { clearTimers(); setReady(false); pausedRef.current = false; setPaused(false); soundOnlyRef.current = false; sessionScapeRef.current = null; teardownAmbience(0.9); setScreen("home"); setOrb({ scale: LO, dur: 1, ease: "ease" }); setRemaining(durationMin * 60); setProgress(0); try { updateMediaSession(); } catch (e) {} };
@@ -1076,6 +1088,8 @@ export default function Lull() {
     .lull-range::-moz-range-thumb { width: 18px; height: 18px; border: none; border-radius: 50%; background: #efeaff; box-shadow: 0 1px 5px rgba(0,0,0,0.5); }
     .lull-range:focus-visible { outline: 2px solid rgba(255,255,255,0.7); outline-offset: 4px; border-radius: 999px; }
     @keyframes readyPop { 0% { opacity: 0; transform: scale(0.6); } 30% { opacity: 1; } 100% { opacity: 0.9; transform: scale(1); } }
+    @keyframes onbFade { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes onbBreath { 0%,100% { transform: scale(0.97); } 50% { transform: scale(1.03); } }
     .ready-count { animation: readyPop 0.95s cubic-bezier(.2,.8,.2,1) both; }
     @media (prefers-reduced-motion: reduce) { .orb-idle,.amb1,.amb2 { animation: none !important; } .ready-count { animation: none !important; opacity: 1 !important; } }
   `;
@@ -1580,6 +1594,34 @@ export default function Lull() {
           })()}
         </div>
       )}
+
+      {onboard && (() => { const s = ONBOARD_SLIDES[onboardStep] || ONBOARD_SLIDES[0]; const last = onboardStep === ONBOARD_SLIDES.length - 1; return (
+        <div style={{ position: "fixed", inset: 0, zIndex: 70, backgroundColor: groundSolid, backgroundImage: groundBg, color: ink, display: "flex", flexDirection: "column", padding: "max(30px, calc(env(safe-area-inset-top) + 14px)) 28px calc(30px + env(safe-area-inset-bottom))", overflowY: "auto" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 13, letterSpacing: 6, fontWeight: 600, opacity: 0.85 }}>LULL</span>
+            <button className="lull-btn" onClick={finishOnboard} style={{ ...textBtn, padding: "6px 4px", fontSize: 13 }}>Skip</button>
+          </div>
+          <div style={{ flex: "1 1 auto", minHeight: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ position: "relative", width: 240, height: 240, flex: "0 0 auto", display: "flex", alignItems: "center", justifyContent: "center", animation: "onbBreath 7s ease-in-out infinite" }}>
+              <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "1px solid " + wa(0.07) }} />
+              <div style={{ position: "absolute", inset: "17%", borderRadius: "50%", border: "1px solid " + wa(0.11) }} />
+              <div style={{ borderRadius: "50%", boxShadow: `0 0 80px ${ringFrom}55` }}>{orbChip(orbId, 150)}</div>
+            </div>
+          </div>
+          <div key={onboardStep} style={{ animation: "onbFade .5s ease both" }}>
+            <div style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", fontWeight: 600, opacity: 0.5, marginBottom: 13 }}>{s.eyebrow}</div>
+            <h1 style={{ fontSize: "clamp(26px, 7.4vw, 37px)", fontWeight: 300, lineHeight: 1.08, letterSpacing: -0.5, margin: 0 }}>{s.title[0]}<br />{s.title[1]}</h1>
+            <p style={{ fontSize: 15.5, lineHeight: 1.55, opacity: 0.55, margin: "16px 0 0", maxWidth: "34ch" }}>{s.body}</p>
+          </div>
+          <div style={{ display: "flex", gap: 7, margin: "22px 0 16px" }}>
+            {ONBOARD_SLIDES.map((_, i) => (
+              <div key={i} style={{ height: 6, width: i === onboardStep ? 26 : 6, borderRadius: 999, background: i === onboardStep ? inkA(0.75) : inkA(0.22), transition: "width .3s ease, background .3s ease" }} />
+            ))}
+          </div>
+          <button className="lull-btn" onClick={nextOnboard} style={{ ...glassBtn, position: "relative", zIndex: 1 }}>{last ? "Begin" : "Continue"}</button>
+          <div style={{ textAlign: "center", fontSize: 12.5, opacity: 0.4, marginTop: 14 }}>{s.foot}</div>
+        </div>
+      ); })()}
 
       {preCheck && (
         <div style={{ position: "fixed", inset: 0, zIndex: 65, backgroundColor: groundSolid, backgroundImage: groundBg, color: ink, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: 18, padding: "max(30px, calc(env(safe-area-inset-top) + 12px)) 30px calc(34px + env(safe-area-inset-bottom))" }}>
