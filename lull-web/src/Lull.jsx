@@ -547,6 +547,10 @@ const ONBOARD_SLIDES = [
   { eyebrow: "When the day winds down", title: ["Drift off", "to calm nights."], body: "Soft rain, distant waves, a warm fire. Let calm sound stay close and carry you into sleep, however far from home you are.", foot: "We're right here with you." },
 ];
 
+// Warm, rotating closings for the end of a breathing session (a small human moment, not a score).
+const DONE_HEADS = ["That's it.", "Well done.", "Beautifully done.", "That's yours to keep."];
+const DONE_LINES = ["Thank you for spending this minute with us.", "You showed up for yourself today, and that matters.", "We're really glad you're here.", "Whatever comes next, you can always return to this.", "Proud of you for pausing."];
+
 export default function Lull() {
   const HI = prefersReduced ? 1.06 : 1.18;
   const LO = prefersReduced ? 0.92 : 0.72;
@@ -1384,8 +1388,9 @@ export default function Lull() {
         {breatheDone && (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: 10, width: "100%" }}>
             <div style={{ marginBottom: 14, borderRadius: "50%", boxShadow: `0 0 60px ${(selectedOrb.ring && selectedOrb.ring[0]) || th.ringTo}66` }}>{orbChip(orbId, 96)}</div>
-            <div style={{ fontSize: 28, fontWeight: 300, letterSpacing: 0.5 }}>That's it.</div>
-            <p style={{ fontSize: 14, opacity: 0.6, margin: 0, maxWidth: 260 }}>You gave yourself {durationMin} {durationMin === 1 ? "minute" : "minutes"}. Carry it with you.</p>
+            <div style={{ fontSize: 28, fontWeight: 300, letterSpacing: 0.5 }}>{DONE_HEADS[sessions.length % DONE_HEADS.length]}</div>
+            <p style={{ fontSize: 15, opacity: 0.78, margin: 0, maxWidth: 290, lineHeight: 1.5 }}>{DONE_LINES[sessions.length % DONE_LINES.length]}</p>
+            <p style={{ fontSize: 13.5, opacity: 0.55, margin: "2px 0 0", maxWidth: 260 }}>You gave yourself {durationMin} {durationMin === 1 ? "minute" : "minutes"}. Carry it with you.</p>
             {!(PATTERNS[mode][patternId] && PATTERNS[mode][patternId].sos) && (() => {
               if (moodAfter == null) return (
                 <div style={{ marginTop: 16, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
@@ -1608,25 +1613,27 @@ export default function Lull() {
             <span style={{ fontSize: 13, letterSpacing: 6, fontWeight: 600, opacity: 0.85 }}>LULL</span>
             <button className="lull-btn" onClick={finishOnboard} style={{ ...textBtn, padding: "6px 4px", fontSize: 13 }}>Skip</button>
           </div>
-          <div style={{ flex: "1 1 auto", minHeight: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <div style={{ position: "relative", width: 240, height: 240, flex: "0 0 auto", display: "flex", alignItems: "center", justifyContent: "center", animation: "onbBreath 7s ease-in-out infinite" }}>
+          <div style={{ flex: "1 1 auto", minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: 30 }}>
+            <div style={{ position: "relative", width: 232, height: 232, flex: "0 0 auto", display: "flex", alignItems: "center", justifyContent: "center", animation: "onbBreath 7s ease-in-out infinite" }}>
               <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "1px solid " + wa(0.07) }} />
               <div style={{ position: "absolute", inset: "17%", borderRadius: "50%", border: "1px solid " + wa(0.11) }} />
-              <div style={{ borderRadius: "50%", boxShadow: `0 0 80px ${ringFrom}55` }}>{orbChip(orbId, 150)}</div>
+              <div style={{ borderRadius: "50%", boxShadow: `0 0 80px ${ringFrom}55` }}>{orbChip(orbId, 146)}</div>
+            </div>
+            <div key={onboardStep} style={{ animation: "onbFade .5s ease both", maxWidth: "34ch" }}>
+              <div style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", fontWeight: 600, opacity: 0.5, marginBottom: 13 }}>{s.eyebrow}</div>
+              <h1 style={{ fontSize: "clamp(26px, 7.4vw, 37px)", fontWeight: 300, lineHeight: 1.08, letterSpacing: -0.5, margin: 0 }}>{s.title[0]}<br />{s.title[1]}</h1>
+              <p style={{ fontSize: 15.5, lineHeight: 1.55, opacity: 0.55, margin: "16px auto 0", maxWidth: "32ch" }}>{s.body}</p>
             </div>
           </div>
-          <div key={onboardStep} style={{ animation: "onbFade .5s ease both" }}>
-            <div style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", fontWeight: 600, opacity: 0.5, marginBottom: 13 }}>{s.eyebrow}</div>
-            <h1 style={{ fontSize: "clamp(26px, 7.4vw, 37px)", fontWeight: 300, lineHeight: 1.08, letterSpacing: -0.5, margin: 0 }}>{s.title[0]}<br />{s.title[1]}</h1>
-            <p style={{ fontSize: 15.5, lineHeight: 1.55, opacity: 0.55, margin: "16px 0 0", maxWidth: "34ch" }}>{s.body}</p>
+          <div style={{ flex: "0 0 auto" }}>
+            <div style={{ display: "flex", gap: 7, margin: "0 0 16px", justifyContent: "center" }}>
+              {ONBOARD_SLIDES.map((_, i) => (
+                <div key={i} style={{ height: 6, width: i === onboardStep ? 26 : 6, borderRadius: 999, background: i === onboardStep ? inkA(0.75) : inkA(0.22), transition: "width .3s ease, background .3s ease" }} />
+              ))}
+            </div>
+            <button className="lull-btn" onClick={nextOnboard} style={{ ...glassBtn, position: "relative", zIndex: 1 }}>{last ? "Begin" : "Continue"}</button>
+            <div style={{ textAlign: "center", fontSize: 12.5, opacity: 0.4, marginTop: 14 }}>{s.foot}</div>
           </div>
-          <div style={{ display: "flex", gap: 7, margin: "22px 0 16px" }}>
-            {ONBOARD_SLIDES.map((_, i) => (
-              <div key={i} style={{ height: 6, width: i === onboardStep ? 26 : 6, borderRadius: 999, background: i === onboardStep ? inkA(0.75) : inkA(0.22), transition: "width .3s ease, background .3s ease" }} />
-            ))}
-          </div>
-          <button className="lull-btn" onClick={nextOnboard} style={{ ...glassBtn, position: "relative", zIndex: 1 }}>{last ? "Begin" : "Continue"}</button>
-          <div style={{ textAlign: "center", fontSize: 12.5, opacity: 0.4, marginTop: 14 }}>{s.foot}</div>
         </div>
       ); })()}
 
