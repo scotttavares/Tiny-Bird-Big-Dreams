@@ -264,7 +264,7 @@ const BUNDLE = { name: "Everything", tag: "Every orb and sound, plus every futur
 // ---- In-App Purchases (RevenueCat on iOS; web falls back to local unlock until Stripe lands) ----
 // This is the RevenueCat *public* iOS SDK key (safe to ship in the app). Paste yours (starts with
 // "appl_") before building the release, or purchases stay in local-unlock mode.
-const RC_IOS_KEY = "appl_REPLACE_WITH_YOUR_REVENUECAT_IOS_KEY";
+const RC_IOS_KEY = "appl_YlMMJojPxIPDRbnIMMFoPDZKPuj";
 const RC_ENTITLEMENT_EVERYTHING = "everything"; // RevenueCat entitlement the "Everything" bundle grants
 // Product identifiers — must match App Store Connect AND RevenueCat exactly.
 const IAP_PRODUCTS = {
