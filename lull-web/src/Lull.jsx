@@ -1097,6 +1097,8 @@ export default function Lull() {
     @keyframes readyPop { 0% { opacity: 0; transform: scale(0.6); } 30% { opacity: 1; } 100% { opacity: 0.9; transform: scale(1); } }
     @keyframes onbFade { from { opacity: 0; } to { opacity: 1; } }
     @keyframes onbBreath { 0%,100% { transform: scale(0.97); } 50% { transform: scale(1.03); } }
+    @keyframes onbSwirl { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes onbFloat { 0%,100% { transform: translateY(-5px); } 50% { transform: translateY(5px); } }
     .ready-count { animation: readyPop 0.95s cubic-bezier(.2,.8,.2,1) both; }
     @media (prefers-reduced-motion: reduce) { .orb-idle,.amb1,.amb2 { animation: none !important; } .ready-count { animation: none !important; opacity: 1 !important; } }
   `;
@@ -1614,10 +1616,12 @@ export default function Lull() {
             <button className="lull-btn" onClick={finishOnboard} style={{ ...textBtn, padding: "6px 4px", fontSize: 13 }}>Skip</button>
           </div>
           <div style={{ flex: "1 1 auto", minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: 30 }}>
-            <div style={{ position: "relative", width: 232, height: 232, flex: "0 0 auto", display: "flex", alignItems: "center", justifyContent: "center", animation: "onbBreath 7s ease-in-out infinite" }}>
-              <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "1px solid " + wa(0.07) }} />
-              <div style={{ position: "absolute", inset: "17%", borderRadius: "50%", border: "1px solid " + wa(0.11) }} />
-              <div style={{ borderRadius: "50%", boxShadow: `0 0 80px ${ringFrom}55` }}>{orbChip(orbId, 146)}</div>
+            <div style={{ flex: "0 0 auto", animation: "onbFloat 9s ease-in-out infinite" }}>
+              <div style={{ position: "relative", width: 232, height: 232, display: "flex", alignItems: "center", justifyContent: "center", animation: "onbBreath 7s ease-in-out infinite" }}>
+                <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "1px solid " + wa(0.07) }} />
+                <div style={{ position: "absolute", inset: "17%", borderRadius: "50%", border: "1px solid " + wa(0.11) }} />
+                <div style={{ borderRadius: "50%", boxShadow: `0 0 80px ${ringFrom}55`, animation: "onbSwirl 44s linear infinite", willChange: "transform" }}>{orbChip(orbId, 146)}</div>
+              </div>
             </div>
             <div key={onboardStep} style={{ animation: "onbFade .5s ease both", maxWidth: "34ch" }}>
               <div style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", fontWeight: 600, opacity: 0.5, marginBottom: 13 }}>{s.eyebrow}</div>
