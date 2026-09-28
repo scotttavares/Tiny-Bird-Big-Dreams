@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Volume2, VolumeX, Sun, Moon, CalendarDays, Waves } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { Purchases, LOG_LEVEL } from "@revenuecat/purchases-capacitor";
+import { AppIcon } from "@capacitor-community/app-icon";
 
 // Lull — a minute to breathe.  Tiny Bird, Big Dreams.
 // A living smoke-plasma orb (six themes, three swirl styles) that breathes with you.
@@ -300,6 +301,29 @@ function orbChip(id, size) {
   const layers = cols.map((c, i, arr) => { const a = (i / arr.length) * Math.PI * 2 - Math.PI / 2; const x = (50 + Math.cos(a) * 24).toFixed(0); const y = (50 + Math.sin(a) * 24).toFixed(0); return `radial-gradient(42% 42% at ${x}% ${y}%, rgba(${c},0.92), transparent 60%)`; });
   layers.push("radial-gradient(30% 30% at 50% 50%, rgba(255,255,255,0.85), transparent 60%)");
   return <div style={{ ...base, background: layers.join(", ") + ", " + (o.white ? "#ffffff" : "#0e0b1a") }} />;
+}
+
+// Alternate iOS app icons. Aurora is the primary icon (reset to it); the rest switch via the plugin.
+// Names must match the alternate app-icon set names configured in the iOS build (codemagic.yaml).
+const APP_ICONS = [
+  { key: "aurora", label: "Aurora", name: null, bg: "radial-gradient(120% 120% at 50% 30%,#241645,#0d0820 58%,#060310)", screen: true },
+  { key: "white", label: "White", name: "AppIcon-White", bg: "#f5f3fb", filter: "invert(1) hue-rotate(185deg) saturate(1.3) brightness(1.03)" },
+  { key: "black", label: "Black", name: "AppIcon-Black", bg: "radial-gradient(125% 120% at 50% 34%,#0b0b13,#000 72%)", screen: true },
+  { key: "frosted", label: "Frosted", name: "AppIcon-Frosted", bg: "#eceaf6", filter: "invert(1) hue-rotate(185deg) saturate(1.15) blur(1.4px)", opacity: 0.92, veil: true },
+];
+// A faithful mini preview of an app-icon variant (same orb art + treatment as the real icon).
+function iconSwatch(opt, size) {
+  const src = ORBS.aurora.src;
+  const img = { width: "100%", height: "100%", objectFit: "cover", transform: "scale(2)", display: "block" };
+  if (opt.screen) img.mixBlendMode = "screen";
+  if (opt.filter) img.filter = opt.filter;
+  if (opt.opacity) img.opacity = opt.opacity;
+  return (
+    <div style={{ width: size, height: size, borderRadius: size * 0.23, overflow: "hidden", position: "relative", background: opt.bg, flex: "0 0 auto" }}>
+      <img src={src} alt="" draggable="false" style={img} />
+      {opt.veil && <div style={{ position: "absolute", inset: 0, background: "radial-gradient(120% 120% at 50% 45%,rgba(255,255,255,.1),rgba(240,240,250,.42))" }} />}
+    </div>
+  );
 }
 // ---------- particle sphere (canvas) ----------
 // A rotating sphere of ~2200 glowing dots (fibonacci distribution + jitter), coloured by a
@@ -626,6 +650,8 @@ export default function Lull() {
   const [light, setLight] = useState(false);
   const [sessions, setSessions] = useState(() => (typeof window !== "undefined" ? loadHist() : []));
   const [showHistory, setShowHistory] = useState(false);
+  const [appIcon, setAppIcon] = useState("aurora");        // active alternate app icon (native only)
+  const [iconPickerOn, setIconPickerOn] = useState(false); // true when alternate icons are supported (iOS)
   const [exportOpen, setExportOpen] = useState(false); const [copied, setCopied] = useState(false);
   // Standalone ambient mixer (play nature beds without a session; blend several, each with its own level).
   const [mixerOpen, setMixerOpen] = useState(false);
@@ -931,6 +957,32 @@ export default function Lull() {
   const finishOnboard = () => { try { localStorage.setItem("lull.onboarded.v1", "1"); } catch (e) {} setOnboard(false); setOnboardStep(0); };
   const nextOnboard = () => { if (onboardStep < ONBOARD_SLIDES.length - 1) setOnboardStep(onboardStep + 1); else finishOnboard(); };
   const replayOnboard = () => { setOnboardStep(0); setOnboard(true); };
+
+  // App icon picker (iOS alternate icons). Detect support + current icon on native.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let dead = false;
+    (async () => {
+      try {
+        const sup = await AppIcon.isSupported();
+        if (dead || !sup || !sup.value) return;
+        setIconPickerOn(true);
+        const cur = await AppIcon.getName();
+        if (dead) return;
+        const found = APP_ICONS.find((o) => o.name === ((cur && cur.value) || null));
+        setAppIcon(found ? found.key : "aurora");
+      } catch (e) {}
+    })();
+    return () => { dead = true; };
+  }, []);
+  const chooseIcon = async (opt) => {
+    setAppIcon(opt.key);
+    if (!Capacitor.isNativePlatform()) return;
+    try {
+      if (opt.name) await AppIcon.change({ name: opt.name, suppressNotification: true });
+      else await AppIcon.reset({ suppressNotification: true });
+    } catch (e) {}
+  };
   const pauseSession = () => { pausedRef.current = true; setPaused(true); if (phaseTimeout.current) clearTimeout(phaseTimeout.current); setPhaseLabel("Paused"); setOrb({ scale: prefersReduced ? 0.95 : 0.92, dur: 0.8, ease: "ease" }); pauseAmbience(); try { if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused"; } catch (e) {} };
   const resumeSession = () => { pausedRef.current = false; setPaused(false); ensureAudio(); if (soundRef.current && !scapeRef.current) buildAmbience(); else resumeAmbience(); if (soundOnlyRef.current) { setPhaseLabel(""); setOrb({ scale: 0.88, dur: 3, ease: "ease" }); } else runPhase(); try { if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "playing"; } catch (e) {} };
   const goHome = () => { clearTimers(); setReady(false); pausedRef.current = false; setPaused(false); soundOnlyRef.current = false; sessionScapeRef.current = null; teardownAmbience(0.9); setScreen("home"); setOrb({ scale: LO, dur: 1, ease: "ease" }); setRemaining(durationMin * 60); setProgress(0); try { updateMediaSession(); } catch (e) {} };
@@ -1715,6 +1767,19 @@ export default function Lull() {
                     </span>
                   </div>); })}
               </div>
+              {iconPickerOn && (
+                <div style={{ marginTop: 30 }}>
+                  <div style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", fontWeight: 600, opacity: 0.5, marginBottom: 14 }}>App icon</div>
+                  <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
+                    {APP_ICONS.map((opt) => { const on = appIcon === opt.key; return (
+                      <button key={opt.key} className="lull-btn" onClick={() => chooseIcon(opt)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: 0, background: "transparent" }}>
+                        <div style={{ padding: 3, borderRadius: 19, border: on ? `2px solid ${inkA(0.85)}` : "2px solid " + wa(0.12) }}>{iconSwatch(opt, 58)}</div>
+                        <span style={{ fontSize: 12, opacity: on ? 0.9 : 0.5 }}>{opt.label}</span>
+                      </button>
+                    ); })}
+                  </div>
+                </div>
+              )}
               <div style={{ marginTop: "auto", paddingTop: 30, display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
                 <button className="lull-btn" onClick={() => { setShowHistory(false); replayOnboard(); }} style={{ padding: "9px 16px", borderRadius: 999, fontSize: 12.5, letterSpacing: 0.3, color: inkA(0.7), background: wa(0.05), border: "1px solid " + wa(0.12) }}>Replay intro</button>
                 <button className="lull-btn" onClick={exportData} style={{ padding: "9px 16px", borderRadius: 999, fontSize: 12.5, letterSpacing: 0.3, color: inkA(0.7), background: wa(0.05), border: "1px solid " + wa(0.12) }}>Export my breaths</button>
