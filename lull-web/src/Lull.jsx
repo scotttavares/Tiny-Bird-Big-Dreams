@@ -1620,7 +1620,15 @@ export default function Lull() {
               <div style={{ position: "relative", width: 232, height: 232, display: "flex", alignItems: "center", justifyContent: "center", animation: "onbBreath 7s ease-in-out infinite" }}>
                 <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "1px solid " + wa(0.07) }} />
                 <div style={{ position: "absolute", inset: "17%", borderRadius: "50%", border: "1px solid " + wa(0.11) }} />
-                <div style={{ borderRadius: "50%", boxShadow: `0 0 80px ${ringFrom}55`, animation: "onbSwirl 44s linear infinite", willChange: "transform" }}>{orbChip(orbId, 146)}</div>
+                {(() => {
+                  const ho = ORBS[orbId] || ORBS.aurora;
+                  if (!ho.src) return <div style={{ borderRadius: "50%", boxShadow: `0 0 80px ${ringFrom}55`, animation: "onbSwirl 44s linear infinite", willChange: "transform" }}>{orbChip(orbId, 146)}</div>;
+                  return (
+                    <div style={{ position: "relative", width: 196, height: 196, borderRadius: "50%", overflow: "hidden", animation: "onbSwirl 44s linear infinite", willChange: "transform", WebkitMaskImage: "radial-gradient(circle at 50% 50%, #000 48%, transparent 78%)", maskImage: "radial-gradient(circle at 50% 50%, #000 48%, transparent 78%)" }}>
+                      <img src={ho.src} alt="" draggable="false" style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.95)", mixBlendMode: "screen", filter: `hue-rotate(${ho.hue || 0}deg) saturate(${ho.sat || 1.15})` }} />
+                    </div>
+                  );
+                })()}
               </div>
             </div>
             <div key={onboardStep} style={{ animation: "onbFade .5s ease both", maxWidth: "34ch" }}>
