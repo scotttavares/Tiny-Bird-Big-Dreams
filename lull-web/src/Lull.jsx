@@ -1098,6 +1098,7 @@ export default function Lull() {
     @keyframes onbFade { from { opacity: 0; } to { opacity: 1; } }
     @keyframes onbBreath { 0%,100% { transform: scale(0.97); } 50% { transform: scale(1.03); } }
     @keyframes onbSwirl { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes onbSwirlR { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
     @keyframes onbFloat { 0%,100% { transform: translateY(-5px); } 50% { transform: translateY(5px); } }
     .ready-count { animation: readyPop 0.95s cubic-bezier(.2,.8,.2,1) both; }
     @media (prefers-reduced-motion: reduce) { .orb-idle,.amb1,.amb2 { animation: none !important; } .ready-count { animation: none !important; opacity: 1 !important; } }
@@ -1623,9 +1624,16 @@ export default function Lull() {
                 {(() => {
                   const ho = ORBS[orbId] || ORBS.aurora;
                   if (!ho.src) return <div style={{ borderRadius: "50%", boxShadow: `0 0 80px ${ringFrom}55`, animation: "onbSwirl 44s linear infinite", willChange: "transform" }}>{orbChip(orbId, 146)}</div>;
+                  const filt = `hue-rotate(${ho.hue || 0}deg) saturate(${ho.sat || 1.15})`;
+                  const wrap = (anim) => ({ position: "absolute", inset: 0, animation: anim, willChange: "transform" });
+                  const img = (scale, opacity) => ({ width: "100%", height: "100%", objectFit: "cover", transform: `scale(${scale})`, mixBlendMode: "screen", filter: filt, opacity });
+                  // Layered copies rotating at different speeds/directions: the filaments cross and drift,
+                  // so the swirl flows rather than the whole image spinning as one.
                   return (
-                    <div style={{ position: "relative", width: 196, height: 196, borderRadius: "50%", overflow: "hidden", animation: "onbSwirl 44s linear infinite", willChange: "transform", WebkitMaskImage: "radial-gradient(circle at 50% 50%, #000 48%, transparent 78%)", maskImage: "radial-gradient(circle at 50% 50%, #000 48%, transparent 78%)" }}>
-                      <img src={ho.src} alt="" draggable="false" style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.95)", mixBlendMode: "screen", filter: `hue-rotate(${ho.hue || 0}deg) saturate(${ho.sat || 1.15})` }} />
+                    <div style={{ position: "relative", width: 196, height: 196, borderRadius: "50%", overflow: "hidden", WebkitMaskImage: "radial-gradient(circle at 50% 50%, #000 46%, transparent 78%)", maskImage: "radial-gradient(circle at 50% 50%, #000 46%, transparent 78%)" }}>
+                      <div style={wrap("onbSwirl 46s linear infinite")}><img src={ho.src} alt="" draggable="false" style={img(1.9, 0.75)} /></div>
+                      <div style={wrap("onbSwirlR 70s linear infinite")}><img src={ho.src} alt="" draggable="false" style={img(2.3, 0.5)} /></div>
+                      <div style={wrap("onbSwirl 108s linear infinite")}><img src={ho.src} alt="" draggable="false" style={img(1.66, 0.45)} /></div>
                     </div>
                   );
                 })()}

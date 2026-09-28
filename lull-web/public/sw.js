@@ -1,4 +1,4 @@
-const C = 'lull-v92';
+const C = 'lull-v93';
 const ASSETS = ['/', '/app', '/privacy', '/assets/lull.js', '/assets/orb-glass.webp', '/assets/orb-swirl-b.webp', '/assets/orb-swirl-c.webp', '/assets/orb-swirl-d.webp', '/assets/orb-iris.webp', '/assets/orb-wisp.webp', '/assets/orb-dawn.webp', '/assets/orb-halo.webp', '/assets/orb-prism.webp', '/assets/orb-lagoon.webp', '/assets/orb-dusk.webp', '/assets/orb-thumb-solstice.png', '/assets/orb-thumb-frost.png', '/assets/orb-thumb-nova.png', '/assets/sound-bowls.webp', '/assets/sound-handpan.webp', '/assets/rain.mp3', '/assets/lightrain.wav', '/assets/ocean.wav', '/assets/forest.wav', '/assets/fire.wav', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/favicon-32.png'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(C).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()).catch(() => {}));
