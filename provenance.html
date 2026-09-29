@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Provenance — A Sanctuary for Human Craft</title>
+<meta name="description" content="Provenance is a concept for a human-only craft marketplace. No algorithms, no AI art, no drop-shipping. Every object is traced back to a living maker." />
+<meta property="og:title" content="Provenance — A Sanctuary for Human Craft" />
+<meta property="og:description" content="Zero algorithms. Zero AI. Every object traced back to a living maker." />
+<meta property="og:type" content="website" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23F9F6F0'/%3E%3Ctext x='32' y='45' font-family='Georgia,serif' font-size='38' text-anchor='middle' fill='%232C2825'%3EP%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --linen: #F9F6F0;
+    --linen-2: #F2EDE3;
+    --linen-3: #E8E1D4;
+    --umber: #2C2825;
+    --umber-soft: #5A534C;
+    --umber-mute: #8A8279;
+    --brass: #8C5E3C;
+    --brass-soft: #B98A64;
+    --rule: rgba(44, 40, 37, .14);
+    --serif: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+    --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --wrap: 1180px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { transition: none !important; animation: none !important; } }
+  body {
+    background: var(--linen);
+    color: var(--umber);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    /* faint paper grain */
+    background-image: radial-gradient(rgba(44,40,37,.035) 1px, transparent 1px);
+    background-size: 3px 3px;
+  }
+  a { color: inherit; }
+  img, svg { display: block; max-width: 100%; }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; }
+  .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 24px; }
+  .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: var(--brass); }
+  .serif { font-family: var(--serif); font-weight: 400; }
+  h1, h2, h3 { font-family: var(--serif); font-weight: 400; letter-spacing: -.01em; line-height: 1.12; }
+  h2 { font-size: clamp(34px, 5vw, 52px); }
+  h3 { font-size: 26px; }
+  .lede { font-size: 17px; color: var(--umber-soft); max-width: 620px; }
+  section { padding: 96px 0; border-top: 1px solid var(--rule); }
+  .sec-head { display: grid; gap: 14px; margin-bottom: 48px; }
+  .skip { position: absolute; left: -999px; top: 8px; background: var(--umber); color: var(--linen); padding: 8px 14px; z-index: 100; }
+  .skip:focus { left: 8px; }
+
+  /* ── Concept ribbon ── */
+  .ribbon { background: var(--umber); color: var(--linen); font-size: 12px; letter-spacing: .04em; text-align: center; padding: 8px 16px; }
+  .ribbon a { color: var(--brass-soft); }
+
+  /* ── Masthead ── */
+  .masthead { text-align: center; padding: 38px 24px 0; }
+  .wordmark { font-family: var(--serif); font-size: clamp(40px, 8vw, 76px); letter-spacing: .2em; line-height: 1; padding-left: .2em; text-decoration: none; display: inline-block; }
+  .tagline { font-size: 12px; letter-spacing: .24em; text-transform: uppercase; color: var(--umber-mute); margin-top: 12px; }
+  nav.primary { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); margin-top: 28px; position: sticky; top: 0; background: rgba(249,246,240,.94); backdrop-filter: blur(6px); z-index: 20; }
+  nav.primary ul { list-style: none; display: flex; justify-content: center; flex-wrap: wrap; gap: 4px 30px; padding: 14px 16px; }
+  nav.primary a, nav.primary button { font-size: 14px; text-decoration: none; background: none; border: 0; cursor: pointer; padding: 2px 0; border-bottom: 1px solid transparent; color: var(--umber-soft); }
+  nav.primary a:hover, nav.primary button:hover, nav.primary button[aria-pressed="true"] { color: var(--umber); border-bottom-color: var(--brass); }
+
+  /* ── Plates (stand-ins for real maker photography) ── */
+  .plate { position: relative; overflow: hidden; background: var(--linen-3); aspect-ratio: 4 / 3; }
+  .plate svg.motif { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .plate .plate-note { position: absolute; left: 12px; bottom: 10px; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: rgba(249,246,240,.82); }
+  .plate.ceramics { background: linear-gradient(160deg, #cdb79c 0%, #a88665 55%, #7a5a40 100%); }
+  .plate.fine-art { background: linear-gradient(150deg, #d9c9a8 0%, #b0874f 45%, #5b4a3a 100%); }
+  .plate.textiles { background: linear-gradient(170deg, #e9e1d2 0%, #cdbfa6 55%, #9c8a6f 100%); }
+  .plate.woodwork { background: linear-gradient(160deg, #c49a6c 0%, #8c5e3c 55%, #4f3423 100%); }
+
+  /* ── Hero ── */
+  .hero { padding: 40px 0 88px; }
+  .hero .plate { aspect-ratio: 21 / 8; border-radius: 2px; }
+  .hero .plate .hero-cap { position: absolute; left: 28px; bottom: 24px; font-family: var(--serif); font-size: clamp(22px, 3.4vw, 34px); color: var(--linen); text-shadow: 0 1px 12px rgba(0,0,0,.25); }
+  .manifesto { text-align: center; max-width: 880px; margin: 56px auto 0; }
+  .manifesto h1 { font-size: clamp(30px, 4.6vw, 50px); line-height: 1.18; }
+  .manifesto h1 em { color: var(--brass); }
+  .manifesto p { margin-top: 22px; color: var(--umber-soft); font-size: 17px; }
+  .pledges { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 28px; margin-top: 30px; font-size: 13px; color: var(--umber-soft); list-style: none; }
+  .pledges li::before { content: "✕"; color: var(--brass); margin-right: 8px; font-size: 11px; }
+
+  /* ── Feed ── */
+  .feed-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 18px; margin-bottom: 28px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { border: 1px solid var(--rule); background: transparent; padding: 7px 16px; border-radius: 999px; font-size: 13px; cursor: pointer; color: var(--umber-soft); }
+  .chip:hover { border-color: var(--umber-mute); color: var(--umber); }
+  .chip[aria-pressed="true"] { background: var(--umber); border-color: var(--umber); color: var(--linen); }
+  .feed-note { font-size: 12px; color: var(--umber-mute); letter-spacing: .02em; }
+  .feed-note strong { color: var(--brass); font-weight: 600; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px 28px; }
+  .card { background: none; border: 0; text-align: left; cursor: pointer; display: block; width: 100%; }
+  .card .plate { transition: transform .5s ease; }
+  .card:hover .plate { transform: scale(1.012); }
+  .card-body { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 14px 2px 0; border-bottom: 1px solid var(--rule); padding-bottom: 14px; }
+  .card-title { font-family: var(--serif); font-size: 22px; line-height: 1.2; }
+  .card-meta { font-size: 12.5px; color: var(--umber-mute); grid-column: 1; }
+  .card-price { font-size: 14px; font-weight: 500; align-self: start; padding-top: 3px; }
+  .stamp { grid-column: 2; grid-row: 2 / span 2; align-self: end; justify-self: end; }
+  .card-listed { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--umber-mute); grid-column: 1; }
+  .empty { grid-column: 1 / -1; text-align: center; color: var(--umber-mute); padding: 40px 0; }
+
+  /* Atelier Stamp — understated seal */
+  .seal { width: 52px; height: 52px; color: var(--brass); }
+  .seal text { font-family: var(--sans); font-size: 7.6px; letter-spacing: 1.6px; fill: currentColor; text-transform: uppercase; }
+
+  /* ── Vetting ── */
+  .protocols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; counter-reset: p; }
+  .protocol { border-top: 2px solid var(--umber); padding-top: 22px; }
+  .protocol .num { font-family: var(--serif); font-style: italic; font-size: 20px; color: var(--brass); }
+  .protocol h3 { margin: 6px 0 12px; }
+  .protocol p { color: var(--umber-soft); font-size: 15px; }
+  .protocol ul { margin-top: 14px; list-style: none; font-size: 13.5px; color: var(--umber-soft); display: grid; gap: 6px; }
+  .protocol li::before { content: "—"; color: var(--brass); margin-right: 8px; }
+
+  /* ── Features ── */
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+  .feature { background: var(--linen); padding: 32px 28px; }
+  .feature h3 { font-size: 24px; margin-bottom: 10px; }
+  .feature p { color: var(--umber-soft); font-size: 15px; }
+
+  /* ── Ledger (fee calculator) ── */
+  .ledger { display: grid; grid-template-columns: 1fr 1.1fr; gap: 56px; align-items: start; }
+  .ledger-card { background: #fffdf9; border: 1px solid var(--rule); padding: 32px; box-shadow: 0 1px 0 var(--rule), 0 18px 40px -28px rgba(44,40,37,.35); }
+  .ledger-card label { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--umber-mute); display: block; margin-bottom: 8px; }
+  .price-input { display: flex; align-items: baseline; gap: 6px; border-bottom: 1px solid var(--umber); padding-bottom: 6px; margin-bottom: 18px; }
+  .price-input span { font-family: var(--serif); font-size: 38px; color: var(--umber-mute); }
+  .price-input input { font-family: var(--serif); font-size: 44px; border: 0; background: transparent; width: 100%; color: var(--umber); outline: none; }
+  input[type="range"] { width: 100%; accent-color: var(--brass); margin-bottom: 22px; }
+  .ledger-rows { list-style: none; font-size: 15px; }
+  .ledger-rows li { display: flex; justify-content: space-between; padding: 11px 0; border-bottom: 1px dashed var(--rule); }
+  .ledger-rows li span:first-child { color: var(--umber-soft); }
+  .ledger-rows li.total { border-bottom: 0; border-top: 1px solid var(--umber); margin-top: 6px; padding-top: 16px; font-size: 17px; font-weight: 600; }
+  .ledger-rows li.total span:first-child { color: var(--umber); }
+  .ledger-rows li.total span:last-child { color: var(--brass); font-family: var(--serif); font-weight: 400; font-size: 30px; line-height: 1; }
+  .split-bar { display: flex; height: 10px; margin: 22px 0 8px; border-radius: 99px; overflow: hidden; background: var(--linen-3); }
+  .split-bar i { display: block; height: 100%; transition: width .3s ease; }
+  .split-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; color: var(--umber-mute); }
+  .split-legend b { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+  .fineprint { font-size: 12.5px; color: var(--umber-mute); margin-top: 18px; }
+  .never { margin-top: 26px; list-style: none; display: grid; gap: 10px; font-size: 15px; color: var(--umber-soft); }
+  .never li::before { content: "✕"; color: var(--brass); margin-right: 10px; font-size: 12px; }
+
+  /* ── Map ── */
+  .map-wrap { display: grid; grid-template-columns: 1.4fr 1fr; gap: 40px; align-items: start; }
+  .map { background: var(--linen-2); border: 1px solid var(--rule); aspect-ratio: 16 / 10; position: relative; }
+  .map svg { width: 100%; height: 100%; }
+  .map .pin { cursor: pointer; }
+  .map .pin circle.dot { fill: var(--brass); }
+  .map .pin circle.halo { fill: var(--brass); opacity: .16; }
+  .map .pin text { font-family: var(--sans); font-size: 11px; fill: var(--umber); }
+  .map .pin:hover circle.halo, .map .pin:focus circle.halo { opacity: .34; }
+  .studios { list-style: none; display: grid; gap: 0; }
+  .studios li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 14px 0; border-bottom: 1px solid var(--rule); }
+  .studios li.lit { background: linear-gradient(90deg, rgba(140,94,60,.08), transparent); }
+  .studios .s-name { font-family: var(--serif); font-size: 20px; }
+  .studios .s-loc { font-size: 12.5px; color: var(--umber-mute); }
+  .studios .s-pick { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--brass); grid-row: 1 / span 2; grid-column: 2; align-self: center; }
+
+  /* ── Journal ── */
+  .journal { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+  .entry .plate { aspect-ratio: 3 / 2; margin-bottom: 16px; }
+  .entry .eyebrow { font-size: 10px; }
+  .entry h3 { font-size: 24px; margin: 6px 0 8px; }
+  .entry p { font-size: 14.5px; color: var(--umber-soft); }
+
+  /* ── Apply ── */
+  .apply { text-align: center; }
+  .apply .lede { margin: 18px auto 0; }
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin: 48px 0 40px; text-align: left; list-style: none; counter-reset: s; }
+  .steps li { counter-increment: s; border-left: 1px solid var(--rule); padding: 4px 0 4px 18px; font-size: 14.5px; color: var(--umber-soft); }
+  .steps li::before { content: counter(s, upper-roman) "."; display: block; font-family: var(--serif); font-size: 22px; color: var(--brass); margin-bottom: 6px; }
+  .steps li strong { display: block; color: var(--umber); font-weight: 600; margin-bottom: 4px; }
+  .btn { display: inline-block; padding: 14px 30px; border: 1px solid var(--umber); background: var(--umber); color: var(--linen); text-decoration: none; font-size: 14px; letter-spacing: .06em; cursor: pointer; transition: background .2s, color .2s; }
+  .btn:hover { background: transparent; color: var(--umber); }
+  .btn.ghost { background: transparent; color: var(--umber); }
+  .btn.ghost:hover { background: var(--umber); color: var(--linen); }
+  .cta-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+
+  /* ── Footer ── */
+  footer { border-top: 1px solid var(--rule); padding: 56px 0 40px; text-align: center; }
+  footer .wordmark { font-size: 28px; }
+  footer p { font-size: 13px; color: var(--umber-mute); margin-top: 14px; max-width: 620px; margin-left: auto; margin-right: auto; }
+  footer a { color: var(--brass); }
+
+  /* ── Product dialog (story-first page) ── */
+  dialog.story { border: 0; padding: 0; width: min(1040px, calc(100vw - 32px)); max-height: calc(100vh - 32px); margin: auto; background: var(--linen); color: var(--umber); box-shadow: 0 40px 90px -30px rgba(44,40,37,.55); }
+  dialog.story::backdrop { background: rgba(44,40,37,.55); backdrop-filter: blur(3px); }
+  .story-inner { display: grid; grid-template-columns: 1.1fr 1fr; }
+  .story-media { display: grid; gap: 8px; padding: 8px; background: var(--linen-2); align-content: start; }
+  .story-media .plate { aspect-ratio: 4 / 3.4; }
+  .story-media .thumbs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .story-media .thumbs .plate { aspect-ratio: 1; }
+  .story-text { padding: 36px 36px 32px; overflow-y: auto; max-height: calc(100vh - 32px); }
+  .story-text h2 { font-size: 38px; margin: 8px 0 4px; }
+  .story-text .by { font-size: 14px; color: var(--umber-soft); }
+  .story-text .price { font-family: var(--serif); font-size: 30px; margin: 18px 0 4px; }
+  .story-text h4 { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--brass); font-weight: 600; margin: 24px 0 8px; }
+  .story-text p, .story-text li { font-size: 14.5px; color: var(--umber-soft); }
+  .story-text blockquote { font-family: var(--serif); font-style: italic; font-size: 20px; line-height: 1.4; color: var(--umber); border-left: 2px solid var(--brass); padding-left: 16px; margin-top: 18px; }
+  .process { list-style: none; display: grid; gap: 8px; counter-reset: pr; }
+  .process li { counter-increment: pr; padding-left: 28px; position: relative; }
+  .process li::before { content: counter(pr); position: absolute; left: 0; top: 1px; width: 18px; height: 18px; border: 1px solid var(--brass); border-radius: 50%; font-size: 10px; display: grid; place-items: center; color: var(--brass); }
+  .fulfil { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; }
+  .fulfil div { border: 1px solid var(--rule); padding: 10px 12px; }
+  .fulfil b { display: block; font-weight: 600; color: var(--umber); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 2px; }
+  .story-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+  .close { position: absolute; top: 12px; right: 14px; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--rule); background: var(--linen); cursor: pointer; font-size: 18px; line-height: 1; z-index: 2; }
+  .ask-note { font-size: 12.5px; color: var(--umber-mute); margin-top: 10px; min-height: 1em; }
+
+  @media (max-width: 960px) {
+    .grid, .journal { grid-template-columns: repeat(2, 1fr); }
+    .protocols, .features { grid-template-columns: 1fr; }
+    .ledger, .map-wrap { grid-template-columns: 1fr; gap: 36px; }
+    .steps { grid-template-columns: repeat(2, 1fr); }
+    .story-inner { grid-template-columns: 1fr; }
+    .story-text { max-height: none; }
+    dialog.story { overflow-y: auto; }
+  }
+  @media (max-width: 620px) {
+    .wrap { padding: 0 16px; }
+    section { padding: 68px 0; }
+    .grid, .journal, .steps { grid-template-columns: 1fr; }
+    nav.primary ul { gap: 4px 18px; padding: 12px 8px; }
+    .hero .plate { aspect-ratio: 4 / 3; }
+    .story-text { padding: 28px 20px; }
+    .fulfil { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#feed">Skip to the Atelier Feed</a>
+
+<div class="ribbon">A product concept from <a href="/">Tiny Bird, Big Dreams</a>. Listings below are illustrative, not real makers.</div>
+
+<header class="masthead">
+  <a class="wordmark" href="#top" id="top">PROVENANCE</a>
+  <div class="tagline">Est. by hand &middot; A guild hall for living makers</div>
+</header>
+
+<nav class="primary" aria-label="Primary">
+  <ul>
+    <li><button type="button" data-nav-medium="fine-art">Fine Art</button></li>
+    <li><button type="button" data-nav-medium="ceramics">Ceramics</button></li>
+    <li><button type="button" data-nav-medium="textiles">Textiles</button></li>
+    <li><button type="button" data-nav-medium="woodwork">Woodwork</button></li>
+    <li><a href="#map">Local Map</a></li>
+    <li><a href="#journal">The Journal</a></li>
+  </ul>
+</nav>
+
+<main>
+  <!-- Hero + manifesto -->
+  <div class="hero wrap">
+    <div class="plate ceramics" role="img" aria-label="Placeholder for a photograph of a potter's hands shaping clay on a wheel">
+      <svg class="motif" viewBox="0 0 840 320" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <defs>
+          <radialGradient id="heroLight" cx="72%" cy="20%" r="70%"><stop offset="0" stop-color="#fff6e6" stop-opacity=".55"/><stop offset="1" stop-color="#fff6e6" stop-opacity="0"/></radialGradient>
+        </defs>
+        <rect width="840" height="320" fill="url(#heroLight)"/>
+        <ellipse cx="420" cy="300" rx="260" ry="34" fill="#5d4330" opacity=".45"/>
+        <path d="M360 296 C352 250 330 220 344 180 C356 146 386 136 386 116 L454 116 C454 136 484 146 496 180 C510 220 488 250 480 296 Z" fill="#c9ad8c" opacity=".92"/>
+        <path d="M386 116 L454 116" stroke="#8c6a4c" stroke-width="3"/>
+        <path d="M352 200 C390 214 450 214 488 200" stroke="#a88665" stroke-width="2" fill="none" opacity=".7"/>
+        <path d="M348 236 C392 250 448 250 492 236" stroke="#a88665" stroke-width="2" fill="none" opacity=".6"/>
+        <path d="M250 190 C290 170 320 176 346 196 C338 212 312 222 280 222 C262 222 250 210 250 190Z" fill="#b48462" opacity=".85"/>
+        <path d="M590 186 C552 168 522 176 496 196 C504 212 530 222 562 222 C580 222 592 206 590 186Z" fill="#b48462" opacity=".85"/>
+      </svg>
+      <span class="hero-cap">The Maker&rsquo;s Hand</span>
+    </div>
+
+    <div class="manifesto">
+      <p class="eyebrow">The Provenance Manifesto</p>
+      <h1>A sanctuary for human craft. Zero algorithms. Zero&nbsp;AI. <em>Every object traced back to a living maker.</em></h1>
+      <p>Provenance is a marketplace built like a gallery and governed like a guild. No sponsored placement, no recommendation engine, no factory resale. Just work, the hands that made it, and the studio it came from.</p>
+      <ul class="pledges">
+        <li>No ranking algorithm</li>
+        <li>No pay-to-play ads</li>
+        <li>No generative AI art</li>
+        <li>No drop-shipping</li>
+        <li>No digital mockups</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Feed -->
+  <section id="feed" aria-labelledby="feed-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">The Chronological Atelier Feed</p>
+        <h2 id="feed-h">Newest first. Always.</h2>
+        <p class="lede">No hidden ranking, no boosted listings. A piece listed this morning by a first-year potter sits exactly where a thirty-year veteran&rsquo;s would.</p>
+      </div>
+      <div class="feed-bar">
+        <div class="chips" role="group" aria-label="Filter by medium">
+          <button type="button" class="chip" data-medium="all" aria-pressed="true">All media</button>
+          <button type="button" class="chip" data-medium="fine-art" aria-pressed="false">Fine Art</button>
+          <button type="button" class="chip" data-medium="ceramics" aria-pressed="false">Ceramics</button>
+          <button type="button" class="chip" data-medium="textiles" aria-pressed="false">Textiles</button>
+          <button type="button" class="chip" data-medium="woodwork" aria-pressed="false">Woodwork</button>
+        </div>
+        <p class="feed-note">Sorted by: <strong>date listed</strong>. That&rsquo;s the only sort there is.</p>
+      </div>
+      <div class="grid" id="grid" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- Vetting -->
+  <section id="vetting" aria-labelledby="vet-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Vetting Protocols</p>
+        <h2 id="vet-h">The door is open. It just isn&rsquo;t automatic.</h2>
+        <p class="lede">Open-door signups are how marketplaces fill up with resold factory goods and generated art. Provenance replaces them with a three-layer trust model reviewed by people.</p>
+      </div>
+      <div class="protocols">
+        <article class="protocol">
+          <span class="num">i.</span>
+          <h3>&ldquo;Hands at Work&rdquo; Application</h3>
+          <p>Every applicant submits a portfolio plus a short video or photo series of raw materials, tools and their own hands mid-creation.</p>
+          <ul>
+            <li>Wet clay on a wheel</li>
+            <li>Ink rolling onto a linocut block</li>
+            <li>Warp threads on the loom</li>
+          </ul>
+        </article>
+        <article class="protocol">
+          <span class="num">ii.</span>
+          <h3>The Authenticity Pledge</h3>
+          <p>A binding seller agreement: zero generative AI, zero digital-art shortcuts presented as handwork, zero drop-shipping or third-party factory resale.</p>
+          <ul>
+            <li>Breach means delisting</li>
+            <li>Buyers can flag any listing</li>
+            <li>Guild review, not a bot</li>
+          </ul>
+        </article>
+        <article class="protocol">
+          <span class="num">iii.</span>
+          <h3>Zero Digital Mockup Rule</h3>
+          <p>Thumbnails are real photographs of the real object, in natural light or in the studio. No stock-generated living rooms, no rendered walls.</p>
+          <ul>
+            <li>Photographed, not rendered</li>
+            <li>Process shots required</li>
+            <li>What you see is what ships</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features" aria-labelledby="feat-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Platform Architecture</p>
+        <h2 id="feat-h">Built like a gallery, not a funnel.</h2>
+      </div>
+      <div class="features">
+        <div class="feature">
+          <h3>The Atelier Stamp</h3>
+          <p>An understated seal on every verified piece, naming the medium and the physical studio: <em>Atelier: Portland, OR</em>. Earned through vetting, never bought.</p>
+        </div>
+        <div class="feature">
+          <h3>Story-First Pages</h3>
+          <p>No countdown timers or &ldquo;12 people have this in their cart.&rdquo; Each listing reads like a studio visit: process documentation, notes on materials, and an <em>Ask the Maker</em> button.</p>
+        </div>
+        <div class="feature">
+          <h3>Studio Fulfillment</h3>
+          <p>Every maker ships from their own bench with discounted postage and processing timelines they set themselves. Heavy or fragile work can be marked for local studio pickup.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Ledger -->
+  <section id="ledger" aria-labelledby="ledger-h">
+    <div class="wrap ledger">
+      <div>
+        <p class="eyebrow">The Open Ledger</p>
+        <h2 id="ledger-h" style="margin:14px 0 16px;">One flat commission. Nothing stacked on top.</h2>
+        <p class="lede">Payments run through Stripe Connect. At checkout the sale splits instantly: the platform takes one flat commission, the processor takes its standard fee, and the rest goes straight to the maker&rsquo;s bank account.</p>
+        <ul class="never">
+          <li>No listing fees</li>
+          <li>No forced &ldquo;offsite ads&rdquo; cut</li>
+          <li>No paid placement to buy back visibility</li>
+          <li>No surprise currency or subscription tiers</li>
+        </ul>
+      </div>
+      <div class="ledger-card">
+        <label for="price">Try a sale price</label>
+        <div class="price-input"><span>$</span><input id="price" type="number" min="1" max="20000" step="1" value="240" inputmode="decimal" /></div>
+        <input id="priceRange" type="range" min="20" max="3000" step="10" value="240" aria-label="Sale price slider" />
+        <ul class="ledger-rows">
+          <li><span>Buyer pays</span><span id="lBuyer">$240.00</span></li>
+          <li><span>Provenance commission (flat <span id="lRate">8</span>%)</span><span id="lFee">&minus;$19.20</span></li>
+          <li><span>Card processing (Stripe, 2.9% + 30&cent;)</span><span id="lStripe">&minus;$7.26</span></li>
+          <li class="total"><span>To the maker&rsquo;s bank</span><span id="lMaker">$213.54</span></li>
+        </ul>
+        <div class="split-bar" aria-hidden="true"><i id="bMaker" style="background:var(--umber);width:89%"></i><i id="bFee" style="background:var(--brass);width:8%"></i><i id="bStripe" style="background:var(--brass-soft);width:3%"></i></div>
+        <div class="split-legend"><span><b style="background:var(--umber)"></b>Maker</span><span><b style="background:var(--brass)"></b>Provenance</span><span><b style="background:var(--brass-soft)"></b>Processing</span></div>
+        <p class="fineprint">Illustrative only. The 8% rate is a concept assumption; processing is shown at Stripe&rsquo;s standard US card rate. Shipping is paid by the buyer and passes straight to the maker.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Map -->
+  <section id="map" aria-labelledby="map-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Local Map</p>
+        <h2 id="map-h">Every piece has an address.</h2>
+        <p class="lede">Browse by studio, not by warehouse. Studios marked for pickup let you collect heavy or fragile work in person and meet the maker.</p>
+      </div>
+      <div class="map-wrap">
+        <div class="map">
+          <svg viewBox="0 0 800 500" role="img" aria-labelledby="mapTitle">
+            <title id="mapTitle">Stylized map of the United States showing illustrative studio locations</title>
+            <path d="M92 118 L168 92 L262 96 L372 104 L470 108 L556 112 L610 92 L664 96 L700 128 L716 170 L690 206 L702 244 L676 290 L636 318 L616 368 L650 432 L628 440 L588 392 L520 372 L466 386 L424 430 L388 420 L352 372 L294 364 L240 340 L168 332 L120 300 L96 250 L82 190 Z" fill="#EDE6D9" stroke="#CFC4B2" stroke-width="2"/>
+            <g stroke="#DCD3C4" stroke-width="1" fill="none" opacity=".8">
+              <path d="M96 200 L700 200"/><path d="M110 280 L680 280"/><path d="M240 96 L240 340"/><path d="M420 104 L420 420"/><path d="M580 108 L580 380"/>
+            </g>
+            <g id="pins"></g>
+          </svg>
+        </div>
+        <ul class="studios" id="studios"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Journal -->
+  <section id="journal" aria-labelledby="journal-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">The Journal</p>
+        <h2 id="journal-h">Dispatches from the bench.</h2>
+      </div>
+      <div class="journal">
+        <article class="entry">
+          <div class="plate textiles" role="img" aria-label="Placeholder for a photograph of a loom"><svg class="motif" viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g stroke="#8a7658" stroke-width="2" opacity=".55"><path d="M40 0V200M60 0V200M80 0V200M100 0V200M120 0V200M140 0V200M160 0V200M180 0V200M200 0V200M220 0V200M240 0V200M260 0V200"/></g><rect x="30" y="110" width="240" height="70" fill="#efe7d8" opacity=".85"/></svg></div>
+          <p class="eyebrow">Studio Visit</p>
+          <h3>Forty hours on one wall hanging</h3>
+          <p>A weaver in Taos talks through her warp, her wool, and why slow work sells.</p>
+        </article>
+        <article class="entry">
+          <div class="plate ceramics" role="img" aria-label="Placeholder for a photograph of a kiln"><svg class="motif" viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path d="M90 200 L90 90 Q150 30 210 90 L210 200Z" fill="#6b4c36" opacity=".6"/><path d="M125 200 L125 130 Q150 108 175 130 L175 200Z" fill="#e9a25a" opacity=".75"/></svg></div>
+          <p class="eyebrow">Guild Notes</p>
+          <h3>Why we banned the ranking algorithm</h3>
+          <p>What happens to a marketplace when nobody can pay to be seen first.</p>
+        </article>
+        <article class="entry">
+          <div class="plate woodwork" role="img" aria-label="Placeholder for a photograph of hand tools on a bench"><svg class="motif" viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g fill="none" stroke="#f1dcc3" stroke-width="1.5" opacity=".4"><ellipse cx="150" cy="120" rx="30" ry="18"/><ellipse cx="150" cy="120" rx="60" ry="36"/><ellipse cx="150" cy="120" rx="92" ry="56"/><ellipse cx="150" cy="120" rx="126" ry="78"/></g></svg></div>
+          <p class="eyebrow">Materials</p>
+          <h3>Reading end grain</h3>
+          <p>A woodworker&rsquo;s field guide to telling salvaged walnut from kiln-dried stock.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Apply -->
+  <section id="apply" class="apply" aria-labelledby="apply-h">
+    <div class="wrap">
+      <p class="eyebrow">For Makers</p>
+      <h2 id="apply-h" style="margin-top:14px;">Apply to the guild.</h2>
+      <p class="lede">Provenance is a concept in development. If you make things with your hands and this is the marketplace you&rsquo;ve wanted, tell us.</p>
+      <ol class="steps">
+        <li><strong>Portfolio</strong>Links to finished work, photographed as it really is.</li>
+        <li><strong>Hands at Work</strong>A short video or photo series of your materials, tools and hands mid-making.</li>
+        <li><strong>The Pledge</strong>Agree to zero generative AI, zero drop-shipping, zero factory resale.</li>
+        <li><strong>Guild Review</strong>A person reviews your application. Approved studios get their Atelier Stamp.</li>
+      </ol>
+      <div class="cta-row">
+        <a class="btn" href="mailto:hello@tinybirdbigdreams.com?subject=Provenance%20%E2%80%94%20Maker%20interest">Register maker interest</a>
+        <a class="btn ghost" href="#feed">Browse the feed</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="wordmark" href="#top">PROVENANCE</a>
+    <p>A concept by <a href="/">Tiny Bird, Big Dreams</a>. In keeping with our own <a href="privacy.html#ai">AI disclosure</a>: the marketplace this page describes bans AI-made goods, but the page itself was designed and built with Claude. The images are hand-drawn vector placeholders, so no photographs have been generated or faked.</p>
+  </div>
+</footer>
+
+<dialog class="story" id="story" aria-labelledby="storyTitle">
+  <button type="button" class="close" id="storyClose" aria-label="Close">&times;</button>
+  <div class="story-inner">
+    <div class="story-media" id="storyMedia"></div>
+    <div class="story-text">
+      <p class="eyebrow" id="storyMedium">Ceramics</p>
+      <h2 id="storyTitle">Title</h2>
+      <p class="by" id="storyBy">by Maker</p>
+      <p class="price" id="storyPrice">$0</p>
+      <p class="card-listed" id="storyListed">Listed</p>
+      <blockquote id="storyQuote">Quote</blockquote>
+      <h4>Raw materials</h4>
+      <p id="storyMaterials">Materials</p>
+      <h4>Process documentation</h4>
+      <ol class="process" id="storyProcess"></ol>
+      <h4>From the studio</h4>
+      <div class="fulfil">
+        <div><b>Ships from</b><span id="storyShips">Portland, OR</span></div>
+        <div><b>Made &amp; packed in</b><span id="storyLead">5 days</span></div>
+        <div><b>Local pickup</b><span id="storyPickup">Available</span></div>
+        <div><b>Atelier Stamp</b><span>Verified by guild review</span></div>
+      </div>
+      <div class="story-actions">
+        <button type="button" class="btn" id="askMaker">Ask the Maker</button>
+        <button type="button" class="btn ghost" id="acquire">Acquire this piece</button>
+      </div>
+      <p class="ask-note" id="askNote" role="status"></p>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  'use strict';
+
+  var MEDIUM_LABEL = { 'fine-art': 'Fine Art', ceramics: 'Ceramics', textiles: 'Textiles', woodwork: 'Woodwork' };
+
+  // Illustrative listings. Dates are days before "today" so the feed always reads as live.
+  var LISTINGS = [
+    { id: 1, medium: 'ceramics', title: 'Hand Thrown Mug Set', maker: 'Mara Ellison', studio: 'Ellison Clay Works', city: 'Portland, OR', price: 168, daysAgo: 0, lead: '5 days', pickup: false,
+      quote: 'Each handle is pulled, not molded. You can feel where my thumb rested.',
+      materials: 'Locally dug Oregon stoneware, wood-ash glaze mixed from our own kiln scraps, fired to cone 10.',
+      process: ['Wedged and thrown on a kick wheel', 'Trimmed at leather-hard, handles pulled and attached', 'Bisque fired, dipped in ash glaze', 'Reduction fired for 14 hours'] },
+    { id: 2, medium: 'fine-art', title: 'Low Tide, Late August', maker: 'Theo Marchetti', studio: 'Marchetti Studio', city: 'Portland, ME', price: 1450, daysAgo: 0, lead: '10 days', pickup: true,
+      quote: 'Painted in three sittings on the same rock, same hour, so the light would agree with itself.',
+      materials: 'Oil on Belgian linen, hand-stretched over kiln-dried pine stretchers. Varnished after six months of cure.',
+      process: ['Toned ground in burnt sienna', 'Plein-air block-in over three sessions', 'Studio glazing layers', 'Final retouch varnish'] },
+    { id: 3, medium: 'textiles', title: 'Undyed Wool Wall Weaving', maker: 'Ines Calder', studio: 'Calder Loom House', city: 'Taos, NM', price: 620, daysAgo: 1, lead: '7 days', pickup: false,
+      quote: 'Undyed means the colors are just the sheep. I know two of them by name.',
+      materials: 'Churro wool from a family flock in northern New Mexico, hand-carded and spun. Cotton warp.',
+      process: ['Wool washed, carded and spun on a treadle wheel', 'Warped on a floor loom', 'Woven over roughly 40 hours', 'Hand-knotted fringe and cedar hanging rod'] },
+    { id: 4, medium: 'woodwork', title: 'Salvaged Walnut Serving Board', maker: 'Dev Okafor', studio: 'Okafor Bench Co.', city: 'Asheville, NC', price: 185, daysAgo: 2, lead: '4 days', pickup: true,
+      quote: 'This walnut stood in a churchyard for 90 years before a storm brought it down.',
+      materials: 'Storm-felled black walnut, air-dried for three years. Finished in food-safe beeswax and walnut oil.',
+      process: ['Slab milled with a chainsaw mill', 'Air-dried three years', 'Hand-planed and scraped, no sanders', 'Oiled and waxed over a week'] },
+    { id: 5, medium: 'ceramics', title: 'Moon Jar No. 7', maker: 'Hana Seo', studio: 'Seo Porcelain', city: 'Oakland, CA', price: 940, daysAgo: 3, lead: '9 days', pickup: true,
+      quote: 'Two bowls joined at the belly. The seam is supposed to show.',
+      materials: 'Porcelain, clear celadon glaze, wood-fired.',
+      process: ['Two hemispheres thrown separately', 'Joined at leather-hard', 'Slow dried for three weeks', 'Wood-fired in a shared anagama'] },
+    { id: 6, medium: 'fine-art', title: 'Linocut: Heron at Dusk', maker: 'Ruth Adeyemi', studio: 'Adeyemi Press', city: 'Minneapolis, MN', price: 140, daysAgo: 4, lead: '3 days', pickup: false,
+      quote: 'Edition of 30. The block gets retired when the last one is pulled.',
+      materials: 'Hand-carved linoleum, oil-based relief ink, printed on Japanese kozo paper.',
+      process: ['Drawn in reverse onto the block', 'Carved with gouges over two days', 'Hand-inked with a brayer', 'Burnished by hand with a baren, signed and numbered'] },
+    { id: 7, medium: 'textiles', title: 'Indigo Shibori Throw', maker: 'Luca Brandt', studio: 'Brandt Dye Works', city: 'Hudson, NY', price: 380, daysAgo: 5, lead: '6 days', pickup: false,
+      quote: 'The vat is alive. Some weeks it just won’t give blue.',
+      materials: 'Organic cotton gauze, natural indigo fermentation vat.',
+      process: ['Fabric scoured and pre-washed', 'Folded and clamped with cedar blocks', 'Dipped twelve times over two days', 'Rinsed and line-dried'] },
+    { id: 8, medium: 'woodwork', title: 'Windsor Side Chair', maker: 'Sam Whitlow', studio: 'Whitlow Chairworks', city: 'Burlington, VT', price: 2100, daysAgo: 6, lead: '5 weeks', pickup: true,
+      quote: 'Green wood, riven by hand. Every spindle follows the grain, so it won’t snap.',
+      materials: 'Riven red oak spindles, pine seat, hard maple legs. Milk paint finish.',
+      process: ['Logs split with froe and wedge', 'Spindles shaved on a shaving horse', 'Seat carved with adze and travisher', 'Wedged joints, milk-painted in three coats'] },
+    { id: 9, medium: 'ceramics', title: 'Speckled Serving Bowl', maker: 'Mara Ellison', studio: 'Ellison Clay Works', city: 'Portland, OR', price: 95, daysAgo: 8, lead: '5 days', pickup: false,
+      quote: 'The speckle is iron in the clay coming up through the glaze. No two bowls are the same.',
+      materials: 'Speckled buff stoneware, satin white glaze.',
+      process: ['Thrown on the wheel', 'Trimmed with a foot ring', 'Bisque fired', 'Glaze fired in reduction'] }
+  ];
+
+  var STUDIOS = [
+    { name: 'Ellison Clay Works', city: 'Portland, OR', x: 128, y: 136, pickup: false },
+    { name: 'Seo Porcelain', city: 'Oakland, CA', x: 104, y: 238, pickup: true },
+    { name: 'Calder Loom House', city: 'Taos, NM', x: 300, y: 282, pickup: false },
+    { name: 'Adeyemi Press', city: 'Minneapolis, MN', x: 452, y: 150, pickup: false },
+    { name: 'Okafor Bench Co.', city: 'Asheville, NC', x: 602, y: 276, pickup: true },
+    { name: 'Whitlow Chairworks', city: 'Burlington, VT', x: 668, y: 118, pickup: true },
+    { name: 'Brandt Dye Works', city: 'Hudson, NY', x: 650, y: 150, pickup: false },
+    { name: 'Marchetti Studio', city: 'Portland, ME', x: 694, y: 104, pickup: true }
+  ];
+
+  // Hand-drawn SVG motifs per medium — stand-ins for real maker photography.
+  function motif(medium, seed) {
+    var s = seed % 3;
+    if (medium === 'ceramics') {
+      var w = [70, 90, 60][s];
+      return '<svg class="motif" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' +
+        '<rect y="210" width="400" height="90" fill="#5d4330" opacity=".35"/>' +
+        '<path d="M' + (200 - w) + ' 220 C' + (190 - w) + ' 170 ' + (180 - w * .4) + ' 150 ' + (200 - w * .45) + ' 110 L' + (200 + w * .45) + ' 110 C' + (220 + w * .4) + ' 150 ' + (210 + w) + ' 170 ' + (200 + w) + ' 220 Z" fill="#ece2d2" opacity=".92"/>' +
+        '<path d="M' + (200 - w * .45) + ' 110 L' + (200 + w * .45) + ' 110" stroke="#8c6a4c" stroke-width="3"/>' +
+        '<g fill="#8c6a4c" opacity=".35"><circle cx="185" cy="160" r="2"/><circle cx="210" cy="180" r="1.6"/><circle cx="198" cy="200" r="2.2"/><circle cx="222" cy="150" r="1.4"/></g></svg>';
+    }
+    if (medium === 'fine-art') {
+      return '<svg class="motif" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' +
+        '<rect x="110" y="50" width="180" height="150" fill="#efe4cf"/>' +
+        '<path d="M110 150 C160 ' + (120 + s * 12) + ' 220 170 290 ' + (130 + s * 8) + ' L290 200 L110 200Z" fill="#5f7a86" opacity=".7"/>' +
+        '<path d="M130 90 C170 70 220 ' + (80 + s * 10) + ' 270 70" stroke="#c9913e" stroke-width="10" fill="none" opacity=".55" stroke-linecap="round"/>' +
+        '<path d="M150 200 L130 290 M250 200 L270 290 M200 200 L200 290" stroke="#4a3a2c" stroke-width="5" opacity=".6"/></svg>';
+    }
+    if (medium === 'textiles') {
+      var lines = '';
+      for (var i = 0; i < 16; i++) lines += '<path d="M' + (70 + i * 17) + ' 20V280" stroke="#8a7658" stroke-width="2" opacity=".45"/>';
+      var bands = '';
+      for (var j = 0; j < 7; j++) bands += '<rect x="60" y="' + (120 + j * 18) + '" width="280" height="12" rx="6" fill="' + (j % 2 ? '#e3d6bf' : '#f4ede1') + '" opacity=".9"/>';
+      return '<svg class="motif" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' + lines + bands +
+        (s === 1 ? '<rect x="60" y="120" width="280" height="120" fill="#34507a" opacity=".45"/>' : '') + '</svg>';
+    }
+    var rings = '';
+    for (var k = 1; k < 7; k++) rings += '<ellipse cx="' + (200 + s * 20) + '" cy="150" rx="' + (k * 26) + '" ry="' + (k * 15) + '" stroke="#f1dcc3" stroke-width="1.4" fill="none" opacity=".35"/>';
+    return '<svg class="motif" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' + rings +
+      '<rect x="80" y="210" width="240" height="22" rx="4" fill="#3b2718" opacity=".45"/></svg>';
+  }
+
+  function seal(medium) {
+    var label = (MEDIUM_LABEL[medium] || '').toUpperCase();
+    return '<svg class="seal" viewBox="0 0 60 60" aria-hidden="true">' +
+      '<defs><path id="sealArc" d="M30 30 m-21 0 a21 21 0 1 1 42 0 a21 21 0 1 1 -42 0"/></defs>' +
+      '<circle cx="30" cy="30" r="28" fill="none" stroke="currentColor" stroke-width="1"/>' +
+      '<circle cx="30" cy="30" r="15" fill="none" stroke="currentColor" stroke-width=".6"/>' +
+      '<text><textPath href="#sealArc">ATELIER · ' + label + ' ·</textPath></text>' +
+      '<text x="30" y="34" text-anchor="middle" style="font-family:\'Instrument Serif\',serif;font-size:14px;letter-spacing:0">P</text></svg>';
+  }
+
+  function esc(str) {
+    return String(str).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
+  }
+  function money(n) { return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }); }
+  function listedLabel(d) {
+    if (d === 0) return 'Listed today';
+    if (d === 1) return 'Listed yesterday';
+    return 'Listed ' + d + ' days ago';
+  }
+
+  // ── Feed ──
+  var grid = document.getElementById('grid');
+  var current = 'all';
+
+  function render() {
+    var items = LISTINGS
+      .filter(function (l) { return current === 'all' || l.medium === current; })
+      .sort(function (a, b) { return a.daysAgo - b.daysAgo || b.id - a.id; });
+    if (!items.length) { grid.innerHTML = '<p class="empty">Nothing listed in this medium yet.</p>'; return; }
+    grid.innerHTML = items.map(function (l) {
+      return '<button type="button" class="card" data-id="' + l.id + '" aria-label="' + esc(l.title + ' by ' + l.maker + ', ' + money(l.price) + '. Open studio page.') + '">' +
+        '<div class="plate ' + l.medium + '">' + motif(l.medium, l.id) + '<span class="plate-note">Maker photograph</span></div>' +
+        '<div class="card-body">' +
+          '<span class="card-title">' + esc(l.title) + '</span>' +
+          '<span class="card-price">' + money(l.price) + '</span>' +
+          '<span class="card-meta">Atelier: ' + esc(l.city) + ' &middot; ' + esc(l.maker) + '</span>' +
+          '<span class="stamp">' + seal(l.medium) + '</span>' +
+          '<span class="card-listed">' + listedLabel(l.daysAgo) + '</span>' +
+        '</div></button>';
+    }).join('');
+  }
+
+  function setMedium(m) {
+    current = m;
+    document.querySelectorAll('.chip').forEach(function (c) { c.setAttribute('aria-pressed', String(c.dataset.medium === m)); });
+    document.querySelectorAll('[data-nav-medium]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.navMedium === m)); });
+    render();
+  }
+
+  document.querySelectorAll('.chip').forEach(function (c) {
+    c.addEventListener('click', function () { setMedium(c.dataset.medium); });
+  });
+  document.querySelectorAll('[data-nav-medium]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      setMedium(current === b.dataset.navMedium ? 'all' : b.dataset.navMedium);
+      document.getElementById('feed').scrollIntoView();
+    });
+  });
+
+  // ── Story-first product page ──
+  var dlg = document.getElementById('story');
+  var active = null;
+  function openStory(id) {
+    var l = LISTINGS.filter(function (x) { return x.id === id; })[0];
+    if (!l) return;
+    active = l;
+    document.getElementById('storyMedia').innerHTML =
+      '<div class="plate ' + l.medium + '">' + motif(l.medium, l.id) + '<span class="plate-note">Finished piece &middot; natural light</span></div>' +
+      '<div class="thumbs">' +
+        '<div class="plate ' + l.medium + '">' + motif(l.medium, l.id + 1) + '<span class="plate-note">Materials</span></div>' +
+        '<div class="plate ' + l.medium + '">' + motif(l.medium, l.id + 2) + '<span class="plate-note">In progress</span></div>' +
+        '<div class="plate ' + l.medium + '">' + motif(l.medium, l.id + 3) + '<span class="plate-note">Hands at work</span></div>' +
+      '</div>';
+    document.getElementById('storyMedium').textContent = MEDIUM_LABEL[l.medium] + ' · Atelier: ' + l.city;
+    document.getElementById('storyTitle').textContent = l.title;
+    document.getElementById('storyBy').textContent = 'by ' + l.maker + ', ' + l.studio;
+    document.getElementById('storyPrice').textContent = money(l.price);
+    document.getElementById('storyListed').textContent = listedLabel(l.daysAgo);
+    document.getElementById('storyQuote').textContent = '“' + l.quote + '”';
+    document.getElementById('storyMaterials').textContent = l.materials;
+    document.getElementById('storyProcess').innerHTML = l.process.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('');
+    document.getElementById('storyShips').textContent = l.city;
+    document.getElementById('storyLead').textContent = l.lead;
+    document.getElementById('storyPickup').textContent = l.pickup ? 'Available at the studio' : 'Ships only';
+    document.getElementById('askNote').textContent = '';
+    if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', '');
+  }
+  function closeStory() { if (typeof dlg.close === 'function') dlg.close(); else dlg.removeAttribute('open'); }
+
+  grid.addEventListener('click', function (e) {
+    var card = e.target.closest('.card');
+    if (card) openStory(Number(card.dataset.id));
+  });
+  document.getElementById('storyClose').addEventListener('click', closeStory);
+  dlg.addEventListener('click', function (e) { if (e.target === dlg) closeStory(); });
+  document.getElementById('askMaker').addEventListener('click', function () {
+    document.getElementById('askNote').textContent = 'In the live product, this opens a direct thread with ' + active.maker.split(' ')[0] + '. No bots in between.';
+  });
+  document.getElementById('acquire').addEventListener('click', function () {
+    document.getElementById('askNote').textContent = 'Concept only. Checkout would split this sale through Stripe Connect. See the Open Ledger below.';
+  });
+
+  // ── Ledger ──
+  var RATE = 0.08;
+  var priceEl = document.getElementById('price');
+  var rangeEl = document.getElementById('priceRange');
+  function fmt(n) { return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function updateLedger(v) {
+    var p = Math.max(0, Number(v) || 0);
+    var fee = p * RATE;
+    var stripe = p > 0 ? p * 0.029 + 0.30 : 0;
+    var maker = Math.max(0, p - fee - stripe);
+    document.getElementById('lRate').textContent = String(RATE * 100);
+    document.getElementById('lBuyer').textContent = fmt(p);
+    document.getElementById('lFee').textContent = '−' + fmt(fee);
+    document.getElementById('lStripe').textContent = '−' + fmt(stripe);
+    document.getElementById('lMaker').textContent = fmt(maker);
+    var pct = function (n) { return p ? (n / p * 100).toFixed(2) + '%' : '0%'; };
+    document.getElementById('bMaker').style.width = pct(maker);
+    document.getElementById('bFee').style.width = pct(fee);
+    document.getElementById('bStripe').style.width = pct(stripe);
+  }
+  priceEl.addEventListener('input', function () { rangeEl.value = priceEl.value; updateLedger(priceEl.value); });
+  rangeEl.addEventListener('input', function () { priceEl.value = rangeEl.value; updateLedger(rangeEl.value); });
+
+  // ── Map ──
+  var pins = document.getElementById('pins');
+  var list = document.getElementById('studios');
+  var NS = 'http://www.w3.org/2000/svg';
+  STUDIOS.forEach(function (st) {
+    var g = document.createElementNS(NS, 'g');
+    g.setAttribute('class', 'pin');
+    g.setAttribute('tabindex', '0');
+    g.setAttribute('role', 'button');
+    g.setAttribute('aria-label', st.name + ', ' + st.city);
+    g.innerHTML = '<circle class="halo" cx="' + st.x + '" cy="' + st.y + '" r="14"/><circle class="dot" cx="' + st.x + '" cy="' + st.y + '" r="5"/>';
+    pins.appendChild(g);
+    var li = document.createElement('li');
+    li.innerHTML = '<span class="s-name">' + esc(st.name) + '</span><span class="s-pick">' + (st.pickup ? 'Pickup' : 'Ships') + '</span><span class="s-loc">Atelier: ' + esc(st.city) + '</span>';
+    list.appendChild(li);
+    function lite(on) { li.classList.toggle('lit', on); }
+    g.addEventListener('mouseenter', function () { lite(true); });
+    g.addEventListener('mouseleave', function () { lite(false); });
+    g.addEventListener('focus', function () { lite(true); });
+    g.addEventListener('blur', function () { lite(false); });
+    li.addEventListener('mouseenter', function () { lite(true); g.querySelector('.halo').style.opacity = '.4'; });
+    li.addEventListener('mouseleave', function () { lite(false); g.querySelector('.halo').style.opacity = ''; });
+  });
+
+  render();
+  updateLedger(priceEl.value);
+})();
+</script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b0b9b5a0ff9345038eb0ab5e85b9ac3d"}'></script>
+</body>
+</html>
