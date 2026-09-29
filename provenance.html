@@ -72,7 +72,12 @@
 
   /* ── Plates (stand-ins for real maker photography) ── */
   .plate { position: relative; overflow: hidden; background: var(--linen-3); aspect-ratio: 4 / 3; }
-  .plate svg.motif { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .plate img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .plate .plate-note { text-shadow: 0 1px 6px rgba(0,0,0,.45); }
+  /* Detail thumbnails: zoomed crops of the one demo image */
+  .plate img.crop-a { transform: scale(1.8); transform-origin: 25% 35%; }
+  .plate img.crop-b { transform: scale(2.2); transform-origin: 55% 60%; }
+  .plate img.crop-c { transform: scale(1.8); transform-origin: 80% 30%; }
   .plate .plate-note { position: absolute; left: 12px; bottom: 10px; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: rgba(249,246,240,.82); }
   .plate.ceramics { background: linear-gradient(160deg, #cdb79c 0%, #a88665 55%, #7a5a40 100%); }
   .plate.fine-art { background: linear-gradient(150deg, #d9c9a8 0%, #b0874f 45%, #5b4a3a 100%); }
@@ -82,7 +87,7 @@
   /* ── Hero ── */
   .hero { padding: 40px 0 88px; }
   .hero .plate { aspect-ratio: 21 / 8; border-radius: 2px; }
-  .hero .plate .hero-cap { position: absolute; left: 28px; bottom: 24px; font-family: var(--serif); font-size: clamp(22px, 3.4vw, 34px); color: var(--linen); text-shadow: 0 1px 12px rgba(0,0,0,.25); }
+  .hero .plate .hero-cap { position: absolute; left: 28px; bottom: 34px; font-family: var(--serif); font-size: clamp(22px, 3.4vw, 34px); color: var(--linen); text-shadow: 0 1px 12px rgba(0,0,0,.25); }
   .manifesto { text-align: center; max-width: 880px; margin: 56px auto 0; }
   .manifesto h1 { font-size: clamp(30px, 4.6vw, 50px); line-height: 1.18; }
   .manifesto h1 em { color: var(--brass); }
@@ -276,7 +281,7 @@
 <body>
 <a class="skip" href="#feed">Skip to the Atelier Feed</a>
 
-<div class="ribbon">A product concept from <a href="/">Tiny Bird, Big Dreams</a>. Listings below are illustrative, not real makers.</div>
+<div class="ribbon">A product concept from <a href="/">Tiny Bird, Big Dreams</a>. Listings and makers are fictional, and the images are AI-generated for demonstration.</div>
 
 <header class="masthead">
   <a class="wordmark" href="#top" id="top">PROVENANCE</a>
@@ -297,20 +302,9 @@
 <main>
   <!-- Hero + manifesto -->
   <div class="hero wrap">
-    <div class="plate ceramics" role="img" aria-label="Placeholder for a photograph of a potter's hands shaping clay on a wheel">
-      <svg class="motif" viewBox="0 0 840 320" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-        <defs>
-          <radialGradient id="heroLight" cx="72%" cy="20%" r="70%"><stop offset="0" stop-color="#fff6e6" stop-opacity=".55"/><stop offset="1" stop-color="#fff6e6" stop-opacity="0"/></radialGradient>
-        </defs>
-        <rect width="840" height="320" fill="url(#heroLight)"/>
-        <ellipse cx="420" cy="300" rx="260" ry="34" fill="#5d4330" opacity=".45"/>
-        <path d="M360 296 C352 250 330 220 344 180 C356 146 386 136 386 116 L454 116 C454 136 484 146 496 180 C510 220 488 250 480 296 Z" fill="#c9ad8c" opacity=".92"/>
-        <path d="M386 116 L454 116" stroke="#8c6a4c" stroke-width="3"/>
-        <path d="M352 200 C390 214 450 214 488 200" stroke="#a88665" stroke-width="2" fill="none" opacity=".7"/>
-        <path d="M348 236 C392 250 448 250 492 236" stroke="#a88665" stroke-width="2" fill="none" opacity=".6"/>
-        <path d="M250 190 C290 170 320 176 346 196 C338 212 312 222 280 222 C262 222 250 210 250 190Z" fill="#b48462" opacity=".85"/>
-        <path d="M590 186 C552 168 522 176 496 196 C504 212 530 222 562 222 C580 222 592 206 590 186Z" fill="#b48462" opacity=".85"/>
-      </svg>
+    <div class="plate ceramics">
+      <img src="assets/provenance/hero.jpg" alt="A potter's clay-covered hands shaping a stoneware vessel on a wheel" width="1600" height="679" fetchpriority="high" />
+      <span class="plate-note">AI-generated for demo</span>
       <span class="hero-cap">The Maker&rsquo;s Hand</span>
     </div>
 
@@ -481,19 +475,19 @@
       </div>
       <div class="journal">
         <article class="entry">
-          <div class="plate textiles" role="img" aria-label="Placeholder for a photograph of a loom"><svg class="motif" viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g stroke="#8a7658" stroke-width="2" opacity=".55"><path d="M40 0V200M60 0V200M80 0V200M100 0V200M120 0V200M140 0V200M160 0V200M180 0V200M200 0V200M220 0V200M240 0V200M260 0V200"/></g><rect x="30" y="110" width="240" height="70" fill="#efe7d8" opacity=".85"/></svg></div>
+          <div class="plate textiles"><img src="assets/provenance/journal-loom.jpg" alt="A weaver's hands passing a shuttle through wool warp threads on a floor loom" width="1200" height="800" loading="lazy" /><span class="plate-note">AI-generated for demo</span></div>
           <p class="eyebrow">Studio Visit</p>
           <h3>Forty hours on one wall hanging</h3>
           <p>A weaver in Taos talks through her warp, her wool, and why slow work sells.</p>
         </article>
         <article class="entry">
-          <div class="plate ceramics" role="img" aria-label="Placeholder for a photograph of a kiln"><svg class="motif" viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path d="M90 200 L90 90 Q150 30 210 90 L210 200Z" fill="#6b4c36" opacity=".6"/><path d="M125 200 L125 130 Q150 108 175 130 L175 200Z" fill="#e9a25a" opacity=".75"/></svg></div>
+          <div class="plate ceramics"><img src="assets/provenance/journal-kiln.jpg" alt="A small brick kiln glowing orange at dusk" width="1200" height="800" loading="lazy" /><span class="plate-note">AI-generated for demo</span></div>
           <p class="eyebrow">Guild Notes</p>
           <h3>Why we banned the ranking algorithm</h3>
           <p>What happens to a marketplace when nobody can pay to be seen first.</p>
         </article>
         <article class="entry">
-          <div class="plate woodwork" role="img" aria-label="Placeholder for a photograph of hand tools on a bench"><svg class="motif" viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g fill="none" stroke="#f1dcc3" stroke-width="1.5" opacity=".4"><ellipse cx="150" cy="120" rx="30" ry="18"/><ellipse cx="150" cy="120" rx="60" ry="36"/><ellipse cx="150" cy="120" rx="92" ry="56"/><ellipse cx="150" cy="120" rx="126" ry="78"/></g></svg></div>
+          <div class="plate woodwork"><img src="assets/provenance/journal-grain.jpg" alt="The end grain of a walnut log beside hand tools on a bench" width="1200" height="800" loading="lazy" /><span class="plate-note">AI-generated for demo</span></div>
           <p class="eyebrow">Materials</p>
           <h3>Reading end grain</h3>
           <p>A woodworker&rsquo;s field guide to telling salvaged walnut from kiln-dried stock.</p>
@@ -585,7 +579,7 @@
 <footer>
   <div class="wrap">
     <a class="wordmark" href="#top">PROVENANCE</a>
-    <p>A concept by <a href="/">Tiny Bird, Big Dreams</a>. In keeping with our own <a href="privacy.html#ai">AI disclosure</a>: the marketplace this page describes bans AI-made goods, but the page itself was designed and built with Claude. The images are hand-drawn vector placeholders, so no photographs have been generated or faked.</p>
+    <p>A concept by <a href="/">Tiny Bird, Big Dreams</a>. In keeping with our own <a href="privacy.html#ai">AI disclosure</a>: the marketplace this page describes bans AI-made goods, but the page itself was designed and built with Claude. For this demonstration, the product and studio images were generated with AI (OpenArt) and are marked as such. On the real marketplace, every listing photo would be a real photograph of the real object.</p>
   </div>
 </footer>
 
@@ -628,39 +622,39 @@
 
   // Illustrative listings. Dates are days before "today" so the feed always reads as live.
   var LISTINGS = [
-    { id: 1, medium: 'ceramics', title: 'Hand Thrown Mug Set', maker: 'Mara Ellison', studio: 'Ellison Clay Works', city: 'Portland, OR', price: 168, daysAgo: 0, lead: '5 days', pickup: false,
+    { id: 1, img: 'mugs', medium: 'ceramics', title: 'Hand Thrown Mug Set', maker: 'Mara Ellison', studio: 'Ellison Clay Works', city: 'Portland, OR', price: 168, daysAgo: 0, lead: '5 days', pickup: false,
       quote: 'Each handle is pulled, not molded. You can feel where my thumb rested.',
       materials: 'Locally dug Oregon stoneware, wood-ash glaze mixed from our own kiln scraps, fired to cone 10.',
       process: ['Wedged and thrown on a kick wheel', 'Trimmed at leather-hard, handles pulled and attached', 'Bisque fired, dipped in ash glaze', 'Reduction fired for 14 hours'] },
-    { id: 2, medium: 'fine-art', title: 'Low Tide, Late August', maker: 'Theo Marchetti', studio: 'Marchetti Studio', city: 'Portland, ME', price: 1450, daysAgo: 0, lead: '10 days', pickup: true,
+    { id: 2, img: 'painting', medium: 'fine-art', title: 'Low Tide, Late August', maker: 'Theo Marchetti', studio: 'Marchetti Studio', city: 'Portland, ME', price: 1450, daysAgo: 0, lead: '10 days', pickup: true,
       quote: 'Painted in three sittings on the same rock, same hour, so the light would agree with itself.',
       materials: 'Oil on Belgian linen, hand-stretched over kiln-dried pine stretchers. Varnished after six months of cure.',
       process: ['Toned ground in burnt sienna', 'Plein-air block-in over three sessions', 'Studio glazing layers', 'Final retouch varnish'] },
-    { id: 3, medium: 'textiles', title: 'Undyed Wool Wall Weaving', maker: 'Ines Calder', studio: 'Calder Loom House', city: 'Taos, NM', price: 620, daysAgo: 1, lead: '7 days', pickup: false,
+    { id: 3, img: 'weaving', medium: 'textiles', title: 'Undyed Wool Wall Weaving', maker: 'Ines Calder', studio: 'Calder Loom House', city: 'Taos, NM', price: 620, daysAgo: 1, lead: '7 days', pickup: false,
       quote: 'Undyed means the colors are just the sheep. I know two of them by name.',
       materials: 'Churro wool from a family flock in northern New Mexico, hand-carded and spun. Cotton warp.',
       process: ['Wool washed, carded and spun on a treadle wheel', 'Warped on a floor loom', 'Woven over roughly 40 hours', 'Hand-knotted fringe and cedar hanging rod'] },
-    { id: 4, medium: 'woodwork', title: 'Salvaged Walnut Serving Board', maker: 'Dev Okafor', studio: 'Okafor Bench Co.', city: 'Asheville, NC', price: 185, daysAgo: 2, lead: '4 days', pickup: true,
+    { id: 4, img: 'board', medium: 'woodwork', title: 'Salvaged Walnut Serving Board', maker: 'Dev Okafor', studio: 'Okafor Bench Co.', city: 'Asheville, NC', price: 185, daysAgo: 2, lead: '4 days', pickup: true,
       quote: 'This walnut stood in a churchyard for 90 years before a storm brought it down.',
       materials: 'Storm-felled black walnut, air-dried for three years. Finished in food-safe beeswax and walnut oil.',
       process: ['Slab milled with a chainsaw mill', 'Air-dried three years', 'Hand-planed and scraped, no sanders', 'Oiled and waxed over a week'] },
-    { id: 5, medium: 'ceramics', title: 'Moon Jar No. 7', maker: 'Hana Seo', studio: 'Seo Porcelain', city: 'Oakland, CA', price: 940, daysAgo: 3, lead: '9 days', pickup: true,
+    { id: 5, img: 'moonjar', medium: 'ceramics', title: 'Moon Jar No. 7', maker: 'Hana Seo', studio: 'Seo Porcelain', city: 'Oakland, CA', price: 940, daysAgo: 3, lead: '9 days', pickup: true,
       quote: 'Two bowls joined at the belly. The seam is supposed to show.',
       materials: 'Porcelain, clear celadon glaze, wood-fired.',
       process: ['Two hemispheres thrown separately', 'Joined at leather-hard', 'Slow dried for three weeks', 'Wood-fired in a shared anagama'] },
-    { id: 6, medium: 'fine-art', title: 'Linocut: Heron at Dusk', maker: 'Ruth Adeyemi', studio: 'Adeyemi Press', city: 'Minneapolis, MN', price: 140, daysAgo: 4, lead: '3 days', pickup: false,
+    { id: 6, img: 'linocut', medium: 'fine-art', title: 'Linocut: Heron at Dusk', maker: 'Ruth Adeyemi', studio: 'Adeyemi Press', city: 'Minneapolis, MN', price: 140, daysAgo: 4, lead: '3 days', pickup: false,
       quote: 'Edition of 30. The block gets retired when the last one is pulled.',
       materials: 'Hand-carved linoleum, oil-based relief ink, printed on Japanese kozo paper.',
       process: ['Drawn in reverse onto the block', 'Carved with gouges over two days', 'Hand-inked with a brayer', 'Burnished by hand with a baren, signed and numbered'] },
-    { id: 7, medium: 'textiles', title: 'Indigo Shibori Throw', maker: 'Luca Brandt', studio: 'Brandt Dye Works', city: 'Hudson, NY', price: 380, daysAgo: 5, lead: '6 days', pickup: false,
+    { id: 7, img: 'shibori', medium: 'textiles', title: 'Indigo Shibori Throw', maker: 'Luca Brandt', studio: 'Brandt Dye Works', city: 'Hudson, NY', price: 380, daysAgo: 5, lead: '6 days', pickup: false,
       quote: 'The vat is alive. Some weeks it just won’t give blue.',
       materials: 'Organic cotton gauze, natural indigo fermentation vat.',
       process: ['Fabric scoured and pre-washed', 'Folded and clamped with cedar blocks', 'Dipped twelve times over two days', 'Rinsed and line-dried'] },
-    { id: 8, medium: 'woodwork', title: 'Windsor Side Chair', maker: 'Sam Whitlow', studio: 'Whitlow Chairworks', city: 'Burlington, VT', price: 2100, daysAgo: 6, lead: '5 weeks', pickup: true,
+    { id: 8, img: 'chair', medium: 'woodwork', title: 'Windsor Side Chair', maker: 'Sam Whitlow', studio: 'Whitlow Chairworks', city: 'Burlington, VT', price: 2100, daysAgo: 6, lead: '5 weeks', pickup: true,
       quote: 'Green wood, riven by hand. Every spindle follows the grain, so it won’t snap.',
       materials: 'Riven red oak spindles, pine seat, hard maple legs. Milk paint finish.',
       process: ['Logs split with froe and wedge', 'Spindles shaved on a shaving horse', 'Seat carved with adze and travisher', 'Wedged joints, milk-painted in three coats'] },
-    { id: 9, medium: 'ceramics', title: 'Speckled Serving Bowl', maker: 'Mara Ellison', studio: 'Ellison Clay Works', city: 'Portland, OR', price: 95, daysAgo: 8, lead: '5 days', pickup: false,
+    { id: 9, img: 'bowl', medium: 'ceramics', title: 'Speckled Serving Bowl', maker: 'Mara Ellison', studio: 'Ellison Clay Works', city: 'Portland, OR', price: 95, daysAgo: 8, lead: '5 days', pickup: false,
       quote: 'The speckle is iron in the clay coming up through the glaze. No two bowls are the same.',
       materials: 'Speckled buff stoneware, satin white glaze.',
       process: ['Thrown on the wheel', 'Trimmed with a foot ring', 'Bisque fired', 'Glaze fired in reduction'] }
@@ -677,36 +671,8 @@
     { name: 'Marchetti Studio', city: 'Portland, ME', x: 694, y: 104, pickup: true }
   ];
 
-  // Hand-drawn SVG motifs per medium — stand-ins for real maker photography.
-  function motif(medium, seed) {
-    var s = seed % 3;
-    if (medium === 'ceramics') {
-      var w = [70, 90, 60][s];
-      return '<svg class="motif" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' +
-        '<rect y="210" width="400" height="90" fill="#5d4330" opacity=".35"/>' +
-        '<path d="M' + (200 - w) + ' 220 C' + (190 - w) + ' 170 ' + (180 - w * .4) + ' 150 ' + (200 - w * .45) + ' 110 L' + (200 + w * .45) + ' 110 C' + (220 + w * .4) + ' 150 ' + (210 + w) + ' 170 ' + (200 + w) + ' 220 Z" fill="#ece2d2" opacity=".92"/>' +
-        '<path d="M' + (200 - w * .45) + ' 110 L' + (200 + w * .45) + ' 110" stroke="#8c6a4c" stroke-width="3"/>' +
-        '<g fill="#8c6a4c" opacity=".35"><circle cx="185" cy="160" r="2"/><circle cx="210" cy="180" r="1.6"/><circle cx="198" cy="200" r="2.2"/><circle cx="222" cy="150" r="1.4"/></g></svg>';
-    }
-    if (medium === 'fine-art') {
-      return '<svg class="motif" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' +
-        '<rect x="110" y="50" width="180" height="150" fill="#efe4cf"/>' +
-        '<path d="M110 150 C160 ' + (120 + s * 12) + ' 220 170 290 ' + (130 + s * 8) + ' L290 200 L110 200Z" fill="#5f7a86" opacity=".7"/>' +
-        '<path d="M130 90 C170 70 220 ' + (80 + s * 10) + ' 270 70" stroke="#c9913e" stroke-width="10" fill="none" opacity=".55" stroke-linecap="round"/>' +
-        '<path d="M150 200 L130 290 M250 200 L270 290 M200 200 L200 290" stroke="#4a3a2c" stroke-width="5" opacity=".6"/></svg>';
-    }
-    if (medium === 'textiles') {
-      var lines = '';
-      for (var i = 0; i < 16; i++) lines += '<path d="M' + (70 + i * 17) + ' 20V280" stroke="#8a7658" stroke-width="2" opacity=".45"/>';
-      var bands = '';
-      for (var j = 0; j < 7; j++) bands += '<rect x="60" y="' + (120 + j * 18) + '" width="280" height="12" rx="6" fill="' + (j % 2 ? '#e3d6bf' : '#f4ede1') + '" opacity=".9"/>';
-      return '<svg class="motif" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' + lines + bands +
-        (s === 1 ? '<rect x="60" y="120" width="280" height="120" fill="#34507a" opacity=".45"/>' : '') + '</svg>';
-    }
-    var rings = '';
-    for (var k = 1; k < 7; k++) rings += '<ellipse cx="' + (200 + s * 20) + '" cy="150" rx="' + (k * 26) + '" ry="' + (k * 15) + '" stroke="#f1dcc3" stroke-width="1.4" fill="none" opacity=".35"/>';
-    return '<svg class="motif" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' + rings +
-      '<rect x="80" y="210" width="240" height="22" rx="4" fill="#3b2718" opacity=".45"/></svg>';
+  function photo(l, cls) {
+    return '<img' + (cls ? ' class="' + cls + '"' : '') + ' src="assets/provenance/' + l.img + '.jpg" alt="' + esc(l.title) + '" width="1200" height="896" loading="lazy" />';
   }
 
   function seal(medium) {
@@ -740,7 +706,7 @@
     if (!items.length) { grid.innerHTML = '<p class="empty">Nothing listed in this medium yet.</p>'; return; }
     grid.innerHTML = items.map(function (l) {
       return '<button type="button" class="card" data-id="' + l.id + '" aria-label="' + esc(l.title + ' by ' + l.maker + ', ' + money(l.price) + '. Open studio page.') + '">' +
-        '<div class="plate ' + l.medium + '">' + motif(l.medium, l.id) + '<span class="plate-note">Maker photograph</span></div>' +
+        '<div class="plate ' + l.medium + '">' + photo(l) + '<span class="plate-note">AI-generated for demo</span></div>' +
         '<div class="card-body">' +
           '<span class="card-title">' + esc(l.title) + '</span>' +
           '<span class="card-price">' + money(l.price) + '</span>' +
@@ -776,11 +742,11 @@
     if (!l) return;
     active = l;
     document.getElementById('storyMedia').innerHTML =
-      '<div class="plate ' + l.medium + '">' + motif(l.medium, l.id) + '<span class="plate-note">Finished piece &middot; natural light</span></div>' +
+      '<div class="plate ' + l.medium + '">' + photo(l) + '<span class="plate-note">AI-generated for demo</span></div>' +
       '<div class="thumbs">' +
-        '<div class="plate ' + l.medium + '">' + motif(l.medium, l.id + 1) + '<span class="plate-note">Materials</span></div>' +
-        '<div class="plate ' + l.medium + '">' + motif(l.medium, l.id + 2) + '<span class="plate-note">In progress</span></div>' +
-        '<div class="plate ' + l.medium + '">' + motif(l.medium, l.id + 3) + '<span class="plate-note">Hands at work</span></div>' +
+        '<div class="plate ' + l.medium + '">' + photo(l, 'crop-a') + '</div>' +
+        '<div class="plate ' + l.medium + '">' + photo(l, 'crop-b') + '</div>' +
+        '<div class="plate ' + l.medium + '">' + photo(l, 'crop-c') + '</div>' +
       '</div>';
     document.getElementById('storyMedium').textContent = MEDIUM_LABEL[l.medium] + ' · Atelier: ' + l.city;
     document.getElementById('storyTitle').textContent = l.title;
