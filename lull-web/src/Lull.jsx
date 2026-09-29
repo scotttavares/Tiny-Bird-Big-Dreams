@@ -168,7 +168,9 @@ const SOUND_BY_ID = Object.fromEntries(SOUND.map((s) => [s.id, s]));
 function soundChip(id, size) {
   const s = SOUND_BY_ID[id] || SOUND[0]; const t = s.tint || "#9a86ff";
   const base = { width: size, height: size, borderRadius: "50%", flex: "0 0 auto", overflow: "hidden", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.09), 0 2px 10px rgba(0,0,0,0.25)" };
-  if (s.img) return <div style={base}><img src={s.img} alt="" draggable="false" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /></div>;
+  // These icons have a rounded-square tile baked in; zoom past it so only the inner circular art
+  // fills the round chip, matching the other (emoji) sounds' circle shape.
+  if (s.img) return <div style={base}><img src={s.img} alt="" draggable="false" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: "scale(2.1)" }} /></div>;
   return <div style={{ ...base, display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), lineHeight: 1, background: `radial-gradient(circle at 50% 38%, ${t}55, ${t}1f 60%, rgba(8,5,16,0.62) 100%)` }}>{s.glyph}</div>;
 }
 // ---------- rings orb ----------
