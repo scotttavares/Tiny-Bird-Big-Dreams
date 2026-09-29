@@ -1236,11 +1236,13 @@ export default function Lull() {
         <div style={{ position: "relative", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 36, marginBottom: 8 }}>
           <span style={{ fontSize: 14, letterSpacing: 6, textTransform: "uppercase", fontWeight: 500, opacity: 0.82, paddingLeft: 6 }}>Lull</span>
           {false && (<button className="lull-btn" aria-label="theme" onClick={() => setLight((v) => !v)} style={{ position: "absolute", left: 0, padding: 8, opacity: 0.7 }}>{lightUI ? <Moon size={19} /> : <Sun size={19} />}</button>)}
-          {screen === "home" && (<button className="lull-btn" aria-label="Settings" onClick={() => setShowSettings(true)} style={{ position: "absolute", left: 0, padding: 8, opacity: 0.7, display: "flex" }}><Settings size={19} /></button>)}
-          <div style={{ position: "absolute", right: 0, display: "flex", alignItems: "center", gap: 2 }}>
-            {screen === "home" && (<button className="lull-btn" aria-label="Ambient sounds" onClick={() => { setEditingPresetId(null); setSavingMix(false); setMixerOpen(true); }} style={{ padding: 8, opacity: mixPlaying ? 1 : 0.7, display: "flex", color: mixPlaying ? "#8ce0b0" : undefined }}><Waves size={19} /></button>)}
-            {screen === "home" && (<button className="lull-btn" aria-label="Your breaths" onClick={() => setShowHistory(true)} style={{ padding: 8, opacity: 0.7, display: "flex" }}><CalendarDays size={19} /></button>)}
+          <div style={{ position: "absolute", left: 0, display: "flex", alignItems: "center", gap: 2 }}>
             <button className="lull-btn" aria-label={soundOn ? "Mute sound" : "Unmute sound"} aria-pressed={soundOn} onClick={toggleSound} style={{ padding: 8, opacity: 0.7, display: "flex" }}>{soundOn ? <Volume2 size={20} /> : <VolumeX size={20} />}</button>
+            {screen === "home" && (<button className="lull-btn" aria-label="Ambient sounds" onClick={() => { setEditingPresetId(null); setSavingMix(false); setMixerOpen(true); }} style={{ padding: 8, opacity: mixPlaying ? 1 : 0.7, display: "flex", color: mixPlaying ? "#8ce0b0" : undefined }}><Waves size={19} /></button>)}
+          </div>
+          <div style={{ position: "absolute", right: 0, display: "flex", alignItems: "center", gap: 2 }}>
+            {screen === "home" && (<button className="lull-btn" aria-label="Your breaths" onClick={() => setShowHistory(true)} style={{ padding: 8, opacity: 0.7, display: "flex" }}><CalendarDays size={19} /></button>)}
+            {screen === "home" && (<button className="lull-btn" aria-label="Settings" onClick={() => setShowSettings(true)} style={{ padding: 8, opacity: 0.7, display: "flex" }}><Settings size={19} /></button>)}
           </div>
         </div>
 
