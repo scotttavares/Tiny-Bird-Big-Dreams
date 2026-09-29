@@ -218,7 +218,40 @@
   .close { position: absolute; top: 12px; right: 14px; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--rule); background: var(--linen); cursor: pointer; font-size: 18px; line-height: 1; z-index: 2; }
   .ask-note { font-size: 12.5px; color: var(--umber-mute); margin-top: 10px; min-height: 1em; }
 
+  /* ── Migration ── */
+  .migrate { display: grid; grid-template-columns: 1fr 1.05fr; gap: 56px; align-items: start; }
+  .mig-steps { list-style: none; counter-reset: m; display: grid; gap: 22px; }
+  .mig-steps li { counter-increment: m; position: relative; padding-left: 52px; font-size: 15px; color: var(--umber-soft); }
+  .mig-steps li::before { content: counter(m); position: absolute; left: 0; top: 0; width: 34px; height: 34px; border: 1px solid var(--brass); border-radius: 50%; display: grid; place-items: center; font-family: var(--serif); font-size: 18px; color: var(--brass); }
+  .mig-steps strong { display: block; color: var(--umber); font-weight: 600; margin-bottom: 4px; }
+  .carry { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 36px; padding-top: 28px; border-top: 1px solid var(--rule); }
+  .carry h3 { font-size: 22px; margin-bottom: 10px; }
+  .carry ul { list-style: none; display: grid; gap: 8px; font-size: 14px; color: var(--umber-soft); }
+  .carry li { position: relative; padding-left: 22px; }
+  .carry li::before { position: absolute; left: 0; top: 0; }
+  .carry-yes li::before { content: "✓"; color: var(--brass); }
+  .carry-no li::before { content: "✕"; color: var(--umber-mute); font-size: 12px; top: 2px; }
+  .importer { background: #fffdf9; border: 1px solid var(--rule); padding: 28px; box-shadow: 0 1px 0 var(--rule), 0 18px 40px -28px rgba(44,40,37,.35); }
+  .imp-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
+  .imp-title { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--umber-mute); }
+  .imp-src { display: flex; gap: 6px; }
+  .imp-src .chip { padding: 5px 12px; font-size: 12px; }
+  .imp-shop { font-size: 13.5px; color: var(--umber-soft); margin: 16px 0 12px; padding-bottom: 14px; border-bottom: 1px solid var(--rule); }
+  .imp-rows { list-style: none; display: grid; }
+  .imp-rows li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; padding: 11px 0; border-bottom: 1px dashed var(--rule); font-size: 14px; transition: opacity .3s ease; }
+  .imp-rows li.pending { opacity: .45; }
+  .imp-rows .t { color: var(--umber); }
+  .imp-rows .m { font-size: 12px; color: var(--umber-mute); grid-column: 1; }
+  .imp-rows .s { grid-row: 1 / span 2; grid-column: 2; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; padding: 4px 9px; border-radius: 99px; border: 1px solid var(--rule); color: var(--umber-mute); white-space: nowrap; }
+  .imp-rows .s.ok { border-color: var(--umber); color: var(--umber); }
+  .imp-rows .s.warn { border-color: var(--brass); color: var(--brass); }
+  .imp-rows .s.held { background: var(--linen-3); border-color: transparent; color: var(--umber-soft); }
+  .imp-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 14px; margin-top: 20px; }
+  .imp-summary { font-size: 13.5px; color: var(--umber-soft); flex: 1 1 220px; }
+  .imp-summary b { color: var(--umber); font-weight: 600; }
+
   @media (max-width: 960px) {
+    .migrate { grid-template-columns: 1fr; gap: 40px; }
     .grid, .journal { grid-template-columns: repeat(2, 1fr); }
     .protocols, .features { grid-template-columns: 1fr; }
     .ledger, .map-wrap { grid-template-columns: 1fr; gap: 36px; }
@@ -235,6 +268,8 @@
     .hero .plate { aspect-ratio: 4 / 3; }
     .story-text { padding: 28px 20px; }
     .fulfil { grid-template-columns: 1fr; }
+    .carry { grid-template-columns: 1fr; }
+    .importer { padding: 22px 18px; }
   }
 </style>
 </head>
@@ -467,6 +502,66 @@
     </div>
   </section>
 
+  <!-- Migrate -->
+  <section id="migrate" aria-labelledby="migrate-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Shop Migration</p>
+        <h2 id="migrate-h">Bring your shop. Leave the algorithm behind.</h2>
+        <p class="lede">Years of listings shouldn&rsquo;t keep you stuck somewhere that stopped working for you. Connect your existing shop and your catalog comes across in minutes, ready for guild review rather than retyped by hand.</p>
+      </div>
+      <div class="migrate">
+        <div>
+          <ol class="mig-steps">
+            <li><strong>Connect your shop</strong>Sign in to Etsy, Shopify, Squarespace or Big Cartel, or upload the listings CSV your platform already lets you download. Imports use each platform&rsquo;s official export or API. Nothing is scraped.</li>
+            <li><strong>Everything comes with you</strong>Titles, descriptions, photos, prices, variations, stock counts and shipping profiles are all mapped to Provenance fields and sorted into a medium.</li>
+            <li><strong>Guild check, not a rubber stamp</strong>Every import lands as a draft. Photos that look like digital mockups are flagged. Pieces that need process shots say so, and anything print-on-demand or factory-made is held back.</li>
+            <li><strong>Run both while you move</strong>Keep your old shop open during the switch. Stock syncs both ways, so a piece that sells in one place comes off the other. Close the old shop whenever you&rsquo;re ready.</li>
+          </ol>
+          <div class="carry">
+            <div>
+              <h3>Comes with you</h3>
+              <ul class="carry-yes">
+                <li>Listings, photos and prices</li>
+                <li>Variations and stock counts</li>
+                <li>Shipping profiles and processing times</li>
+                <li>Reviews, labelled with where they were earned, wherever the source platform allows it</li>
+                <li>Your shop story and About page</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Stays behind</h3>
+              <ul class="carry-no">
+                <li>Ad budgets and promoted listings</li>
+                <li>Search ranking games</li>
+                <li>Print-on-demand and third-party fulfillment</li>
+                <li>Stock-generated mockup photos</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="importer" aria-labelledby="imp-h">
+          <div class="imp-head">
+            <p id="imp-h" class="imp-title">Import preview</p>
+            <div class="imp-src" role="group" aria-label="Choose a source platform">
+              <button type="button" class="chip" data-src="Etsy" aria-pressed="true">Etsy</button>
+              <button type="button" class="chip" data-src="Shopify" aria-pressed="false">Shopify</button>
+              <button type="button" class="chip" data-src="CSV file" aria-pressed="false">CSV</button>
+            </div>
+          </div>
+          <p class="imp-shop" id="impShop">Connected: <strong>ElmAndEmberStudio</strong> on Etsy &middot; 7 active listings</p>
+          <ul class="imp-rows" id="impRows" aria-live="polite"></ul>
+          <div class="imp-foot">
+            <p class="imp-summary" id="impSummary">Press import to see how a real shop would come across.</p>
+            <button type="button" class="btn" id="impRun">Import listings</button>
+          </div>
+          <p class="fineprint">Demonstration with a fictional shop. No account is connected and nothing is imported.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Apply -->
   <section id="apply" class="apply" aria-labelledby="apply-h">
     <div class="wrap">
@@ -481,7 +576,7 @@
       </ol>
       <div class="cta-row">
         <a class="btn" href="mailto:hello@tinybirdbigdreams.com?subject=Provenance%20%E2%80%94%20Maker%20interest">Register maker interest</a>
-        <a class="btn ghost" href="#feed">Browse the feed</a>
+        <a class="btn ghost" href="#migrate">Already selling elsewhere? Migrate</a>
       </div>
     </div>
   </section>
@@ -658,12 +753,12 @@
 
   function setMedium(m) {
     current = m;
-    document.querySelectorAll('.chip').forEach(function (c) { c.setAttribute('aria-pressed', String(c.dataset.medium === m)); });
+    document.querySelectorAll('.chip[data-medium]').forEach(function (c) { c.setAttribute('aria-pressed', String(c.dataset.medium === m)); });
     document.querySelectorAll('[data-nav-medium]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.navMedium === m)); });
     render();
   }
 
-  document.querySelectorAll('.chip').forEach(function (c) {
+  document.querySelectorAll('.chip[data-medium]').forEach(function (c) {
     c.addEventListener('click', function () { setMedium(c.dataset.medium); });
   });
   document.querySelectorAll('[data-nav-medium]').forEach(function (b) {
@@ -763,8 +858,72 @@
     li.addEventListener('mouseleave', function () { lite(false); g.querySelector('.halo').style.opacity = ''; });
   });
 
+  // ── Migration demo ──
+  // A fictional shop, showing each outcome the guild check can produce.
+  var IMPORT = [
+    { t: 'Ash-glazed stoneware mug', m: 'Ceramics · 3 variations · 12 in stock', s: 'ok', l: 'Ready' },
+    { t: 'Nesting bowl set of three', m: 'Ceramics · 5 photos · 4 reviews', s: 'ok', l: 'Ready' },
+    { t: 'Walnut spoon, hand-carved', m: 'Woodwork · shipping profile mapped', s: 'warn', l: 'Add process shots' },
+    { t: 'Speckled vase, large', m: 'Ceramics · 1 photo looks like a digital mockup', s: 'warn', l: 'Replace mockup' },
+    { t: 'Linen table runner', m: 'Textiles · 2 variations · 6 reviews', s: 'ok', l: 'Ready' },
+    { t: 'Botanical art print', m: 'Fine Art · fulfilled by a print-on-demand service', s: 'held', l: 'Held back' },
+    { t: 'Serving platter, ash glaze', m: 'Ceramics · local pickup offered', s: 'ok', l: 'Ready' }
+  ];
+  var SHOPS = {
+    'Etsy': 'Connected: <strong>ElmAndEmberStudio</strong> on Etsy &middot; 7 active listings',
+    'Shopify': 'Connected: <strong>elmandember.shop</strong> on Shopify &middot; 7 products',
+    'CSV file': 'Uploaded: <strong>listings-export.csv</strong> &middot; 7 rows'
+  };
+  var impRows = document.getElementById('impRows');
+  var impRun = document.getElementById('impRun');
+  var impSummary = document.getElementById('impSummary');
+  var impTimer = null;
+
+  function resetImport() {
+    clearTimeout(impTimer);
+    impRows.innerHTML = IMPORT.map(function (r) {
+      return '<li class="pending"><span class="t">' + esc(r.t) + '</span><span class="s">Waiting</span><span class="m">' + esc(r.m) + '</span></li>';
+    }).join('');
+    impSummary.textContent = 'Press import to see how a real shop would come across.';
+    impRun.disabled = false;
+    impRun.textContent = 'Import listings';
+  }
+
+  function runImport() {
+    resetImport();
+    impRun.disabled = true;
+    impRun.textContent = 'Importing…';
+    var items = impRows.children;
+    var i = 0;
+    (function step() {
+      if (i < IMPORT.length) {
+        var r = IMPORT[i], li = items[i], s = li.querySelector('.s');
+        li.classList.remove('pending');
+        s.className = 's ' + r.s;
+        s.textContent = r.l;
+        i++;
+        impTimer = setTimeout(step, 320);
+        return;
+      }
+      var n = function (k) { return IMPORT.filter(function (x) { return x.s === k; }).length; };
+      impSummary.innerHTML = '<b>' + n('ok') + ' ready to publish</b>, ' + n('warn') + ' need a quick fix, ' + n('held') + ' held back. Everything is saved as a draft for you to review.';
+      impRun.disabled = false;
+      impRun.textContent = 'Run again';
+    })();
+  }
+
+  document.querySelectorAll('[data-src]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('[data-src]').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+      document.getElementById('impShop').innerHTML = SHOPS[b.dataset.src];
+      resetImport();
+    });
+  });
+  impRun.addEventListener('click', runImport);
+
   render();
   updateLedger(priceEl.value);
+  resetImport();
 })();
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b0b9b5a0ff9345038eb0ab5e85b9ac3d"}'></script>
