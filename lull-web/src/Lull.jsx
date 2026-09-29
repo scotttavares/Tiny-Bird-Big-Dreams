@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { Volume2, VolumeX, Sun, Moon, CalendarDays, Waves } from "lucide-react";
+import { Volume2, VolumeX, Sun, Moon, CalendarDays, Waves, Settings } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { Purchases, LOG_LEVEL } from "@revenuecat/purchases-capacitor";
 import { AppIcon } from "@capacitor-community/app-icon";
@@ -650,6 +650,7 @@ export default function Lull() {
   const [light, setLight] = useState(false);
   const [sessions, setSessions] = useState(() => (typeof window !== "undefined" ? loadHist() : []));
   const [showHistory, setShowHistory] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [appIcon, setAppIcon] = useState("aurora");        // active alternate app icon (native only)
   const [iconPickerOn, setIconPickerOn] = useState(false); // true when alternate icons are supported (iOS)
   const [exportOpen, setExportOpen] = useState(false); const [copied, setCopied] = useState(false);
@@ -1233,6 +1234,7 @@ export default function Lull() {
         <div style={{ position: "relative", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 36, marginBottom: 8 }}>
           <span style={{ fontSize: 14, letterSpacing: 6, textTransform: "uppercase", fontWeight: 500, opacity: 0.82, paddingLeft: 6 }}>Lull</span>
           {false && (<button className="lull-btn" aria-label="theme" onClick={() => setLight((v) => !v)} style={{ position: "absolute", left: 0, padding: 8, opacity: 0.7 }}>{lightUI ? <Moon size={19} /> : <Sun size={19} />}</button>)}
+          {screen === "home" && (<button className="lull-btn" aria-label="Settings" onClick={() => setShowSettings(true)} style={{ position: "absolute", left: 0, padding: 8, opacity: 0.7, display: "flex" }}><Settings size={19} /></button>)}
           <div style={{ position: "absolute", right: 0, display: "flex", alignItems: "center", gap: 2 }}>
             {screen === "home" && (<button className="lull-btn" aria-label="Ambient sounds" onClick={() => { setEditingPresetId(null); setSavingMix(false); setMixerOpen(true); }} style={{ padding: 8, opacity: mixPlaying ? 1 : 0.7, display: "flex", color: mixPlaying ? "#8ce0b0" : undefined }}><Waves size={19} /></button>)}
             {screen === "home" && (<button className="lull-btn" aria-label="Your breaths" onClick={() => setShowHistory(true)} style={{ padding: 8, opacity: 0.7, display: "flex" }}><CalendarDays size={19} /></button>)}
@@ -1767,27 +1769,40 @@ export default function Lull() {
                     </span>
                   </div>); })}
               </div>
-              {iconPickerOn && (
-                <div style={{ marginTop: 30 }}>
-                  <div style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", fontWeight: 600, opacity: 0.5, marginBottom: 14 }}>App icon</div>
-                  <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
-                    {APP_ICONS.map((opt) => { const on = appIcon === opt.key; return (
-                      <button key={opt.key} className="lull-btn" onClick={() => chooseIcon(opt)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: 0, background: "transparent" }}>
-                        <div style={{ padding: 3, borderRadius: 19, border: on ? `2px solid ${inkA(0.85)}` : "2px solid " + wa(0.12) }}>{iconSwatch(opt, 58)}</div>
-                        <span style={{ fontSize: 12, opacity: on ? 0.9 : 0.5 }}>{opt.label}</span>
-                      </button>
-                    ); })}
-                  </div>
-                </div>
-              )}
               <div style={{ marginTop: "auto", paddingTop: 30, display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
-                <button className="lull-btn" onClick={() => { setShowHistory(false); replayOnboard(); }} style={{ padding: "9px 16px", borderRadius: 999, fontSize: 12.5, letterSpacing: 0.3, color: inkA(0.7), background: wa(0.05), border: "1px solid " + wa(0.12) }}>Replay intro</button>
                 <button className="lull-btn" onClick={exportData} style={{ padding: "9px 16px", borderRadius: 999, fontSize: 12.5, letterSpacing: 0.3, color: inkA(0.7), background: wa(0.05), border: "1px solid " + wa(0.12) }}>Export my breaths</button>
                 <button className="lull-btn" onClick={eraseData} style={{ padding: "9px 16px", borderRadius: 999, fontSize: 12.5, letterSpacing: 0.3, color: inkA(0.55), background: "transparent", border: "1px solid " + wa(0.12) }}>Erase everything</button>
               </div>
               <div style={{ paddingTop: 16, fontSize: 12.5, opacity: 0.4, textAlign: "center", letterSpacing: 0.3 }}>No streaks. No goals. Just the breaths you’ve taken. Private to this device.</div>
             </>);
           })()}
+        </div>
+      )}
+
+      {showSettings && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 60, backgroundColor: groundSolid, backgroundImage: groundBg, color: ink, display: "flex", flexDirection: "column", padding: "max(30px, calc(env(safe-area-inset-top) + 12px)) 26px calc(34px + env(safe-area-inset-bottom))", overflowY: "auto" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
+            <span style={{ fontSize: 12, letterSpacing: 5, textTransform: "uppercase", fontWeight: 500, opacity: 0.6 }}>Settings</span>
+            <button className="lull-btn" aria-label="Close" onClick={() => setShowSettings(false)} style={{ padding: "6px 4px", opacity: 0.75, fontSize: 15 }}>Done</button>
+          </div>
+          {iconPickerOn && (
+            <div style={{ marginBottom: 34 }}>
+              <div style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", fontWeight: 600, opacity: 0.5, marginBottom: 15 }}>App icon</div>
+              <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
+                {APP_ICONS.map((opt) => { const on = appIcon === opt.key; return (
+                  <button key={opt.key} className="lull-btn" onClick={() => chooseIcon(opt)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: 0, background: "transparent" }}>
+                    <div style={{ padding: 3, borderRadius: 19, border: on ? `2px solid ${inkA(0.85)}` : "2px solid " + wa(0.12) }}>{iconSwatch(opt, 58)}</div>
+                    <span style={{ fontSize: 12, opacity: on ? 0.9 : 0.5 }}>{opt.label}</span>
+                  </button>
+                ); })}
+              </div>
+            </div>
+          )}
+          <div>
+            <div style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", fontWeight: 600, opacity: 0.5, marginBottom: 15 }}>Intro</div>
+            <button className="lull-btn" onClick={() => { setShowSettings(false); replayOnboard(); }} style={{ padding: "10px 18px", borderRadius: 999, fontSize: 13, letterSpacing: 0.3, color: inkA(0.75), background: wa(0.05), border: "1px solid " + wa(0.14) }}>Replay intro</button>
+          </div>
+          <div style={{ marginTop: "auto", paddingTop: 28, fontSize: 12.5, opacity: 0.4, textAlign: "center", letterSpacing: 0.3 }}>Private to this device. No account, nothing tracked.</div>
         </div>
       )}
 
