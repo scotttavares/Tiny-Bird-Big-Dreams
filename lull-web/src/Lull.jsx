@@ -304,14 +304,6 @@ function orbChip(id, size) {
   layers.push("radial-gradient(30% 30% at 50% 50%, rgba(255,255,255,0.85), transparent 60%)");
   return <div style={{ ...base, background: layers.join(", ") + ", " + (o.white ? "#ffffff" : "#0e0b1a") }} />;
 }
-// A mini orb preview in a theme's own palette — used for the on-home colour-variation picker
-// so each choice reads as a little orb (like the selected orb chip) rather than a flat dot.
-function themeOrb(t, size) {
-  const cols = (t.bloom && t.bloom.length ? t.bloom : [[198, 182, 255], [111, 178, 255], [255, 143, 206], [119, 240, 208], [255, 190, 148]]);
-  const layers = cols.map((c, i, arr) => { const a = (i / arr.length) * Math.PI * 2 - Math.PI / 2; const x = (50 + Math.cos(a) * 25).toFixed(0); const y = (50 + Math.sin(a) * 25).toFixed(0); return `radial-gradient(44% 44% at ${x}% ${y}%, rgba(${c},0.95), transparent 60%)`; });
-  layers.push("radial-gradient(32% 32% at 47% 42%, rgba(255,255,255,0.82), transparent 56%)");
-  return <div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", flex: "0 0 auto", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12), 0 2px 10px rgba(0,0,0,0.3)", background: layers.join(", ") + ", #0a0613" }} />;
-}
 
 // Alternate iOS app icons. Aurora is the primary icon (reset to it); the rest switch via the plugin.
 // Names must match the alternate app-icon set names configured in the iOS build (codemagic.yaml).
@@ -1413,12 +1405,9 @@ export default function Lull() {
               );
             })()}
             {selectedOrb.kind === "coded" && (
-            <div style={{ display: "flex", gap: 16, justifyContent: "center", padding: "2px 0 4px" }}>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center", padding: "2px 0 4px" }}>
               {Object.entries(THEMES).map(([id, t]) => { const sel = themeId === id; return (
-                <button key={id} className="lull-btn" aria-label={`Orb colour: ${t.name}`} aria-pressed={sel} title={t.name} onClick={() => setThemeId(id)} style={{ position: "relative", padding: 0, borderRadius: "50%", border: "none", background: "none", transform: sel ? "scale(1.12)" : "scale(1)", transition: "transform .2s ease" }}>
-                  {themeOrb(t, 44)}
-                  <span aria-hidden="true" style={{ position: "absolute", inset: -3, borderRadius: "50%", border: "2px solid " + (sel ? (lightUI ? "rgba(70,50,140,0.9)" : "rgba(255,255,255,0.92)") : "transparent"), boxShadow: sel ? (lightUI ? "0 3px 14px rgba(80,60,140,0.3)" : "0 4px 14px rgba(0,0,0,0.5)") : "none", transition: "border-color .2s ease" }} />
-                </button>); })}
+                <button key={id} className="lull-dot lull-btn" aria-label={`Orb colour: ${t.name}`} aria-pressed={sel} title={t.name} onClick={() => setThemeId(id)} style={{ width: 30, height: 30, borderRadius: "50%", padding: 0, backgroundImage: t.swatch, border: "1px solid " + wa(0.3), boxShadow: sel ? (lightUI ? "0 0 0 2px rgba(70,50,140,0.8), 0 3px 12px rgba(80,60,140,0.25)" : "0 0 0 2px rgba(255,255,255,0.9), 0 3px 12px rgba(0,0,0,0.45)") : (lightUI ? "0 2px 8px rgba(80,60,140,0.2)" : "0 2px 8px rgba(0,0,0,0.35)"), transform: sel ? "scale(1.14)" : "scale(1)", transition: "transform .2s ease, box-shadow .2s ease" }} />); })}
             </div>
             )}
             {(() => { const entries = Object.entries(pats); const cols = entries.length === 4 ? 2 : Math.min(entries.length, 3); return (
