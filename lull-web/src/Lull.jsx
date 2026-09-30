@@ -1136,6 +1136,8 @@ export default function Lull() {
     .lull-btn { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
     .lull-btn:focus-visible, .lull-seg:focus-visible, .lull-dot:focus-visible { outline: 2px solid rgba(255,255,255,0.7); outline-offset: 3px; border-radius: 14px; }
     .lull-seg, .lull-dot { font-family: inherit; cursor: pointer; }
+    .lull-orbrow { scrollbar-width: none; -ms-overflow-style: none; }
+    .lull-orbrow::-webkit-scrollbar { display: none; }
     .lull-cta { -webkit-tap-highlight-color: transparent; background-color: rgba(255,255,255,0.05); background-image: linear-gradient(177deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.07) 38%, rgba(255,255,255,0.02) 64%, rgba(255,255,255,0.13) 100%), radial-gradient(120% 80% at 50% 104%, rgba(255,255,255,0.16), transparent 62%); border: 1px solid rgba(255,255,255,0.28); -webkit-backdrop-filter: blur(16px) saturate(190%); backdrop-filter: blur(16px) saturate(190%); }
     .lull-cta::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 46%; border-radius: inherit; background: linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0) 100%); opacity: 0.55; pointer-events: none; }
     .lull-cta:active { transform: translateY(1px) scale(0.985); animation: lullGlow 1.1s ease; }
@@ -1388,6 +1390,17 @@ export default function Lull() {
                 <span style={{ fontSize: 13, opacity: 0.5, letterSpacing: 0.5, marginLeft: 1 }}>›</span>
               </button>
             </div>
+            {(() => { const owned = ORB_ORDER.filter(orbOwned); if (owned.length < 2) return null; return (
+              <div className="lull-orbrow" style={{ display: "flex", overflowX: "auto", padding: "2px 0" }}>
+                <div style={{ display: "flex", gap: 12, margin: "0 auto", padding: "0 14px", width: "max-content" }}>
+                  {owned.map((id) => { const o = ORBS[id] || {}; const sel = id === orbId; return (
+                    <button key={id} className="lull-btn" aria-label={"Use " + o.name + " orb"} aria-pressed={sel} title={o.name} onClick={() => setOrbId(id)} style={{ position: "relative", flex: "0 0 auto", padding: 0, borderRadius: "50%", border: "none", background: "none", transform: sel ? "scale(1.12)" : "scale(1)", transition: "transform .2s ease" }}>
+                      {orbChip(id, 38)}
+                      <span aria-hidden="true" style={{ position: "absolute", inset: -3, borderRadius: "50%", border: "2px solid " + (sel ? (lightUI ? "rgba(70,50,140,0.9)" : "rgba(255,255,255,0.92)") : "transparent"), transition: "border-color .2s ease" }} />
+                    </button>); })}
+                </div>
+              </div>
+            ); })()}
             {mixPlaying && (() => {
               const active = NATURE_IDS.filter((id) => (mix[id] || 0) > 0 && soundOwned(id));
               if (!active.length) return null;
