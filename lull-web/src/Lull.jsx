@@ -250,6 +250,10 @@ const ORBS = {
   dusk:     { name: "Dusk",     tag: "Ember halo",    kind: "image", src: "/assets/orb-dusk.webp",   price: 0.5, zoom: 1.1, hue: 0, ring: ["#ff9a7a", "#ff6ea0", "#c79bff"], bg: "radial-gradient(125% 120% at 50% 20%, #140b16 0%, #0c0710 58%, #060309 100%)" },
 };
 const ORB_ORDER = ["aurora", "bloom", "ember", "verdant", "blossom", "glacier", "nebula", "iris", "dawn", "solstice", "frost", "nova", "wisp", "halo", "prism", "lagoon", "dusk"];
+// Per-orb colour selections: hue-rotate offsets (degrees) layered on top of each image orb's own
+// hue, so every orb offers a few colours to pick from on the home screen — the way the coded
+// "Bloom" orb offers its themes. Index 0 (0°) is the orb's original colour.
+const ORB_TINTS = [0, 120, 240];
 // ---------- packs & bundle ----------
 // Orbs are sold in themed packs (one price unlocks every orb in the pack), plus a single
 // "Everything" bundle that unlocks all orbs — and every future orb & sound we add — for one
@@ -290,11 +294,11 @@ const OWNED_KEY = "lull.orbsOwned.v1";
 function loadOrb() { try { const v = localStorage.getItem(ORB_KEY); return v && ORBS[v] ? v : "aurora"; } catch (e) { return "aurora"; } }
 function loadOwned() { try { const r = JSON.parse(localStorage.getItem(OWNED_KEY) || "null"); const saved = Array.isArray(r) ? r.filter((id) => ORBS[id]) : []; const merged = [...FREE_ORBS]; saved.forEach((id) => { if (!merged.includes(id)) merged.push(id); }); return merged; } catch (e) { return [...FREE_ORBS]; } }
 function fmtPrice(p) { return p ? "$" + p.toFixed(2) : "Free"; }
-function orbChip(id, size) {
+function orbChip(id, size, hueAdd) {
   const o = ORBS[id] || ORBS.aurora;
   const base = { width: size, height: size, borderRadius: "50%", flex: "0 0 auto", overflow: "hidden", boxShadow: "0 2px 10px rgba(0,0,0,0.22)" };
   if (o.thumb) return <div style={base}><img src={o.thumb} alt="" draggable="false" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /></div>;
-  if (o.kind === "image") return <div style={base}><img src={o.src} alt="" draggable="false" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: o.zoom ? `scale(${o.zoom})` : undefined, transformOrigin: "center", filter: o.hue ? `hue-rotate(${o.hue}deg) saturate(${o.sat || 1.1})` : undefined }} /></div>;
+  if (o.kind === "image") { const h = (o.hue || 0) + (hueAdd || 0); return <div style={base}><img src={o.src} alt="" draggable="false" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: o.zoom ? `scale(${o.zoom})` : undefined, transformOrigin: "center", filter: h ? `hue-rotate(${h}deg) saturate(${o.sat || 1.1})` : undefined }} /></div>; }
   if (o.kind === "particles") { const t = o.palette.top.join(","), bt = o.palette.bot.join(","); return <div style={{ ...base, background: `radial-gradient(58% 52% at 50% 33%, rgba(${t},0.95), transparent 62%), radial-gradient(54% 50% at 50% 78%, rgba(${bt},0.92), transparent 62%), #060409` }} />; }
   if (o.kind === "plasma") return <div style={{ ...base, background: "radial-gradient(circle at 44% 38%, #12336a 0%, #0a1428 62%), radial-gradient(circle at 50% 50%, transparent 74%, rgba(150,232,255,0.9) 93%, transparent 100%), #050308" }} />;
   if (o.kind === "rings") return <div style={{ ...base, position: "relative", background: "radial-gradient(circle at 50% 45%, #14111f, #06040e)" }}>{ringsSVG(o.palette, { anim: false })}</div>;
@@ -636,6 +640,7 @@ export default function Lull() {
 
   const [mode, setMode] = useState("breathe");
   const [orbId, setOrbId] = useState(loadOrb);          // which orb you breathe with
+  const [orbTint, setOrbTint] = useState(() => { try { return JSON.parse(localStorage.getItem("lull.orbTint.v1")) || {}; } catch (e) { return {}; } }); // per-orb colour selection (hue offset)
   const [ownedOrbs, setOwnedOrbs] = useState(loadOwned); // unlocked orb ids
   const [ownedSounds, setOwnedSounds] = useState(loadOwnedSounds); // unlocked sound ids
   const [bundleOwned, setBundleOwned] = useState(() => { try { return localStorage.getItem("lull.bundleOwned.v1") === "1"; } catch (e) { return false; } }); // "Everything" owned → unlocks all, incl. future
@@ -715,6 +720,7 @@ export default function Lull() {
   useEffect(() => { scapeIdRef.current = scapeId; try { localStorage.setItem("lull.scape.v1", scapeId); } catch (e) {} }, [scapeId]);
   useEffect(() => { sleepScapeIdRef.current = sleepScapeId; try { localStorage.setItem("lull.sleepScape.v1", sleepScapeId); } catch (e) {} }, [sleepScapeId]);
   useEffect(() => { try { localStorage.setItem(ORB_KEY, orbId); } catch (e) {} }, [orbId]);
+  useEffect(() => { try { localStorage.setItem("lull.orbTint.v1", JSON.stringify(orbTint)); } catch (e) {} }, [orbTint]);
   useEffect(() => { try { localStorage.setItem(OWNED_KEY, JSON.stringify(ownedOrbs)); } catch (e) {} }, [ownedOrbs]);
   useEffect(() => { try { localStorage.setItem(SOUNDS_OWNED_KEY, JSON.stringify(ownedSounds)); } catch (e) {} }, [ownedSounds]);
   useEffect(() => { try { localStorage.setItem("lull.bundleOwned.v1", bundleOwned ? "1" : "0"); } catch (e) {} }, [bundleOwned]);
@@ -1074,6 +1080,8 @@ export default function Lull() {
   const pats = PATTERNS[mode];
 
   const selectedOrb = ORBS[orbId] || ORBS.aurora;
+  const orbTintDeg = selectedOrb.kind === "image" ? (orbTint[orbId] || 0) : 0; // chosen colour offset for this orb
+  const effOrbHue = (selectedOrb.hue || 0) + orbTintDeg;
   // The progress ring's gradient matches the selected orb's own palette (falls back to the theme).
   const ringColors = selectedOrb.ring || [ringFrom, ringTo];
   const isLight = !!selectedOrb.light && !night;    // pastel orbs sit on a bright ground with dark UI; sleep stays dark
@@ -1136,8 +1144,6 @@ export default function Lull() {
     .lull-btn { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
     .lull-btn:focus-visible, .lull-seg:focus-visible, .lull-dot:focus-visible { outline: 2px solid rgba(255,255,255,0.7); outline-offset: 3px; border-radius: 14px; }
     .lull-seg, .lull-dot { font-family: inherit; cursor: pointer; }
-    .lull-orbrow { scrollbar-width: none; -ms-overflow-style: none; }
-    .lull-orbrow::-webkit-scrollbar { display: none; }
     .lull-cta { -webkit-tap-highlight-color: transparent; background-color: rgba(255,255,255,0.05); background-image: linear-gradient(177deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.07) 38%, rgba(255,255,255,0.02) 64%, rgba(255,255,255,0.13) 100%), radial-gradient(120% 80% at 50% 104%, rgba(255,255,255,0.16), transparent 62%); border: 1px solid rgba(255,255,255,0.28); -webkit-backdrop-filter: blur(16px) saturate(190%); backdrop-filter: blur(16px) saturate(190%); }
     .lull-cta::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 46%; border-radius: inherit; background: linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0) 100%); opacity: 0.55; pointer-events: none; }
     .lull-cta:active { transform: translateY(1px) scale(0.985); animation: lullGlow 1.1s ease; }
@@ -1337,7 +1343,7 @@ export default function Lull() {
                   <div style={{ position: "absolute", inset: 0, borderRadius: "50%", overflow: "hidden", isolation: "isolate", zIndex: 2, WebkitMaskImage: imgMask, maskImage: imgMask, filter: active ? (isCool ? "brightness(1.13) saturate(1.06)" : "brightness(0.9) saturate(1.0)") : undefined, animation: (idle && !prefersReduced) ? "orbGlow 7s ease-in-out infinite" : "none", transition: active ? `filter ${orb.dur}s ${orb.ease || "ease"}` : "filter 1s ease" }}>
                     {/* Two copies of the swirl counter-rotate and screen-blend so the ribbons churn.
                         `zoom` crops past the glass rim/gloss for a bubble-less, free-flowing look. */}
-                    <div style={{ position: "absolute", inset: 0, transform: imgZoom !== 1 ? `scale(${imgZoom})` : undefined, transformOrigin: "center", filter: selectedOrb.hue ? `hue-rotate(${selectedOrb.hue}deg) saturate(${selectedOrb.sat || 1.1})` : undefined }}>
+                    <div style={{ position: "absolute", inset: 0, transform: imgZoom !== 1 ? `scale(${imgZoom})` : undefined, transformOrigin: "center", filter: effOrbHue ? `hue-rotate(${effOrbHue}deg) saturate(${selectedOrb.sat || 1.1})` : undefined }}>
                       <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transformOrigin: "center", display: "block", pointerEvents: "none", willChange: "transform", animation: prefersReduced ? "none" : "swirlSpin 46s linear infinite" }} />
                       <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transformOrigin: "center", display: "block", pointerEvents: "none", mixBlendMode: "screen", opacity: 0.45, willChange: "transform", animation: prefersReduced ? "none" : "swirlSpinRev 63s linear infinite" }} />
                     </div>
@@ -1379,7 +1385,7 @@ export default function Lull() {
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: 8 }}>
               <button className="lull-btn" aria-label="Choose your orb and sound" onClick={() => setOrbStoreOpen(true)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 10, padding: "6px 14px 6px 6px", borderRadius: 999, background: wa(0.06), border: "1px solid " + wa(0.16), color: ink }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  {orbChip(orbId, 26)}
+                  {orbChip(orbId, 26, orbTintDeg)}
                   <span style={{ fontSize: 13, fontWeight: 500, letterSpacing: 0.3 }}>{selectedOrb.name}</span>
                 </span>
                 <span aria-hidden="true" style={{ width: 1, height: 18, background: wa(0.18) }} />
@@ -1390,17 +1396,6 @@ export default function Lull() {
                 <span style={{ fontSize: 13, opacity: 0.5, letterSpacing: 0.5, marginLeft: 1 }}>›</span>
               </button>
             </div>
-            {(() => { const owned = ORB_ORDER.filter(orbOwned); if (owned.length < 2) return null; return (
-              <div className="lull-orbrow" style={{ display: "flex", overflowX: "auto", padding: "2px 0" }}>
-                <div style={{ display: "flex", gap: 12, margin: "0 auto", padding: "0 14px", width: "max-content" }}>
-                  {owned.map((id) => { const o = ORBS[id] || {}; const sel = id === orbId; return (
-                    <button key={id} className="lull-btn" aria-label={"Use " + o.name + " orb"} aria-pressed={sel} title={o.name} onClick={() => setOrbId(id)} style={{ position: "relative", flex: "0 0 auto", padding: 0, borderRadius: "50%", border: "none", background: "none", transform: sel ? "scale(1.12)" : "scale(1)", transition: "transform .2s ease" }}>
-                      {orbChip(id, 38)}
-                      <span aria-hidden="true" style={{ position: "absolute", inset: -3, borderRadius: "50%", border: "2px solid " + (sel ? (lightUI ? "rgba(70,50,140,0.9)" : "rgba(255,255,255,0.92)") : "transparent"), transition: "border-color .2s ease" }} />
-                    </button>); })}
-                </div>
-              </div>
-            ); })()}
             {mixPlaying && (() => {
               const active = NATURE_IDS.filter((id) => (mix[id] || 0) > 0 && soundOwned(id));
               if (!active.length) return null;
@@ -1421,6 +1416,12 @@ export default function Lull() {
             <div style={{ display: "flex", gap: 12, justifyContent: "center", padding: "2px 0 4px" }}>
               {Object.entries(THEMES).map(([id, t]) => { const sel = themeId === id; return (
                 <button key={id} className="lull-dot lull-btn" aria-label={`Orb colour: ${t.name}`} aria-pressed={sel} title={t.name} onClick={() => setThemeId(id)} style={{ width: 30, height: 30, borderRadius: "50%", padding: 0, backgroundImage: t.swatch, border: "1px solid " + wa(0.3), boxShadow: sel ? (lightUI ? "0 0 0 2px rgba(70,50,140,0.8), 0 3px 12px rgba(80,60,140,0.25)" : "0 0 0 2px rgba(255,255,255,0.9), 0 3px 12px rgba(0,0,0,0.45)") : (lightUI ? "0 2px 8px rgba(80,60,140,0.2)" : "0 2px 8px rgba(0,0,0,0.35)"), transform: sel ? "scale(1.14)" : "scale(1)", transition: "transform .2s ease, box-shadow .2s ease" }} />); })}
+            </div>
+            )}
+            {selectedOrb.kind === "image" && selectedOrb.ring && (
+            <div style={{ display: "flex", gap: 12, justifyContent: "center", padding: "2px 0 4px" }}>
+              {ORB_TINTS.map((off, i) => { const sel = (orbTint[orbId] || 0) === off; const r = selectedOrb.ring; return (
+                <button key={off} className="lull-dot lull-btn" aria-label={"Colour option " + (i + 1)} aria-pressed={sel} onClick={() => setOrbTint((p) => ({ ...p, [orbId]: off }))} style={{ width: 30, height: 30, borderRadius: "50%", padding: 0, backgroundImage: `linear-gradient(135deg, ${r[0]} 0%, ${r[1]} 50%, ${r[2]} 100%)`, filter: off ? `hue-rotate(${off}deg)` : undefined, border: "1px solid " + wa(0.3), boxShadow: sel ? (lightUI ? "0 0 0 2px rgba(70,50,140,0.8), 0 3px 12px rgba(80,60,140,0.25)" : "0 0 0 2px rgba(255,255,255,0.9), 0 3px 12px rgba(0,0,0,0.45)") : (lightUI ? "0 2px 8px rgba(80,60,140,0.2)" : "0 2px 8px rgba(0,0,0,0.35)"), transform: sel ? "scale(1.14)" : "scale(1)", transition: "transform .2s ease, box-shadow .2s ease" }} />); })}
             </div>
             )}
             {(() => { const entries = Object.entries(pats); const cols = entries.length === 4 ? 2 : Math.min(entries.length, 3); return (
