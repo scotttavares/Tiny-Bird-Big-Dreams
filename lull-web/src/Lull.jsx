@@ -254,6 +254,26 @@ const ORB_ORDER = ["aurora", "bloom", "ember", "verdant", "blossom", "glacier", 
 // hue, so every orb offers a few colours to pick from on the home screen — the way the coded
 // "Bloom" orb offers its themes. Index 0 (0°) is the orb's original colour.
 const ORB_TINTS = [0, 120, 240];
+// Rotate the hue of a single #rrggbb colour by `deg` degrees (via HSL).
+function rotateHexHue(hex, deg) {
+  let r = parseInt(hex.slice(1, 3), 16) / 255, g = parseInt(hex.slice(3, 5), 16) / 255, b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, d = max - min; let h = 0, s = 0;
+  if (d) {
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0); else if (max === g) h = (b - r) / d + 2; else h = (r - g) / d + 4;
+    h *= 60;
+  }
+  h = (h + deg) % 360; if (h < 0) h += 360;
+  const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs(((h / 60) % 2) - 1)), m = l - c / 2;
+  let rr = 0, gg = 0, bb = 0;
+  if (h < 60) { rr = c; gg = x; } else if (h < 120) { rr = x; gg = c; } else if (h < 180) { gg = c; bb = x; }
+  else if (h < 240) { gg = x; bb = c; } else if (h < 300) { rr = x; bb = c; } else { rr = c; bb = x; }
+  const to = (v) => Math.round((v + m) * 255).toString(16).padStart(2, "0");
+  return "#" + to(rr) + to(gg) + to(bb);
+}
+// Shift every #rrggbb colour in a CSS gradient string, to move an image orb's background ground
+// to match the colour selection picked for that orb (the way Bloom's themes recolour the ground).
+function shiftGradientHue(str, deg) { return deg ? str.replace(/#[0-9a-fA-F]{6}/g, (hx) => rotateHexHue(hx, deg)) : str; }
 // ---------- packs & bundle ----------
 // Orbs are sold in themed packs (one price unlocks every orb in the pack), plus a single
 // "Everything" bundle that unlocks all orbs — and every future orb & sound we add — for one
@@ -1108,7 +1128,8 @@ export default function Lull() {
   const LIGHT_ROOT = "radial-gradient(125% 110% at 50% 6%, #faf4ee 0%, #f2eaef 55%, #ece1e9 100%)";
   const WHITE_ROOT = "radial-gradient(125% 120% at 50% 4%, #ffffff 0%, #fbfbfe 58%, #f3f3f8 100%)";
   const DARK_ROOT = "radial-gradient(120% 120% at 50% 32%, #0a0711 0%, #050308 60%, #020104 100%)";
-  const groundBg = night ? th.rootNight : (selectedOrb.bg || th.rootDay);  // each orb's own matching ground
+  const groundBg0 = night ? th.rootNight : (selectedOrb.bg || th.rootDay);  // each orb's own matching ground
+  const groundBg = orbTintDeg ? shiftGradientHue(groundBg0, orbTintDeg) : groundBg0; // shift the ground to the orb's picked colour
   // Solid fallback under the gradient so full-screen (position:fixed) modals never let the dark page
   // body bleed through — critical for light orbs, where a non-painting gradient would look dark.
   const groundSolid = isLight ? "#f8f4fd" : "#0a0613";
