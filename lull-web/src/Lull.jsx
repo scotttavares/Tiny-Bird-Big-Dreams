@@ -239,9 +239,9 @@ const ORBS = {
   // "Pearl" option on a whiter ground). Each palette carries its own particle colours, ring and ground;
   // `light` flips the sphere to dark specks on a bright ground.
   stardust: { name: "Stardust", tag: "Shifting dust", kind: "particles", price: 0.5, palettes: [
-    { name: "Ember", top: [255, 150, 55],  mid: [255, 180, 120], bot: [255, 255, 255], ring: ["#ffb04a", "#ff8a3c", "#fff0d6"], bg: "radial-gradient(120% 120% at 50% 30%, #140b06 0%, #080402 60%, #020101 100%)" },
-    { name: "Ice",   top: [120, 205, 255], mid: [180, 228, 255], bot: [255, 255, 255], ring: ["#7fd0ff", "#b0e6ff", "#ffffff"], bg: "radial-gradient(120% 120% at 50% 30%, #06121e 0%, #03080f 60%, #010305 100%)" },
-    { name: "Nova",  top: [190, 120, 255], mid: [230, 140, 230], bot: [255, 155, 210], ring: ["#b46eff", "#e08aff", "#ff8ec8"], bg: "radial-gradient(120% 120% at 50% 30%, #120826 0%, #080414 60%, #030108 100%)" },
+    { name: "Ember", thumb: "/assets/orb-thumb-solstice.png", top: [255, 150, 55],  mid: [255, 180, 120], bot: [255, 255, 255], ring: ["#ffb04a", "#ff8a3c", "#fff0d6"], bg: "radial-gradient(120% 120% at 50% 30%, #140b06 0%, #080402 60%, #020101 100%)" },
+    { name: "Ice",   thumb: "/assets/orb-thumb-frost.png", top: [120, 205, 255], mid: [180, 228, 255], bot: [255, 255, 255], ring: ["#7fd0ff", "#b0e6ff", "#ffffff"], bg: "radial-gradient(120% 120% at 50% 30%, #06121e 0%, #03080f 60%, #010305 100%)" },
+    { name: "Nova",  thumb: "/assets/orb-thumb-nova.png", top: [190, 120, 255], mid: [230, 140, 230], bot: [255, 155, 210], ring: ["#b46eff", "#e08aff", "#ff8ec8"], bg: "radial-gradient(120% 120% at 50% 30%, #120826 0%, #080414 60%, #030108 100%)" },
     { name: "Pearl", light: true, top: [150, 100, 230], mid: [95, 150, 225], bot: [225, 125, 180], ring: ["#9a7bff", "#6aa8ea", "#e68ac0"], bg: "radial-gradient(120% 120% at 50% 20%, #ffffff 0%, #f2edfb 55%, #e7e0f5 100%)" },
   ] },
   // Radiant image orbs — a pinwheel bloom and a wispy flare, on their own deep grounds.
@@ -325,7 +325,7 @@ function orbChip(id, size, hueAdd) {
   const base = { width: size, height: size, borderRadius: "50%", flex: "0 0 auto", overflow: "hidden", boxShadow: "0 2px 10px rgba(0,0,0,0.22)" };
   if (o.thumb) return <div style={base}><img src={o.thumb} alt="" draggable="false" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /></div>;
   if (o.kind === "image") { const h = (o.hue || 0) + (hueAdd || 0); return <div style={base}><img src={o.src} alt="" draggable="false" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: o.zoom ? `scale(${o.zoom})` : undefined, transformOrigin: "center", filter: h ? `hue-rotate(${h}deg) saturate(${o.sat || 1.1})` : undefined }} /></div>; }
-  if (o.kind === "particles") { const pal = o.palettes ? (o.palettes[hueAdd || 0] || o.palettes[0]) : o.palette; const t = pal.top.join(","), bt = pal.bot.join(","); if (pal.light) return <div style={{ ...base, background: `radial-gradient(58% 52% at 50% 36%, rgba(${t},0.85), transparent 60%), radial-gradient(52% 48% at 50% 72%, rgba(${pal.mid.join(",")},0.5), transparent 60%), #ece7f5` }} />; return <div style={{ ...base, background: `radial-gradient(58% 52% at 50% 33%, rgba(${t},0.95), transparent 62%), radial-gradient(54% 50% at 50% 78%, rgba(${bt},0.92), transparent 62%), #060409` }} />; }
+  if (o.kind === "particles") { const pal = o.palettes ? (o.palettes[hueAdd || 0] || o.palettes[0]) : o.palette; if (pal.thumb) return <div style={base}><img src={pal.thumb} alt="" draggable="false" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /></div>; const t = pal.top.join(","), bt = pal.bot.join(","); if (pal.light) return <div style={{ ...base, background: `radial-gradient(58% 52% at 50% 36%, rgba(${t},0.85), transparent 60%), radial-gradient(52% 48% at 50% 72%, rgba(${pal.mid.join(",")},0.5), transparent 60%), #ece7f5` }} />; return <div style={{ ...base, background: `radial-gradient(58% 52% at 50% 33%, rgba(${t},0.95), transparent 62%), radial-gradient(54% 50% at 50% 78%, rgba(${bt},0.92), transparent 62%), #060409` }} />; }
   if (o.kind === "plasma") return <div style={{ ...base, background: "radial-gradient(circle at 44% 38%, #12336a 0%, #0a1428 62%), radial-gradient(circle at 50% 50%, transparent 74%, rgba(150,232,255,0.9) 93%, transparent 100%), #050308" }} />;
   if (o.kind === "rings") return <div style={{ ...base, position: "relative", background: "radial-gradient(circle at 50% 45%, #14111f, #06040e)" }}>{ringsSVG(o.palette, { anim: false })}</div>;
   if (o.kind === "coded") return <div style={{ ...base, background: "radial-gradient(circle at 38% 30%, #b8a4ff, transparent 54%), radial-gradient(circle at 68% 40%, #6fb2ff, transparent 54%), radial-gradient(circle at 62% 72%, #78f0d0, transparent 54%), radial-gradient(circle at 32% 66%, #ffb696, transparent 54%), radial-gradient(circle at 50% 46%, rgba(255,255,255,0.7), transparent 34%), #0a0613" }} />;
@@ -1501,7 +1501,7 @@ export default function Lull() {
 
         {breatheDone && (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: 10, width: "100%" }}>
-            <div style={{ marginBottom: 14, borderRadius: "50%", boxShadow: `0 0 60px ${(selectedOrb.ring && selectedOrb.ring[0]) || th.ringTo}66` }}>{orbChip(orbId, 96)}</div>
+            <div style={{ marginBottom: 14, borderRadius: "50%", boxShadow: `0 0 60px ${(ringColors && ringColors[0]) || th.ringTo}66` }}>{orbChip(orbId, 96, selectedOrb.palettes ? orbVarIdx : orbTintDeg)}</div>
             <div style={{ fontSize: 28, fontWeight: 300, letterSpacing: 0.5 }}>{DONE_HEADS[sessions.length % DONE_HEADS.length]}</div>
             <p style={{ fontSize: 15, opacity: 0.78, margin: 0, maxWidth: 290, lineHeight: 1.5 }}>{DONE_LINES[sessions.length % DONE_LINES.length]}</p>
             <p style={{ fontSize: 13.5, opacity: 0.55, margin: "2px 0 0", maxWidth: 260 }}>You gave yourself {durationMin} {durationMin === 1 ? "minute" : "minutes"}. Carry it with you.</p>
@@ -1540,7 +1540,7 @@ export default function Lull() {
               const o = ORBS[id]; const sel = orbId === id;
               return (
                 <button key={id} className="lull-btn" aria-pressed={sel} onClick={() => selectOrb(id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 9, padding: "15px 8px 12px", borderRadius: 18, background: sel ? wa(0.09) : wa(0.03), border: "1px solid " + (sel ? wa(0.34) : wa(0.1)), boxShadow: sel ? "0 8px 22px -14px rgba(0,0,0,0.55)" : "none", transition: "border-color .2s ease, background .2s ease" }}>
-                  {orbChip(id, 58)}
+                  {orbChip(id, 58, orbTint[id] || 0)}
                   <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: 0.2 }}>{o.name}</span>
                   <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", color: sel ? inkA(0.72) : inkA(0.36) }}>{sel ? "In use" : "Tap to use"}</span>
                 </button>
