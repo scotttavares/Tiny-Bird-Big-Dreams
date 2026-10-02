@@ -240,8 +240,6 @@ const ORBS = {
   // night (drifting fog, rising embers, a candle flicker). Free for the season; comes paired with the
   // "Haunt" spooky sound. Three colours: Pumpkin, Phantom (green), Blood (red).
   hallow: { name: "Hallow", tag: "Spooky season", kind: "flow", src: "/assets/orb-hallow.webp", price: 0, zoom: 1, noBubble: true, noTint: true, hue: 0, sat: 1.0, season: "halloween", animBg: "haunt", pairSound: "haunt", ring: ["#7fe6ff", "#8fb6ff", "#b89cff"], bg: "radial-gradient(125% 120% at 50% 16%, #081018 0%, #050a14 58%, #02060e 100%)" },
-  spirit: { name: "Spirit", tag: "Little ghost", kind: "float", src: "/assets/orb-spirit.webp", price: 0, zoom: 1, noBubble: true, noTint: true, hue: 0, sat: 1.0, season: "halloween", animBg: "haunt", pairSound: "haunt", ring: ["#8fe0ff", "#9fb8ff", "#c3a8ff"], bg: "radial-gradient(125% 120% at 50% 16%, #081018 0%, #050a14 58%, #02060e 100%)" },
-  aether: { name: "Aether", tag: "Spectral mist", kind: "flow", src: "/assets/orb-seance.webp", price: 0, zoom: 1, noBubble: true, noTint: true, hue: -28, sat: 1.0, season: "halloween", animBg: "haunt", pairSound: "haunt", ring: ["#8ff0d8", "#7fd0ff", "#b89cff"], bg: "radial-gradient(125% 120% at 50% 16%, #081418 0%, #050c14 58%, #02060e 100%)" },
   // Particle spheres — a rotating cloud of glowing dots on a deep black ground.
   // One particle "dust" orb with several colour selections (the old Solstice/Frost/Nova, plus a light
   // "Pearl" option on a whiter ground). Each palette carries its own particle colours, ring and ground;
@@ -263,7 +261,7 @@ const ORBS = {
   lagoon:   { name: "Lagoon",   tag: "Tidal rings",   kind: "image", src: "/assets/orb-lagoon.webp", price: 0.5, zoom: 1.1, hue: 0, ring: ["#5ec8ff", "#4fd0c0", "#bfeeff"], bg: "radial-gradient(125% 120% at 50% 20%, #06181f 0%, #04111a 58%, #02090f 100%)" },
   dusk:     { name: "Dusk",     tag: "Ember halo",    kind: "image", src: "/assets/orb-dusk.webp",   price: 0.5, zoom: 1.1, hue: 0, ring: ["#ff9a7a", "#ff6ea0", "#c79bff"], bg: "radial-gradient(125% 120% at 50% 20%, #140b16 0%, #0c0710 58%, #060309 100%)" },
 };
-const ORB_ORDER = ["aurora", "bloom", "hallow", "spirit", "aether", "ember", "verdant", "blossom", "glacier", "nebula", "iris", "dawn", "stardust", "wisp", "halo", "prism", "lagoon", "dusk"];
+const ORB_ORDER = ["aurora", "bloom", "hallow", "ember", "verdant", "blossom", "glacier", "nebula", "iris", "dawn", "stardust", "wisp", "halo", "prism", "lagoon", "dusk"];
 // Per-orb colour selections: hue-rotate offsets (degrees) layered on top of each image orb's own
 // hue, so every orb offers a few colours to pick from on the home screen — the way the coded
 // "Bloom" orb offers its themes. Index 0 (0°) is the orb's original colour.
