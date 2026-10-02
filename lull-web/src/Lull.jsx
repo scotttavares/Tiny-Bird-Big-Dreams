@@ -239,11 +239,7 @@ const ORBS = {
   // Seasonal — a Halloween "spirit" sphere: a swirling cloud of glowing embers over a haunted, animated
   // night (drifting fog, rising embers, a candle flicker). Free for the season; comes paired with the
   // "Haunt" spooky sound. Three colours: Pumpkin, Phantom (green), Blood (red).
-  hallow: { name: "Hallow", tag: "Spooky season", kind: "particles", price: 0, season: "halloween", animBg: "haunt", pairSound: "haunt", palettes: [
-    { name: "Pumpkin", top: [255, 150, 40], mid: [255, 110, 30], bot: [150, 60, 200], ring: ["#ff9a2e", "#ff7a1e", "#9a4fff"], bg: "radial-gradient(120% 120% at 50% 26%, #1c0e02 0%, #0c0514 58%, #050108 100%)" },
-    { name: "Phantom", top: [160, 245, 95], mid: [90, 210, 120], bot: [40, 120, 150], ring: ["#9af05a", "#5ad08a", "#3aa0b0"], bg: "radial-gradient(120% 120% at 50% 26%, #07160c 0%, #050f12 58%, #02070a 100%)" },
-    { name: "Blood", top: [255, 80, 60], mid: [210, 40, 60], bot: [110, 30, 150], ring: ["#ff5a4a", "#d8324a", "#8a3fd0"], bg: "radial-gradient(120% 120% at 50% 26%, #1c0506 0%, #10040c 58%, #060108 100%)" },
-  ] },
+  hallow: { name: "Hallow", tag: "Spooky season", kind: "image", src: "/assets/orb-seance.webp", price: 0, zoom: 1, noBubble: true, hue: 0, sat: 1.04, season: "halloween", animBg: "haunt", pairSound: "haunt", ring: ["#8ff0c6", "#7fd0ff", "#c6a0ff"], bg: "radial-gradient(125% 120% at 50% 16%, #0c1420 0%, #070b16 58%, #03060e 100%)" },
   // Particle spheres — a rotating cloud of glowing dots on a deep black ground.
   // One particle "dust" orb with several colour selections (the old Solstice/Frost/Nova, plus a light
   // "Pearl" option on a whiter ground). Each palette carries its own particle colours, ring and ground;
