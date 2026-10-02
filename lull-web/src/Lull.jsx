@@ -163,6 +163,8 @@ const SOUND = [
   { id: "ocean", name: "Ocean", tag: "Rolling waves", glyph: "🌊", tint: "#4fc4d0", pack: "nature", bed: true },
   { id: "forest", name: "Forest", tag: "Calm woodland", glyph: "🌲", tint: "#79c88a", pack: "nature", bed: true },
   { id: "fire", name: "Fire", tag: "Crackling hearth", glyph: "🔥", tint: "#ff8a5c", pack: "nature", bed: true },
+  // Seasonal: a haunted hollow — howling wind, an uneasy drone, a faint whine and the odd distant moan.
+  { id: "haunt", name: "Haunt", tag: "Spooky hollow", glyph: "🎃", tint: "#ff7a1e", free: true, bed: true, season: "halloween" },
 ];
 const SOUND_BY_ID = Object.fromEntries(SOUND.map((s) => [s.id, s]));
 function soundChip(id, size) {
@@ -234,6 +236,14 @@ const ORBS = {
   blossom: { name: "Blossom", tag: "Rose petals",   kind: "image", src: "/assets/orb-swirl-b.webp", price: 0.5, zoom: 1.5, noBubble: true, hue: 90,  sat: 1.12, ring: ["#ff8fbf", "#ff6ea0", "#ffa8d8"], bg: "radial-gradient(125% 120% at 50% 16%, #2a1024 0%, #150813 58%, #0a040b 100%)" },
   glacier: { name: "Glacier", tag: "Icy current",   kind: "image", src: "/assets/orb-swirl-c.webp", price: 0.5, zoom: 1.5, noBubble: true, hue: 310, sat: 1.1,  ring: ["#5ee0ff", "#66d6e6", "#7fb8ff"], bg: "radial-gradient(125% 120% at 50% 16%, #0a2432 0%, #06131c 58%, #03080e 100%)" },
   nebula:  { name: "Nebula",  tag: "Cosmic violet", kind: "image", src: "/assets/orb-swirl-d.webp", price: 0.5, zoom: 1.5, noBubble: true, hue: 55,  sat: 1.12, ring: ["#b46eff", "#8a6eff", "#ff6ecd"], bg: "radial-gradient(125% 120% at 50% 16%, #1c1038 0%, #0e0722 58%, #060310 100%)" },
+  // Seasonal — a Halloween "spirit" sphere: a swirling cloud of glowing embers over a haunted, animated
+  // night (drifting fog, rising embers, a candle flicker). Free for the season; comes paired with the
+  // "Haunt" spooky sound. Three colours: Pumpkin, Phantom (green), Blood (red).
+  hallow: { name: "Hallow", tag: "Spooky season", kind: "particles", price: 0, season: "halloween", animBg: "haunt", pairSound: "haunt", palettes: [
+    { name: "Pumpkin", top: [255, 150, 40], mid: [255, 110, 30], bot: [150, 60, 200], ring: ["#ff9a2e", "#ff7a1e", "#9a4fff"], bg: "radial-gradient(120% 120% at 50% 26%, #1c0e02 0%, #0c0514 58%, #050108 100%)" },
+    { name: "Phantom", top: [160, 245, 95], mid: [90, 210, 120], bot: [40, 120, 150], ring: ["#9af05a", "#5ad08a", "#3aa0b0"], bg: "radial-gradient(120% 120% at 50% 26%, #07160c 0%, #050f12 58%, #02070a 100%)" },
+    { name: "Blood", top: [255, 80, 60], mid: [210, 40, 60], bot: [110, 30, 150], ring: ["#ff5a4a", "#d8324a", "#8a3fd0"], bg: "radial-gradient(120% 120% at 50% 26%, #1c0506 0%, #10040c 58%, #060108 100%)" },
+  ] },
   // Particle spheres — a rotating cloud of glowing dots on a deep black ground.
   // One particle "dust" orb with several colour selections (the old Solstice/Frost/Nova, plus a light
   // "Pearl" option on a whiter ground). Each palette carries its own particle colours, ring and ground;
@@ -255,11 +265,19 @@ const ORBS = {
   lagoon:   { name: "Lagoon",   tag: "Tidal rings",   kind: "image", src: "/assets/orb-lagoon.webp", price: 0.5, zoom: 1.1, hue: 0, ring: ["#5ec8ff", "#4fd0c0", "#bfeeff"], bg: "radial-gradient(125% 120% at 50% 20%, #06181f 0%, #04111a 58%, #02090f 100%)" },
   dusk:     { name: "Dusk",     tag: "Ember halo",    kind: "image", src: "/assets/orb-dusk.webp",   price: 0.5, zoom: 1.1, hue: 0, ring: ["#ff9a7a", "#ff6ea0", "#c79bff"], bg: "radial-gradient(125% 120% at 50% 20%, #140b16 0%, #0c0710 58%, #060309 100%)" },
 };
-const ORB_ORDER = ["aurora", "bloom", "ember", "verdant", "blossom", "glacier", "nebula", "iris", "dawn", "stardust", "wisp", "halo", "prism", "lagoon", "dusk"];
+const ORB_ORDER = ["aurora", "bloom", "hallow", "ember", "verdant", "blossom", "glacier", "nebula", "iris", "dawn", "stardust", "wisp", "halo", "prism", "lagoon", "dusk"];
 // Per-orb colour selections: hue-rotate offsets (degrees) layered on top of each image orb's own
 // hue, so every orb offers a few colours to pick from on the home screen — the way the coded
 // "Bloom" orb offers its themes. Index 0 (0°) is the orb's original colour.
 const ORB_TINTS = [0, 120, 240];
+// Seasonal "haunted" background embers: fixed positions/sizes/timings (so the layout is stable across
+// renders). Each rises and fades on its own loop. Used only by the Hallow orb's animated night.
+const EMBERS = [
+  { l: 12, s: 7, d: 9.0, delay: 0.0 }, { l: 24, s: 5, d: 11.0, delay: 2.5 }, { l: 38, s: 8, d: 8.5, delay: 5.0 },
+  { l: 50, s: 5, d: 10.5, delay: 1.2 }, { l: 62, s: 7, d: 9.5, delay: 3.6 }, { l: 74, s: 6, d: 12.0, delay: 6.0 },
+  { l: 86, s: 5, d: 10.0, delay: 0.8 }, { l: 18, s: 4, d: 13.0, delay: 7.5 }, { l: 44, s: 6, d: 11.5, delay: 4.4 },
+  { l: 68, s: 4, d: 12.5, delay: 8.2 }, { l: 92, s: 6, d: 9.0, delay: 2.0 }, { l: 6, s: 5, d: 11.0, delay: 5.7 },
+];
 // Rotate the hue of a single #rrggbb colour by `deg` degrees (via HSL).
 function rotateHexHue(hex, deg) {
   let r = parseInt(hex.slice(1, 3), 16) / 255, g = parseInt(hex.slice(3, 5), 16) / 255, b = parseInt(hex.slice(5, 7), 16) / 255;
@@ -579,6 +597,28 @@ function createSoundscape(id, ctx, master, reverb, buffers, mode, selfPlay) {
     // clustered crackle: 1-4 soft pops per burst (rare louder one), with real gaps between bursts.
     const burst = () => { const n = 1 + (Math.random() * 3 | 0); for (let i = 0; i < n; i++) timers.push(setTimeout(() => { if (!stopped) pop(0.04 + (Math.random() < 0.18 ? Math.random() * 0.14 : Math.random() * 0.04)); }, i * (30 + Math.random() * 90))); };
     every(() => { if (Math.random() < 0.72) burst(); }, () => 320 + Math.random() * 900);
+  } else if (id === "haunt") {
+    // Haunted hollow: a low wind howl (brown noise through an LFO-swept lowpass), an uneasy detuned
+    // drone with slow vibrato, a faint high whine, and the occasional distant moan. Eerie but calm.
+    wet.gain.value = 0.5;
+    const bns = ctx.createBufferSource(); bns.buffer = buffers.brown; bns.loop = true;
+    const wlp = ctx.createBiquadFilter(); wlp.type = "lowpass"; wlp.frequency.value = 480; wlp.Q.value = 0.9;
+    const wg = ctx.createGain(); wg.gain.value = 0.0001; bns.connect(wlp); wlp.connect(wg); wg.connect(bus); wg.connect(wet); startSrc(bns); fades.push(wg);
+    wg.gain.exponentialRampToValueAtTime(mode === "sleep" ? 0.5 : 0.62, ctx.currentTime + 4);
+    const wlfo = ctx.createOscillator(); wlfo.type = "sine"; wlfo.frequency.value = 0.07; const wlg = ctx.createGain(); wlg.gain.value = 260; wlfo.connect(wlg); wlg.connect(wlp.frequency); startSrc(wlfo);
+    // uneasy drone: a low detuned pair plus a dissonant tritone, through a lowpass, with slow vibrato
+    const dlp = ctx.createBiquadFilter(); dlp.type = "lowpass"; dlp.frequency.value = 420;
+    const dg = ctx.createGain(); dg.gain.value = 0.0001; dlp.connect(dg); dg.connect(bus); dg.connect(wet); fades.push(dg);
+    const vib = ctx.createOscillator(); vib.type = "sine"; vib.frequency.value = 0.13; const vibg = ctx.createGain(); vibg.gain.value = 5; vib.connect(vibg); startSrc(vib);
+    [55, 55.6, 77.78].forEach((f, i) => { const o = ctx.createOscillator(); o.type = i === 2 ? "triangle" : "sine"; o.frequency.value = f; vibg.connect(o.detune); o.connect(dlp); startSrc(o); });
+    dg.gain.exponentialRampToValueAtTime(mode === "sleep" ? 0.09 : 0.12, ctx.currentTime + 6);
+    // faint high whine (very quiet, slowly wavering)
+    const wh = ctx.createOscillator(); wh.type = "sine"; wh.frequency.value = 1190; const whg = ctx.createGain(); whg.gain.value = 0.0001; wh.connect(whg); whg.connect(wet); startSrc(wh); fades.push(whg); whg.gain.exponentialRampToValueAtTime(0.009, ctx.currentTime + 7);
+    const whlfo = ctx.createOscillator(); whlfo.type = "sine"; whlfo.frequency.value = 0.09; const whlg = ctx.createGain(); whlg.gain.value = 70; whlfo.connect(whlg); whlg.connect(wh.frequency); startSrc(whlfo);
+    // occasional distant moan: a low tone that swells and bends downward, rare
+    const moan = () => { const t0 = ctx.currentTime; const o = ctx.createOscillator(); o.type = "sine"; const f = 120 + Math.random() * 70; o.frequency.setValueAtTime(f, t0); o.frequency.exponentialRampToValueAtTime(f * 0.6, t0 + 3.2); const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(mode === "sleep" ? 0.03 : 0.05, t0 + 1.2); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 3.4); o.connect(g); g.connect(wet); g.connect(bus); o.start(t0); o.stop(t0 + 3.6); };
+    every(() => { if (Math.random() < 0.6) moan(); }, () => 7000 + Math.random() * 9000);
+    api.onPhase = (phase) => { const t = ctx.currentTime; const tgt = phase.key === "inhale" ? 0.7 : phase.key === "exhale" ? 0.46 : 0.58; const g = wg.gain; g.cancelScheduledValues(t); g.setValueAtTime(Math.max(g.value, 0.0001), t); g.linearRampToValueAtTime(mode === "sleep" ? tgt * 0.8 : tgt, t + phase.dur * 0.9); };
   } else { // bowls (default)
     wet.gain.value = 0.5;
     const cfg = mode === "sleep" ? { f: [98, 146.83, 196], lo: 280, hi: 520, peak: 0.16, low: 0.05, noise: 0.016, nf: 320, bin: 396, bout: 264, vol: 0.05 } : { f: [146.83, 220, 293.66], lo: 480, hi: 940, peak: 0.2, low: 0.06, noise: 0.012, nf: 520, bin: 528, bout: 396, vol: 0.085 };
@@ -755,7 +795,7 @@ export default function Lull() {
   useEffect(() => { try { localStorage.setItem("lull.bundleOwned.v1", bundleOwned ? "1" : "0"); } catch (e) {} }, [bundleOwned]);
   // Notice a return after a few days away — a warm hello, never a guilt trip. Updates last-seen each open.
   useEffect(() => { try { const k = "lull.lastSeen.v1"; const prev = parseInt(localStorage.getItem(k) || "0", 10); const now = Date.now(); if (prev && (now - prev) >= 3 * 864e5) setWelcomeBack(true); localStorage.setItem(k, String(now)); } catch (e) {} }, []);
-  const selectOrb = (id) => { if (orbOwned(id)) { setOrbId(id); setOrbStoreOpen(false); } };
+  const selectOrb = (id) => { if (orbOwned(id)) { setOrbId(id); const ps = ORBS[id] && ORBS[id].pairSound; if (ps && soundOwned(ps)) setScapeId(ps); setOrbStoreOpen(false); } };
   // Single seam for buying an orb. Today it unlocks locally; real charging (Apple In-App Purchase
   // on iOS, Stripe on web) drops in here — await the receipt, then unlock on success.
   const unlockOrb = (id) => { setOwnedOrbs((prev) => (prev.includes(id) ? prev : [...prev, id])); setOrbId(id); };
@@ -1109,6 +1149,7 @@ export default function Lull() {
   const pats = PATTERNS[mode];
 
   const selectedOrb = ORBS[orbId] || ORBS.aurora;
+  const haunted = selectedOrb.animBg === "haunt"; // seasonal Hallow orb: animated haunted night behind the orb
   const orbTintDeg = selectedOrb.kind === "image" ? (orbTint[orbId] || 0) : 0; // chosen colour offset for this orb
   const effOrbHue = (selectedOrb.hue || 0) + orbTintDeg;
   // Multi-palette orbs (the particle "dust" orb) pick their active palette from the per-orb selection.
@@ -1169,6 +1210,10 @@ export default function Lull() {
     @keyframes bloomSpin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
     @keyframes hueBreath { 0%,100% { filter: saturate(1) brightness(1);} 50% { filter: saturate(1.16) brightness(1.04);} }
     @keyframes orbGlow { 0%,100% { filter: brightness(1) saturate(1);} 50% { filter: brightness(1.09) saturate(1.06);} }
+    /* Seasonal haunted night (Hallow orb): embers rising, a candle-like flicker, bats drifting across. */
+    @keyframes emberRise { 0% { transform: translate(0,0) scale(1); opacity: 0; } 12% { opacity: 0.9; } 70% { opacity: 0.62; } 100% { transform: translate(24px,-108vh) scale(0.35); opacity: 0; } }
+    @keyframes hauntFlicker { 0%,100% { opacity: 0.72; } 22% { opacity: 1; } 38% { opacity: 0.56; } 55% { opacity: 0.95; } 72% { opacity: 0.64; } 88% { opacity: 0.9; } }
+    @keyframes batFly { 0% { transform: translate(-12vw,0) rotate(0deg); } 50% { transform: translate(52vw,-34px) rotate(5deg); } 100% { transform: translate(120vw,8px) rotate(0deg); } }
     /* Negative delay starts the breath ~a quarter in (mid-inhale, moving fast) so it never
        stalls small at the beginning; larger amplitude so the resting breath is clearly visible. */
     .orb-idle { animation: orbIdle 6.5s ease-in-out -1.6s infinite; }
@@ -1262,9 +1307,9 @@ export default function Lull() {
         </defs>
       </svg>
 
-      <div className="amb1" style={{ position: "absolute", top: "-10%", left: "-15%", width: 520, height: 520, borderRadius: "50%", background: amb1, filter: "blur(20px)", zIndex: 0, opacity: selectedOrb.bg ? 0 : 1, transition: "background 1.4s ease, opacity 1.2s ease" }} />
-      <div className="amb2" style={{ position: "absolute", bottom: "-12%", right: "-18%", width: 560, height: 560, borderRadius: "50%", background: amb2, filter: "blur(20px)", zIndex: 0, opacity: selectedOrb.bg ? 0 : 1, transition: "background 1.4s ease, opacity 1.2s ease" }} />
-      <div style={{ position: "absolute", inset: 0, background: isCool ? tintCool : tintWarm, opacity: selectedOrb.bg ? 0 : 1, transition: "background 1.5s ease, opacity 1.2s ease", zIndex: 1, pointerEvents: "none" }} />
+      <div className="amb1" style={{ position: "absolute", top: "-10%", left: "-15%", width: 520, height: 520, borderRadius: "50%", background: amb1, filter: "blur(20px)", zIndex: 0, opacity: (selectedOrb.bg || haunted) ? 0 : 1, transition: "background 1.4s ease, opacity 1.2s ease" }} />
+      <div className="amb2" style={{ position: "absolute", bottom: "-12%", right: "-18%", width: 560, height: 560, borderRadius: "50%", background: amb2, filter: "blur(20px)", zIndex: 0, opacity: (selectedOrb.bg || haunted) ? 0 : 1, transition: "background 1.4s ease, opacity 1.2s ease" }} />
+      <div style={{ position: "absolute", inset: 0, background: isCool ? tintCool : tintWarm, opacity: (selectedOrb.bg || haunted) ? 0 : 1, transition: "background 1.5s ease, opacity 1.2s ease", zIndex: 1, pointerEvents: "none" }} />
       {/* Light orb: slowly-drifting pastel blobs give the bright ground gentle motion (disabled by reduced-motion via .amb classes). */}
       {isLight && (<>
         <div className="amb1" style={{ position: "absolute", top: "-14%", left: "-12%", width: 560, height: 560, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,170,205,0.55), rgba(255,170,205,0) 70%)", filter: "blur(46px)", zIndex: 0, pointerEvents: "none" }} />
@@ -1272,6 +1317,22 @@ export default function Lull() {
         <div className="amb1" style={{ position: "absolute", top: "34%", right: "-14%", width: 460, height: 460, borderRadius: "50%", background: "radial-gradient(circle, rgba(170,235,200,0.5), rgba(170,235,200,0) 70%)", filter: "blur(50px)", zIndex: 0, pointerEvents: "none", animationDelay: "-9s" }} />
         <div className="amb2" style={{ position: "absolute", bottom: "30%", left: "-12%", width: 480, height: 480, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,215,165,0.5), rgba(255,215,165,0) 70%)", filter: "blur(50px)", zIndex: 0, pointerEvents: "none", animationDelay: "-15s" }} />
       </>)}
+      {/* Seasonal haunted night behind the Hallow orb: drifting fog, rising embers, a candle flicker, bats. */}
+      {haunted && (
+        <div aria-hidden="true" style={{ position: "absolute", inset: 0, zIndex: 0, overflow: "hidden", pointerEvents: "none" }}>
+          <div className="amb1" style={{ position: "absolute", top: "-12%", left: "-18%", width: 580, height: 580, borderRadius: "50%", background: "radial-gradient(circle, rgba(120,60,185,0.34), rgba(120,60,185,0) 70%)", filter: "blur(52px)" }} />
+          <div className="amb2" style={{ position: "absolute", bottom: "-16%", right: "-16%", width: 620, height: 620, borderRadius: "50%", background: "radial-gradient(circle, rgba(90,190,80,0.24), rgba(90,190,80,0) 70%)", filter: "blur(56px)" }} />
+          <div className="amb1" style={{ position: "absolute", top: "40%", left: "-20%", width: 480, height: 480, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,120,30,0.22), rgba(255,120,30,0) 70%)", filter: "blur(52px)", animationDelay: "-11s" }} />
+          {!prefersReduced && EMBERS.map((e, i) => (
+            <div key={i} style={{ position: "absolute", left: e.l + "%", bottom: "-5%", width: e.s, height: e.s, borderRadius: "50%", background: "radial-gradient(circle, #ffe3a6 0%, #ff8a1e 55%, rgba(255,120,30,0) 75%)", boxShadow: "0 0 10px rgba(255,150,50,0.8)", animation: `emberRise ${e.d}s ${e.delay}s ease-in infinite`, opacity: 0 }} />
+          ))}
+          <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "42%", background: "radial-gradient(62% 100% at 50% 122%, rgba(255,140,40,0.3), rgba(255,140,40,0) 72%)", animation: prefersReduced ? "none" : "hauntFlicker 3.8s ease-in-out infinite" }} />
+          {!prefersReduced && (<>
+            <div style={{ position: "absolute", top: "14%", left: 0, fontSize: 30, lineHeight: 1, opacity: 0.5, animation: "batFly 27s linear infinite" }}>🦇</div>
+            <div style={{ position: "absolute", top: "22%", left: 0, fontSize: 20, lineHeight: 1, opacity: 0.4, animation: "batFly 35s linear 7s infinite" }}>🦇</div>
+          </>)}
+        </div>
+      )}
 
       <div style={frame}>
         <div style={{ position: "relative", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 36, marginBottom: 8 }}>
