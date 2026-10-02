@@ -239,7 +239,7 @@ const ORBS = {
   // Seasonal — a Halloween "spirit" sphere: a swirling cloud of glowing embers over a haunted, animated
   // night (drifting fog, rising embers, a candle flicker). Free for the season; comes paired with the
   // "Haunt" spooky sound. Three colours: Pumpkin, Phantom (green), Blood (red).
-  hallow: { name: "Hallow", tag: "Spooky season", kind: "video", vsrc: "/assets/orb-wisp.mp4", poster: "/assets/orb-wisp.webp", price: 0, zoom: 1, noBubble: true, noTint: true, hue: 0, sat: 1.0, season: "halloween", animBg: "haunt", pairSound: "haunt", ring: ["#7fe6ff", "#8fb6ff", "#b89cff"], bg: "radial-gradient(125% 120% at 50% 16%, #081018 0%, #050a14 58%, #02060e 100%)" },
+  hallow: { name: "Hallow", tag: "Spooky season", kind: "video", vsrc: "/assets/orb-hallow.mp4", poster: "/assets/orb-hallow.webp", price: 0, zoom: 1, noBubble: true, noTint: true, hue: 0, sat: 1.0, season: "halloween", animBg: "haunt", pairSound: "haunt", ring: ["#7fe6ff", "#8fb6ff", "#b89cff"], bg: "radial-gradient(125% 120% at 50% 16%, #081018 0%, #050a14 58%, #02060e 100%)" },
   // Particle spheres — a rotating cloud of glowing dots on a deep black ground.
   // One particle "dust" orb with several colour selections (the old Solstice/Frost/Nova, plus a light
   // "Pearl" option on a whiter ground). Each palette carries its own particle colours, ring and ground;
@@ -1213,7 +1213,6 @@ export default function Lull() {
     /* Seasonal haunted night (Hallow orb): embers rising, a candle-like flicker, bats drifting across. */
     @keyframes emberRise { 0% { transform: translate(0,0) scale(1); opacity: 0; } 12% { opacity: 0.9; } 70% { opacity: 0.62; } 100% { transform: translate(24px,-108vh) scale(0.35); opacity: 0; } }
     @keyframes hauntFlicker { 0%,100% { opacity: 0.72; } 22% { opacity: 1; } 38% { opacity: 0.56; } 55% { opacity: 0.95; } 72% { opacity: 0.64; } 88% { opacity: 0.9; } }
-    @keyframes batFly { 0% { transform: translate(-12vw,0) rotate(0deg); } 50% { transform: translate(52vw,-34px) rotate(5deg); } 100% { transform: translate(120vw,8px) rotate(0deg); } }
     /* Negative delay starts the breath ~a quarter in (mid-inhale, moving fast) so it never
        stalls small at the beginning; larger amplitude so the resting breath is clearly visible. */
     .orb-idle { animation: orbIdle 6.5s ease-in-out -1.6s infinite; }
@@ -1327,10 +1326,6 @@ export default function Lull() {
             <div key={i} style={{ position: "absolute", left: e.l + "%", bottom: "-5%", width: e.s, height: e.s, borderRadius: "50%", background: "radial-gradient(circle, #e6f8ff 0%, #8fd6ff 55%, rgba(120,200,255,0) 75%)", boxShadow: "0 0 10px rgba(150,210,255,0.8)", animation: `emberRise ${e.d}s ${e.delay}s ease-in infinite`, opacity: 0 }} />
           ))}
           <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "42%", background: "radial-gradient(62% 100% at 50% 122%, rgba(120,180,255,0.24), rgba(120,180,255,0) 72%)", animation: prefersReduced ? "none" : "hauntFlicker 3.8s ease-in-out infinite" }} />
-          {!prefersReduced && (<>
-            <div style={{ position: "absolute", top: "14%", left: 0, fontSize: 30, lineHeight: 1, opacity: 0.5, animation: "batFly 27s linear infinite" }}>🦇</div>
-            <div style={{ position: "absolute", top: "22%", left: 0, fontSize: 20, lineHeight: 1, opacity: 0.4, animation: "batFly 35s linear 7s infinite" }}>🦇</div>
-          </>)}
         </div>
       )}
 
@@ -1360,7 +1355,7 @@ export default function Lull() {
           <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, width: "100%", opacity: dim, transition: "opacity 1.2s ease" }}>
             <div style={{ position: "relative", width: S, height: S, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width={S} height={S} style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)", zIndex: 3, pointerEvents: "none" }}>
-                <circle cx={S / 2} cy={S / 2} r={R} fill="none" stroke={inkA(0.14)} strokeWidth={2} />
+                <circle cx={S / 2} cy={S / 2} r={R} fill="none" stroke={inkA(0.14)} strokeWidth={2} style={{ opacity: active || screen === "done" ? 1 : 0, transition: "opacity .6s ease" }} />
                 <circle cx={S / 2} cy={S / 2} r={R} fill="none" stroke="url(#ring)" strokeWidth={3} strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - (active ? progress : screen === "done" ? 1 : 0))} style={{ transition: "stroke-dashoffset .3s linear", opacity: active || screen === "done" ? 1 : 0 }} />
                 <defs><linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">{ringColors.map((c, i, a) => (<stop key={i} offset={`${a.length === 1 ? 0 : (i / (a.length - 1)) * 100}%`} stopColor={c} />))}</linearGradient></defs>
               </svg>
