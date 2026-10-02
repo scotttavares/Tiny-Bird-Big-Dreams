@@ -239,7 +239,7 @@ const ORBS = {
   // Seasonal — a Halloween "spirit" sphere: a swirling cloud of glowing embers over a haunted, animated
   // night (drifting fog, rising embers, a candle flicker). Free for the season; comes paired with the
   // "Haunt" spooky sound. Three colours: Pumpkin, Phantom (green), Blood (red).
-  hallow: { name: "Hallow", tag: "Spooky season", kind: "image", src: "/assets/orb-seance.webp", price: 0, zoom: 1, noBubble: true, noTint: true, hue: -30, sat: 1.0, season: "halloween", animBg: "haunt", pairSound: "haunt", ring: ["#7fe6ff", "#8fb6ff", "#b89cff"], bg: "radial-gradient(125% 120% at 50% 16%, #081018 0%, #050a14 58%, #02060e 100%)" },
+  hallow: { name: "Hallow", tag: "Spooky season", kind: "video", vsrc: "/assets/orb-wisp.mp4", poster: "/assets/orb-wisp.webp", price: 0, zoom: 1, noBubble: true, noTint: true, hue: 0, sat: 1.0, season: "halloween", animBg: "haunt", pairSound: "haunt", ring: ["#7fe6ff", "#8fb6ff", "#b89cff"], bg: "radial-gradient(125% 120% at 50% 16%, #081018 0%, #050a14 58%, #02060e 100%)" },
   // Particle spheres — a rotating cloud of glowing dots on a deep black ground.
   // One particle "dust" orb with several colour selections (the old Solstice/Frost/Nova, plus a light
   // "Pearl" option on a whiter ground). Each palette carries its own particle colours, ring and ground;
@@ -337,6 +337,7 @@ function fmtPrice(p) { return p ? "$" + p.toFixed(2) : "Free"; }
 function orbChip(id, size, hueAdd) {
   const o = ORBS[id] || ORBS.aurora;
   const base = { width: size, height: size, borderRadius: "50%", flex: "0 0 auto", overflow: "hidden", boxShadow: "0 2px 10px rgba(0,0,0,0.22)" };
+  if (o.kind === "video") return <div style={base}><img src={o.poster} alt="" draggable="false" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /></div>;
   if (o.thumb) return <div style={base}><img src={o.thumb} alt="" draggable="false" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /></div>;
   if (o.kind === "image") { const h = (o.hue || 0) + (hueAdd || 0); return <div style={base}><img src={o.src} alt="" draggable="false" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: o.zoom ? `scale(${o.zoom})` : undefined, transformOrigin: "center", filter: h ? `hue-rotate(${h}deg) saturate(${o.sat || 1.1})` : undefined }} /></div>; }
   if (o.kind === "particles") { const pal = o.palettes ? (o.palettes[hueAdd || 0] || o.palettes[0]) : o.palette; if (pal.thumb) return <div style={base}><img src={pal.thumb} alt="" draggable="false" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /></div>; const t = pal.top.join(","), bt = pal.bot.join(","); if (pal.light) return <div style={{ ...base, background: `radial-gradient(58% 52% at 50% 36%, rgba(${t},0.85), transparent 60%), radial-gradient(52% 48% at 50% 72%, rgba(${pal.mid.join(",")},0.5), transparent 60%), #ece7f5` }} />; return <div style={{ ...base, background: `radial-gradient(58% 52% at 50% 33%, rgba(${t},0.95), transparent 62%), radial-gradient(54% 50% at 50% 78%, rgba(${bt},0.92), transparent 62%), #060409` }} />; }
@@ -757,6 +758,7 @@ export default function Lull() {
   const soundOnlyRef = useRef(false); const sessionScapeRef = useRef(null); // sound-only sleep: no breathing, a forced bed
   const purchasesRef = useRef(null); const iapBusyRef = useRef(false); // RevenueCat handle + in-flight guard
   const particleRef = useRef(null);
+  const orbVideoRef = useRef(null); // the looping video element for a "video" orb
   const moodBeforeRef = useRef(null); const pendingStartRef = useRef(null); // carry the pre-session mood + intent through the check-in
   const readyTimers = useRef([]); // pending "get ready" countdown timeouts
   // Drive the particle-sphere canvas while a particle orb is selected; clean up on change/unmount.
@@ -782,6 +784,8 @@ export default function Lull() {
   useEffect(() => { soundRef.current = soundOn; }, [soundOn]);
   useEffect(() => { modeRef.current = mode; }, [mode]);
   useEffect(() => { patternIdRef.current = patternId; }, [patternId]);
+  // Make sure a "video" orb keeps playing its loop when it becomes the selected orb.
+  useEffect(() => { const v = orbVideoRef.current; if (v) { try { const p = v.play(); if (p && p.catch) p.catch(() => {}); } catch (e) {} } }, [orbId]);
   useEffect(() => { scapeIdRef.current = scapeId; try { localStorage.setItem("lull.scape.v1", scapeId); } catch (e) {} }, [scapeId]);
   useEffect(() => { sleepScapeIdRef.current = sleepScapeId; try { localStorage.setItem("lull.sleepScape.v1", sleepScapeId); } catch (e) {} }, [sleepScapeId]);
   useEffect(() => { try { localStorage.setItem(ORB_KEY, orbId); } catch (e) {} }, [orbId]);
@@ -1428,6 +1432,12 @@ export default function Lull() {
                 ) : selectedOrb.kind === "particles" ? (
                   <div style={{ position: "absolute", inset: 0, borderRadius: "50%", overflow: "hidden", zIndex: 2, filter: active ? (isCool ? "brightness(1.12) saturate(1.05)" : "brightness(0.92)") : undefined, animation: (idle && !prefersReduced) ? "orbGlow 8s ease-in-out infinite" : "none", transition: active ? `filter ${orb.dur}s ${orb.ease || "ease"}` : "filter 1s ease" }}>
                     <canvas ref={particleRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: "block" }} />
+                  </div>
+                ) : selectedOrb.kind === "video" ? (
+                  <div style={{ position: "absolute", inset: 0, borderRadius: "50%", overflow: "hidden", isolation: "isolate", zIndex: 2, WebkitMaskImage: imgMask, maskImage: imgMask, filter: active ? (isCool ? "brightness(1.12) saturate(1.06)" : "brightness(0.92) saturate(1.0)") : undefined, animation: (idle && !prefersReduced) ? "orbGlow 7s ease-in-out infinite" : "none", transition: active ? `filter ${orb.dur}s ${orb.ease || "ease"}` : "filter 1s ease" }}>
+                    <div style={{ position: "absolute", inset: 0, transform: imgZoom !== 1 ? `scale(${imgZoom})` : undefined, transformOrigin: "center", filter: effOrbHue ? `hue-rotate(${effOrbHue}deg) saturate(${selectedOrb.sat || 1.1})` : undefined }}>
+                      <video ref={orbVideoRef} src={selectedOrb.vsrc} poster={selectedOrb.poster} autoPlay loop muted playsInline preload="auto" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block", pointerEvents: "none" }} />
+                    </div>
                   </div>
                 ) : selectedOrb.kind === "image" ? (
                   <div style={{ position: "absolute", inset: 0, borderRadius: "50%", overflow: "hidden", isolation: "isolate", zIndex: 2, WebkitMaskImage: imgMask, maskImage: imgMask, filter: active ? (isCool ? "brightness(1.13) saturate(1.06)" : "brightness(0.9) saturate(1.0)") : undefined, animation: (idle && !prefersReduced) ? "orbGlow 7s ease-in-out infinite" : "none", transition: active ? `filter ${orb.dur}s ${orb.ease || "ease"}` : "filter 1s ease" }}>
