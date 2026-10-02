@@ -239,7 +239,7 @@ const ORBS = {
   // Seasonal — a Halloween "spirit" sphere: a swirling cloud of glowing embers over a haunted, animated
   // night (drifting fog, rising embers, a candle flicker). Free for the season; comes paired with the
   // "Haunt" spooky sound. Three colours: Pumpkin, Phantom (green), Blood (red).
-  hallow: { name: "Hallow", tag: "Spooky season", kind: "image", src: "/assets/orb-seance.webp", price: 0, zoom: 1, noBubble: true, hue: 0, sat: 1.04, season: "halloween", animBg: "haunt", pairSound: "haunt", ring: ["#8ff0c6", "#7fd0ff", "#c6a0ff"], bg: "radial-gradient(125% 120% at 50% 16%, #0c1420 0%, #070b16 58%, #03060e 100%)" },
+  hallow: { name: "Hallow", tag: "Spooky season", kind: "image", src: "/assets/orb-seance.webp", price: 0, zoom: 1, noBubble: true, noTint: true, hue: -30, sat: 1.0, season: "halloween", animBg: "haunt", pairSound: "haunt", ring: ["#7fe6ff", "#8fb6ff", "#b89cff"], bg: "radial-gradient(125% 120% at 50% 16%, #081018 0%, #050a14 58%, #02060e 100%)" },
   // Particle spheres — a rotating cloud of glowing dots on a deep black ground.
   // One particle "dust" orb with several colour selections (the old Solstice/Frost/Nova, plus a light
   // "Pearl" option on a whiter ground). Each palette carries its own particle colours, ring and ground;
@@ -1317,12 +1317,12 @@ export default function Lull() {
       {haunted && (
         <div aria-hidden="true" style={{ position: "absolute", inset: 0, zIndex: 0, overflow: "hidden", pointerEvents: "none" }}>
           <div className="amb1" style={{ position: "absolute", top: "-12%", left: "-18%", width: 580, height: 580, borderRadius: "50%", background: "radial-gradient(circle, rgba(120,60,185,0.34), rgba(120,60,185,0) 70%)", filter: "blur(52px)" }} />
-          <div className="amb2" style={{ position: "absolute", bottom: "-16%", right: "-16%", width: 620, height: 620, borderRadius: "50%", background: "radial-gradient(circle, rgba(90,190,80,0.24), rgba(90,190,80,0) 70%)", filter: "blur(56px)" }} />
-          <div className="amb1" style={{ position: "absolute", top: "40%", left: "-20%", width: 480, height: 480, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,120,30,0.22), rgba(255,120,30,0) 70%)", filter: "blur(52px)", animationDelay: "-11s" }} />
+          <div className="amb2" style={{ position: "absolute", bottom: "-16%", right: "-16%", width: 620, height: 620, borderRadius: "50%", background: "radial-gradient(circle, rgba(70,180,205,0.24), rgba(70,180,205,0) 70%)", filter: "blur(56px)" }} />
+          <div className="amb1" style={{ position: "absolute", top: "40%", left: "-20%", width: 480, height: 480, borderRadius: "50%", background: "radial-gradient(circle, rgba(80,120,220,0.22), rgba(80,120,220,0) 70%)", filter: "blur(52px)", animationDelay: "-11s" }} />
           {!prefersReduced && EMBERS.map((e, i) => (
-            <div key={i} style={{ position: "absolute", left: e.l + "%", bottom: "-5%", width: e.s, height: e.s, borderRadius: "50%", background: "radial-gradient(circle, #ffe3a6 0%, #ff8a1e 55%, rgba(255,120,30,0) 75%)", boxShadow: "0 0 10px rgba(255,150,50,0.8)", animation: `emberRise ${e.d}s ${e.delay}s ease-in infinite`, opacity: 0 }} />
+            <div key={i} style={{ position: "absolute", left: e.l + "%", bottom: "-5%", width: e.s, height: e.s, borderRadius: "50%", background: "radial-gradient(circle, #e6f8ff 0%, #8fd6ff 55%, rgba(120,200,255,0) 75%)", boxShadow: "0 0 10px rgba(150,210,255,0.8)", animation: `emberRise ${e.d}s ${e.delay}s ease-in infinite`, opacity: 0 }} />
           ))}
-          <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "42%", background: "radial-gradient(62% 100% at 50% 122%, rgba(255,140,40,0.3), rgba(255,140,40,0) 72%)", animation: prefersReduced ? "none" : "hauntFlicker 3.8s ease-in-out infinite" }} />
+          <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "42%", background: "radial-gradient(62% 100% at 50% 122%, rgba(120,180,255,0.24), rgba(120,180,255,0) 72%)", animation: prefersReduced ? "none" : "hauntFlicker 3.8s ease-in-out infinite" }} />
           {!prefersReduced && (<>
             <div style={{ position: "absolute", top: "14%", left: 0, fontSize: 30, lineHeight: 1, opacity: 0.5, animation: "batFly 27s linear infinite" }}>🦇</div>
             <div style={{ position: "absolute", top: "22%", left: 0, fontSize: 20, lineHeight: 1, opacity: 0.4, animation: "batFly 35s linear 7s infinite" }}>🦇</div>
@@ -1508,7 +1508,7 @@ export default function Lull() {
                 <button key={id} className="lull-dot lull-btn" aria-label={`Orb colour: ${t.name}`} aria-pressed={sel} title={t.name} onClick={() => setThemeId(id)} style={{ width: 30, height: 30, borderRadius: "50%", padding: 0, backgroundImage: t.swatch, border: "1px solid " + wa(0.3), boxShadow: sel ? (lightUI ? "0 0 0 2px rgba(70,50,140,0.8), 0 3px 12px rgba(80,60,140,0.25)" : "0 0 0 2px rgba(255,255,255,0.9), 0 3px 12px rgba(0,0,0,0.45)") : (lightUI ? "0 2px 8px rgba(80,60,140,0.2)" : "0 2px 8px rgba(0,0,0,0.35)"), transform: sel ? "scale(1.14)" : "scale(1)", transition: "transform .2s ease, box-shadow .2s ease" }} />); })}
             </div>
             )}
-            {selectedOrb.kind === "image" && selectedOrb.ring && (
+            {selectedOrb.kind === "image" && selectedOrb.ring && !selectedOrb.noTint && (
             <div style={{ display: "flex", gap: 12, justifyContent: "center", padding: "2px 0 4px" }}>
               {ORB_TINTS.map((off, i) => { const sel = (orbTint[orbId] || 0) === off; const r = selectedOrb.ring; return (
                 <button key={off} className="lull-dot lull-btn" aria-label={"Colour option " + (i + 1)} aria-pressed={sel} onClick={() => setOrbTint((p) => ({ ...p, [orbId]: off }))} style={{ width: 30, height: 30, borderRadius: "50%", padding: 0, backgroundImage: `linear-gradient(135deg, ${r[0]} 0%, ${r[1]} 50%, ${r[2]} 100%)`, filter: off ? `hue-rotate(${off}deg)` : undefined, border: "1px solid " + wa(0.3), boxShadow: sel ? (lightUI ? "0 0 0 2px rgba(70,50,140,0.8), 0 3px 12px rgba(80,60,140,0.25)" : "0 0 0 2px rgba(255,255,255,0.9), 0 3px 12px rgba(0,0,0,0.45)") : (lightUI ? "0 2px 8px rgba(80,60,140,0.2)" : "0 2px 8px rgba(0,0,0,0.35)"), transform: sel ? "scale(1.14)" : "scale(1)", transition: "transform .2s ease, box-shadow .2s ease" }} />); })}
