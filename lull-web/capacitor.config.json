@@ -1,0 +1,10 @@
+{
+  "appId": "com.tinybirdbigdreams.lull",
+  "appName": "Lull",
+  "webDir": "www",
+  "backgroundColor": "#0a0613",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#0a0613"
+  }
+}

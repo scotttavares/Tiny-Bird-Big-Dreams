@@ -4,3 +4,13 @@
 !.dev.vars.example
 .env*
 !.env.example
+
+# Lull web build deps
+lull-web/node_modules/
+lull-web/package-lock.json
+
+# Capacitor / iOS build (regenerated in CI each build)
+lull-web/www/
+lull-web/ios/
+lull-web/dist/
+.DS_Store
