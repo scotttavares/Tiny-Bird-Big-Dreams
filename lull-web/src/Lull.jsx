@@ -250,10 +250,8 @@ const ORBS = {
   // Aura Pack — premium generated "woven light-rings" orbs (image), each on its own deep ground.
   halo:     { name: "Halo",     tag: "Woven light",   kind: "image", src: "/assets/orb-halo.webp",   price: 0.5, zoom: 1.1, hue: 0, ring: ["#e0929e", "#8fb0e0", "#5ececf"], bg: "radial-gradient(125% 120% at 50% 20%, #0e1220 0%, #080b16 58%, #04060e 100%)" },
   prism:    { name: "Prism",    tag: "Spectrum halo", kind: "image", src: "/assets/orb-prism.webp",  price: 0.5, zoom: 1.1, hue: 0, ring: ["#ff9a9a", "#9be89b", "#7fb8ff"], bg: "radial-gradient(125% 120% at 50% 20%, #0b0910 0%, #070510 58%, #030208 100%)" },
-  lagoon:   { name: "Lagoon",   tag: "Tidal rings",   kind: "image", src: "/assets/orb-lagoon.webp", price: 0.5, zoom: 1.1, hue: 0, ring: ["#5ec8ff", "#4fd0c0", "#bfeeff"], bg: "radial-gradient(125% 120% at 50% 20%, #06181f 0%, #04111a 58%, #02090f 100%)" },
-  dusk:     { name: "Dusk",     tag: "Ember halo",    kind: "image", src: "/assets/orb-dusk.webp",   price: 0.5, zoom: 1.1, hue: 0, ring: ["#ff9a7a", "#ff6ea0", "#c79bff"], bg: "radial-gradient(125% 120% at 50% 20%, #140b16 0%, #0c0710 58%, #060309 100%)" },
 };
-const ORB_ORDER = ["aurora", "bloom", "ember", "verdant", "blossom", "iris", "dawn", "stardust", "wisp", "halo", "prism", "lagoon", "dusk"];
+const ORB_ORDER = ["aurora", "bloom", "ember", "verdant", "blossom", "iris", "dawn", "stardust", "wisp", "halo", "prism"];
 // Per-orb colour selections: hue-rotate offsets (degrees) layered on top of each image orb's own
 // hue, so every orb offers a few colours to pick from on the home screen — the way the coded
 // "Bloom" orb offers its themes. Index 0 (0°) is the orb's original colour.
@@ -287,7 +285,7 @@ function shiftGradientHue(str, deg) { return deg ? str.replace(/#[0-9a-fA-F]{6}/
 const PACKS = {
   swirls: { name: "Swirls Pack", tag: "Flowing colour orbs, each with its own sky", price: 0.99, orbs: ["ember", "verdant", "blossom", "iris", "dawn"] },
   cosmos: { name: "Cosmos Pack", tag: "Cosmic orbs on deep space", price: 0.99, orbs: ["stardust", "wisp"] },
-  aura: { name: "Aura Pack", tag: "Woven translucent light-rings", price: 0.99, orbs: ["halo", "prism", "lagoon", "dusk"] },
+  aura: { name: "Aura Pack", tag: "Woven translucent light-rings", price: 0.99, orbs: ["halo", "prism"] },
 };
 const PACK_ORDER = ["swirls", "cosmos", "aura"];
 const BUNDLE = { name: "Everything", tag: "Every orb and sound, plus every future one we add", price: 3.99 };
