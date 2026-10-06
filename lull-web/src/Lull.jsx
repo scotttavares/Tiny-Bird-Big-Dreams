@@ -232,8 +232,6 @@ const ORBS = {
   ember:   { name: "Ember",   tag: "Warm fire",     kind: "image", src: "/assets/orb-swirl-d.webp", price: 0.5, zoom: 1.5, noBubble: true, hue: 150, sat: 1.15, ring: ["#ffd27a", "#ff9a5c", "#ff5c7d"], bg: "radial-gradient(125% 120% at 50% 16%, #2a1208 0%, #150806 58%, #0a0403 100%)" },
   verdant: { name: "Verdant", tag: "Emerald bloom", kind: "image", src: "/assets/orb-swirl-c.webp", price: 0.5, zoom: 1.5, noBubble: true, hue: 260, sat: 1.12, ring: ["#7fe6a0", "#a8e86e", "#5ad0c0"], bg: "radial-gradient(125% 120% at 50% 16%, #0c2418 0%, #07140d 58%, #030b07 100%)" },
   blossom: { name: "Blossom", tag: "Rose petals",   kind: "image", src: "/assets/orb-swirl-b.webp", price: 0.5, zoom: 1.5, noBubble: true, hue: 90,  sat: 1.12, ring: ["#ff8fbf", "#ff6ea0", "#ffa8d8"], bg: "radial-gradient(125% 120% at 50% 16%, #2a1024 0%, #150813 58%, #0a040b 100%)" },
-  glacier: { name: "Glacier", tag: "Icy current",   kind: "image", src: "/assets/orb-swirl-c.webp", price: 0.5, zoom: 1.5, noBubble: true, hue: 310, sat: 1.1,  ring: ["#5ee0ff", "#66d6e6", "#7fb8ff"], bg: "radial-gradient(125% 120% at 50% 16%, #0a2432 0%, #06131c 58%, #03080e 100%)" },
-  nebula:  { name: "Nebula",  tag: "Cosmic violet", kind: "image", src: "/assets/orb-swirl-d.webp", price: 0.5, zoom: 1.5, noBubble: true, hue: 55,  sat: 1.12, ring: ["#b46eff", "#8a6eff", "#ff6ecd"], bg: "radial-gradient(125% 120% at 50% 16%, #1c1038 0%, #0e0722 58%, #060310 100%)" },
   // Particle spheres — a rotating cloud of glowing dots on a deep black ground.
   // One particle "dust" orb with several colour selections (the old Solstice/Frost/Nova, plus a light
   // "Pearl" option on a whiter ground). Each palette carries its own particle colours, ring and ground;
@@ -255,7 +253,7 @@ const ORBS = {
   lagoon:   { name: "Lagoon",   tag: "Tidal rings",   kind: "image", src: "/assets/orb-lagoon.webp", price: 0.5, zoom: 1.1, hue: 0, ring: ["#5ec8ff", "#4fd0c0", "#bfeeff"], bg: "radial-gradient(125% 120% at 50% 20%, #06181f 0%, #04111a 58%, #02090f 100%)" },
   dusk:     { name: "Dusk",     tag: "Ember halo",    kind: "image", src: "/assets/orb-dusk.webp",   price: 0.5, zoom: 1.1, hue: 0, ring: ["#ff9a7a", "#ff6ea0", "#c79bff"], bg: "radial-gradient(125% 120% at 50% 20%, #140b16 0%, #0c0710 58%, #060309 100%)" },
 };
-const ORB_ORDER = ["aurora", "bloom", "ember", "verdant", "blossom", "glacier", "nebula", "iris", "dawn", "stardust", "wisp", "halo", "prism", "lagoon", "dusk"];
+const ORB_ORDER = ["aurora", "bloom", "ember", "verdant", "blossom", "iris", "dawn", "stardust", "wisp", "halo", "prism", "lagoon", "dusk"];
 // Per-orb colour selections: hue-rotate offsets (degrees) layered on top of each image orb's own
 // hue, so every orb offers a few colours to pick from on the home screen — the way the coded
 // "Bloom" orb offers its themes. Index 0 (0°) is the orb's original colour.
@@ -287,7 +285,7 @@ function shiftGradientHue(str, deg) { return deg ? str.replace(/#[0-9a-fA-F]{6}/
 // (Apple In-App Purchase on iOS, Stripe on web) wires into unlockPack/unlockBundle — the same
 // seam as unlockOrb.
 const PACKS = {
-  swirls: { name: "Swirls Pack", tag: "Flowing colour orbs, each with its own sky", price: 0.99, orbs: ["ember", "verdant", "blossom", "glacier", "nebula", "iris", "dawn"] },
+  swirls: { name: "Swirls Pack", tag: "Flowing colour orbs, each with its own sky", price: 0.99, orbs: ["ember", "verdant", "blossom", "iris", "dawn"] },
   cosmos: { name: "Cosmos Pack", tag: "Cosmic orbs on deep space", price: 0.99, orbs: ["stardust", "wisp"] },
   aura: { name: "Aura Pack", tag: "Woven translucent light-rings", price: 0.99, orbs: ["halo", "prism", "lagoon", "dusk"] },
 };
