@@ -297,7 +297,7 @@ function orbChip(id, size, hueAdd) {
   const o = ORBS[id] || ORBS.aurora;
   const base = { width: size, height: size, borderRadius: "50%", flex: "0 0 auto", overflow: "hidden", boxShadow: "0 2px 10px rgba(0,0,0,0.22)" };
   if (o.thumb) return <div style={base}><img src={o.thumb} alt="" draggable="false" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /></div>;
-  if (o.kind === "image") { const h = (o.hue || 0) + (hueAdd || 0); return <div style={base}><img src={o.src} alt="" draggable="false" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: o.zoom ? `scale(${o.zoom})` : undefined, transformOrigin: "center", filter: h ? `hue-rotate(${h}deg) saturate(${o.sat || 1.1})` : undefined }} /></div>; }
+  if (o.kind === "image") { const h = (o.hue || 0) + (hueAdd || 0); return <div style={{ ...base, background: "#0a0613" }}><img src={o.src} alt="" draggable="false" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: o.zoom ? `scale(${o.zoom})` : undefined, transformOrigin: "center", filter: h ? `hue-rotate(${h}deg) saturate(${o.sat || 1.1})` : undefined }} /></div>; }
   if (o.kind === "particles") { const pal = o.palettes ? (o.palettes[hueAdd || 0] || o.palettes[0]) : o.palette; if (pal.thumb) return <div style={base}><img src={pal.thumb} alt="" draggable="false" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /></div>; const t = pal.top.join(","), bt = pal.bot.join(","); if (pal.light) return <div style={{ ...base, background: `radial-gradient(58% 52% at 50% 36%, rgba(${t},0.85), transparent 60%), radial-gradient(52% 48% at 50% 72%, rgba(${pal.mid.join(",")},0.5), transparent 60%), #ece7f5` }} />; return <div style={{ ...base, background: `radial-gradient(58% 52% at 50% 33%, rgba(${t},0.95), transparent 62%), radial-gradient(54% 50% at 50% 78%, rgba(${bt},0.92), transparent 62%), #060409` }} />; }
   if (o.kind === "plasma") return <div style={{ ...base, background: "radial-gradient(circle at 44% 38%, #12336a 0%, #0a1428 62%), radial-gradient(circle at 50% 50%, transparent 74%, rgba(150,232,255,0.9) 93%, transparent 100%), #050308" }} />;
   if (o.kind === "rings") return <div style={{ ...base, position: "relative", background: "radial-gradient(circle at 50% 45%, #14111f, #06040e)" }}>{ringsSVG(o.palette, { anim: false })}</div>;
@@ -1105,11 +1105,9 @@ export default function Lull() {
   const imgZoom = selectedOrb.zoom || 1;                 // >1 crops past the glass rim/gloss (bubble-less)
   // Bubble-less orbs melt softly into the ground (no hard rim); glass orbs keep a crisper edge.
   const imgMask = selectedOrb.noBubble ? "radial-gradient(closest-side, #000 42%, rgba(0,0,0,0.5) 72%, transparent 94%)" : orbMask;
-  const lightOn = appLight && !night;                    // global light mode active (sleep always stays dark)
-  // In light mode every image orb would show its near-black background as a dark disc, so key that
-  // background out with a luminance mask of the orb itself — only the glowing ribbons remain on the light ground.
-  const keyOrb = lightOn && !!orbSrc;
-  const lumMask = keyOrb ? { WebkitMaskImage: `url("${orbSrc}")`, maskImage: `url("${orbSrc}")`, WebkitMaskSize: "100% 100%", maskSize: "100% 100%", WebkitMaskPosition: "center", maskPosition: "center", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", maskMode: "luminance", WebkitMaskSourceType: "luminance" } : null;
+  // The "bubble" orbs (Halo/Prism) ship with their near-black background baked to transparency in the
+  // webp itself, so they sit cleanly on any ground on every platform — no CSS luminance mask (iOS
+  // WebKit doesn't apply those to raster images, which left a dark disc on the phone).
   // Soft background washes borrow the selected orb's own colours (hue-shifted by its colour pick), so
   // changing the orb — or just its colour dot — gently restyles the ground in both light and dark.
   const tintHexes = ((ringColors && ringColors.length ? ringColors : ["#9b8cff", "#6fb2ff", "#ff8fbf"]).map((h) => rotateHexHue(h, orbTintDeg)));
@@ -1366,10 +1364,10 @@ export default function Lull() {
                     {/* Two copies of the swirl counter-rotate and screen-blend so the ribbons churn.
                         `zoom` crops past the glass rim/gloss for a bubble-less, free-flowing look. */}
                     <div style={{ position: "absolute", inset: 0, transform: imgZoom !== 1 ? `scale(${imgZoom})` : undefined, transformOrigin: "center", filter: effOrbHue ? `hue-rotate(${effOrbHue}deg) saturate(${selectedOrb.sat || 1.1})` : undefined }}>
-                      <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transformOrigin: "center", display: "block", pointerEvents: "none", willChange: "transform", animation: prefersReduced ? "none" : "swirlSpin 46s linear infinite", ...(lumMask || {}) }} />
-                      <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transformOrigin: "center", display: "block", pointerEvents: "none", mixBlendMode: "screen", opacity: 0.45, willChange: "transform", animation: prefersReduced ? "none" : "swirlSpinRev 63s linear infinite", ...(lumMask || {}) }} />
+                      <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transformOrigin: "center", display: "block", pointerEvents: "none", willChange: "transform", animation: prefersReduced ? "none" : "swirlSpin 46s linear infinite" }} />
+                      <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transformOrigin: "center", display: "block", pointerEvents: "none", mixBlendMode: "screen", opacity: 0.45, willChange: "transform", animation: prefersReduced ? "none" : "swirlSpinRev 63s linear infinite" }} />
                     </div>
-                    {!selectedOrb.noBubble && !keyOrb && (<div aria-hidden="true" style={{ position: "absolute", inset: 0, borderRadius: "50%", pointerEvents: "none", background: "radial-gradient(58% 52% at 37% 30%, rgba(255,255,255,0.32), rgba(255,255,255,0.06) 42%, transparent 62%)" }} />)}
+                    {!selectedOrb.noBubble && !(appLight && !night) && (<div aria-hidden="true" style={{ position: "absolute", inset: 0, borderRadius: "50%", pointerEvents: "none", background: "radial-gradient(58% 52% at 37% 30%, rgba(255,255,255,0.32), rgba(255,255,255,0.06) 42%, transparent 62%)" }} />)}
                   </div>
                 ) : (
                   /* Soft glow orb (coded). A symmetric ring of blurred colour blobs (from the orb's
