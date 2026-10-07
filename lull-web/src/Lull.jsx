@@ -232,26 +232,15 @@ const ORBS = {
   ember:   { name: "Ember",   tag: "Warm fire",     kind: "image", src: "/assets/orb-swirl-d.webp", price: 0.5, zoom: 1.5, noBubble: true, hue: 150, sat: 1.15, ring: ["#ffd27a", "#ff9a5c", "#ff5c7d"], bg: "radial-gradient(125% 120% at 50% 16%, #2a1208 0%, #150806 58%, #0a0403 100%)" },
   verdant: { name: "Verdant", tag: "Emerald bloom", kind: "image", src: "/assets/orb-swirl-c.webp", price: 0.5, zoom: 1.5, noBubble: true, hue: 260, sat: 1.12, ring: ["#7fe6a0", "#a8e86e", "#5ad0c0"], bg: "radial-gradient(125% 120% at 50% 16%, #0c2418 0%, #07140d 58%, #030b07 100%)" },
   blossom: { name: "Blossom", tag: "Rose petals",   kind: "image", src: "/assets/orb-swirl-b.webp", price: 0.5, zoom: 1.5, noBubble: true, hue: 90,  sat: 1.12, ring: ["#ff8fbf", "#ff6ea0", "#ffa8d8"], bg: "radial-gradient(125% 120% at 50% 16%, #2a1024 0%, #150813 58%, #0a040b 100%)" },
-  // Particle spheres — a rotating cloud of glowing dots on a deep black ground.
-  // One particle "dust" orb with several colour selections (the old Solstice/Frost/Nova, plus a light
-  // "Pearl" option on a whiter ground). Each palette carries its own particle colours, ring and ground;
-  // `light` flips the sphere to dark specks on a bright ground.
-  stardust: { name: "Stardust", tag: "Shifting dust", kind: "particles", price: 0.5, palettes: [
-    { name: "Ember", thumb: "/assets/orb-thumb-solstice.png", top: [255, 150, 55],  mid: [255, 180, 120], bot: [255, 255, 255], ring: ["#ffb04a", "#ff8a3c", "#fff0d6"], bg: "radial-gradient(120% 120% at 50% 30%, #140b06 0%, #080402 60%, #020101 100%)" },
-    { name: "Ice",   thumb: "/assets/orb-thumb-frost.png", top: [120, 205, 255], mid: [180, 228, 255], bot: [255, 255, 255], ring: ["#7fd0ff", "#b0e6ff", "#ffffff"], bg: "radial-gradient(120% 120% at 50% 30%, #06121e 0%, #03080f 60%, #010305 100%)" },
-    { name: "Nova",  thumb: "/assets/orb-thumb-nova.png", top: [190, 120, 255], mid: [230, 140, 230], bot: [255, 155, 210], ring: ["#b46eff", "#e08aff", "#ff8ec8"], bg: "radial-gradient(120% 120% at 50% 30%, #120826 0%, #080414 60%, #030108 100%)" },
-    { name: "Pearl", light: true, top: [150, 100, 230], mid: [95, 150, 225], bot: [225, 125, 180], ring: ["#9a7bff", "#6aa8ea", "#e68ac0"], bg: "radial-gradient(120% 120% at 50% 20%, #ffffff 0%, #f2edfb 55%, #e7e0f5 100%)" },
-  ] },
-  // Radiant image orbs — a pinwheel bloom and a wispy flare, on their own deep grounds.
+  // Radiant image orb — a pinwheel bloom on its own deep ground.
   iris:     { name: "Iris",     tag: "Radiant bloom", kind: "image", src: "/assets/orb-iris.webp", price: 0.5, zoom: 1.35, noBubble: true, hue: 0, ring: ["#4fd0ff", "#b46eff", "#ff7ad0"], bg: "radial-gradient(125% 120% at 50% 16%, #16123a 0%, #0a0720 58%, #050310 100%)" },
-  wisp:     { name: "Wisp",     tag: "Wisps of light", kind: "image", src: "/assets/orb-wisp.webp", price: 0.5, zoom: 1.35, noBubble: true, hue: 0, ring: ["#6ea8ff", "#a06eff", "#ff6ec8"], bg: "radial-gradient(120% 120% at 50% 30%, #0e0a2a 0%, #070518 60%, #030110 100%)" },
   // Light orb — a pastel swirl on a soft bright ground (flips the UI to dark ink; drifting pastel blobs behind it).
   dawn:     { name: "Dawn",     tag: "Soft daylight", kind: "image", src: "/assets/orb-dawn.webp", price: 0.5, zoom: 1.25, noBubble: true, hue: 0, light: true, ring: ["#5ab0f5", "#a97fe6", "#f58cb8"], bg: "radial-gradient(125% 120% at 50% 8%, #ffffff 0%, #fbf7ff 55%, #f1edfa 100%)" },
   // Aura Pack — premium generated "woven light-rings" orbs (image), each on its own deep ground.
   halo:     { name: "Halo",     tag: "Woven light",   kind: "image", src: "/assets/orb-halo.webp",   price: 0.5, zoom: 1.1, hue: 0, ring: ["#e0929e", "#8fb0e0", "#5ececf"], bg: "radial-gradient(125% 120% at 50% 20%, #0e1220 0%, #080b16 58%, #04060e 100%)" },
   prism:    { name: "Prism",    tag: "Spectrum halo", kind: "image", src: "/assets/orb-prism.webp",  price: 0.5, zoom: 1.1, hue: 0, ring: ["#ff9a9a", "#9be89b", "#7fb8ff"], bg: "radial-gradient(125% 120% at 50% 20%, #0b0910 0%, #070510 58%, #030208 100%)" },
 };
-const ORB_ORDER = ["aurora", "bloom", "ember", "verdant", "blossom", "iris", "dawn", "stardust", "wisp", "halo", "prism"];
+const ORB_ORDER = ["aurora", "bloom", "ember", "verdant", "blossom", "iris", "dawn", "halo", "prism"];
 // Per-orb colour selections: hue-rotate offsets (degrees) layered on top of each image orb's own
 // hue, so every orb offers a few colours to pick from on the home screen — the way the coded
 // "Bloom" orb offers its themes. Index 0 (0°) is the orb's original colour.
@@ -284,10 +273,9 @@ function shiftGradientHue(str, deg) { return deg ? str.replace(/#[0-9a-fA-F]{6}/
 // seam as unlockOrb.
 const PACKS = {
   swirls: { name: "Swirls Pack", tag: "Flowing colour orbs, each with its own sky", price: 0.99, orbs: ["ember", "verdant", "blossom", "iris", "dawn"] },
-  cosmos: { name: "Cosmos Pack", tag: "Cosmic orbs on deep space", price: 0.99, orbs: ["stardust", "wisp"] },
   aura: { name: "Aura Pack", tag: "Woven translucent light-rings", price: 0.99, orbs: ["halo", "prism"] },
 };
-const PACK_ORDER = ["swirls", "cosmos", "aura"];
+const PACK_ORDER = ["swirls", "aura"];
 const BUNDLE = { name: "Everything", tag: "Every orb and sound, plus every future one we add", price: 3.99 };
 
 // ---- In-App Purchases (RevenueCat on iOS; web falls back to local unlock until Stripe lands) ----
@@ -298,14 +286,12 @@ const RC_ENTITLEMENT_EVERYTHING = "everything"; // RevenueCat entitlement the "E
 // Product identifiers — must match App Store Connect AND RevenueCat exactly.
 const IAP_PRODUCTS = {
   swirls: "com.tinybirdbigdreams.lull.pack.swirls",
-  cosmos: "com.tinybirdbigdreams.lull.pack.cosmos",
   aura: "com.tinybirdbigdreams.lull.pack.aura",
   nature: "com.tinybirdbigdreams.lull.pack.nature",
   everything: "com.tinybirdbigdreams.lull.everything",
 };
 const PRODUCT_TO_UNLOCK = {
   [IAP_PRODUCTS.swirls]: { kind: "orb", pack: "swirls" },
-  [IAP_PRODUCTS.cosmos]: { kind: "orb", pack: "cosmos" },
   [IAP_PRODUCTS.aura]: { kind: "orb", pack: "aura" },
   [IAP_PRODUCTS.nature]: { kind: "sound", pack: "nature" },
 };
@@ -1594,7 +1580,7 @@ export default function Lull() {
                     <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", padding: "3px 9px", borderRadius: 999, background: wa(0.15), color: inkA(0.82) }}>Best value</span>
                   </div>
                   <div style={{ display: "flex", marginBottom: 14 }}>
-                    {["ember", "verdant", "blossom", "iris", "stardust"].map((id, i) => (
+                    {["ember", "verdant", "blossom", "iris", "prism"].map((id, i) => (
                       <div key={id} style={{ marginLeft: i ? -14 : 0, borderRadius: "50%", boxShadow: "0 0 0 2.5px rgba(8,5,16,0.92)" }}>{orbChip(id, 46)}</div>
                     ))}
                   </div>
