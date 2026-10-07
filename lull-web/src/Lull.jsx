@@ -224,11 +224,9 @@ function fmtDur(m) { if (m >= 60) { const h = m / 60; return { big: (Number.isIn
 // symmetric ring of the `colors` palette on a white (white:true) or deep (white:false) ground.
 // Every orb is a real generated swirl (Aurora quality). Three different swirl compositions
 // (glass/b/c/d), each hue-shifted into its own colour family and cropped bubble-less like Aurora.
-// Each orb carries its own `bg` (a dark, tinted ground that matches it). "coded" is the original
-// aurora-bloom orb (recoloured by the theme dots); it has no bg so it uses the theme's own ground.
+// Each orb carries its own `bg` (a dark, tinted ground that matches it).
 const ORBS = {
   aurora:  { name: "Aurora",  tag: "Flowing swirl", kind: "image", src: "/assets/orb-glass.webp",  price: 0,   zoom: 1.5, noBubble: true, hue: 0,             ring: ["#5ec8ff", "#9a7bff", "#ff6ec0"], bg: "radial-gradient(125% 120% at 50% 16%, #1a1030 0%, #0a0613 58%, #060310 100%)" },
-  bloom:   { name: "Bloom",   tag: "Original · themeable", kind: "coded", price: 0 },
   ember:   { name: "Ember",   tag: "Warm fire",     kind: "image", src: "/assets/orb-swirl-d.webp", price: 0.5, zoom: 1.5, noBubble: true, hue: 150, sat: 1.15, ring: ["#ffd27a", "#ff9a5c", "#ff5c7d"], bg: "radial-gradient(125% 120% at 50% 16%, #2a1208 0%, #150806 58%, #0a0403 100%)" },
   verdant: { name: "Verdant", tag: "Emerald bloom", kind: "image", src: "/assets/orb-swirl-c.webp", price: 0.5, zoom: 1.5, noBubble: true, hue: 260, sat: 1.12, ring: ["#7fe6a0", "#a8e86e", "#5ad0c0"], bg: "radial-gradient(125% 120% at 50% 16%, #0c2418 0%, #07140d 58%, #030b07 100%)" },
   blossom: { name: "Blossom", tag: "Rose petals",   kind: "image", src: "/assets/orb-swirl-b.webp", price: 0.5, zoom: 1.5, noBubble: true, hue: 90,  sat: 1.12, ring: ["#ff8fbf", "#ff6ea0", "#ffa8d8"], bg: "radial-gradient(125% 120% at 50% 16%, #2a1024 0%, #150813 58%, #0a040b 100%)" },
@@ -236,10 +234,10 @@ const ORBS = {
   halo:     { name: "Halo",     tag: "Woven light",   kind: "image", src: "/assets/orb-halo.webp",   price: 0.5, zoom: 1.1, hue: 0, ring: ["#e0929e", "#8fb0e0", "#5ececf"], bg: "radial-gradient(125% 120% at 50% 20%, #0e1220 0%, #080b16 58%, #04060e 100%)" },
   prism:    { name: "Prism",    tag: "Spectrum halo", kind: "image", src: "/assets/orb-prism.webp",  price: 0.5, zoom: 1.1, hue: 0, ring: ["#ff9a9a", "#9be89b", "#7fb8ff"], bg: "radial-gradient(125% 120% at 50% 20%, #0b0910 0%, #070510 58%, #030208 100%)" },
 };
-const ORB_ORDER = ["aurora", "bloom", "ember", "verdant", "blossom", "halo", "prism"];
+const ORB_ORDER = ["aurora", "ember", "verdant", "blossom", "halo", "prism"];
 // Per-orb colour selections: hue-rotate offsets (degrees) layered on top of each image orb's own
-// hue, so every orb offers a few colours to pick from on the home screen — the way the coded
-// "Bloom" orb offers its themes. Index 0 (0°) is the orb's original colour.
+// hue, so every orb offers a few colours to pick from on the home screen.
+// Index 0 (0°) is the orb's original colour.
 const ORB_TINTS = [0, 120, 240];
 // Rotate the hue of a single #rrggbb colour by `deg` degrees (via HSL).
 function rotateHexHue(hex, deg) {
@@ -259,12 +257,12 @@ function rotateHexHue(hex, deg) {
   return "#" + to(rr) + to(gg) + to(bb);
 }
 // Shift every #rrggbb colour in a CSS gradient string, to move an image orb's background ground
-// to match the colour selection picked for that orb (the way Bloom's themes recolour the ground).
+// to match the colour selection picked for that orb.
 function shiftGradientHue(str, deg) { return deg ? str.replace(/#[0-9a-fA-F]{6}/g, (hx) => rotateHexHue(hx, deg)) : str; }
 // ---------- packs & bundle ----------
 // Orbs are sold in themed packs (one price unlocks every orb in the pack), plus a single
 // "Everything" bundle that unlocks all orbs — and every future orb & sound we add — for one
-// price. Aurora + Bloom ship free and belong to no pack. Pricing is scaffolded; real charging
+// price. Aurora ships free and belongs to no pack. Pricing is scaffolded; real charging
 // (Apple In-App Purchase on iOS, Stripe on web) wires into unlockPack/unlockBundle — the same
 // seam as unlockOrb.
 const PACKS = {
@@ -292,7 +290,7 @@ const PRODUCT_TO_UNLOCK = {
   [IAP_PRODUCTS.nature]: { kind: "sound", pack: "nature" },
 };
 const iapLive = () => Capacitor.isNativePlatform() && RC_IOS_KEY.indexOf("REPLACE") === -1;
-const FREE_ORBS = ORB_ORDER.filter((id) => (ORBS[id].price || 0) === 0); // ship unlocked (Aurora, Bloom)
+const FREE_ORBS = ORB_ORDER.filter((id) => (ORBS[id].price || 0) === 0); // ship unlocked (Aurora)
 const ORB_KEY = "lull.orb.v1";
 const OWNED_KEY = "lull.orbsOwned.v1";
 function loadOrb() { try { const v = localStorage.getItem(ORB_KEY); return v && ORBS[v] ? v : "aurora"; } catch (e) { return "aurora"; } }
@@ -1110,6 +1108,14 @@ export default function Lull() {
   const imgZoom = selectedOrb.zoom || 1;                 // >1 crops past the glass rim/gloss (bubble-less)
   // Bubble-less orbs melt softly into the ground (no hard rim); glass orbs keep a crisper edge.
   const imgMask = selectedOrb.noBubble ? "radial-gradient(closest-side, #000 42%, rgba(0,0,0,0.5) 72%, transparent 94%)" : orbMask;
+  const lightOn = appLight && !night;                    // global light mode active (sleep always stays dark)
+  // In light mode the "bubble" orbs (Halo/Prism) would show a hard dark disc, so key their near-black
+  // background out with a luminance mask of the orb itself — only the glowing ribbons remain on the light ground.
+  const keyOrb = lightOn && !selectedOrb.noBubble && !!orbSrc;
+  const lumMask = keyOrb ? { WebkitMaskImage: `url("${orbSrc}")`, maskImage: `url("${orbSrc}")`, WebkitMaskSize: "100% 100%", maskSize: "100% 100%", WebkitMaskPosition: "center", maskPosition: "center", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", maskMode: "luminance", WebkitMaskSourceType: "luminance" } : null;
+  // Soft background washes borrow the selected orb's own colours (hue-shifted by its colour pick), so
+  // changing the orb — or just its colour dot — gently restyles the ground in both light and dark.
+  const tintHexes = ((ringColors && ringColors.length ? ringColors : ["#9b8cff", "#6fb2ff", "#ff8fbf"]).map((h) => rotateHexHue(h, orbTintDeg)));
   // Readout ink/shadow: dark text with a soft white halo on the white ground, light text with a
   // dark halo on every other ground.
   const roInk = onWhite ? "#26203f" : "#F8F5FF";
@@ -1134,8 +1140,8 @@ export default function Lull() {
     body { margin: 0; }
     @keyframes orbIdle { 0%,100% { transform: scale(0.8);} 50% { transform: scale(1.08);} }
     @keyframes ringSpin { to { transform: rotate(360deg); } }
-    @keyframes drift1 { 0%,100% { transform: translate(0,0);} 50% { transform: translate(40px,-30px);} }
-    @keyframes drift2 { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-50px,40px);} }
+    @keyframes drift1 { 0%,100% { transform: translate(0,0) scale(1);} 50% { transform: translate(60px,-44px) scale(1.12);} }
+    @keyframes drift2 { 0%,100% { transform: translate(0,0) scale(1);} 50% { transform: translate(-68px,54px) scale(1.14);} }
     /* Scale baked in so the (inset:0, 100%) image fills the container exactly and stays centred,
        while the rotation still can't expose a corner of the masked circle. */
     @keyframes swirlSpin { from { transform: scale(1.3) rotate(0deg);} to { transform: scale(1.3) rotate(360deg);} }
@@ -1154,8 +1160,8 @@ export default function Lull() {
     /* Negative delay starts the breath ~a quarter in (mid-inhale, moving fast) so it never
        stalls small at the beginning; larger amplitude so the resting breath is clearly visible. */
     .orb-idle { animation: orbIdle 6.5s ease-in-out -1.6s infinite; }
-    .amb1 { animation: drift1 24s ease-in-out infinite; }
-    .amb2 { animation: drift2 30s ease-in-out infinite; }
+    .amb1 { animation: drift1 19s ease-in-out infinite; }
+    .amb2 { animation: drift2 24s ease-in-out infinite; }
     .lull-btn { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
     .lull-btn:focus-visible, .lull-seg:focus-visible, .lull-dot:focus-visible { outline: 2px solid rgba(255,255,255,0.7); outline-offset: 3px; border-radius: 14px; }
     .lull-seg, .lull-dot { font-family: inherit; cursor: pointer; }
@@ -1247,12 +1253,17 @@ export default function Lull() {
       <div className="amb1" style={{ position: "absolute", top: "-10%", left: "-15%", width: 520, height: 520, borderRadius: "50%", background: amb1, filter: "blur(20px)", zIndex: 0, opacity: selectedOrb.bg ? 0 : 1, transition: "background 1.4s ease, opacity 1.2s ease" }} />
       <div className="amb2" style={{ position: "absolute", bottom: "-12%", right: "-18%", width: 560, height: 560, borderRadius: "50%", background: amb2, filter: "blur(20px)", zIndex: 0, opacity: selectedOrb.bg ? 0 : 1, transition: "background 1.4s ease, opacity 1.2s ease" }} />
       <div style={{ position: "absolute", inset: 0, background: isCool ? tintCool : tintWarm, opacity: selectedOrb.bg ? 0 : 1, transition: "background 1.5s ease, opacity 1.2s ease", zIndex: 1, pointerEvents: "none" }} />
-      {/* Light orb: slowly-drifting pastel blobs give the bright ground gentle motion (disabled by reduced-motion via .amb classes). */}
+      {/* Slowly-drifting blobs in the selected orb's own colours give the ground gentle motion and tie
+          it to the orb — a soft wash on light, a faint glow on dark (disabled by reduced-motion via .amb classes). */}
       {isLight && (<>
-        <div className="amb1" style={{ position: "absolute", top: "-14%", left: "-12%", width: 560, height: 560, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,170,205,0.55), rgba(255,170,205,0) 70%)", filter: "blur(46px)", zIndex: 0, pointerEvents: "none" }} />
-        <div className="amb2" style={{ position: "absolute", bottom: "-16%", right: "-12%", width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(150,200,255,0.55), rgba(150,200,255,0) 70%)", filter: "blur(46px)", zIndex: 0, pointerEvents: "none" }} />
-        <div className="amb1" style={{ position: "absolute", top: "34%", right: "-14%", width: 460, height: 460, borderRadius: "50%", background: "radial-gradient(circle, rgba(170,235,200,0.5), rgba(170,235,200,0) 70%)", filter: "blur(50px)", zIndex: 0, pointerEvents: "none", animationDelay: "-9s" }} />
-        <div className="amb2" style={{ position: "absolute", bottom: "30%", left: "-12%", width: 480, height: 480, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,215,165,0.5), rgba(255,215,165,0) 70%)", filter: "blur(50px)", zIndex: 0, pointerEvents: "none", animationDelay: "-15s" }} />
+        <div className="amb1" style={{ position: "absolute", top: "-14%", left: "-12%", width: 560, height: 560, borderRadius: "50%", background: `radial-gradient(circle, ${tintHexes[0]}66, ${tintHexes[0]}00 70%)`, filter: "blur(46px)", zIndex: 0, pointerEvents: "none", transition: "background 1.2s ease" }} />
+        <div className="amb2" style={{ position: "absolute", bottom: "-16%", right: "-12%", width: 600, height: 600, borderRadius: "50%", background: `radial-gradient(circle, ${(tintHexes[2] || tintHexes[0])}66, ${(tintHexes[2] || tintHexes[0])}00 70%)`, filter: "blur(46px)", zIndex: 0, pointerEvents: "none", transition: "background 1.2s ease" }} />
+        <div className="amb1" style={{ position: "absolute", top: "34%", right: "-14%", width: 460, height: 460, borderRadius: "50%", background: `radial-gradient(circle, ${(tintHexes[1] || tintHexes[0])}52, ${(tintHexes[1] || tintHexes[0])}00 70%)`, filter: "blur(50px)", zIndex: 0, pointerEvents: "none", animationDelay: "-9s", transition: "background 1.2s ease" }} />
+        <div className="amb2" style={{ position: "absolute", bottom: "30%", left: "-12%", width: 480, height: 480, borderRadius: "50%", background: `radial-gradient(circle, ${tintHexes[0]}52, ${tintHexes[0]}00 70%)`, filter: "blur(50px)", zIndex: 0, pointerEvents: "none", animationDelay: "-15s", transition: "background 1.2s ease" }} />
+      </>)}
+      {!isLight && !night && (<>
+        <div className="amb1" style={{ position: "absolute", top: "-12%", left: "-14%", width: 540, height: 540, borderRadius: "50%", background: `radial-gradient(circle, ${tintHexes[0]}26, ${tintHexes[0]}00 70%)`, filter: "blur(52px)", zIndex: 0, pointerEvents: "none", transition: "background 1.2s ease" }} />
+        <div className="amb2" style={{ position: "absolute", bottom: "-14%", right: "-14%", width: 580, height: 580, borderRadius: "50%", background: `radial-gradient(circle, ${(tintHexes[2] || tintHexes[0])}20, ${(tintHexes[2] || tintHexes[0])}00 70%)`, filter: "blur(54px)", zIndex: 0, pointerEvents: "none", animationDelay: "-12s", transition: "background 1.2s ease" }} />
       </>)}
 
       <div style={frame}>
@@ -1358,10 +1369,10 @@ export default function Lull() {
                     {/* Two copies of the swirl counter-rotate and screen-blend so the ribbons churn.
                         `zoom` crops past the glass rim/gloss for a bubble-less, free-flowing look. */}
                     <div style={{ position: "absolute", inset: 0, transform: imgZoom !== 1 ? `scale(${imgZoom})` : undefined, transformOrigin: "center", filter: effOrbHue ? `hue-rotate(${effOrbHue}deg) saturate(${selectedOrb.sat || 1.1})` : undefined }}>
-                      <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transformOrigin: "center", display: "block", pointerEvents: "none", willChange: "transform", animation: prefersReduced ? "none" : "swirlSpin 46s linear infinite" }} />
-                      <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transformOrigin: "center", display: "block", pointerEvents: "none", mixBlendMode: "screen", opacity: 0.45, willChange: "transform", animation: prefersReduced ? "none" : "swirlSpinRev 63s linear infinite" }} />
+                      <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transformOrigin: "center", display: "block", pointerEvents: "none", willChange: "transform", animation: prefersReduced ? "none" : "swirlSpin 46s linear infinite", ...(lumMask || {}) }} />
+                      <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transformOrigin: "center", display: "block", pointerEvents: "none", mixBlendMode: "screen", opacity: 0.45, willChange: "transform", animation: prefersReduced ? "none" : "swirlSpinRev 63s linear infinite", ...(lumMask || {}) }} />
                     </div>
-                    {!selectedOrb.noBubble && (<div aria-hidden="true" style={{ position: "absolute", inset: 0, borderRadius: "50%", pointerEvents: "none", background: "radial-gradient(58% 52% at 37% 30%, rgba(255,255,255,0.32), rgba(255,255,255,0.06) 42%, transparent 62%)" }} />)}
+                    {!selectedOrb.noBubble && !keyOrb && (<div aria-hidden="true" style={{ position: "absolute", inset: 0, borderRadius: "50%", pointerEvents: "none", background: "radial-gradient(58% 52% at 37% 30%, rgba(255,255,255,0.32), rgba(255,255,255,0.06) 42%, transparent 62%)" }} />)}
                   </div>
                 ) : (
                   /* Soft glow orb (coded). A symmetric ring of blurred colour blobs (from the orb's
