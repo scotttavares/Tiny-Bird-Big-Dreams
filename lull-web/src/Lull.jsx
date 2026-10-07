@@ -198,7 +198,7 @@ const SOUND_PACKS = {
   nature: { name: "Nature Pack", tag: "Rain, light rain, ocean, forest & fire", price: 0.99, sounds: ["rain", "lightrain", "ocean", "forest", "fire"] },
 };
 const SOUND_PACK_ORDER = ["nature"];
-const FREE_SOUNDS = SOUND.filter((s) => s.free).map((s) => s.id);
+const FREE_SOUNDS = SOUND.map((s) => s.id); // launch: every sound ships free. To charge later: SOUND.filter((s) => s.free).map((s) => s.id)
 const SOUNDS_OWNED_KEY = "lull.soundsOwned.v1";
 function loadOwnedSounds() { try { const r = JSON.parse(localStorage.getItem(SOUNDS_OWNED_KEY) || "null"); const saved = Array.isArray(r) ? r.filter((id) => SOUND_BY_ID[id]) : []; const merged = [...FREE_SOUNDS]; saved.forEach((id) => { if (!merged.includes(id)) merged.push(id); }); return merged; } catch (e) { return [...FREE_SOUNDS]; } }
 const HIST_KEY = "lull.sessions.v1";
@@ -287,7 +287,7 @@ const PRODUCT_TO_UNLOCK = {
   [IAP_PRODUCTS.nature]: { kind: "sound", pack: "nature" },
 };
 const iapLive = () => Capacitor.isNativePlatform() && RC_IOS_KEY.indexOf("REPLACE") === -1;
-const FREE_ORBS = ORB_ORDER.filter((id) => (ORBS[id].price || 0) === 0); // ship unlocked (Aurora)
+const FREE_ORBS = [...ORB_ORDER]; // launch: every orb ships free. To charge later: ORB_ORDER.filter((id) => (ORBS[id].price || 0) === 0)
 const ORB_KEY = "lull.orb.v1";
 const OWNED_KEY = "lull.orbsOwned.v1";
 function loadOrb() { try { const v = localStorage.getItem(ORB_KEY); return v && ORBS[v] ? v : "aurora"; } catch (e) { return "aurora"; } }
@@ -1520,7 +1520,7 @@ export default function Lull() {
             <span style={{ fontSize: 12, letterSpacing: 5, textTransform: "uppercase", fontWeight: 500, opacity: 0.6 }}>Store</span>
             <button className="lull-btn" aria-label="Done" onClick={() => setOrbStoreOpen(false)} style={{ padding: "6px 4px", opacity: 0.75, fontSize: 15 }}>Done</button>
           </div>
-          <p style={{ fontSize: 14, lineHeight: 1.5, opacity: 0.6, margin: "0 0 24px", maxWidth: "42ch" }}>Tap to choose your orb and sound. Unlock packs to add more. Yours forever, no subscription.</p>
+          <p style={{ fontSize: 14, lineHeight: 1.5, opacity: 0.6, margin: "0 0 24px", maxWidth: "42ch" }}>Tap to choose your orb and sound. Everything’s included, yours forever, no subscription.</p>
 
           {/* Your orbs — free + everything you own, tap to breathe with it */}
           <div style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", fontWeight: 600, opacity: 0.5, marginBottom: 13 }}>Your orbs</div>
@@ -1638,8 +1638,10 @@ export default function Lull() {
               </div>
             </>
           )}
+          {!allOwned && (<>
           <button className="lull-btn" onClick={restoreOrbs} style={{ alignSelf: "center", marginTop: 22, padding: "8px 0", fontSize: 12.5, letterSpacing: 0.4, color: inkA(0.5) }}>Restore purchases</button>
           <p style={{ fontSize: 11.5, lineHeight: 1.5, opacity: 0.42, textAlign: "center", margin: "6px auto 0", maxWidth: "40ch" }}>One time purchases, no subscription. Restore anytime.</p>
+          </>)}
         </div>
       )}
       {showCustom && (
