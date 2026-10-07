@@ -646,6 +646,7 @@ export default function Lull() {
   const [mode, setMode] = useState("breathe");
   const [orbId, setOrbId] = useState(loadOrb);          // which orb you breathe with
   const [orbTint, setOrbTint] = useState(() => { try { return JSON.parse(localStorage.getItem("lull.orbTint.v1")) || {}; } catch (e) { return {}; } }); // per-orb colour selection (hue offset)
+  const [orbBg, setOrbBg] = useState(() => { try { return JSON.parse(localStorage.getItem("lull.orbBg.v1")) || {}; } catch (e) { return {}; } }); // per-orb background: "light" = white ground
   const [ownedOrbs, setOwnedOrbs] = useState(loadOwned); // unlocked orb ids
   const [ownedSounds, setOwnedSounds] = useState(loadOwnedSounds); // unlocked sound ids
   const [bundleOwned, setBundleOwned] = useState(() => { try { return localStorage.getItem("lull.bundleOwned.v1") === "1"; } catch (e) { return false; } }); // "Everything" owned → unlocks all, incl. future
@@ -728,6 +729,7 @@ export default function Lull() {
   useEffect(() => { sleepScapeIdRef.current = sleepScapeId; try { localStorage.setItem("lull.sleepScape.v1", sleepScapeId); } catch (e) {} }, [sleepScapeId]);
   useEffect(() => { try { localStorage.setItem(ORB_KEY, orbId); } catch (e) {} }, [orbId]);
   useEffect(() => { try { localStorage.setItem("lull.orbTint.v1", JSON.stringify(orbTint)); } catch (e) {} }, [orbTint]);
+  useEffect(() => { try { localStorage.setItem("lull.orbBg.v1", JSON.stringify(orbBg)); } catch (e) {} }, [orbBg]);
   useEffect(() => { try { localStorage.setItem(OWNED_KEY, JSON.stringify(ownedOrbs)); } catch (e) {} }, [ownedOrbs]);
   useEffect(() => { try { localStorage.setItem(SOUNDS_OWNED_KEY, JSON.stringify(ownedSounds)); } catch (e) {} }, [ownedSounds]);
   useEffect(() => { try { localStorage.setItem("lull.bundleOwned.v1", bundleOwned ? "1" : "0"); } catch (e) {} }, [bundleOwned]);
@@ -1087,6 +1089,7 @@ export default function Lull() {
   const pats = PATTERNS[mode];
 
   const selectedOrb = ORBS[orbId] || ORBS.aurora;
+  const orbWantsLight = orbBg[orbId] === "light";       // per-orb choice to sit the orb on a white ground
   const orbTintDeg = selectedOrb.kind === "image" ? (orbTint[orbId] || 0) : 0; // chosen colour offset for this orb
   const effOrbHue = (selectedOrb.hue || 0) + orbTintDeg;
   // Multi-palette orbs (the particle "dust" orb) pick their active palette from the per-orb selection.
@@ -1094,7 +1097,7 @@ export default function Lull() {
   const activePal = selectedOrb.palettes ? (selectedOrb.palettes[orbVarIdx] || selectedOrb.palettes[0]) : null;
   // The progress ring's gradient matches the selected orb's own palette (falls back to the theme).
   const ringColors = (activePal && activePal.ring) || selectedOrb.ring || [ringFrom, ringTo];
-  const isLight = (activePal ? !!activePal.light : !!selectedOrb.light) && !night;    // pastel orbs sit on a bright ground with dark UI; sleep stays dark
+  const isLight = (((activePal ? !!activePal.light : !!selectedOrb.light) || orbWantsLight) && !night);    // pastel orbs (or a white-ground pick) sit on a bright ground with dark UI; sleep stays dark
   const onWhite = isLight;                           // dark readout ink + a soft white halo on the bright ground
   const onDark = activePal ? !activePal.light : !!selectedOrb.dark;               // particle / plasma orbs glow on a deep-black ground
   const daylight = isLight;
@@ -1118,8 +1121,8 @@ export default function Lull() {
   const LIGHT_ROOT = "radial-gradient(125% 110% at 50% 6%, #faf4ee 0%, #f2eaef 55%, #ece1e9 100%)";
   const WHITE_ROOT = "radial-gradient(125% 120% at 50% 4%, #ffffff 0%, #fbfbfe 58%, #f3f3f8 100%)";
   const DARK_ROOT = "radial-gradient(120% 120% at 50% 32%, #0a0711 0%, #050308 60%, #020104 100%)";
-  const groundBg0 = activePal ? (activePal.bg || th.rootDay) : (night ? th.rootNight : (selectedOrb.bg || th.rootDay));  // each orb's (or palette's) own matching ground
-  const groundBg = orbTintDeg ? shiftGradientHue(groundBg0, orbTintDeg) : groundBg0; // shift the ground to the orb's picked colour
+  const groundBg0 = (orbWantsLight && !night) ? WHITE_ROOT : (activePal ? (activePal.bg || th.rootDay) : (night ? th.rootNight : (selectedOrb.bg || th.rootDay)));  // white-ground pick wins, else each orb's (or palette's) own matching ground
+  const groundBg = (orbTintDeg && !(orbWantsLight && !night)) ? shiftGradientHue(groundBg0, orbTintDeg) : groundBg0; // shift the ground to the orb's picked colour (but keep the clean white ground unshifted)
   // Solid fallback under the gradient so full-screen (position:fixed) modals never let the dark page
   // body bleed through — critical for light orbs, where a non-painting gradient would look dark.
   const groundSolid = isLight ? "#f8f4fd" : "#0a0613";
@@ -1441,6 +1444,10 @@ export default function Lull() {
                 <button key={i} className="lull-dot lull-btn" aria-label={"Colour: " + pal.name} aria-pressed={sel} title={pal.name} onClick={() => setOrbTint((p) => ({ ...p, [orbId]: i }))} style={{ width: 30, height: 30, borderRadius: "50%", padding: 0, backgroundImage: g, border: "1px solid " + wa(0.3), boxShadow: sel ? (lightUI ? "0 0 0 2px rgba(70,50,140,0.8), 0 3px 12px rgba(80,60,140,0.25)" : "0 0 0 2px rgba(255,255,255,0.9), 0 3px 12px rgba(0,0,0,0.45)") : (lightUI ? "0 2px 8px rgba(80,60,140,0.2)" : "0 2px 8px rgba(0,0,0,0.35)"), transform: sel ? "scale(1.14)" : "scale(1)", transition: "transform .2s ease, box-shadow .2s ease" }} />); })}
             </div>
             )}
+            <div style={{ display: "flex", gap: 12, justifyContent: "center", padding: "2px 0 4px" }}>
+              {[["dark", "radial-gradient(circle at 50% 34%, #1b1533 0%, #0a0613 82%)", "Dark background"], ["light", "radial-gradient(circle at 50% 34%, #ffffff 0%, #eeeef6 85%)", "White background"]].map(([val, g, label]) => { const sel = val === "light" ? orbWantsLight : !orbWantsLight; return (
+                <button key={val} className="lull-dot lull-btn" aria-label={label} aria-pressed={sel} title={label} onClick={() => setOrbBg((p) => ({ ...p, [orbId]: val }))} style={{ width: 30, height: 30, borderRadius: "50%", padding: 0, backgroundImage: g, border: "1px solid " + wa(0.3), boxShadow: sel ? (lightUI ? "0 0 0 2px rgba(70,50,140,0.8), 0 3px 12px rgba(80,60,140,0.25)" : "0 0 0 2px rgba(255,255,255,0.9), 0 3px 12px rgba(0,0,0,0.45)") : (lightUI ? "0 2px 8px rgba(80,60,140,0.2)" : "0 2px 8px rgba(0,0,0,0.35)"), transform: sel ? "scale(1.14)" : "scale(1)", transition: "transform .2s ease, box-shadow .2s ease" }} />); })}
+            </div>
             {(() => { const entries = Object.entries(pats); const cols = entries.length === 4 ? 2 : Math.min(entries.length, 3); return (
               <div style={{ ...segWrap, display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
                 {entries.map(([id, p]) => { const sel = patternId === id; return (<button key={id} className="lull-seg lull-btn" aria-pressed={sel} onClick={() => setPatternId(id)} style={seg(sel)}><span style={{ fontSize: 14, fontWeight: 500 }}>{p.name}</span><span style={{ fontSize: 10.5, opacity: 0.6, letterSpacing: 0.3, textAlign: "center" }}>{p.goal || p.ratio}</span></button>); })}
