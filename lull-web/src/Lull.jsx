@@ -1109,9 +1109,9 @@ export default function Lull() {
   // Bubble-less orbs melt softly into the ground (no hard rim); glass orbs keep a crisper edge.
   const imgMask = selectedOrb.noBubble ? "radial-gradient(closest-side, #000 42%, rgba(0,0,0,0.5) 72%, transparent 94%)" : orbMask;
   const lightOn = appLight && !night;                    // global light mode active (sleep always stays dark)
-  // In light mode the "bubble" orbs (Halo/Prism) would show a hard dark disc, so key their near-black
+  // In light mode every image orb would show its near-black background as a dark disc, so key that
   // background out with a luminance mask of the orb itself — only the glowing ribbons remain on the light ground.
-  const keyOrb = lightOn && !selectedOrb.noBubble && !!orbSrc;
+  const keyOrb = lightOn && !!orbSrc;
   const lumMask = keyOrb ? { WebkitMaskImage: `url("${orbSrc}")`, maskImage: `url("${orbSrc}")`, WebkitMaskSize: "100% 100%", maskSize: "100% 100%", WebkitMaskPosition: "center", maskPosition: "center", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat", maskMode: "luminance", WebkitMaskSourceType: "luminance" } : null;
   // Soft background washes borrow the selected orb's own colours (hue-shifted by its colour pick), so
   // changing the orb — or just its colour dot — gently restyles the ground in both light and dark.
