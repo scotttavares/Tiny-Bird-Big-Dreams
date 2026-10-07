@@ -232,15 +232,11 @@ const ORBS = {
   ember:   { name: "Ember",   tag: "Warm fire",     kind: "image", src: "/assets/orb-swirl-d.webp", price: 0.5, zoom: 1.5, noBubble: true, hue: 150, sat: 1.15, ring: ["#ffd27a", "#ff9a5c", "#ff5c7d"], bg: "radial-gradient(125% 120% at 50% 16%, #2a1208 0%, #150806 58%, #0a0403 100%)" },
   verdant: { name: "Verdant", tag: "Emerald bloom", kind: "image", src: "/assets/orb-swirl-c.webp", price: 0.5, zoom: 1.5, noBubble: true, hue: 260, sat: 1.12, ring: ["#7fe6a0", "#a8e86e", "#5ad0c0"], bg: "radial-gradient(125% 120% at 50% 16%, #0c2418 0%, #07140d 58%, #030b07 100%)" },
   blossom: { name: "Blossom", tag: "Rose petals",   kind: "image", src: "/assets/orb-swirl-b.webp", price: 0.5, zoom: 1.5, noBubble: true, hue: 90,  sat: 1.12, ring: ["#ff8fbf", "#ff6ea0", "#ffa8d8"], bg: "radial-gradient(125% 120% at 50% 16%, #2a1024 0%, #150813 58%, #0a040b 100%)" },
-  // Radiant image orb — a pinwheel bloom on its own deep ground.
-  iris:     { name: "Iris",     tag: "Radiant bloom", kind: "image", src: "/assets/orb-iris.webp", price: 0.5, zoom: 1.35, noBubble: true, hue: 0, ring: ["#4fd0ff", "#b46eff", "#ff7ad0"], bg: "radial-gradient(125% 120% at 50% 16%, #16123a 0%, #0a0720 58%, #050310 100%)" },
-  // Light orb — a pastel swirl on a soft bright ground (flips the UI to dark ink; drifting pastel blobs behind it).
-  dawn:     { name: "Dawn",     tag: "Soft daylight", kind: "image", src: "/assets/orb-dawn.webp", price: 0.5, zoom: 1.25, noBubble: true, hue: 0, light: true, ring: ["#5ab0f5", "#a97fe6", "#f58cb8"], bg: "radial-gradient(125% 120% at 50% 8%, #ffffff 0%, #fbf7ff 55%, #f1edfa 100%)" },
   // Aura Pack — premium generated "woven light-rings" orbs (image), each on its own deep ground.
   halo:     { name: "Halo",     tag: "Woven light",   kind: "image", src: "/assets/orb-halo.webp",   price: 0.5, zoom: 1.1, hue: 0, ring: ["#e0929e", "#8fb0e0", "#5ececf"], bg: "radial-gradient(125% 120% at 50% 20%, #0e1220 0%, #080b16 58%, #04060e 100%)" },
   prism:    { name: "Prism",    tag: "Spectrum halo", kind: "image", src: "/assets/orb-prism.webp",  price: 0.5, zoom: 1.1, hue: 0, ring: ["#ff9a9a", "#9be89b", "#7fb8ff"], bg: "radial-gradient(125% 120% at 50% 20%, #0b0910 0%, #070510 58%, #030208 100%)" },
 };
-const ORB_ORDER = ["aurora", "bloom", "ember", "verdant", "blossom", "iris", "dawn", "halo", "prism"];
+const ORB_ORDER = ["aurora", "bloom", "ember", "verdant", "blossom", "halo", "prism"];
 // Per-orb colour selections: hue-rotate offsets (degrees) layered on top of each image orb's own
 // hue, so every orb offers a few colours to pick from on the home screen — the way the coded
 // "Bloom" orb offers its themes. Index 0 (0°) is the orb's original colour.
@@ -272,7 +268,7 @@ function shiftGradientHue(str, deg) { return deg ? str.replace(/#[0-9a-fA-F]{6}/
 // (Apple In-App Purchase on iOS, Stripe on web) wires into unlockPack/unlockBundle — the same
 // seam as unlockOrb.
 const PACKS = {
-  swirls: { name: "Swirls Pack", tag: "Flowing colour orbs, each with its own sky", price: 0.99, orbs: ["ember", "verdant", "blossom", "iris", "dawn"] },
+  swirls: { name: "Swirls Pack", tag: "Flowing colour orbs, each with its own sky", price: 0.99, orbs: ["ember", "verdant", "blossom"] },
   aura: { name: "Aura Pack", tag: "Woven translucent light-rings", price: 0.99, orbs: ["halo", "prism"] },
 };
 const PACK_ORDER = ["swirls", "aura"];
@@ -1580,7 +1576,7 @@ export default function Lull() {
                     <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", padding: "3px 9px", borderRadius: 999, background: wa(0.15), color: inkA(0.82) }}>Best value</span>
                   </div>
                   <div style={{ display: "flex", marginBottom: 14 }}>
-                    {["ember", "verdant", "blossom", "iris", "prism"].map((id, i) => (
+                    {["ember", "verdant", "blossom", "halo", "prism"].map((id, i) => (
                       <div key={id} style={{ marginLeft: i ? -14 : 0, borderRadius: "50%", boxShadow: "0 0 0 2.5px rgba(8,5,16,0.92)" }}>{orbChip(id, 46)}</div>
                     ))}
                   </div>
