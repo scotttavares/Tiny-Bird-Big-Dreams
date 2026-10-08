@@ -226,7 +226,7 @@ function fmtDur(m) { if (m >= 60) { const h = m / 60; return { big: (Number.isIn
 // Each orb carries its own `bg` (a dark, tinted ground that matches it).
 const ORBS = {
   aurora:  { name: "Aurora",  tag: "Flowing swirl", kind: "image", src: "/assets/orb-glass.webp",  price: 0,   zoom: 1.5, noBubble: true, hue: 0,             ring: ["#5ec8ff", "#9a7bff", "#ff6ec0"], bg: "radial-gradient(125% 120% at 50% 16%, #1a1030 0%, #0a0613 58%, #060310 100%)" },
-  blossom: { name: "Blossom", tag: "Rose petals",   kind: "image", src: "/assets/orb-swirl-b.webp", price: 0.5, zoom: 1.5, noBubble: true, hue: 0,  sat: 1.12, ring: ["#ff8fbf", "#ff6ea0", "#ffa8d8"], bg: "radial-gradient(125% 120% at 50% 16%, #2a1024 0%, #150813 58%, #0a040b 100%)" },
+  blossom: { name: "Blossom", tag: "Rose petals",   kind: "image", src: "/assets/orb-swirl-b.webp", price: 0.5, zoom: 1.5, noBubble: true, hue: 90,  sat: 1.12, ring: ["#ff8fbf", "#ff6ea0", "#ffa8d8"], bg: "radial-gradient(125% 120% at 50% 16%, #2a1024 0%, #150813 58%, #0a040b 100%)" },
   // Aura Pack — premium generated "woven light-rings" orbs (image), each on its own deep ground.
   halo:     { name: "Halo",     tag: "Woven light",   kind: "image", src: "/assets/orb-halo.webp",   price: 0.5, zoom: 1.1, hue: 0, ring: ["#e0929e", "#8fb0e0", "#5ececf"], bg: "radial-gradient(125% 120% at 50% 20%, #0e1220 0%, #080b16 58%, #04060e 100%)" },
   prism:    { name: "Prism",    tag: "Spectrum halo", kind: "image", src: "/assets/orb-prism.webp",  price: 0.5, zoom: 1.1, hue: 0, ring: ["#ff9a9a", "#9be89b", "#7fb8ff"], bg: "radial-gradient(125% 120% at 50% 20%, #0b0910 0%, #070510 58%, #030208 100%)" },
