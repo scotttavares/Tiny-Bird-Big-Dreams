@@ -641,7 +641,6 @@ export default function Lull() {
   const [mode, setMode] = useState("breathe");
   const [orbId, setOrbId] = useState(loadOrb);          // which orb you breathe with
   const [orbTint, setOrbTint] = useState(() => { try { return JSON.parse(localStorage.getItem("lull.orbTint.v1")) || {}; } catch (e) { return {}; } }); // per-orb colour selection (hue offset)
-  const [appearance, setAppearance] = useState(() => { try { const v = localStorage.getItem("lull.appearance.v1"); return (v === "light" || v === "dark" || v === "system") ? v : "dark"; } catch (e) { return "dark"; } }); // global light/dark mode: "system" follows the OS
   const [ownedOrbs, setOwnedOrbs] = useState(loadOwned); // unlocked orb ids
   const [ownedSounds, setOwnedSounds] = useState(loadOwnedSounds); // unlocked sound ids
   const [bundleOwned, setBundleOwned] = useState(() => { try { return localStorage.getItem("lull.bundleOwned.v1") === "1"; } catch (e) { return false; } }); // "Everything" owned → unlocks all, incl. future
@@ -655,7 +654,6 @@ export default function Lull() {
   const [scapeId, setScapeId] = useState(() => { try { const s = localStorage.getItem("lull.scape.v1"); return (s && (SOUND_BY_ID[s] || s.slice(0, 4) === "mix:")) ? s : "bowls"; } catch (e) { return "bowls"; } });
   // Sound-only sleep ("Sound only") keeps its own bed, so a sleep sound never changes your breathing sound. Defaults to white noise.
   const [sleepScapeId, setSleepScapeId] = useState(() => { try { const s = localStorage.getItem("lull.sleepScape.v1"); return (s && (SOUND_BY_ID[s] || s.slice(0, 4) === "mix:")) ? s : "noise"; } catch (e) { return "noise"; } });
-  const [light, setLight] = useState(false);
   const [sessions, setSessions] = useState(() => (typeof window !== "undefined" ? loadHist() : []));
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -724,7 +722,6 @@ export default function Lull() {
   useEffect(() => { sleepScapeIdRef.current = sleepScapeId; try { localStorage.setItem("lull.sleepScape.v1", sleepScapeId); } catch (e) {} }, [sleepScapeId]);
   useEffect(() => { try { localStorage.setItem(ORB_KEY, orbId); } catch (e) {} }, [orbId]);
   useEffect(() => { try { localStorage.setItem("lull.orbTint.v1", JSON.stringify(orbTint)); } catch (e) {} }, [orbTint]);
-  useEffect(() => { try { localStorage.setItem("lull.appearance.v1", appearance); } catch (e) {} }, [appearance]);
   useEffect(() => { try { localStorage.setItem(OWNED_KEY, JSON.stringify(ownedOrbs)); } catch (e) {} }, [ownedOrbs]);
   useEffect(() => { try { localStorage.setItem(SOUNDS_OWNED_KEY, JSON.stringify(ownedSounds)); } catch (e) {} }, [ownedSounds]);
   useEffect(() => { try { localStorage.setItem("lull.bundleOwned.v1", bundleOwned ? "1" : "0"); } catch (e) {} }, [bundleOwned]);
@@ -801,8 +798,6 @@ export default function Lull() {
     })();
     return () => { dead = true; };
   }, []);
-  // Track the OS light/dark preference so Appearance: System can follow it live.
-  useEffect(() => { try { if (!window.matchMedia) return; const mq = window.matchMedia("(prefers-color-scheme: light)"); const on = () => setLight(mq.matches); on(); if (mq.addEventListener) { mq.addEventListener("change", on); return () => mq.removeEventListener("change", on); } mq.addListener(on); return () => mq.removeListener(on); } catch (e) {} }, []);
   useEffect(() => { try { document.documentElement.style.colorScheme = "dark"; const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", "#070410"); } catch (e) {} }, []);
 
   const clearTimers = useCallback(() => {
@@ -1085,7 +1080,6 @@ export default function Lull() {
   const pats = PATTERNS[mode];
 
   const selectedOrb = ORBS[orbId] || ORBS.aurora;
-  const appLight = appearance === "light" || (appearance === "system" && light); // global light mode (chosen, or following the OS)
   const orbTintDeg = selectedOrb.kind === "image" ? (orbTint[orbId] || 0) : 0; // chosen colour offset for this orb
   const effOrbHue = (selectedOrb.hue || 0) + orbTintDeg;
   // Multi-palette orbs (the particle "dust" orb) pick their active palette from the per-orb selection.
@@ -1093,7 +1087,7 @@ export default function Lull() {
   const activePal = selectedOrb.palettes ? (selectedOrb.palettes[orbVarIdx] || selectedOrb.palettes[0]) : null;
   // The progress ring's gradient matches the selected orb's own palette (falls back to the theme).
   const ringColors = (activePal && activePal.ring) || selectedOrb.ring || [ringFrom, ringTo];
-  const isLight = (((activePal ? !!activePal.light : !!selectedOrb.light) || appLight) && !night);    // light mode (or a pastel orb) sits on a bright ground with dark UI; sleep always stays dark
+  const isLight = ((activePal ? !!activePal.light : !!selectedOrb.light) && !night);    // only a pastel orb sits on a bright ground with dark UI; sleep always stays dark
   const onWhite = isLight;                           // dark readout ink + a soft white halo on the bright ground
   const onDark = activePal ? !activePal.light : !!selectedOrb.dark;               // particle / plasma orbs glow on a deep-black ground
   const daylight = isLight;
@@ -1123,8 +1117,8 @@ export default function Lull() {
   const LIGHT_ROOT = "radial-gradient(125% 110% at 50% 6%, #faf4ee 0%, #f2eaef 55%, #ece1e9 100%)";
   const WHITE_ROOT = "radial-gradient(125% 120% at 50% 4%, #ffffff 0%, #fbfbfe 58%, #f3f3f8 100%)";
   const DARK_ROOT = "radial-gradient(120% 120% at 50% 32%, #0a0711 0%, #050308 60%, #020104 100%)";
-  const groundBg0 = (appLight && !night) ? WHITE_ROOT : (activePal ? (activePal.bg || th.rootDay) : (night ? th.rootNight : (selectedOrb.bg || th.rootDay)));  // light mode uses the clean white ground, else each orb's (or palette's) own matching ground
-  const groundBg = (orbTintDeg && !(appLight && !night)) ? shiftGradientHue(groundBg0, orbTintDeg) : groundBg0; // shift the ground to the orb's picked colour (but keep the clean white ground unshifted in light mode)
+  const groundBg0 = activePal ? (activePal.bg || th.rootDay) : (night ? th.rootNight : (selectedOrb.bg || th.rootDay));  // each orb's (or palette's) own matching ground
+  const groundBg = orbTintDeg ? shiftGradientHue(groundBg0, orbTintDeg) : groundBg0; // shift the ground to the orb's picked colour
   // Solid fallback under the gradient so full-screen (position:fixed) modals never let the dark page
   // body bleed through — critical for light orbs, where a non-painting gradient would look dark.
   const groundSolid = isLight ? "#f8f4fd" : "#0a0613";
@@ -1248,14 +1242,8 @@ export default function Lull() {
       <div className="amb1" style={{ position: "absolute", top: "-10%", left: "-15%", width: 520, height: 520, borderRadius: "50%", background: amb1, filter: "blur(20px)", zIndex: 0, opacity: selectedOrb.bg ? 0 : 1, transition: "background 1.4s ease, opacity 1.2s ease" }} />
       <div className="amb2" style={{ position: "absolute", bottom: "-12%", right: "-18%", width: 560, height: 560, borderRadius: "50%", background: amb2, filter: "blur(20px)", zIndex: 0, opacity: selectedOrb.bg ? 0 : 1, transition: "background 1.4s ease, opacity 1.2s ease" }} />
       <div style={{ position: "absolute", inset: 0, background: isCool ? tintCool : tintWarm, opacity: selectedOrb.bg ? 0 : 1, transition: "background 1.5s ease, opacity 1.2s ease", zIndex: 1, pointerEvents: "none" }} />
-      {/* Slowly-drifting blobs in the selected orb's own colours give the ground gentle motion and tie
-          it to the orb — a soft wash on light, a faint glow on dark (disabled by reduced-motion via .amb classes). */}
-      {isLight && (<>
-        <div className="amb1" style={{ position: "absolute", top: "-14%", left: "-12%", width: 560, height: 560, borderRadius: "50%", background: `radial-gradient(circle, ${tintHexes[0]}66, ${tintHexes[0]}00 70%)`, filter: "blur(46px)", zIndex: 0, pointerEvents: "none", transition: "background 1.2s ease" }} />
-        <div className="amb2" style={{ position: "absolute", bottom: "-16%", right: "-12%", width: 600, height: 600, borderRadius: "50%", background: `radial-gradient(circle, ${(tintHexes[2] || tintHexes[0])}66, ${(tintHexes[2] || tintHexes[0])}00 70%)`, filter: "blur(46px)", zIndex: 0, pointerEvents: "none", transition: "background 1.2s ease" }} />
-        <div className="amb1" style={{ position: "absolute", top: "34%", right: "-14%", width: 460, height: 460, borderRadius: "50%", background: `radial-gradient(circle, ${(tintHexes[1] || tintHexes[0])}52, ${(tintHexes[1] || tintHexes[0])}00 70%)`, filter: "blur(50px)", zIndex: 0, pointerEvents: "none", animationDelay: "-9s", transition: "background 1.2s ease" }} />
-        <div className="amb2" style={{ position: "absolute", bottom: "30%", left: "-12%", width: 480, height: 480, borderRadius: "50%", background: `radial-gradient(circle, ${tintHexes[0]}52, ${tintHexes[0]}00 70%)`, filter: "blur(50px)", zIndex: 0, pointerEvents: "none", animationDelay: "-15s", transition: "background 1.2s ease" }} />
-      </>)}
+      {/* Slowly-drifting blobs in the selected orb's own colours give the dark ground a faint, gentle
+          glow tied to the orb (disabled by reduced-motion via .amb classes). */}
       {!isLight && !night && (<>
         <div className="amb1" style={{ position: "absolute", top: "-12%", left: "-14%", width: 540, height: 540, borderRadius: "50%", background: `radial-gradient(circle, ${tintHexes[0]}26, ${tintHexes[0]}00 70%)`, filter: "blur(52px)", zIndex: 0, pointerEvents: "none", transition: "background 1.2s ease" }} />
         <div className="amb2" style={{ position: "absolute", bottom: "-14%", right: "-14%", width: 580, height: 580, borderRadius: "50%", background: `radial-gradient(circle, ${(tintHexes[2] || tintHexes[0])}20, ${(tintHexes[2] || tintHexes[0])}00 70%)`, filter: "blur(54px)", zIndex: 0, pointerEvents: "none", animationDelay: "-12s", transition: "background 1.2s ease" }} />
@@ -1367,7 +1355,7 @@ export default function Lull() {
                       <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transformOrigin: "center", display: "block", pointerEvents: "none", willChange: "transform", animation: prefersReduced ? "none" : "swirlSpin 46s linear infinite" }} />
                       <img src={orbSrc} alt="" draggable="false" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transformOrigin: "center", display: "block", pointerEvents: "none", mixBlendMode: "screen", opacity: 0.45, willChange: "transform", animation: prefersReduced ? "none" : "swirlSpinRev 63s linear infinite" }} />
                     </div>
-                    {!selectedOrb.noBubble && !(appLight && !night) && (<div aria-hidden="true" style={{ position: "absolute", inset: 0, borderRadius: "50%", pointerEvents: "none", background: "radial-gradient(58% 52% at 37% 30%, rgba(255,255,255,0.32), rgba(255,255,255,0.06) 42%, transparent 62%)" }} />)}
+                    {!selectedOrb.noBubble && (<div aria-hidden="true" style={{ position: "absolute", inset: 0, borderRadius: "50%", pointerEvents: "none", background: "radial-gradient(58% 52% at 37% 30%, rgba(255,255,255,0.32), rgba(255,255,255,0.06) 42%, transparent 62%)" }} />)}
                   </div>
                 ) : (
                   /* Soft glow orb (coded). A symmetric ring of blurred colour blobs (from the orb's
@@ -1830,15 +1818,6 @@ export default function Lull() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
             <span style={{ fontSize: 12, letterSpacing: 5, textTransform: "uppercase", fontWeight: 500, opacity: 0.6 }}>Settings</span>
             <button className="lull-btn" aria-label="Close" onClick={() => setShowSettings(false)} style={{ padding: "6px 4px", opacity: 0.75, fontSize: 15 }}>Done</button>
-          </div>
-          <div style={{ marginBottom: 34 }}>
-            <div style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", fontWeight: 600, opacity: 0.5, marginBottom: 15 }}>Appearance</div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-              {[["system", "System"], ["light", "Light"], ["dark", "Dark"]].map(([val, label]) => { const on = appearance === val; return (
-                <button key={val} className="lull-btn" aria-pressed={on} onClick={() => setAppearance(val)} style={{ padding: "12px 0", borderRadius: 14, fontSize: 13.5, fontWeight: 600, letterSpacing: 0.3, color: on ? ink : inkA(0.6), background: on ? wa(0.14) : wa(0.05), border: "1px solid " + wa(on ? 0.32 : 0.12), transition: "background .2s ease, color .2s ease, border-color .2s ease" }}>{label}</button>
-              ); })}
-            </div>
-            <div style={{ fontSize: 12.5, opacity: 0.45, marginTop: 10, letterSpacing: 0.2 }}>System follows your device’s light or dark setting. Sleep stays dark.</div>
           </div>
           {iconPickerOn && (
             <div style={{ marginBottom: 34 }}>
