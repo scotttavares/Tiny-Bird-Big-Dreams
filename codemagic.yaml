@@ -1,0 +1,112 @@
+# Codemagic CI — builds & signs the Lull iOS app entirely in the cloud (no Mac).
+# The Capacitor project lives in lull-web/, so the whole workflow runs there.
+#
+# BEFORE THE FIRST BUILD, fill in the two placeholders below and set the signing
+# key (see NATIVE-IOS.md at the repo root for the full checklist):
+#   1. integrations.app_store_connect  -> your Codemagic App Store Connect API
+#      integration name, copied EXACTLY as Codemagic shows it.
+#   2. environment.vars.APP_APPLE_ID   -> the numeric Apple ID of the app record
+#      in App Store Connect (App Information page).
+#   3. A secret env var CERTIFICATE_PRIVATE_KEY (group "appstore") holding a
+#      persistent RSA private key PEM — without it, signing fails.
+workflows:
+  ios-release:
+    name: Lull iOS release
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    working_directory: lull-web
+
+    integrations:
+      app_store_connect: "Orbit ASC API key"       # account-wide ASC API key (also manages Lull)
+
+    environment:
+      groups:
+        - appstore                                 # holds CERTIFICATE_PRIVATE_KEY (secret)
+      node: 20
+      xcode: latest
+      cocoapods: default
+      vars:
+        APP_APPLE_ID: "6783862542"                 # numeric Apple ID of the Lull app record in App Store Connect
+        BUNDLE_ID: "com.tinybirdbigdreams.lull"
+        MARKETING_VERSION: "1.1"                    # <-- App Store version string; bump each release (must exceed the live version)
+
+    scripts:
+      - name: Install npm dependencies
+        script: npm install
+
+      - name: Build the web app and assemble www/
+        script: npm run build:ios
+
+      - name: Add iOS platform and sync
+        script: |
+          [ -d "ios/App" ] || npx cap add ios
+          npx cap sync ios
+
+      - name: Generate app icon + splash from assets/
+        script: |
+          # Use the SCOPED package — bare `npx capacitor-assets` is a deprecated
+          # package that silently no-ops and ships the default placeholder icon.
+          if [ -f assets/icon.png ]; then
+            npx --yes @capacitor/assets@3 generate --ios
+          else
+            echo "no assets/icon.png — skipping icon generation"
+          fi
+
+      - name: Configure Info.plist (encryption, portrait, full-screen)
+        script: |
+          PLIST="ios/App/App/Info.plist"
+          # No non-exempt encryption -> skips the App Store export-compliance prompt.
+          /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption NO" "$PLIST" \
+            || /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool NO" "$PLIST"
+          # Lock to portrait on iPhone + iPad (Lull is a portrait experience).
+          for KEY in UISupportedInterfaceOrientations "UISupportedInterfaceOrientations~ipad"; do
+            /usr/libexec/PlistBuddy -c "Delete :$KEY" "$PLIST" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :$KEY array" "$PLIST"
+            /usr/libexec/PlistBuddy -c "Add :$KEY:0 string UIInterfaceOrientationPortrait" "$PLIST"
+          done
+          # Full-screen on iPad (no Split View / Slide Over) — required when portrait-locked + universal.
+          /usr/libexec/PlistBuddy -c "Set :UIRequiresFullScreen YES" "$PLIST" 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Add :UIRequiresFullScreen bool YES" "$PLIST"
+
+      - name: Set version and build number
+        script: |
+          # Marketing version = the App Store version string (bump MARKETING_VERSION per release).
+          # Build number auto-increments from the latest build in App Store Connect.
+          LATEST=$(app-store-connect get-latest-build-number "$APP_APPLE_ID" 2>/dev/null || echo "0")
+          [ -z "$LATEST" ] && LATEST=0
+          cd ios/App
+          agvtool new-marketing-version "$MARKETING_VERSION"
+          agvtool new-version -all "$((LATEST + 1))"
+
+      - name: Sign and build the signed IPA
+        script: |
+          set -e
+          # Pin the target's bundle id to match the App ID + provisioning profile.
+          sed -i '' "s/PRODUCT_BUNDLE_IDENTIFIER = [^;]*;/PRODUCT_BUNDLE_IDENTIFIER = $BUNDLE_ID;/g" \
+            ios/App/App.xcodeproj/project.pbxproj || true
+          keychain initialize
+          # Create (or reuse) the distribution cert FROM OUR PERSISTENT KEY, plus the profile.
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
+            --create
+          keychain add-certificates
+          # use-profiles AND build-ipa MUST run in the SAME step (fresh signing state).
+          # TARGETED_DEVICE_FAMILY=1,2 -> universal (iPhone + iPad).
+          xcode-project use-profiles
+          xcode-project build-ipa \
+            --workspace "ios/App/App.xcworkspace" \
+            --scheme "App" \
+            --archive-flags "TARGETED_DEVICE_FAMILY=1,2"
+
+    artifacts:
+      - lull-web/build/ios/ipa/*.ipa
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app.dSYM
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: false   # flip to true to auto-push to TestFlight
+        submit_to_app_store: false    # we attach the build + submit manually in ASC
