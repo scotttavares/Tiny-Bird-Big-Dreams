@@ -17,6 +17,8 @@
 //   CF_TTBI_BEACON       – Web Analytics site tag for tinythoughtsbigideas.com (fallback)
 //   CF_TS_BEACON         – Web Analytics site tag for tinysuperpowers.com (fallback)
 
+import { handleGazette } from "./gazette.js";
+
 const SESSION_COOKIE = "tbbd_studio";
 const SESSION_TTL = 60 * 60 * 24 * 30; // 30 days, in seconds
 
@@ -32,6 +34,9 @@ export default {
 
     if (p === "/" || p === "") {
       return serveHome(request, env, ctx);
+    }
+    if (p === "/gazette" || p === "/gazette/") {
+      return handleGazette(request);
     }
     if (p === "/track" && request.method === "POST") {
       return handleTrack(request, env, ctx);
