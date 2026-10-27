@@ -1,0 +1,108 @@
+name: FieldGuide
+
+options:
+  bundleIdPrefix: com.tinybirdbigdreams
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    GCC_TREAT_WARNINGS_AS_ERRORS: NO
+    # Flip to YES in CI (scripts/build.sh) to enforce the zero-warnings bar.
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: NO
+
+targets:
+  FieldGuide:
+    type: application
+    platform: iOS
+    sources:
+      - path: FieldGuide
+    dependencies:
+      - target: FieldGuideWidget
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.tinybirdbigdreams.fieldguide
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    info:
+      path: FieldGuide/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Field Guide
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen:
+          UIColorName: PaperColor
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+          - UIInterfaceOrientationPortraitUpsideDown
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        NSCameraUsageDescription: Field Guide uses the camera to capture a reference photo for the page you are sketching.
+        NSLocationWhenInUseUsageDescription: Field Guide looks up the name of your current place only when you tap “Use current place”.
+        CFBundleURLTypes:
+          - CFBundleURLName: com.tinybirdbigdreams.fieldguide
+            CFBundleURLSchemes:
+              - fieldguide
+
+  FieldGuideWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: FieldGuideWidget
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.tinybirdbigdreams.fieldguide.widget
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SKIP_INSTALL: YES
+        ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME: WidgetBackground
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    info:
+      path: FieldGuideWidget/Info.plist
+      properties:
+        CFBundleDisplayName: Field Guide
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+
+  FieldGuideTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: FieldGuideTests
+    dependencies:
+      - target: FieldGuide
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.tinybirdbigdreams.fieldguide.tests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  FieldGuide:
+    build:
+      targets:
+        FieldGuide: all
+        FieldGuideTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - FieldGuideTests
