@@ -81,7 +81,8 @@ struct ExportServiceTests {
 
     @Test func emptyNotebookPDFHasOnlyTheCover() throws {
         let data = ExportService.notebookPDF(title: "Empty", pages: [])
-        let document = try #require(CGPDFDocument(try #require(CGDataProvider(data: data as CFData))))
+        let provider = try #require(CGDataProvider(data: data as CFData))
+        let document = try #require(CGPDFDocument(provider))
         #expect(document.numberOfPages == 1)
     }
 

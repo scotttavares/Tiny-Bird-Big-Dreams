@@ -44,6 +44,9 @@ grep -E ": warning: " "$OUT/xcodebuild.log" \
 WARNINGS=$(wc -l < "$OUT/warnings.txt" | tr -d ' ')
 echo "Warnings: $WARNINGS"
 cat "$OUT/warnings.txt"
+echo "Summary: Xcode $(xcodebuild -version | head -n 1 | cut -d' ' -f2), simulator SDK $SDK_VERSION, conditions '$CONDITIONS'"
+echo "Simulator: $(xcrun simctl list devices | grep "$UDID" | sed 's/^ *//')"
+xcrun simctl list devicetypes | grep -iE "duo|fold" || echo "No iPhone Duo simulator device type available"
 
 if [ "$STATUS" -ne 0 ]; then
   echo "xcodebuild failed with status $STATUS" >&2

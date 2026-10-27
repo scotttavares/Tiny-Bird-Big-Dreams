@@ -60,7 +60,8 @@ struct DrawingPersistenceTests {
         try context.save()
 
         let pageID = page.id
-        let fetched = try #require(try context.fetch(FetchDescriptor<Page>(predicate: #Predicate { $0.id == pageID })).first)
+        let descriptor = FetchDescriptor<Page>(predicate: #Predicate { $0.id == pageID })
+        let fetched = try #require(try context.fetch(descriptor).first)
         let restored = CanvasStore.decode(fetched.drawingData)
         #expect(restored.strokes.count == 2)
         #expect(restored.dataRepresentation() == Self.sampleDrawing().dataRepresentation())

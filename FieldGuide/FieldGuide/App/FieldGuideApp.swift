@@ -8,6 +8,8 @@ struct FieldGuideApp: App {
 
     init() {
         let inMemory = ProcessInfo.processInfo.arguments.contains("-FGInMemoryStore")
+        // SwiftData's default store lives in Application Support, which doesn't exist on first launch.
+        try? FileManager.default.createDirectory(at: .applicationSupportDirectory, withIntermediateDirectories: true)
         let configuration = ModelConfiguration(isStoredInMemoryOnly: inMemory)
         do {
             container = try ModelContainer(for: Schema(FieldGuideSchema.models), configurations: configuration)
