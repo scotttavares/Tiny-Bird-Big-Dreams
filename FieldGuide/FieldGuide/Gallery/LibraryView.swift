@@ -125,6 +125,7 @@ struct GalleryView: View {
 
     @State private var search = ""
     @State private var infoPage: Page?
+    @State private var sharedFile: SharedFile?
     @ScaledMetric(relativeTo: .body) private var tileWidth: CGFloat = 150
 
     private var pages: [Page] {
@@ -157,6 +158,7 @@ struct GalleryView: View {
                             .buttonStyle(.plain)
                             .contextMenu {
                                 Button("Page Info", systemImage: "info.circle") { infoPage = page }
+                                ExportMenuItems(model: model, page: page, sharedFile: $sharedFile)
                                 Button("Delete Page", systemImage: "trash", role: .destructive) { model.delete(page) }
                             }
                         }
@@ -179,6 +181,10 @@ struct GalleryView: View {
         }
         .sheet(item: $infoPage) { page in
             PageInfoSheet(model: model, page: page)
+        }
+        .sheet(item: $sharedFile) { file in
+            ShareSheet(file: file)
+                .presentationDetents([.medium, .large])
         }
     }
 }

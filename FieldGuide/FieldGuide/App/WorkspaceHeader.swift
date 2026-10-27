@@ -16,6 +16,7 @@ struct WorkspaceHeader: View {
     @State private var isShowingCamera = false
     @State private var isShowingLibrary = false
     @State private var infoPage: Page?
+    @State private var sharedFile: SharedFile?
 
     var body: some View {
         Group {
@@ -37,6 +38,10 @@ struct WorkspaceHeader: View {
         }
         .sheet(item: $infoPage) { page in
             PageInfoSheet(model: model, page: page)
+        }
+        .sheet(item: $sharedFile) { file in
+            ShareSheet(file: file)
+                .presentationDetents([.medium, .large])
         }
         .fullScreenCover(isPresented: $isShowingCamera) {
             CameraCaptureView { image in
@@ -190,6 +195,7 @@ struct WorkspaceHeader: View {
             Button("New Page", systemImage: "plus") { model.newPage() }
             Button("Page Info", systemImage: "info.circle") { infoPage = model.currentPage }
             Button("Present", systemImage: "triangle") { postureProvider.override = .tent }
+            ExportMenuItems(model: model, sharedFile: $sharedFile)
             Section("Layout") {
                 Button {
                     postureProvider.override = nil
