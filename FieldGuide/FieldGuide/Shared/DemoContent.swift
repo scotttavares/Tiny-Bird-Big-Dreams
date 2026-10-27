@@ -46,6 +46,10 @@ enum DemoContent {
         blank.paperStyle = .grid
         blank.tags = ["practice"]
 
+        // Open on the illustrated fern page: bootstrap reopens the most recently edited page.
+        fern.updatedAt = .now.addingTimeInterval(1)
+        notebook.updatedAt = .now.addingTimeInterval(1)
+
         try? context.save()
     }
 

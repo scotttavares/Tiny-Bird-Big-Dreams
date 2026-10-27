@@ -51,7 +51,8 @@ shoot() {
   limit 30 xcrun simctl terminate "$udid" "$BUNDLE_ID" 2>/dev/null || true
   limit 240 xcrun simctl launch "$udid" "$BUNDLE_ID" \
     -FGInMemoryStore -FGSeedDemo -FGPostureOverride "$posture" >/dev/null || { echo "launch failed for $name" >&2; return 1; }
-  sleep 8
+  # The first launch on a freshly booted simulator can take a while to draw its first frame.
+  sleep "${SETTLE:-10}"
   limit 90 xcrun simctl io "$udid" screenshot --type=png "$SHOTS/$name.png" || { echo "screenshot failed for $name" >&2; return 1; }
   echo "saved screenshots/$name.png"
 }
@@ -64,6 +65,8 @@ shoot "$PHONE" closed closed-dark dark || FAILED="$FAILED closed-dark"
 if [ "$SPREAD" != "$PHONE" ]; then
   prepare "$SPREAD" || FAILED="$FAILED spread-device"
 fi
+SETTLE=25 shoot "$SPREAD" book book-warmup >/dev/null 2>&1 || true
+rm -f "$SHOTS/book-warmup.png"
 shoot "$SPREAD" book book || FAILED="$FAILED book"
 shoot "$SPREAD" book book-dark dark || FAILED="$FAILED book-dark"
 shoot "$SPREAD" laptop laptop || FAILED="$FAILED laptop"

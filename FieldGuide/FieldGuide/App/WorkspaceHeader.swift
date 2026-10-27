@@ -95,7 +95,7 @@ struct WorkspaceHeader: View {
 
     private var tentBar: some View {
         HStack(spacing: 12) {
-            titleBlock
+            titleText
                 .padding(.leading, 8)
             Spacer(minLength: 8)
             Button(action: onReturnToDraw) {
@@ -103,6 +103,7 @@ struct WorkspaceHeader: View {
                     .font(.headline)
                     .padding(.horizontal, 14)
                     .frame(minHeight: buttonSize)
+                    .foregroundStyle(Theme.onAccent)
             }
             .buttonStyle(.borderedProminent)
             .accessibilityHint("Leaves presentation mode so you can keep sketching.")
@@ -130,8 +131,7 @@ struct WorkspaceHeader: View {
             titleText
         }
         .buttonStyle(.plain)
-        .disabled(posture == .tent)
-        .accessibilityHint(posture == .tent ? "" : "Edits the title, place, date and tags.")
+        .accessibilityHint("Edits the title, place, date and tags.")
     }
 
     private var titleText: some View {
