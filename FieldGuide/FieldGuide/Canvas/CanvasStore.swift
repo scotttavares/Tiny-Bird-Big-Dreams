@@ -58,7 +58,7 @@ final class CanvasStore {
     var paperStyle: PaperStyle = .dotted {
         didSet {
             canvasView?.paperStyle = paperStyle
-            if paperStyle != oldValue { onPaperStyleChange?(paperStyle) }
+            if paperStyle != oldValue, !isLoading { onPaperStyleChange?(paperStyle) }
         }
     }
     /// Tracing mode: the reference image shows at 30% under the canvas.
