@@ -8,9 +8,11 @@ import Testing
 @Suite("PKDrawing persistence")
 struct DrawingPersistenceTests {
     static func sampleDrawing() -> PKDrawing {
-        let points = (0..<20).map { index in
-            PKStrokePoint(
-                location: CGPoint(x: 100 + index * 10, y: 200 + index * 5),
+        let points: [PKStrokePoint] = (0..<20).map { (index: Int) -> PKStrokePoint in
+            let step = CGFloat(index)
+            let location = CGPoint(x: 100 + step * 10, y: 200 + step * 5)
+            return PKStrokePoint(
+                location: location,
                 timeOffset: TimeInterval(index) * 0.01,
                 size: CGSize(width: 4, height: 4),
                 opacity: 1,

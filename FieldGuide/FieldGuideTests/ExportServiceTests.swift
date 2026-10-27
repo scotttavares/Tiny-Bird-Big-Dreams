@@ -58,8 +58,10 @@ struct ExportServiceTests {
         let data = ExportService.spreadPNG(samplePage(reference: solidImage(CGSize(width: 400, height: 400))), scale: 1)
         let image = try #require(UIImage(data: data)?.cgImage)
         // Centre of the left page should be the green reference, not paper.
-        let point = CGPoint(x: ExportService.margin + ExportService.pageWidth / 2,
-                            y: ExportService.captionHeight + ExportService.margin / 2 + ExportService.pageWidth * 1.375 / 2)
+        let pageHeight: CGFloat = ExportService.pageWidth * PageGeometry.size.height / PageGeometry.size.width
+        let x: CGFloat = ExportService.margin + ExportService.pageWidth / 2
+        let top: CGFloat = ExportService.captionHeight + ExportService.margin / 2
+        let point = CGPoint(x: x, y: top + pageHeight / 2)
         let color = try #require(pixel(in: image, at: point))
         #expect(color.green > color.red)
         #expect(color.green > color.blue)
