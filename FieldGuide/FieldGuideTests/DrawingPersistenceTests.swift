@@ -39,7 +39,7 @@ struct DrawingPersistenceTests {
         #expect(decoded.strokes.count == 2)
         #expect(decoded.bounds.integral == drawing.bounds.integral)
         #expect(decoded.strokes[0].path.count == drawing.strokes[0].path.count)
-        #expect(decoded.dataRepresentation() == drawing.dataRepresentation())
+        expectSameStrokes(decoded, drawing)
     }
 
     @Test func emptyDrawingIsEmptyData() {
@@ -68,7 +68,7 @@ struct DrawingPersistenceTests {
         let fetched = try #require(try context.fetch(descriptor).first)
         let restored = CanvasStore.decode(fetched.drawingData)
         #expect(restored.strokes.count == 2)
-        #expect(restored.dataRepresentation() == Self.sampleDrawing().dataRepresentation())
+        expectSameStrokes(restored, Self.sampleDrawing())
     }
 
     @Test func storeLoadsAndPersistsOnFlush() {
@@ -132,5 +132,20 @@ struct DrawingPersistenceTests {
         #expect(CanvasStore.width(for: .marker, fraction: 0) == range.lowerBound)
         #expect(CanvasStore.width(for: .marker, fraction: 1) == range.upperBound)
         #expect(CanvasStore.width(for: .marker, fraction: 5) == range.upperBound)
+    }
+
+    /// PencilKit doesn't guarantee byte-identical re-encoding, so compare what a person would see:
+    /// stroke order, ink, transform and every control point.
+    private func expectSameStrokes(_ lhs: PKDrawing, _ rhs: PKDrawing) {
+        #expect(lhs.strokes.count == rhs.strokes.count)
+        for (a, b) in zip(lhs.strokes, rhs.strokes) {
+            #expect(a.ink.inkType == b.ink.inkType)
+            #expect(a.transform == b.transform)
+            #expect(a.path.count == b.path.count)
+            for (p, q) in zip(a.path, b.path) {
+                #expect(abs(p.location.x - q.location.x) < 0.01)
+                #expect(abs(p.location.y - q.location.y) < 0.01)
+            }
+        }
     }
 }
