@@ -95,3 +95,21 @@ until the posture changes again.
   the same everywhere.
 - **Simulator stand-ins** for screenshots when no Duo simulator exists: an iPhone for
   closed, an iPad for book/laptop/tent, with the posture forced by launch argument.
+
+## Verification status
+
+Checked on GitHub Actions (`macos-26` runner), PR #55:
+
+| Check | Result |
+| --- | --- |
+| Toolchain | Xcode 26.6, iOS Simulator SDK 26.5 (newest on the runner). No iOS 27.1 SDK, so `FIELDGUIDE_DUO_SDK` is **off** in CI. |
+| App + widget build | Passes with **zero warnings**. The only warning in the log is from Apple's `appintentsmetadataprocessor` ("Metadata extraction skipped. No AppIntents.framework dependency found."), which the zero-warnings gate filters out because it isn't about our sources. |
+| Unit tests | **47 tests in 7 suites pass** on an iPhone 17 Pro simulator: posture mapping, workspace layout, PKDrawing persistence, export, models/search/tags, color contrast. |
+| iPhone Duo simulator | **Not available** on the runner (`simctl list devicetypes` has no Duo/fold type). |
+| Duo code paths (`onHingeChange`, `reservedRegions`) | **Not compiled yet.** They need Xcode 27.1+. Until a runner or a Mac with that SDK builds them, the exact signatures from NOTES §Step 0 are unverified. |
+| Fold mid-stroke | Covered by design (one canvas instance, posture changes deferred while `isDrawing`) and by unit tests for the store. **Not exercised on hardware.** If the system itself cancels the touch when the scene moves displays, PencilKit drops that stroke; only a real device can show whether that happens. |
+
+### Things learned from CI
+
+- PencilKit doesn't re-encode a decoded `PKDrawing` byte-for-byte (938 vs 916 bytes), so persistence tests compare strokes, ink, transforms and points rather than bytes.
+- `PKStroke` has no `transformed(using:)`. Set `stroke.transform` instead.
