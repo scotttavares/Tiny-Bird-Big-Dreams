@@ -14,6 +14,8 @@ struct WorkspaceHeader: View {
 
     @ScaledMetric(relativeTo: .body) private var buttonSize: CGFloat = 44
     @State private var isShowingCamera = false
+    @State private var isShowingLibrary = false
+    @State private var infoPage: Page?
 
     var body: some View {
         Group {
@@ -30,6 +32,12 @@ struct WorkspaceHeader: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.regularMaterial, in: .rect(cornerRadius: 16))
         .foregroundStyle(Theme.inkText)
+        .sheet(isPresented: $isShowingLibrary) {
+            LibraryView(model: model)
+        }
+        .sheet(item: $infoPage) { page in
+            PageInfoSheet(model: model, page: page)
+        }
         .fullScreenCover(isPresented: $isShowingCamera) {
             CameraCaptureView { image in
                 model.setReference(image: image.downscaled(maxDimension: 2400), kind: .camera)
@@ -41,6 +49,7 @@ struct WorkspaceHeader: View {
 
     private var openBar: some View {
         HStack(spacing: 4) {
+            libraryButton
             pageTurnButton(offset: -1)
             titleBlock
             Spacer(minLength: 4)
@@ -51,6 +60,7 @@ struct WorkspaceHeader: View {
 
     private var closedBar: some View {
         HStack(spacing: 4) {
+            libraryButton
             lastPagePeek
             titleBlock
             Spacer(minLength: 4)
@@ -96,7 +106,30 @@ struct WorkspaceHeader: View {
 
     // MARK: Pieces
 
+    private var libraryButton: some View {
+        Button {
+            isShowingLibrary = true
+        } label: {
+            Image(systemName: "books.vertical")
+                .font(.title3)
+                .frame(width: buttonSize, height: buttonSize)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Notebooks and gallery")
+    }
+
     private var titleBlock: some View {
+        Button {
+            infoPage = model.currentPage
+        } label: {
+            titleText
+        }
+        .buttonStyle(.plain)
+        .disabled(posture == .tent)
+        .accessibilityHint(posture == .tent ? "" : "Edits the title, place, date and tags.")
+    }
+
+    private var titleText: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(model.currentPage?.title ?? "Field Guide")
                 .font(.headline)
@@ -155,6 +188,7 @@ struct WorkspaceHeader: View {
     private var moreMenu: some View {
         Menu {
             Button("New Page", systemImage: "plus") { model.newPage() }
+            Button("Page Info", systemImage: "info.circle") { infoPage = model.currentPage }
             Button("Present", systemImage: "triangle") { postureProvider.override = .tent }
             Section("Layout") {
                 Button {
