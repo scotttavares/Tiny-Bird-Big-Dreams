@@ -46,11 +46,11 @@ jobs:
         run: scripts/ci.sh
 
       - name: Screenshots
-        timeout-minutes: 25
+        timeout-minutes: 40
         run: scripts/screenshots.sh
 
       - name: Commit refreshed screenshots
-        if: github.event_name == 'push'
+        if: always() && github.event_name == 'push'
         working-directory: .
         run: |
           git config user.name "github-actions[bot]"
