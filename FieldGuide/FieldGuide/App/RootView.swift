@@ -11,17 +11,11 @@ struct RootView: View {
     var body: some View {
         Group {
             if let model {
-                VStack(spacing: 8) {
-                    CanvasView(store: model.canvas)
-                    ToolStrip(store: model.canvas, style: .compact)
-                        .padding(.horizontal)
-                }
-                .background(Theme.chrome)
+                WorkspaceView(model: model, postureProvider: postureProvider)
             } else {
-                Theme.paper
+                Theme.chrome.ignoresSafeArea()
             }
         }
-        .readsPosture(into: postureProvider)
         .task {
             guard model == nil else { return }
             let appModel = AppModel(context: modelContext)
