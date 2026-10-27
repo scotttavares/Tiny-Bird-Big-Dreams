@@ -25,7 +25,9 @@ struct DrawingPersistenceTests {
             ink: PKInk(.pen, color: .black),
             path: PKStrokePath(controlPoints: points, creationDate: Date(timeIntervalSince1970: 1_000))
         )
-        return PKDrawing(strokes: [stroke, stroke.transformed(using: CGAffineTransform(translationX: 0, y: 100))])
+        var shifted = stroke
+        shifted.transform = CGAffineTransform(translationX: 0, y: 100)
+        return PKDrawing(strokes: [stroke, shifted])
     }
 
     @Test func encodeDecodeRoundTrip() {
