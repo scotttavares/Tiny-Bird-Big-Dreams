@@ -14,6 +14,9 @@ SHOTS="$ROOT/screenshots"
 BUNDLE_ID="com.tinybirdbigdreams.fieldguide"
 mkdir -p "$SHOTS"
 
+# macOS has no GNU `timeout`; perl's alarm gives each simulator command a hard limit.
+limit() { local secs="$1"; shift; echo "+ [$secs s] $*" >&2; perl -e 'alarm shift; exec @ARGV' "$secs" "$@"; }
+
 CONDITIONS="$(cat "$OUT/conditions.txt" 2>/dev/null || echo DEBUG)"
 PHONE="$("$ROOT/scripts/pick-simulator.sh" phone)"
 SPREAD="$("$ROOT/scripts/pick-simulator.sh" spread)"
@@ -27,24 +30,25 @@ xcodebuild \
   SWIFT_ACTIVE_COMPILATION_CONDITIONS="$CONDITIONS" \
   CODE_SIGNING_ALLOWED=NO \
   build -quiet
+echo "Built app for screenshots" >&2
 APP="$(find "$OUT/DerivedData/Build/Products" -maxdepth 2 -name 'FieldGuide.app' -path '*iphonesimulator*' | head -n 1)"
 
 prepare() {
   local udid="$1"
-  xcrun simctl boot "$udid" 2>/dev/null || true
-  xcrun simctl bootstatus "$udid" -b >/dev/null
-  xcrun simctl status_bar "$udid" override --time "9:41" --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3 || true
-  xcrun simctl install "$udid" "$APP"
+  limit 60 xcrun simctl boot "$udid" 2>/dev/null || true
+  limit 300 xcrun simctl bootstatus "$udid" -b >/dev/null || echo "bootstatus timed out; continuing" >&2
+  limit 30 xcrun simctl status_bar "$udid" override --time "9:41" --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3 || true
+  limit 180 xcrun simctl install "$udid" "$APP"
 }
 
 shoot() {
   local udid="$1" posture="$2" name="$3" appearance="${4:-light}"
-  xcrun simctl ui "$udid" appearance "$appearance" || true
-  xcrun simctl terminate "$udid" "$BUNDLE_ID" 2>/dev/null || true
-  xcrun simctl launch "$udid" "$BUNDLE_ID" \
+  limit 30 xcrun simctl ui "$udid" appearance "$appearance" || true
+  limit 30 xcrun simctl terminate "$udid" "$BUNDLE_ID" 2>/dev/null || true
+  limit 90 xcrun simctl launch "$udid" "$BUNDLE_ID" \
     -FGInMemoryStore -FGSeedDemo -FGPostureOverride "$posture" >/dev/null
   sleep 6
-  xcrun simctl io "$udid" screenshot --type=png "$SHOTS/$name.png"
+  limit 60 xcrun simctl io "$udid" screenshot --type=png "$SHOTS/$name.png"
   echo "saved screenshots/$name.png"
 }
 

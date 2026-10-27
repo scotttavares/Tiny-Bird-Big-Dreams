@@ -46,6 +46,7 @@ jobs:
         run: scripts/ci.sh
 
       - name: Screenshots
+        timeout-minutes: 25
         run: scripts/screenshots.sh
 
       - name: Commit refreshed screenshots
