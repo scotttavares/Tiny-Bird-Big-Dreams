@@ -57,7 +57,7 @@ struct ReferenceSlot: View {
                 isExpanded = true
             }
             .accessibilityLabel(reference.kind == .camera ? "Reference photo" : "Reference image")
-            .accessibilityHint("Pinch to zoom. Double-tap to expand.")
+            .accessibilityHint("Pinch to zoom. Use the Expand action to view full screen.")
         } else if let reference, reference.kind == .notes {
             ScrollView {
                 Text(reference.notes.isEmpty ? "Tap to add notes" : reference.notes)
@@ -154,7 +154,7 @@ struct ReferenceSlot: View {
     }
 }
 
-/// Pinch to zoom, drag when zoomed, double-tap to expand (or tap action).
+/// Pinch to zoom, drag when zoomed, tap to expand, double-tap to reset the zoom.
 struct ZoomableImage: View {
     let image: UIImage
     var onExpand: (() -> Void)?
@@ -175,11 +175,10 @@ struct ZoomableImage: View {
                 .contentShape(.rect)
                 .gesture(magnify.simultaneously(with: pan))
                 .onTapGesture(count: 2) {
-                    if let onExpand {
-                        onExpand()
-                    } else {
-                        withAnimation(.smooth) { reset() }
-                    }
+                    withAnimation(.smooth) { reset() }
+                }
+                .onTapGesture {
+                    onExpand?()
                 }
         }
         .clipped()

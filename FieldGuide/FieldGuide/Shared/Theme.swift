@@ -8,6 +8,8 @@ enum Theme {
     static let rule = Color("PaperRuleColor")
     static let inkText = Color("InkTextColor")
     static let chrome = Color("ChromeColor")
+    /// Text and icons drawn on the accent color (white on light, slate on dark).
+    static let onAccent = Color("OnAccentColor")
 
     static var paperUIColor: UIColor { UIColor(named: "PaperColor") ?? .systemBackground }
     static var ruleUIColor: UIColor { UIColor(named: "PaperRuleColor") ?? .separator }

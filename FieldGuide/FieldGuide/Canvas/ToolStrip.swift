@@ -61,7 +61,7 @@ struct ToolStrip: View {
                 Image(systemName: kind.symbol)
                     .font(.title3)
                     .frame(width: buttonSize, height: buttonSize)
-                    .foregroundStyle(isSelected ? Color.white : Theme.inkText)
+                    .foregroundStyle(isSelected ? Theme.onAccent : Theme.inkText)
                     .background(isSelected ? Color.accentColor : .clear, in: .rect(cornerRadius: 12))
             }
             .buttonStyle(.plain)

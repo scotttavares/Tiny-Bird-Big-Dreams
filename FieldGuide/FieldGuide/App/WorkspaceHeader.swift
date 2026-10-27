@@ -83,7 +83,7 @@ struct WorkspaceHeader: View {
             } label: {
                 Image(systemName: "square.and.pencil")
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.onAccent)
                     .frame(width: buttonSize, height: buttonSize)
                     .background(Color.accentColor, in: .rect(cornerRadius: 12))
             }
