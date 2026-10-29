@@ -10,6 +10,7 @@ enum DemoContent {
         guard existing == 0 else { return }
 
         let notebook = Notebook(title: "Spring Walk", createdAt: .now.addingTimeInterval(-86_400 * 3))
+        notebook.theme = .journal
         context.insert(notebook)
 
         let fern = notebook.addPage(now: .now.addingTimeInterval(-86_400 * 2))

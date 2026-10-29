@@ -3,6 +3,7 @@ import SwiftUI
 /// A notebook's cover design. Each is modelled on a real field notebook: the board colour,
 /// the ink printed on it, and the type style of the title.
 enum NotebookTheme: String, CaseIterable, Identifiable, Sendable {
+    case journal
     case pines
     case kraft
     case olive
@@ -14,6 +15,7 @@ enum NotebookTheme: String, CaseIterable, Identifiable, Sendable {
 
     var name: String {
         switch self {
+        case .journal: "Field Journal"
         case .pines: "Wild Pines"
         case .kraft: "Kraft Memo"
         case .olive: "Olive Drab"
@@ -26,6 +28,7 @@ enum NotebookTheme: String, CaseIterable, Identifiable, Sendable {
     /// The small print under the title.
     var subtitle: String {
         switch self {
+        case .journal: "Sketches · Notes · Specimens"
         case .pines: "The official field guide to flora, fauna and adventure"
         case .kraft: "Pocket sketchbook · Graph paper · Durable materials"
         case .olive: "Field sketch book · Made by hand"
@@ -45,6 +48,7 @@ enum NotebookTheme: String, CaseIterable, Identifiable, Sendable {
 
     var boardHex: UInt32 {
         switch self {
+        case .journal: 0xC9A46A
         case .pines: 0x2B3A6E
         case .kraft: 0xD4A243
         case .olive: 0x5C7033
@@ -56,6 +60,7 @@ enum NotebookTheme: String, CaseIterable, Identifiable, Sendable {
 
     var coverInkHex: UInt32 {
         switch self {
+        case .journal: 0x24402C
         case .pines: 0xEF8F3C
         case .kraft: 0x1C1914
         case .olive: 0xECE8D6
@@ -67,6 +72,7 @@ enum NotebookTheme: String, CaseIterable, Identifiable, Sendable {
 
     var lineHex: UInt32 {
         switch self {
+        case .journal: 0xA8834C
         case .pines: 0x141C3C
         case .kraft: 0xA77B26
         case .olive: 0x3E4D21
@@ -78,6 +84,7 @@ enum NotebookTheme: String, CaseIterable, Identifiable, Sendable {
 
     var accentHex: UInt32 {
         switch self {
+        case .journal: 0x3A2A1A
         case .pines: 0xB3332B
         case .kraft: 0x28407A
         case .olive: 0x7F2A22
@@ -90,9 +97,13 @@ enum NotebookTheme: String, CaseIterable, Identifiable, Sendable {
     /// Wire-bound designs have rings across the top instead of a stapled spine.
     var isSpiralBound: Bool { self == .weather || self == .supply }
 
-    /// The title type: rounded and heavy, wide grotesque, stencil-like mono, or condensed.
+    /// Stapled pamphlets show staples through a scored fold; the cloth-bound journal doesn't.
+    var hasStapledSpine: Bool { !isSpiralBound && self != .journal }
+
+    /// The title type: book serif, rounded and heavy, wide grotesque, stencil-like mono, or condensed.
     func titleFont(size: CGFloat) -> Font {
         switch self {
+        case .journal: .system(size: size, weight: .bold, design: .serif)
         case .pines, .trail: .system(size: size, weight: .black, design: .rounded)
         case .kraft: .system(size: size, weight: .heavy).width(.expanded)
         case .olive, .weather: .system(size: size, weight: .bold, design: .monospaced)

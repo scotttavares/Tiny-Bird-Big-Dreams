@@ -34,8 +34,8 @@ struct PageCurlTests {
     }
 
     @Test func newNotebooksCycleThroughCovers() {
-        #expect(NotebookTheme.next(after: 0) == .pines)
-        #expect(NotebookTheme.next(after: 1) == .kraft)
-        #expect(NotebookTheme.next(after: NotebookTheme.allCases.count) == .pines)
+        #expect(NotebookTheme.next(after: 0) == .journal)
+        #expect(NotebookTheme.next(after: 1) == .pines)
+        #expect(NotebookTheme.next(after: NotebookTheme.allCases.count) == .journal)
     }
 }

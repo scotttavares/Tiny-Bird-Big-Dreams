@@ -45,6 +45,7 @@ private struct CoverPainter {
     mutating func paint() {
         context.fill(Path(board), with: .color(theme.board))
         switch theme {
+        case .journal: paintJournal()
         case .pines: paintPines()
         case .kraft: paintKraft()
         case .olive: paintOlive()
@@ -56,6 +57,37 @@ private struct CoverPainter {
     }
 
     // MARK: Designs
+
+    private mutating func paintJournal() {
+        // A cloth spine wrapped round the boards, and the elastic closure band.
+        context.fill(Path(CGRect(x: 0, y: 0, width: 30, height: height)), with: .color(theme.line))
+        var seam = Path(); seam.move(to: CGPoint(x: 30, y: 0)); seam.addLine(to: CGPoint(x: 30, y: height))
+        context.stroke(seam, with: .color(.black.opacity(0.18)), lineWidth: 1)
+        context.fill(Path(CGRect(x: 204, y: 0, width: 11, height: height)), with: .color(theme.accent))
+        var sheen = Path(); sheen.move(to: CGPoint(x: 206.5, y: 0)); sheen.addLine(to: CGPoint(x: 206.5, y: height))
+        context.stroke(sheen, with: .color(.white.opacity(0.12)), lineWidth: 1)
+
+        let titleBottom = drawTitle(centerY: 92, maxWidth: 150, maxSize: 32, color: theme.coverInk)
+        drawSubtitle(theme.subtitle.uppercased(), centerY: titleBottom + 20, size: 9, maxWidth: 150, color: theme.coverInk.opacity(0.85))
+
+        // The leaf emblem, pressed into the board.
+        var leaf = Path()
+        leaf.move(to: CGPoint(x: 120, y: 296))
+        leaf.addQuadCurve(to: CGPoint(x: 120, y: 200), control: CGPoint(x: 90, y: 248))
+        leaf.addQuadCurve(to: CGPoint(x: 120, y: 296), control: CGPoint(x: 150, y: 248))
+        context.fill(leaf, with: .color(theme.coverInk))
+        var veins = Path()
+        veins.move(to: CGPoint(x: 120, y: 214)); veins.addLine(to: CGPoint(x: 120, y: 290))
+        for (i, y) in [228.0, 246, 264].enumerated() {
+            let dx = 11 - CGFloat(i) * 1.5
+            veins.move(to: CGPoint(x: 120, y: y + 8)); veins.addLine(to: CGPoint(x: 120 - dx, y: y))
+            veins.move(to: CGPoint(x: 120, y: y + 8)); veins.addLine(to: CGPoint(x: 120 + dx, y: y))
+        }
+        context.stroke(veins, with: .color(theme.board), style: StrokeStyle(lineWidth: 1.4, lineCap: .round))
+        context.fill(Path(CGRect(x: 118.5, y: 294, width: 3, height: 16)), with: .color(theme.coverInk))
+
+        drawText("№ \(number)", at: CGPoint(x: 117, y: 384), font: theme.titleFont(size: 12), color: theme.coverInk.opacity(0.85))
+    }
 
     private mutating func paintPines() {
         // Topographic contours around a few hills.
@@ -193,7 +225,7 @@ private struct CoverPainter {
         context.fill(darkGrain, with: .color(.black.opacity(0.12)))
         context.fill(lightGrain, with: .color(.white.opacity(0.08)))
 
-        if !theme.isSpiralBound {
+        if theme.hasStapledSpine {
             // A scored spine with three staples through the fold.
             var score = Path(); score.move(to: CGPoint(x: 11.5, y: 0)); score.addLine(to: CGPoint(x: 11.5, y: height))
             context.stroke(score, with: .color(.black.opacity(0.28)), lineWidth: 1.4)

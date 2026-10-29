@@ -15,7 +15,7 @@ struct CoverScreen: View {
         ZStack(alignment: .bottom) {
             NotebookCoverArt(
                 title: notebook?.title ?? "Field Notes",
-                theme: notebook?.theme ?? .pines,
+                theme: notebook?.theme ?? .journal,
                 seed: notebook?.id.uuidString ?? "cover",
                 number: model.notebookNumber
             )
