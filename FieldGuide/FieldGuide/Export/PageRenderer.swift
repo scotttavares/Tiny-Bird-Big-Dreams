@@ -13,6 +13,7 @@ enum PageRenderer {
         drawing: PKDrawing,
         paperStyle: PaperStyle,
         paperTint: PaperTint = .automatic,
+        items: [PageItem] = [],
         width: CGFloat,
         scale: CGFloat = 2,
         appearance: UIUserInterfaceStyle = .light,
@@ -44,6 +45,7 @@ enum PageRenderer {
                 paper: paperTint.paperColor(for: traits),
                 rule: paperTint.ruleColor(for: traits)
             )
+            PageItemArt.draw(items, in: cg)
             cg.restoreGState()
             inkImage.draw(in: CGRect(origin: .zero, size: size), blendMode: .normal, alpha: inkOpacity)
         }
@@ -51,8 +53,8 @@ enum PageRenderer {
 
     /// Small JPEG for the gallery grid.
     static func thumbnailData(drawing: PKDrawing, paperStyle: PaperStyle, paperTint: PaperTint = .automatic,
-                              width: CGFloat = 240) -> Data? {
-        sketchImage(drawing: drawing, paperStyle: paperStyle, paperTint: paperTint, width: width, scale: 2)
+                              items: [PageItem] = [], width: CGFloat = 240) -> Data? {
+        sketchImage(drawing: drawing, paperStyle: paperStyle, paperTint: paperTint, items: items, width: width, scale: 2)
             .jpegData(compressionQuality: 0.7)
     }
 }

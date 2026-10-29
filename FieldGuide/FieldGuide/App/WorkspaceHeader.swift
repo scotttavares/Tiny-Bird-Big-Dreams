@@ -14,6 +14,7 @@ struct WorkspaceHeader: View {
 
     @ScaledMetric(relativeTo: .body) private var buttonSize: CGFloat = 44
     @State private var isShowingCamera = false
+    @State private var isShowingReference = false
     @State private var isShowingLibrary = false
     @State private var infoPage: Page?
     @State private var sharedFile: SharedFile?
@@ -46,7 +47,12 @@ struct WorkspaceHeader: View {
         .fullScreenCover(isPresented: $isShowingCamera) {
             CameraCaptureView { image in
                 model.setReference(image: image.downscaled(maxDimension: 2400), kind: .camera)
+                // Folded, there's no reference page to show it on, so show it under the sketch.
+                model.canvas.isTracing = true
             }
+        }
+        .fullScreenCover(isPresented: $isShowingReference) {
+            ExpandedReferenceView(model: model)
         }
     }
 
@@ -69,6 +75,7 @@ struct WorkspaceHeader: View {
             lastPagePeek
             titleBlock
             Spacer(minLength: 4)
+            referencePeek
             Button {
                 isShowingCamera = true
             } label: {
@@ -174,6 +181,36 @@ struct WorkspaceHeader: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Previous page: \(previous.title)")
+        }
+    }
+
+    /// Folded, the reference page is hidden: the photo shows here instead.
+    /// Tap to view it full screen; press and hold for tracing, retake and remove.
+    @ViewBuilder
+    private var referencePeek: some View {
+        if let image = model.canvas.referenceImage, model.currentPage?.reference?.kind != .notes {
+            Menu {
+                Button("View Photo", systemImage: "arrow.up.left.and.arrow.down.right") { isShowingReference = true }
+                Toggle("Trace Over It", systemImage: "square.on.square",
+                       isOn: Binding { model.canvas.isTracing } set: { model.canvas.isTracing = $0 })
+                Button("Retake", systemImage: "camera") { isShowingCamera = true }
+                Divider()
+                Button("Remove Photo", systemImage: "trash", role: .destructive) { model.removeReference() }
+            } label: {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: buttonSize * 0.8, height: buttonSize)
+                    .clipShape(.rect(cornerRadius: 6))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 6)
+                            .strokeBorder(model.canvas.isTracing ? Color.accentColor : Theme.rule, lineWidth: model.canvas.isTracing ? 2 : 0.5)
+                    }
+            } primaryAction: {
+                isShowingReference = true
+            }
+            .accessibilityLabel("Reference photo")
+            .accessibilityHint("Opens the photo. Press and hold for tracing and more.")
         }
     }
 

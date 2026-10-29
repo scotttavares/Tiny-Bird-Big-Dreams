@@ -60,6 +60,8 @@ final class Page {
     var paperStyleRaw: String
     /// `PaperTint` raw value: the paper's colour. Defaulted so older stores migrate.
     var paperTintRaw: String = PaperTint.automatic.rawValue
+    /// JSON `[PageItem]`: stickers, photos and tape on the page. Defaulted so older stores migrate.
+    var itemsData: Data = Data()
 
     // Field metadata
     var locationName: String
@@ -98,6 +100,11 @@ final class Page {
         set { paperTintRaw = newValue.rawValue }
     }
 
+    var items: [PageItem] {
+        get { (try? JSONDecoder().decode([PageItem].self, from: itemsData)) ?? [] }
+        set { itemsData = newValue.isEmpty ? Data() : ((try? JSONEncoder().encode(newValue)) ?? Data()) }
+    }
+
     /// The title a page gets when it is created: an auto timestamp.
     static func defaultTitle(for date: Date) -> String {
         "Page · " + date.formatted(.dateTime.month(.abbreviated).day().hour().minute())
@@ -133,6 +140,37 @@ final class ReferenceAsset {
     var kind: ReferenceKind {
         get { ReferenceKind(rawValue: kindRaw) ?? .notes }
         set { kindRaw = newValue.rawValue }
+    }
+}
+
+/// Something stuck on a page, under the ink: a sticker, a photo or a strip of tape.
+/// Placed in page coordinates (`PageGeometry`); its height follows from its art.
+struct PageItem: Codable, Identifiable, Equatable, Sendable {
+    enum Content: Codable, Hashable, Sendable {
+        /// An emoji, cut out with a white border.
+        case sticker(String)
+        /// A photo file, path relative to `ImageStore.root`.
+        case photo(String)
+        /// A strip of washi tape, by index into `PageItemArt.tapes`.
+        case tape(Int)
+    }
+
+    var id = UUID()
+    var content: Content
+    var center: CGPoint
+    var width: CGFloat
+    /// Radians, clockwise.
+    var rotation: Double = 0
+
+    /// Whether `point` (page coordinates) lands on this item when it is `size` big.
+    func contains(_ point: CGPoint, size: CGSize) -> Bool {
+        let dx = point.x - center.x
+        let dy = point.y - center.y
+        let c = cos(-rotation)
+        let s = sin(-rotation)
+        let x = dx * c - dy * s
+        let y = dx * s + dy * c
+        return abs(x) <= size.width / 2 && abs(y) <= size.height / 2
     }
 }
 

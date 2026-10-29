@@ -12,6 +12,7 @@ struct ExportPage {
     var paperTint: PaperTint = .automatic
     var referenceImage: UIImage?
     var referenceNotes: String?
+    var items: [PageItem] = []
 }
 
 /// Renders pages, spreads and notebooks to PNG and PDF.
@@ -122,7 +123,7 @@ enum ExportService {
 
     private static func drawSketch(_ page: ExportPage, in rect: CGRect, context: CGContext) {
         let image = PageRenderer.sketchImage(drawing: page.drawing, paperStyle: page.paperStyle, paperTint: page.paperTint,
-                                             width: rect.width, scale: 2)
+                                             items: page.items, width: rect.width, scale: 2)
         drawPageShadow(rect, context: context)
         image.draw(in: rect)
     }
@@ -244,7 +245,8 @@ extension ExportPage {
             paperStyle: page.paperStyle,
             paperTint: page.paperTint,
             referenceImage: page.reference?.kind == .notes ? nil : imageStore.image(at: page.reference?.relativeImagePath),
-            referenceNotes: page.reference?.kind == .notes ? page.reference?.notes : nil
+            referenceNotes: page.reference?.kind == .notes ? page.reference?.notes : nil,
+            items: page.items
         )
     }
 }

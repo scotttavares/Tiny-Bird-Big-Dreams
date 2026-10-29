@@ -10,6 +10,8 @@ struct ToolStrip: View {
 
     @Bindable var store: CanvasStore
     var style: Style = .full
+    /// Opens the stickers and photos sheet.
+    var onStickers: () -> Void = {}
 
     @State private var customColor: Color = .black
     @ScaledMetric(relativeTo: .body) private var buttonSize: CGFloat = 44
@@ -18,6 +20,15 @@ struct ToolStrip: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
                 toolButtons
+                Button(action: onStickers) {
+                    Image(systemName: store.isArranging ? "face.smiling.inverse" : "face.smiling")
+                        .font(.title3)
+                        .frame(width: buttonSize, height: buttonSize)
+                        .foregroundStyle(store.isArranging ? Theme.onAccent : Theme.inkText)
+                        .background(store.isArranging ? Color.accentColor : .clear, in: .rect(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Stickers and photos")
                 divider
                 if style == .full {
                     swatches
@@ -33,6 +44,9 @@ struct ToolStrip: View {
                     colorMenu
                     widthMenu
                     PaperStylePicker(store: store)
+                    if store.referenceImage != nil {
+                        TracingToggle(store: store)
+                    }
                     divider
                 }
                 undoRedo

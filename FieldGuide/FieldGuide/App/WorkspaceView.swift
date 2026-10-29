@@ -24,6 +24,7 @@ struct WorkspaceView: View {
     @State private var tentDismissed = false
     /// Folded shut, the outer screen shows the notebook's cover until it's opened.
     @State private var coverOpen = ProcessInfo.processInfo.arguments.contains("-FGCoverOpen")
+    @State private var isShowingStickers = false
 
     var body: some View {
         GeometryReader { proxy in
@@ -46,8 +47,10 @@ struct WorkspaceView: View {
                 CanvasPane(model: model, reduceMotion: reduceMotion)
                     .placed(in: frames.canvas, visible: true)
 
-                ToolStrip(store: model.canvas, style: current.posture == .closed ? .compact : .full)
-                    .placed(in: frames.tools, visible: frames.showsTools)
+                ToolStrip(store: model.canvas, style: current.posture == .closed ? .compact : .full) {
+                    isShowingStickers = true
+                }
+                .placed(in: frames.tools, visible: frames.showsTools)
 
                 WorkspaceHeader(
                     model: model,
@@ -74,6 +77,9 @@ struct WorkspaceView: View {
             }
         }
         .background(Theme.chrome.ignoresSafeArea())
+        .sheet(isPresented: $isShowingStickers) {
+            StickerPicker(model: model)
+        }
         .readsPosture(into: postureProvider)
         .onChange(of: postureProvider.posture, initial: true) { _, posture in
             if posture != .tent { tentDismissed = false }
@@ -184,7 +190,8 @@ struct CanvasPane: View {
     /// Everything that sits on the page: the corner hints, a page mid-turn, and the edge grips.
     @ViewBuilder
     private func pageLayer(size: CGSize) -> some View {
-        let canTurn = !reduceMotion && !model.canvas.isReadOnly
+        let isArranging = model.canvas.isArranging
+        let canTurn = !reduceMotion && !model.canvas.isReadOnly && !isArranging
         let grip = max(44, size.width * 0.15)
         ZStack(alignment: .topLeading) {
             if canTurn && turn == nil {
@@ -197,6 +204,9 @@ struct CanvasPane: View {
             if canTurn {
                 edgeGrip(offset: 1, width: grip, size: size)
                 edgeGrip(offset: -1, width: grip, size: size)
+            }
+            if isArranging && !model.canvas.isReadOnly {
+                PageItemsEditor(model: model, size: size)
             }
         }
         .frame(width: size.width, height: size.height, alignment: .topLeading)
@@ -274,11 +284,12 @@ struct CanvasPane: View {
               let current = model.currentPage,
               let target = offset > 0 ? model.nextPage : model.previousPage else { return false }
         let appearance: UIUserInterfaceStyle = colorScheme == .dark ? .dark : .light
-        let render = { (drawing: PKDrawing, paper: PaperStyle, tint: PaperTint) -> UIImage in
-            PageRenderer.sketchImage(drawing: drawing, paperStyle: paper, paperTint: tint, width: size.width, appearance: appearance)
+        let render = { (drawing: PKDrawing, paper: PaperStyle, tint: PaperTint, items: [PageItem]) -> UIImage in
+            PageRenderer.sketchImage(drawing: drawing, paperStyle: paper, paperTint: tint, items: items,
+                                     width: size.width, appearance: appearance)
         }
-        let here = render(model.canvas.drawing, current.paperStyle, current.paperTint)
-        let there = render(CanvasStore.decode(target.drawingData), target.paperStyle, target.paperTint)
+        let here = render(model.canvas.drawing, current.paperStyle, current.paperTint, model.canvas.items)
+        let there = render(CanvasStore.decode(target.drawingData), target.paperStyle, target.paperTint, target.items)
         let forward = offset > 0
         let sheetTint = forward ? current.paperTint : target.paperTint
         let sheetPaper = sheetTint.paperColor(for: UITraitCollection(userInterfaceStyle: sheetTint.resolvedAppearance(appearance)))

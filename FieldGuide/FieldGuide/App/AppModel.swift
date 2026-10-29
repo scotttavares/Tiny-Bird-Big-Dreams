@@ -42,6 +42,15 @@ final class AppModel {
             self?.refreshThumbnail(for: page)
             self?.save()
         }
+        PageItemArt.imageStore = imageStore
+        canvas.onItemsChange = { [weak self] items in
+            guard let page = self?.currentPage else { return }
+            page.items = items
+            page.updatedAt = .now
+            page.notebook?.updatedAt = .now
+            self?.refreshThumbnail(for: page)
+            self?.save()
+        }
     }
 
     // MARK: Startup
@@ -93,7 +102,7 @@ final class AppModel {
 
     func delete(_ notebook: Notebook) {
         for page in notebook.pages {
-            imageStore.delete(page.reference?.relativeImagePath)
+            deleteFiles(of: page)
         }
         let wasCurrent = notebook.id == currentNotebook?.id
         context.delete(notebook)
@@ -119,6 +128,7 @@ final class AppModel {
             drawingData: page.drawingData,
             paperStyle: page.paperStyle,
             paperTint: page.paperTint,
+            items: page.items,
             referenceImage: imageStore.image(at: page.reference?.relativeImagePath)
         )
         if canvas.referenceImage == nil {
@@ -139,7 +149,7 @@ final class AppModel {
     }
 
     func delete(_ page: Page) {
-        imageStore.delete(page.reference?.relativeImagePath)
+        deleteFiles(of: page)
         let notebook = page.notebook
         let wasCurrent = page.id == currentPage?.id
         context.delete(page)
@@ -224,6 +234,35 @@ final class AppModel {
         save()
     }
 
+    // MARK: Stickers and photos
+
+    func addItem(_ content: PageItem.Content) {
+        switch content {
+        case .sticker: canvas.add(content, width: 150, tilt: 0.15)
+        case .tape: canvas.add(content, width: 300, tilt: 0.35)
+        case .photo: canvas.add(content, width: 380, tilt: 0.08)
+        }
+    }
+
+    /// Saves `image` and sticks it on the page.
+    func addPhoto(_ image: UIImage) {
+        guard currentPage != nil, let path = try? imageStore.save(image) else { return }
+        addItem(.photo(path))
+    }
+
+    func deleteItem(_ id: UUID) {
+        if let removed = canvas.removeItem(id), case .photo(let path) = removed.content {
+            imageStore.delete(path)
+        }
+    }
+
+    private func deleteFiles(of page: Page) {
+        imageStore.delete(page.reference?.relativeImagePath)
+        for item in page.items {
+            if case .photo(let path) = item.content { imageStore.delete(path) }
+        }
+    }
+
     // MARK: Persistence
 
     private func persist(drawing: PKDrawing, pageID: UUID) {
@@ -237,13 +276,16 @@ final class AppModel {
         page.drawingData = CanvasStore.encode(drawing)
         page.updatedAt = .now
         page.notebook?.updatedAt = .now
-        page.thumbnailData = PageRenderer.thumbnailData(drawing: drawing, paperStyle: page.paperStyle, paperTint: page.paperTint)
+        page.thumbnailData = PageRenderer.thumbnailData(drawing: drawing, paperStyle: page.paperStyle,
+                                                        paperTint: page.paperTint, items: page.items)
         save()
     }
 
     func refreshThumbnail(for page: Page) {
-        let drawing = page.id == currentPage?.id ? canvas.drawing : CanvasStore.decode(page.drawingData)
-        page.thumbnailData = PageRenderer.thumbnailData(drawing: drawing, paperStyle: page.paperStyle, paperTint: page.paperTint)
+        let isOpen = page.id == currentPage?.id
+        let drawing = isOpen ? canvas.drawing : CanvasStore.decode(page.drawingData)
+        page.thumbnailData = PageRenderer.thumbnailData(drawing: drawing, paperStyle: page.paperStyle, paperTint: page.paperTint,
+                                                        items: isOpen ? canvas.items : page.items)
     }
 
     /// Flushes pending strokes and writes the store. Called on scene phase changes.

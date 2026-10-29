@@ -171,11 +171,17 @@ final class FieldCanvasView: PKCanvasView {
         underlay.tracingImage = visible ? image : nil
     }
 
+    func updateItems(_ items: [PageItem]) {
+        underlay.itemsView.items = items
+    }
+
     func refreshUnderlayResolution() {
         let scale = traitCollection.displayScale * min(max(zoomScale, 0.25), 4)
         if abs(underlay.contentScaleFactor - scale) > 0.01 {
             underlay.contentScaleFactor = scale
             underlay.setNeedsDisplay()
+            underlay.itemsView.contentScaleFactor = scale
+            underlay.itemsView.setNeedsDisplay()
         }
     }
 
@@ -206,7 +212,7 @@ final class FieldCanvasView: PKCanvasView {
     }
 }
 
-/// Paper pattern plus the optional 30% tracing image, drawn in page coordinates.
+/// Paper pattern, the optional 30% tracing image and the page's items, in page coordinates.
 final class PaperUnderlayView: UIView {
     var style: PaperStyle = .dotted {
         didSet { if style != oldValue { setNeedsDisplay() } }
@@ -224,6 +230,8 @@ final class PaperUnderlayView: UIView {
     }
 
     private let tracingView = UIImageView()
+    /// Stickers, photos and tape, above the paper and tracing image, under the ink.
+    let itemsView = PageItemsLayerView(frame: .zero)
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -240,6 +248,9 @@ final class PaperUnderlayView: UIView {
         tracingView.isHidden = true
         tracingView.isAccessibilityElement = false
         addSubview(tracingView)
+        itemsView.frame = bounds
+        itemsView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        addSubview(itemsView)
         registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (view: PaperUnderlayView, _: UITraitCollection) in
             view.setNeedsDisplay()
         }

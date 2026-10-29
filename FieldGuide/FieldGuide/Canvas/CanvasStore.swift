@@ -49,7 +49,11 @@ final class CanvasStore {
     // MARK: Tool state
 
     var toolKind: ToolKind = .pen {
-        didSet { applyTool() }
+        didSet {
+            applyTool()
+            // Picking a tool means back to drawing.
+            if isArranging { endArranging() }
+        }
     }
     /// The selected ink. Starts on the first palette swatch.
     var inkColor: UIColor = InkSwatch.palette[0].uiColor {
@@ -78,6 +82,13 @@ final class CanvasStore {
     var referenceImage: UIImage? {
         didSet { canvasView?.updateTracing(image: referenceImage, visible: isTracing) }
     }
+    /// Stickers, photos and tape on the page, under the ink.
+    var items: [PageItem] = [] {
+        didSet { canvasView?.updateItems(items) }
+    }
+    /// Arranging items: the page shows whole, and touches move items instead of drawing.
+    private(set) var isArranging = false
+    var selectedItemID: UUID?
     /// Read-only presentation (tent posture).
     var isReadOnly = false {
         didSet { canvasView?.isUserInteractionEnabled = !isReadOnly }
@@ -106,6 +117,7 @@ final class CanvasStore {
     @ObservationIgnored var onPersist: ((UUID, PKDrawing) -> Void)?
     @ObservationIgnored var onPaperStyleChange: ((PaperStyle) -> Void)?
     @ObservationIgnored var onPaperTintChange: ((PaperTint) -> Void)?
+    @ObservationIgnored var onItemsChange: (([PageItem]) -> Void)?
     @ObservationIgnored weak var canvasView: FieldCanvasView?
 
     @ObservationIgnored private var saveTask: Task<Void, Never>?
@@ -119,13 +131,17 @@ final class CanvasStore {
     // MARK: Loading pages
 
     /// Shows another page. Saves the current one first; resets undo and the view of the page.
-    func load(pageID: UUID, drawingData: Data, paperStyle: PaperStyle, paperTint: PaperTint = .automatic, referenceImage: UIImage?) {
+    func load(pageID: UUID, drawingData: Data, paperStyle: PaperStyle, paperTint: PaperTint = .automatic,
+              items: [PageItem] = [], referenceImage: UIImage?) {
         flush()
         isLoading = true
         defer { isLoading = false }
 
         self.pageID = pageID
         drawing = Self.decode(drawingData)
+        isArranging = false
+        selectedItemID = nil
+        self.items = items
         undoManager.removeAllActions()
         zoomFactor = 1
         normalizedCenter = CGPoint(x: 0.5, y: 0.5)
@@ -151,8 +167,65 @@ final class CanvasStore {
         view.paperStyle = paperStyle
         view.paperTint = paperTint
         view.updateTracing(image: referenceImage, visible: isTracing)
+        view.updateItems(items)
         view.isUserInteractionEnabled = !isReadOnly
         applyTool()
+    }
+
+    // MARK: Stickers and photos
+
+    /// Puts `content` on the page, a little off centre and askew, and starts arranging it.
+    func add(_ content: PageItem.Content, width: CGFloat, tilt: Double = 0) {
+        let page = PageGeometry.size
+        let item = PageItem(
+            content: content,
+            center: CGPoint(x: page.width / 2 + .random(in: -60...60), y: page.height / 2 + .random(in: -80...80)),
+            width: width,
+            rotation: tilt == 0 ? 0 : .random(in: -tilt...tilt)
+        )
+        items.append(item)
+        commitItems()
+        beginArranging(selecting: item.id)
+    }
+
+    /// Shows the whole page so items can be moved where they'll stay.
+    func beginArranging(selecting id: UUID? = nil) {
+        zoomFactor = 1
+        normalizedCenter = CGPoint(x: 0.5, y: 0.5)
+        canvasView?.restoreViewport()
+        selectedItemID = id
+        isArranging = true
+    }
+
+    func endArranging() {
+        isArranging = false
+        selectedItemID = nil
+    }
+
+    /// Live change while a gesture is under way; `commitItems` saves it.
+    func update(_ item: PageItem) {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        items[index] = item
+    }
+
+    func bringToFront(_ id: UUID) {
+        guard let index = items.firstIndex(where: { $0.id == id }), index != items.count - 1 else { return }
+        items.append(items.remove(at: index))
+        commitItems()
+    }
+
+    @discardableResult
+    func removeItem(_ id: UUID) -> PageItem? {
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return nil }
+        let removed = items.remove(at: index)
+        if selectedItemID == id { selectedItemID = nil }
+        commitItems()
+        return removed
+    }
+
+    func commitItems() {
+        guard !isLoading else { return }
+        onItemsChange?(items)
     }
 
     func drawingDidChange(_ newDrawing: PKDrawing) {
