@@ -10,7 +10,7 @@ import UIKit
 @Observable
 final class CanvasStore {
     enum ToolKind: String, CaseIterable, Identifiable, Sendable {
-        case pen, pencil, marker, eraser
+        case pen, pencil, marker, chalk, eraser
 
         var id: String { rawValue }
 
@@ -19,6 +19,7 @@ final class CanvasStore {
             case .pen: "Pen"
             case .pencil: "Pencil"
             case .marker: "Marker"
+            case .chalk: "Chalk"
             case .eraser: "Eraser"
             }
         }
@@ -28,6 +29,7 @@ final class CanvasStore {
             case .pen: "pencil.tip"
             case .pencil: "pencil"
             case .marker: "highlighter"
+            case .chalk: "scribble.variable"
             case .eraser: "eraser"
             }
         }
@@ -37,6 +39,8 @@ final class CanvasStore {
             case .pen: .pen
             case .pencil: .pencil
             case .marker: .marker
+            // Crayon ink: grainy, dusty edges, like chalk on a board.
+            case .chalk: .crayon
             case .eraser: nil
             }
         }
