@@ -295,6 +295,10 @@ workflows:
         script: |
           command -v xcodegen >/dev/null || brew install xcodegen
           xcodegen generate
+      - name: Install the Metal toolchain (page-curl shader)
+        script: |
+          # Xcode 26+ ships without it; the build needs it to compile PageCurl.metal.
+          xcodebuild -downloadComponent MetalToolchain
       - name: Set up code signing (persistent cert from CERTIFICATE_PRIVATE_KEY)
         script: |
           set -e
