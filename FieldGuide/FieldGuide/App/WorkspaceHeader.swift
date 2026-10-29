@@ -194,6 +194,18 @@ struct WorkspaceHeader: View {
         Menu {
             Button("New Page", systemImage: "plus") { model.newPage() }
             Button("Page Info", systemImage: "info.circle") { infoPage = model.currentPage }
+            Menu("Paper", systemImage: "doc.plaintext") {
+                Picker("Paper Color", selection: Binding { model.canvas.paperTint } set: { model.canvas.paperTint = $0 }) {
+                    ForEach(PaperTint.allCases) { tint in
+                        Text(tint.title).tag(tint)
+                    }
+                }
+                Picker("Pattern", selection: Binding { model.canvas.paperStyle } set: { model.canvas.paperStyle = $0 }) {
+                    ForEach(PaperStyle.allCases) { style in
+                        Label(style.title, systemImage: style.symbol).tag(style)
+                    }
+                }
+            }
             Button("Present", systemImage: "triangle") { postureProvider.override = .tent }
             ExportMenuItems(model: model, sharedFile: $sharedFile)
             Section("Layout") {
