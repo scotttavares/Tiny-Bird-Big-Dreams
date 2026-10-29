@@ -36,6 +36,12 @@ final class AppModel {
             self?.refreshThumbnail(for: page)
             self?.save()
         }
+        canvas.onPaperTintChange = { [weak self] tint in
+            guard let page = self?.currentPage else { return }
+            page.paperTint = tint
+            self?.refreshThumbnail(for: page)
+            self?.save()
+        }
     }
 
     // MARK: Startup
@@ -112,6 +118,7 @@ final class AppModel {
             pageID: page.id,
             drawingData: page.drawingData,
             paperStyle: page.paperStyle,
+            paperTint: page.paperTint,
             referenceImage: imageStore.image(at: page.reference?.relativeImagePath)
         )
         if canvas.referenceImage == nil {
@@ -125,6 +132,7 @@ final class AppModel {
         let target = notebook ?? currentNotebook ?? createNotebook(title: "Field Notes")
         let page = target.addPage()
         page.paperStyle = canvas.paperStyle
+        page.paperTint = canvas.paperTint
         save()
         open(page)
         return page
@@ -229,13 +237,13 @@ final class AppModel {
         page.drawingData = CanvasStore.encode(drawing)
         page.updatedAt = .now
         page.notebook?.updatedAt = .now
-        page.thumbnailData = PageRenderer.thumbnailData(drawing: drawing, paperStyle: page.paperStyle)
+        page.thumbnailData = PageRenderer.thumbnailData(drawing: drawing, paperStyle: page.paperStyle, paperTint: page.paperTint)
         save()
     }
 
     func refreshThumbnail(for page: Page) {
         let drawing = page.id == currentPage?.id ? canvas.drawing : CanvasStore.decode(page.drawingData)
-        page.thumbnailData = PageRenderer.thumbnailData(drawing: drawing, paperStyle: page.paperStyle)
+        page.thumbnailData = PageRenderer.thumbnailData(drawing: drawing, paperStyle: page.paperStyle, paperTint: page.paperTint)
     }
 
     /// Flushes pending strokes and writes the store. Called on scene phase changes.

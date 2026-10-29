@@ -65,6 +65,12 @@ final class CanvasStore {
             if paperStyle != oldValue, !isLoading { onPaperStyleChange?(paperStyle) }
         }
     }
+    var paperTint: PaperTint = .automatic {
+        didSet {
+            canvasView?.paperTint = paperTint
+            if paperTint != oldValue, !isLoading { onPaperTintChange?(paperTint) }
+        }
+    }
     /// Tracing mode: the reference image shows at 30% under the canvas.
     var isTracing = false {
         didSet { canvasView?.updateTracing(image: referenceImage, visible: isTracing) }
@@ -99,6 +105,7 @@ final class CanvasStore {
     /// Called with the drawing to persist (debounced after strokes, immediately on `flush`).
     @ObservationIgnored var onPersist: ((UUID, PKDrawing) -> Void)?
     @ObservationIgnored var onPaperStyleChange: ((PaperStyle) -> Void)?
+    @ObservationIgnored var onPaperTintChange: ((PaperTint) -> Void)?
     @ObservationIgnored weak var canvasView: FieldCanvasView?
 
     @ObservationIgnored private var saveTask: Task<Void, Never>?
@@ -112,7 +119,7 @@ final class CanvasStore {
     // MARK: Loading pages
 
     /// Shows another page. Saves the current one first; resets undo and the view of the page.
-    func load(pageID: UUID, drawingData: Data, paperStyle: PaperStyle, referenceImage: UIImage?) {
+    func load(pageID: UUID, drawingData: Data, paperStyle: PaperStyle, paperTint: PaperTint = .automatic, referenceImage: UIImage?) {
         flush()
         isLoading = true
         defer { isLoading = false }
@@ -123,6 +130,7 @@ final class CanvasStore {
         zoomFactor = 1
         normalizedCenter = CGPoint(x: 0.5, y: 0.5)
         self.paperStyle = paperStyle
+        self.paperTint = paperTint
         self.referenceImage = referenceImage
         hasUnsavedChanges = false
         canvasView?.drawing = drawing
@@ -141,6 +149,7 @@ final class CanvasStore {
             isLoading = false
         }
         view.paperStyle = paperStyle
+        view.paperTint = paperTint
         view.updateTracing(image: referenceImage, visible: isTracing)
         view.isUserInteractionEnabled = !isReadOnly
         applyTool()

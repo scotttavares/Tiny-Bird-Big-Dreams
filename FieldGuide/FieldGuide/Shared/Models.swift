@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import UIKit
 
 /// A named collection of pages.
 @Model
@@ -57,6 +58,8 @@ final class Page {
     /// `PKDrawing.dataRepresentation()`; empty data means an empty drawing.
     var drawingData: Data
     var paperStyleRaw: String
+    /// `PaperTint` raw value: the paper's colour. Defaulted so older stores migrate.
+    var paperTintRaw: String = PaperTint.automatic.rawValue
 
     // Field metadata
     var locationName: String
@@ -88,6 +91,11 @@ final class Page {
     var paperStyle: PaperStyle {
         get { PaperStyle(rawValue: paperStyleRaw) ?? .dotted }
         set { paperStyleRaw = newValue.rawValue }
+    }
+
+    var paperTint: PaperTint {
+        get { PaperTint(rawValue: paperTintRaw) ?? .automatic }
+        set { paperTintRaw = newValue.rawValue }
     }
 
     /// The title a page gets when it is created: an auto timestamp.
@@ -163,4 +171,70 @@ enum PaperStyle: String, CaseIterable, Identifiable, Sendable {
 
 enum FieldGuideSchema {
     static var models: [any PersistentModel.Type] { [Notebook.self, Page.self, ReferenceAsset.self] }
+}
+
+/// The colour of a page's paper. `automatic` is warm cream in light appearance and slate in dark;
+/// the others stay the same whatever the device is set to.
+enum PaperTint: String, CaseIterable, Identifiable, Sendable {
+    case automatic
+    case cream
+    case white
+    case kraft
+    case sage
+    case night
+    case blueprint
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .automatic: "Match Device"
+        case .cream: "Cream"
+        case .white: "White"
+        case .kraft: "Kraft"
+        case .sage: "Sage"
+        case .night: "Night"
+        case .blueprint: "Blueprint"
+        }
+    }
+
+    /// Whether the paper is light or dark. Ink is shown as it would be in that appearance, so
+    /// PencilKit lightens dark inks on dark paper. `.unspecified` follows the device.
+    var appearance: UIUserInterfaceStyle {
+        switch self {
+        case .automatic: .unspecified
+        case .night, .blueprint: .dark
+        case .cream, .white, .kraft, .sage: .light
+        }
+    }
+
+    /// The paper colour for `traits` (only `automatic` depends on them).
+    @MainActor
+    func paperColor(for traits: UITraitCollection) -> UIColor {
+        switch self {
+        case .automatic: Theme.paperUIColor.resolvedColor(with: traits)
+        case .cream: Theme.paperUIColor.resolvedColor(with: UITraitCollection(userInterfaceStyle: .light))
+        case .white: UIColor(white: 1, alpha: 1)
+        case .kraft: UIColor(red: 0.86, green: 0.78, blue: 0.63, alpha: 1)
+        case .sage: UIColor(red: 0.87, green: 0.90, blue: 0.83, alpha: 1)
+        case .night: Theme.paperUIColor.resolvedColor(with: UITraitCollection(userInterfaceStyle: .dark))
+        case .blueprint: UIColor(red: 0.13, green: 0.24, blue: 0.42, alpha: 1)
+        }
+    }
+
+    /// Dots, grid and lines on this paper.
+    @MainActor
+    func ruleColor(for traits: UITraitCollection) -> UIColor {
+        switch self {
+        case .automatic: Theme.ruleUIColor.resolvedColor(with: traits)
+        case .cream, .night: Theme.ruleUIColor.resolvedColor(with: UITraitCollection(userInterfaceStyle: appearance))
+        case .white, .kraft, .sage: UIColor(white: 0, alpha: 0.16)
+        case .blueprint: UIColor(white: 1, alpha: 0.28)
+        }
+    }
+
+    /// The appearance ink and paper are drawn in: the tint's own, or `fallback` for `automatic`.
+    func resolvedAppearance(_ fallback: UIUserInterfaceStyle) -> UIUserInterfaceStyle {
+        appearance == .unspecified ? fallback : appearance
+    }
 }

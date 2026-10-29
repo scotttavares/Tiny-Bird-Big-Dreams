@@ -32,6 +32,7 @@ struct ToolStrip: View {
                 } else {
                     colorMenu
                     widthMenu
+                    PaperStylePicker(store: store)
                     divider
                 }
                 undoRedo
@@ -193,9 +194,19 @@ struct PaperStylePicker: View {
 
     var body: some View {
         Menu {
-            Picker("Paper", selection: $store.paperStyle) {
+            Picker("Pattern", selection: $store.paperStyle) {
                 ForEach(PaperStyle.allCases) { style in
                     Label(style.title, systemImage: style.symbol).tag(style)
+                }
+            }
+            Picker("Paper Color", selection: $store.paperTint) {
+                ForEach(PaperTint.allCases) { tint in
+                    Label {
+                        Text(tint.title)
+                    } icon: {
+                        Image(uiImage: Self.swatch(for: tint))
+                    }
+                    .tag(tint)
                 }
             }
         } label: {
@@ -204,8 +215,36 @@ struct PaperStylePicker: View {
                 .frame(width: buttonSize, height: buttonSize)
                 .foregroundStyle(Theme.inkText)
         }
-        .accessibilityLabel("Paper style")
-        .accessibilityValue(store.paperStyle.title)
+        .accessibilityLabel("Paper")
+        .accessibilityValue("\(store.paperStyle.title), \(store.paperTint.title)")
+    }
+
+    /// A small round chip of the paper colour for the menu (menus drop SwiftUI tints, so it's an image).
+    private static func swatch(for tint: PaperTint) -> UIImage {
+        let size = CGSize(width: 22, height: 22)
+        let image = UIGraphicsImageRenderer(size: size).image { context in
+            let rect = CGRect(origin: .zero, size: size).insetBy(dx: 1.5, dy: 1.5)
+            if tint == .automatic {
+                // Half light, half dark: it follows the device.
+                let light = PaperTint.cream.paperColor(for: UITraitCollection(userInterfaceStyle: .light))
+                let dark = PaperTint.night.paperColor(for: UITraitCollection(userInterfaceStyle: .dark))
+                light.setFill()
+                UIBezierPath(ovalIn: rect).fill()
+                context.cgContext.saveGState()
+                UIBezierPath(ovalIn: rect).addClip()
+                dark.setFill()
+                UIRectFill(CGRect(x: rect.midX, y: 0, width: size.width, height: size.height))
+                context.cgContext.restoreGState()
+            } else {
+                tint.paperColor(for: UITraitCollection(userInterfaceStyle: tint.appearance)).setFill()
+                UIBezierPath(ovalIn: rect).fill()
+            }
+            UIColor(white: 0.5, alpha: 0.6).setStroke()
+            let ring = UIBezierPath(ovalIn: rect)
+            ring.lineWidth = 1
+            ring.stroke()
+        }
+        return image.withRenderingMode(.alwaysOriginal)
     }
 }
 

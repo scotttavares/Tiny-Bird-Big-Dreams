@@ -192,7 +192,7 @@ struct CanvasPane: View {
                 dogEar(pointsRight: false, size: size, visible: model.previousPage != nil)
             }
             if let turn {
-                PageCurlView(turn: turn, motion: motion, paper: Theme.paper)
+                PageCurlView(turn: turn, motion: motion)
             }
             if canTurn {
                 edgeGrip(offset: 1, width: grip, size: size)
@@ -274,18 +274,20 @@ struct CanvasPane: View {
               let current = model.currentPage,
               let target = offset > 0 ? model.nextPage : model.previousPage else { return false }
         let appearance: UIUserInterfaceStyle = colorScheme == .dark ? .dark : .light
-        let render = { (drawing: PKDrawing, paper: PaperStyle) -> UIImage in
-            PageRenderer.sketchImage(drawing: drawing, paperStyle: paper, width: size.width, appearance: appearance)
+        let render = { (drawing: PKDrawing, paper: PaperStyle, tint: PaperTint) -> UIImage in
+            PageRenderer.sketchImage(drawing: drawing, paperStyle: paper, paperTint: tint, width: size.width, appearance: appearance)
         }
-        let here = render(model.canvas.drawing, current.paperStyle)
-        let there = render(CanvasStore.decode(target.drawingData), target.paperStyle)
+        let here = render(model.canvas.drawing, current.paperStyle, current.paperTint)
+        let there = render(CanvasStore.decode(target.drawingData), target.paperStyle, target.paperTint)
         let forward = offset > 0
+        let sheetTint = forward ? current.paperTint : target.paperTint
+        let sheetPaper = sheetTint.paperColor(for: UITraitCollection(userInterfaceStyle: sheetTint.resolvedAppearance(appearance)))
         let y = min(max(touch.y, 0), size.height)
         // Going forward, the current sheet is picked up where the finger is. Going back, the
         // previous sheet lies turned over on the far side of the spine and comes back by its edge.
         let grab = forward ? CGPoint(x: min(max(touch.x, 1), size.width), y: y) : CGPoint(x: size.width, y: y)
         let next = PageTurn(offset: offset, target: target, isForward: forward, grab: grab, size: size,
-                            sheet: forward ? here : there, under: forward ? there : here)
+                            sheet: forward ? here : there, under: forward ? there : here, paper: Color(uiColor: sheetPaper))
         turn = next
         motion.start(at: forward ? next.flatPoint : next.overPoint)
         return true

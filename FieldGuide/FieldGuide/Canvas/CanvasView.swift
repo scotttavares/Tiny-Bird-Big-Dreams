@@ -80,6 +80,15 @@ final class FieldCanvasView: PKCanvasView {
         set { underlay.style = newValue }
     }
 
+    /// Light or dark paper also sets the canvas's appearance, so ink stays readable on it.
+    var paperTint: PaperTint {
+        get { underlay.tint }
+        set {
+            underlay.tint = newValue
+            overrideUserInterfaceStyle = newValue.appearance
+        }
+    }
+
     override init(frame: CGRect) {
         super.init(frame: frame)
         drawingPolicy = .anyInput
@@ -203,6 +212,10 @@ final class PaperUnderlayView: UIView {
         didSet { if style != oldValue { setNeedsDisplay() } }
     }
 
+    var tint: PaperTint = .automatic {
+        didSet { if tint != oldValue { setNeedsDisplay() } }
+    }
+
     var tracingImage: UIImage? {
         didSet {
             tracingView.image = tracingImage
@@ -243,8 +256,8 @@ final class PaperUnderlayView: UIView {
             style,
             in: bounds,
             context: context,
-            paper: Theme.paperUIColor.resolvedColor(with: traitCollection),
-            rule: Theme.ruleUIColor.resolvedColor(with: traitCollection)
+            paper: tint.paperColor(for: traitCollection),
+            rule: tint.ruleColor(for: traitCollection)
         )
     }
 }

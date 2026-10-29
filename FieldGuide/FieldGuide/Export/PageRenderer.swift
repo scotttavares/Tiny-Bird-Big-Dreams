@@ -12,6 +12,7 @@ enum PageRenderer {
     static func sketchImage(
         drawing: PKDrawing,
         paperStyle: PaperStyle,
+        paperTint: PaperTint = .automatic,
         width: CGFloat,
         scale: CGFloat = 2,
         appearance: UIUserInterfaceStyle = .light,
@@ -26,7 +27,7 @@ enum PageRenderer {
         format.opaque = true
         format.preferredRange = .standard
 
-        let traits = UITraitCollection(userInterfaceStyle: appearance)
+        let traits = UITraitCollection(userInterfaceStyle: paperTint.resolvedAppearance(appearance))
         var inkImage = UIImage()
         traits.performAsCurrent {
             inkImage = drawing.image(from: PageGeometry.rect, scale: factor * scale)
@@ -40,8 +41,8 @@ enum PageRenderer {
                 showsRules ? paperStyle : .blank,
                 in: PageGeometry.rect,
                 context: cg,
-                paper: Theme.paperUIColor.resolvedColor(with: traits),
-                rule: Theme.ruleUIColor.resolvedColor(with: traits)
+                paper: paperTint.paperColor(for: traits),
+                rule: paperTint.ruleColor(for: traits)
             )
             cg.restoreGState()
             inkImage.draw(in: CGRect(origin: .zero, size: size), blendMode: .normal, alpha: inkOpacity)
@@ -49,8 +50,9 @@ enum PageRenderer {
     }
 
     /// Small JPEG for the gallery grid.
-    static func thumbnailData(drawing: PKDrawing, paperStyle: PaperStyle, width: CGFloat = 240) -> Data? {
-        sketchImage(drawing: drawing, paperStyle: paperStyle, width: width, scale: 2)
+    static func thumbnailData(drawing: PKDrawing, paperStyle: PaperStyle, paperTint: PaperTint = .automatic,
+                              width: CGFloat = 240) -> Data? {
+        sketchImage(drawing: drawing, paperStyle: paperStyle, paperTint: paperTint, width: width, scale: 2)
             .jpegData(compressionQuality: 0.7)
     }
 }

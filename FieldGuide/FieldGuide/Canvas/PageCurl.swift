@@ -72,6 +72,8 @@ struct PageTurn {
     let size: CGSize
     let sheet: UIImage
     let under: UIImage
+    /// The turning sheet's paper colour, for its back.
+    let paper: Color
     var isSettling = false
 
     /// Lying flat where it started, and turned right over onto the other side of the spine.
@@ -186,7 +188,6 @@ private final class DisplayLinkProxy: NSObject {
 struct PageCurlView: View {
     let turn: PageTurn
     let motion: PageTurnMotion
-    let paper: Color
 
     var body: some View {
         let size = turn.size
@@ -202,7 +203,7 @@ struct PageCurlView: View {
                         .float2(curl.origin),
                         .float2(curl.normal.dx, curl.normal.dy),
                         .float(curl.radius),
-                        .color(paper)
+                        .color(turn.paper)
                     ),
                     maxSampleOffset: size,
                     isEnabled: !curl.isFlat

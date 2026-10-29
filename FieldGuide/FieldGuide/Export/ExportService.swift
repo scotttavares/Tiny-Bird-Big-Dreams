@@ -9,6 +9,7 @@ struct ExportPage {
     var tags: [String]
     var drawing: PKDrawing
     var paperStyle: PaperStyle
+    var paperTint: PaperTint = .automatic
     var referenceImage: UIImage?
     var referenceNotes: String?
 }
@@ -120,7 +121,8 @@ enum ExportService {
     }
 
     private static func drawSketch(_ page: ExportPage, in rect: CGRect, context: CGContext) {
-        let image = PageRenderer.sketchImage(drawing: page.drawing, paperStyle: page.paperStyle, width: rect.width, scale: 2)
+        let image = PageRenderer.sketchImage(drawing: page.drawing, paperStyle: page.paperStyle, paperTint: page.paperTint,
+                                             width: rect.width, scale: 2)
         drawPageShadow(rect, context: context)
         image.draw(in: rect)
     }
@@ -240,6 +242,7 @@ extension ExportPage {
             tags: page.tags,
             drawing: liveDrawing ?? CanvasStore.decode(page.drawingData),
             paperStyle: page.paperStyle,
+            paperTint: page.paperTint,
             referenceImage: page.reference?.kind == .notes ? nil : imageStore.image(at: page.reference?.relativeImagePath),
             referenceNotes: page.reference?.kind == .notes ? page.reference?.notes : nil
         )
