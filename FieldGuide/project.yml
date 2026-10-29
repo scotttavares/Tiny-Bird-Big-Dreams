@@ -54,6 +54,8 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
+        # Only HTTPS/system crypto: no export-compliance questions on each TestFlight upload.
+        ITSAppUsesNonExemptEncryption: false
         NSCameraUsageDescription: Field Guide uses the camera to capture a reference photo for the page you are sketching.
         NSLocationWhenInUseUsageDescription: Field Guide looks up the name of your current place only when you tap “Use current place”.
         CFBundleURLTypes:

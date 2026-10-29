@@ -38,6 +38,12 @@ workflows:
         - pattern: 'claude/*'
           include: true
           source: true
+    # Only when Orbit (or this file) changes, so Field Guide pushes don't rebuild Orbit.
+    when:
+      changeset:
+        includes:
+          - 'orbit/**'
+          - 'codemagic.yaml'
     integrations:
       app_store_connect: Orbit ASC API key
     environment:
@@ -241,3 +247,83 @@ workflows:
         # App Store Connect, or SCHEDULED (with earliest_release_date) for a timed
         # launch.
         release_type: AFTER_APPROVAL
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # FIELD GUIDE — the native SwiftUI sketchbook in FieldGuide/ (XcodeGen, no
+  # CocoaPods). Add this repo to Codemagic a second time as an app named
+  # "Field Guide" and pick this workflow there; it only auto-builds when files
+  # under FieldGuide/ change.
+  #
+  # One-time setup (Codemagic + App Store Connect web UI):
+  #   1. App Store Connect → Apps → + New App: name "Field Guide", bundle id
+  #      com.tinybirdbigdreams.fieldguide (register it, and
+  #      com.tinybirdbigdreams.fieldguide.widget, under Identifiers if asked).
+  #   2. In the Field Guide Codemagic app, make the same two things available as
+  #      Orbit: the "Orbit ASC API key" integration (team-wide) and a variable
+  #      group named orbit_signing holding the Secure CERTIFICATE_PRIVATE_KEY.
+  #      Reusing the same key reuses the same distribution certificate.
+  # ─────────────────────────────────────────────────────────────────────────
+  fieldguide-testflight:
+    name: Field Guide iOS → TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    working_directory: FieldGuide
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: 'claude/*'
+          include: true
+          source: true
+    when:
+      changeset:
+        includes:
+          - 'FieldGuide/**'
+    integrations:
+      app_store_connect: Orbit ASC API key
+    environment:
+      groups:
+        - orbit_signing
+      vars:
+        BUNDLE_ID: "com.tinybirdbigdreams.fieldguide"
+        XCODE_PROJECT: "FieldGuide.xcodeproj"
+        XCODE_SCHEME: "FieldGuide"
+      xcode: latest
+    scripts:
+      - name: Generate the Xcode project (XcodeGen)
+        script: |
+          command -v xcodegen >/dev/null || brew install xcodegen
+          xcodegen generate
+      - name: Set up code signing (persistent cert from CERTIFICATE_PRIVATE_KEY)
+        script: |
+          set -e
+          if [ -z "$CERTIFICATE_PRIVATE_KEY" ]; then
+            echo "❌ CERTIFICATE_PRIVATE_KEY is not set (Secure var in group orbit_signing)."
+            exit 1
+          fi
+          keychain initialize
+          # The app and its home-screen widget are two bundle ids; each needs a profile.
+          for id in "$BUNDLE_ID" "$BUNDLE_ID.widget"; do
+            app-store-connect fetch-signing-files "$id" \
+              --type IOS_APP_STORE \
+              --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
+              --create
+          done
+          keychain add-certificates
+          xcode-project use-profiles --project "$XCODE_PROJECT"
+      - name: Build IPA
+        script: |
+          # Codemagic's per-app build counter keeps every upload's build number unique.
+          BUILD="${PROJECT_BUILD_NUMBER:-$BUILD_NUMBER}"
+          xcode-project build-ipa \
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME" \
+            --archive-xcargs "CURRENT_PROJECT_VERSION=$BUILD"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - build/ios/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Upload only: the build appears in TestFlight for Internal Testing.
