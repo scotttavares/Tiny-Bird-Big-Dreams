@@ -9,6 +9,7 @@ struct CoverScreen: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var swing: Double = 0
     @State private var isShowingLibrary = false
+    @State private var isChoosingCover = false
 
     var body: some View {
         let notebook = model.currentNotebook
@@ -46,6 +47,14 @@ struct CoverScreen: View {
                 } label: {
                     Label("Notebooks", systemImage: "books.vertical")
                 }
+                if notebook != nil {
+                    Button {
+                        isChoosingCover = true
+                    } label: {
+                        Label("Change Cover", systemImage: "paintpalette")
+                            .labelStyle(.iconOnly)
+                    }
+                }
             }
             .buttonStyle(CoverButtonStyle())
             .padding(.bottom, 22)
@@ -72,6 +81,11 @@ struct CoverScreen: View {
         .accessibilityAction(named: "Open notebook") { open() }
         .sheet(isPresented: $isShowingLibrary) {
             LibraryView(model: model)
+        }
+        .sheet(isPresented: $isChoosingCover) {
+            if let notebook = model.currentNotebook {
+                CoverPickerSheet(model: model, notebook: notebook)
+            }
         }
         .sensoryFeedback(.impact(flexibility: .soft), trigger: swing == -100)
     }

@@ -12,6 +12,7 @@ struct LibraryView: View {
     @State private var renameText = ""
     @State private var isCreating = false
     @State private var newTitle = ""
+    @State private var choosingCover: Notebook?
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -21,7 +22,7 @@ struct LibraryView: View {
                         NotebookRow(notebook: notebook, isCurrent: notebook.id == model.currentNotebook?.id)
                     }
                     .contextMenu {
-                        CoverMenu(model: model, notebook: notebook)
+                        Button("Change Cover", systemImage: "paintpalette") { choosingCover = notebook }
                         Button("Rename", systemImage: "pencil") { startRename(notebook) }
                         Button("Delete", systemImage: "trash", role: .destructive) { model.delete(notebook) }
                     }
@@ -29,6 +30,10 @@ struct LibraryView: View {
                         Button("Delete", systemImage: "trash", role: .destructive) { model.delete(notebook) }
                         Button("Rename", systemImage: "pencil") { startRename(notebook) }
                             .tint(.accentColor)
+                    }
+                    .swipeActions(edge: .leading) {
+                        Button("Cover", systemImage: "paintpalette") { choosingCover = notebook }
+                            .tint(.brown)
                     }
                 }
             }
@@ -56,7 +61,12 @@ struct LibraryView: View {
                     let title = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
                     let notebook = model.createNotebook(title: title.isEmpty ? "Untitled Notebook" : title)
                     path = [notebook.id]
+                    // A new notebook starts by picking how it looks.
+                    choosingCover = notebook
                 }
+            }
+            .sheet(item: $choosingCover) { notebook in
+                CoverPickerSheet(model: model, notebook: notebook)
             }
             .alert("Rename Notebook", isPresented: renameBinding) {
                 TextField("Title", text: $renameText)
@@ -114,25 +124,62 @@ private struct NotebookRow: View {
     }
 }
 
-/// Chooses a notebook's cover design.
-struct CoverMenu: View {
+/// Chooses a notebook's cover: every design, drawn with the notebook's own title.
+struct CoverPickerSheet: View {
     let model: AppModel
     let notebook: Notebook
 
+    @Environment(\.dismiss) private var dismiss
+
     var body: some View {
-        Menu("Cover", systemImage: "book.closed") {
-            ForEach(NotebookTheme.allCases) { theme in
-                Button {
-                    model.setTheme(theme, for: notebook)
-                } label: {
-                    if notebook.theme == theme {
-                        Label(theme.name, systemImage: "checkmark")
-                    } else {
-                        Text(theme.name)
+        NavigationStack {
+            ScrollView {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 104, maximum: 160), spacing: 18)], spacing: 22) {
+                    ForEach(NotebookTheme.allCases) { theme in
+                        coverOption(theme)
                     }
+                }
+                .padding(20)
+            }
+            .background(Theme.chrome)
+            .navigationTitle("Choose a Cover")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
                 }
             }
         }
+        .presentationDetents([.medium, .large])
+    }
+
+    private func coverOption(_ theme: NotebookTheme) -> some View {
+        let isSelected = notebook.theme == theme
+        return Button {
+            model.setTheme(theme, for: notebook)
+        } label: {
+            VStack(spacing: 8) {
+                NotebookCoverArt(title: notebook.title, theme: theme, seed: notebook.id.uuidString)
+                    .aspectRatio(NotebookCoverArt.designSize.width / NotebookCoverArt.designSize.height, contentMode: .fit)
+                    .clipShape(UnevenRoundedRectangle(topLeadingRadius: 3, bottomLeadingRadius: 3, bottomTrailingRadius: 8, topTrailingRadius: 8))
+                    .shadow(color: .black.opacity(0.25), radius: 4, x: 1, y: 2)
+                    .overlay {
+                        UnevenRoundedRectangle(topLeadingRadius: 3, bottomLeadingRadius: 3, bottomTrailingRadius: 8, topTrailingRadius: 8)
+                            .strokeBorder(Color.accentColor, lineWidth: isSelected ? 3 : 0)
+                            .padding(-5)
+                    }
+                Label(theme.name, systemImage: isSelected ? "checkmark.circle.fill" : "circle")
+                    .labelStyle(.titleAndIcon)
+                    .font(.subheadline.weight(isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? Color.accentColor : Theme.inkText)
+            }
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(theme.name) cover")
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+        .sensoryFeedback(.selection, trigger: isSelected)
     }
 }
 
@@ -142,6 +189,7 @@ struct GalleryView: View {
     let notebook: Notebook
     let onOpen: () -> Void
 
+    @State private var isChoosingCover = false
     @State private var search = ""
     @State private var infoPage: Page?
     @State private var sharedFile: SharedFile?
@@ -191,8 +239,8 @@ struct GalleryView: View {
         .navigationTitle(notebook.title)
         .searchable(text: $search, prompt: "Search titles and #tags")
         .toolbar {
-            ToolbarItem(placement: .secondaryAction) {
-                CoverMenu(model: model, notebook: notebook)
+            ToolbarItem(placement: .primaryAction) {
+                Button("Cover", systemImage: "paintpalette") { isChoosingCover = true }
             }
             ToolbarItem(placement: .primaryAction) {
                 Button("New Page", systemImage: "square.and.pencil") {
@@ -203,6 +251,9 @@ struct GalleryView: View {
         }
         .sheet(item: $infoPage) { page in
             PageInfoSheet(model: model, page: page)
+        }
+        .sheet(isPresented: $isChoosingCover) {
+            CoverPickerSheet(model: model, notebook: notebook)
         }
         .sheet(item: $sharedFile) { file in
             ShareSheet(file: file)
