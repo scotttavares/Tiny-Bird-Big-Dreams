@@ -46,11 +46,11 @@ prepare() {
 }
 
 shoot() {
-  local udid="$1" posture="$2" name="$3" appearance="${4:-light}"
+  local udid="$1" posture="$2" name="$3" appearance="${4:-light}" extra="${5:-}"
   limit 90 xcrun simctl ui "$udid" appearance "$appearance" || true
   limit 30 xcrun simctl terminate "$udid" "$BUNDLE_ID" 2>/dev/null || true
   limit 240 xcrun simctl launch "$udid" "$BUNDLE_ID" \
-    -FGInMemoryStore -FGSeedDemo -FGPostureOverride "$posture" >/dev/null || { echo "launch failed for $name" >&2; return 1; }
+    -FGInMemoryStore -FGSeedDemo -FGPostureOverride "$posture" $extra >/dev/null || { echo "launch failed for $name" >&2; return 1; }
   # The first launch on a freshly booted simulator can take a while to draw its first frame.
   sleep "${SETTLE:-10}"
   limit 90 xcrun simctl io "$udid" screenshot --type=png "$SHOTS/$name.png" || { echo "screenshot failed for $name" >&2; return 1; }
@@ -60,7 +60,8 @@ shoot() {
 FAILED=""
 prepare "$PHONE"
 shoot "$PHONE" closed closed || FAILED="$FAILED closed"
-shoot "$PHONE" closed closed-dark dark || FAILED="$FAILED closed-dark"
+shoot "$PHONE" closed closed-open light -FGCoverOpen || FAILED="$FAILED closed-open"
+shoot "$PHONE" closed closed-dark dark -FGCoverOpen || FAILED="$FAILED closed-dark"
 
 if [ "$SPREAD" != "$PHONE" ]; then
   prepare "$SPREAD" || FAILED="$FAILED spread-device"

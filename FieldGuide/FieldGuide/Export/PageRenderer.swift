@@ -7,7 +7,17 @@ import UIKit
 /// the device's appearance; PencilKit resolves dynamic ink colors from the current traits.
 @MainActor
 enum PageRenderer {
-    static func sketchImage(drawing: PKDrawing, paperStyle: PaperStyle, width: CGFloat, scale: CGFloat = 2) -> UIImage {
+    /// - Parameter appearance: `.light` for exports; the page-turn uses the screen's own appearance
+    ///   so the turning sheet matches the live page.
+    static func sketchImage(
+        drawing: PKDrawing,
+        paperStyle: PaperStyle,
+        width: CGFloat,
+        scale: CGFloat = 2,
+        appearance: UIUserInterfaceStyle = .light,
+        inkOpacity: CGFloat = 1,
+        showsRules: Bool = true
+    ) -> UIImage {
         let pageSize = PageGeometry.size
         let factor = width / pageSize.width
         let size = CGSize(width: width, height: pageSize.height * factor)
@@ -16,9 +26,9 @@ enum PageRenderer {
         format.opaque = true
         format.preferredRange = .standard
 
-        let light = UITraitCollection(userInterfaceStyle: .light)
+        let traits = UITraitCollection(userInterfaceStyle: appearance)
         var inkImage = UIImage()
-        light.performAsCurrent {
+        traits.performAsCurrent {
             inkImage = drawing.image(from: PageGeometry.rect, scale: factor * scale)
         }
 
@@ -27,14 +37,14 @@ enum PageRenderer {
             cg.saveGState()
             cg.scaleBy(x: factor, y: factor)
             PaperRenderer.draw(
-                paperStyle,
+                showsRules ? paperStyle : .blank,
                 in: PageGeometry.rect,
                 context: cg,
-                paper: Theme.exportPaperUIColor,
-                rule: Theme.exportRuleUIColor
+                paper: Theme.paperUIColor.resolvedColor(with: traits),
+                rule: Theme.ruleUIColor.resolvedColor(with: traits)
             )
             cg.restoreGState()
-            inkImage.draw(in: CGRect(origin: .zero, size: size))
+            inkImage.draw(in: CGRect(origin: .zero, size: size), blendMode: .normal, alpha: inkOpacity)
         }
     }
 

@@ -19,6 +19,9 @@ final class AppModel {
     /// Bumped on every page change; drives the page-turn animation and haptic.
     private(set) var pageTurnCount = 0
     private(set) var lastTurnDirection: Int = 1
+    /// Set by the page view: starts an animated page-turn and returns true, or returns false to
+    /// let the page change happen straight away (Reduce Motion, nothing to turn to).
+    @ObservationIgnored var pageTurnHandler: (@MainActor (Int) -> Bool)?
 
     init(context: ModelContext, canvas: CanvasStore = CanvasStore(), imageStore: ImageStore = .standard) {
         self.context = context
@@ -54,6 +57,8 @@ final class AppModel {
     @discardableResult
     func createNotebook(title: String) -> Notebook {
         let notebook = Notebook(title: title)
+        let count = (try? context.fetchCount(FetchDescriptor<Notebook>())) ?? 0
+        notebook.theme = NotebookTheme.next(after: count)
         context.insert(notebook)
         save()
         return notebook
@@ -65,6 +70,19 @@ final class AppModel {
         notebook.title = trimmed
         notebook.updatedAt = .now
         save()
+    }
+
+    func setTheme(_ theme: NotebookTheme, for notebook: Notebook) {
+        notebook.theme = theme
+        notebook.updatedAt = .now
+        save()
+    }
+
+    /// The open notebook's number on the shelf (oldest is № 1), printed on some covers.
+    var notebookNumber: Int {
+        guard let currentNotebook else { return 1 }
+        let all = (try? context.fetch(FetchDescriptor<Notebook>(sortBy: [SortDescriptor(\.createdAt)]))) ?? []
+        return (all.firstIndex { $0.id == currentNotebook.id } ?? 0) + 1
     }
 
     func delete(_ notebook: Notebook) {
@@ -133,6 +151,7 @@ final class AppModel {
 
     func turnPage(by offset: Int) {
         guard let page = neighbor(offset: offset) else { return }
+        if let pageTurnHandler, pageTurnHandler(offset) { return }
         open(page, direction: offset)
     }
 

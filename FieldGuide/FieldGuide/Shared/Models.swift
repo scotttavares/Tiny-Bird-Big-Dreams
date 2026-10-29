@@ -8,6 +8,8 @@ final class Notebook {
     var title: String
     var createdAt: Date
     var updatedAt: Date
+    /// `NotebookTheme` raw value: the cover design. Defaulted so older stores migrate.
+    var themeRaw: String = NotebookTheme.pines.rawValue
 
     @Relationship(deleteRule: .cascade, inverse: \Page.notebook)
     var pages: [Page] = []
@@ -17,6 +19,11 @@ final class Notebook {
         self.title = title
         self.createdAt = createdAt
         self.updatedAt = createdAt
+    }
+
+    var theme: NotebookTheme {
+        get { NotebookTheme(rawValue: themeRaw) ?? .pines }
+        set { themeRaw = newValue.rawValue }
     }
 
     /// Pages in the order they were added to the notebook.

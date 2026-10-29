@@ -21,6 +21,7 @@ struct LibraryView: View {
                         NotebookRow(notebook: notebook, isCurrent: notebook.id == model.currentNotebook?.id)
                     }
                     .contextMenu {
+                        CoverMenu(model: model, notebook: notebook)
                         Button("Rename", systemImage: "pencil") { startRename(notebook) }
                         Button("Delete", systemImage: "trash", role: .destructive) { model.delete(notebook) }
                     }
@@ -89,15 +90,11 @@ private struct NotebookRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            if let cover = notebook.orderedPages.first {
-                PageThumbnail(page: cover)
-                    .frame(width: 44, height: 60)
-            } else {
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Theme.paper)
-                    .frame(width: 44, height: 60)
-                    .accessibilityHidden(true)
-            }
+            NotebookCoverArt(title: notebook.title, theme: notebook.theme, seed: notebook.id.uuidString)
+                .frame(width: 44, height: 72)
+                .clipShape(UnevenRoundedRectangle(topLeadingRadius: 2, bottomLeadingRadius: 2, bottomTrailingRadius: 5, topTrailingRadius: 5))
+                .shadow(color: .black.opacity(0.25), radius: 2, x: 1, y: 2)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(notebook.title)
                     .font(.headline)
@@ -114,6 +111,28 @@ private struct NotebookRow: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// Chooses a notebook's cover design.
+struct CoverMenu: View {
+    let model: AppModel
+    let notebook: Notebook
+
+    var body: some View {
+        Menu("Cover", systemImage: "book.closed") {
+            ForEach(NotebookTheme.allCases) { theme in
+                Button {
+                    model.setTheme(theme, for: notebook)
+                } label: {
+                    if notebook.theme == theme {
+                        Label(theme.name, systemImage: "checkmark")
+                    } else {
+                        Text(theme.name)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -172,6 +191,9 @@ struct GalleryView: View {
         .navigationTitle(notebook.title)
         .searchable(text: $search, prompt: "Search titles and #tags")
         .toolbar {
+            ToolbarItem(placement: .secondaryAction) {
+                CoverMenu(model: model, notebook: notebook)
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button("New Page", systemImage: "square.and.pencil") {
                     model.newPage(in: notebook)
