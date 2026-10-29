@@ -189,6 +189,7 @@ struct GalleryView: View {
     let notebook: Notebook
     let onOpen: () -> Void
 
+    @Environment(\.dismiss) private var dismiss
     @State private var isChoosingCover = false
     @State private var search = ""
     @State private var infoPage: Page?
@@ -236,9 +237,22 @@ struct GalleryView: View {
             .padding(.vertical)
         }
         .background(Theme.chrome)
-        .navigationTitle(notebook.title)
+        // Say what this screen is (the notebook's pages) and where the back button goes.
+        .navigationTitle("Pages")
+        .navigationSubtitle(notebook.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden()
         .searchable(text: $search, prompt: "Search titles and #tags")
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    Label("Notebooks", systemImage: "chevron.backward")
+                        .labelStyle(.titleAndIcon)
+                }
+                .accessibilityLabel("Back to Notebooks")
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button("Cover", systemImage: "paintpalette") { isChoosingCover = true }
             }
