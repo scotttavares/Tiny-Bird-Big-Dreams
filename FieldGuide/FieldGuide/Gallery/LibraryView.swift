@@ -19,7 +19,9 @@ struct LibraryView: View {
             List {
                 ForEach(notebooks) { notebook in
                     NavigationLink(value: notebook.id) {
-                        NotebookRow(notebook: notebook, isCurrent: notebook.id == model.currentNotebook?.id)
+                        NotebookRow(notebook: notebook, isCurrent: notebook.id == model.currentNotebook?.id) {
+                            choosingCover = notebook
+                        }
                     }
                     .contextMenu {
                         Button("Change Cover", systemImage: "paintpalette") { choosingCover = notebook }
@@ -97,14 +99,27 @@ struct LibraryView: View {
 private struct NotebookRow: View {
     let notebook: Notebook
     let isCurrent: Bool
+    /// Tapping the little cover changes it; tapping the rest of the row opens the notebook.
+    let onChangeCover: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
-            NotebookCoverArt(title: notebook.title, theme: notebook.theme, seed: notebook.id.uuidString)
-                .frame(width: 44, height: 72)
-                .clipShape(UnevenRoundedRectangle(topLeadingRadius: 2, bottomLeadingRadius: 2, bottomTrailingRadius: 5, topTrailingRadius: 5))
-                .shadow(color: .black.opacity(0.25), radius: 2, x: 1, y: 2)
-                .accessibilityHidden(true)
+            Button(action: onChangeCover) {
+                NotebookCoverArt(title: notebook.title, theme: notebook.theme, seed: notebook.id.uuidString)
+                    .frame(width: 44, height: 72)
+                    .clipShape(UnevenRoundedRectangle(topLeadingRadius: 2, bottomLeadingRadius: 2, bottomTrailingRadius: 5, topTrailingRadius: 5))
+                    .shadow(color: .black.opacity(0.25), radius: 2, x: 1, y: 2)
+                    .overlay(alignment: .bottomTrailing) {
+                        Image(systemName: "paintpalette.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .padding(4)
+                            .background(.black.opacity(0.55), in: .circle)
+                            .offset(x: 6, y: 6)
+                    }
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel("Change cover for \(notebook.title)")
             VStack(alignment: .leading, spacing: 2) {
                 Text(notebook.title)
                     .font(.headline)
@@ -190,7 +205,6 @@ struct GalleryView: View {
     let onOpen: () -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @State private var isChoosingCover = false
     @State private var search = ""
     @State private var infoPage: Page?
     @State private var sharedFile: SharedFile?
@@ -254,9 +268,6 @@ struct GalleryView: View {
                 .accessibilityLabel("Back to Notebooks")
             }
             ToolbarItem(placement: .primaryAction) {
-                Button("Cover", systemImage: "paintpalette") { isChoosingCover = true }
-            }
-            ToolbarItem(placement: .primaryAction) {
                 Button("New Page", systemImage: "square.and.pencil") {
                     model.newPage(in: notebook)
                     onOpen()
@@ -265,9 +276,6 @@ struct GalleryView: View {
         }
         .sheet(item: $infoPage) { page in
             PageInfoSheet(model: model, page: page)
-        }
-        .sheet(isPresented: $isChoosingCover) {
-            CoverPickerSheet(model: model, notebook: notebook)
         }
         .sheet(item: $sharedFile) { file in
             ShareSheet(file: file)
