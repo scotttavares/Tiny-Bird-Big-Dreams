@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// A notebook's cover, drawn in code: the design for its theme, its title, and the wear of a
-/// book that has been carried around (rubbed edges, staples, scuffs, sometimes a coffee ring).
+/// book that has been carried around (rubbed edges, staples, scuffs, a crease).
 /// The wear is seeded by the notebook, so it never moves.
 ///
 /// Artwork is laid out on a 240 × 420 board and scaled to fill whatever shape it's shown in,
@@ -118,12 +118,6 @@ private struct CoverPainter {
         context.stroke(Path(board.insetBy(dx: 5, dy: 5)), with: .color(theme.line.opacity(0.35)), lineWidth: 10)
         let titleBottom = drawTitle(centerY: 120, maxWidth: 190, maxSize: 44, color: theme.coverInk)
         drawSubtitle(theme.subtitle.uppercased(), centerY: titleBottom + 24, size: 9.5, maxWidth: 180, color: theme.coverInk)
-        // A tide line where it sat in a wet pack.
-        var tide = Path()
-        tide.move(to: CGPoint(x: 0, y: 400))
-        tide.addCurve(to: CGPoint(x: width, y: 402), control1: CGPoint(x: 60, y: 405), control2: CGPoint(x: 140, y: 395))
-        tide.addLine(to: CGPoint(x: width, y: height)); tide.addLine(to: CGPoint(x: 0, y: height)); tide.closeSubpath()
-        context.fill(tide, with: .color(Color(hex: 0x7AA6C9).opacity(0.5)))
     }
 
     private mutating func paintOlive() {
@@ -258,13 +252,6 @@ private struct CoverPainter {
                             control: CGPoint(x: creaseStart.x - 50, y: creaseStart.y + random.range(-12, 12)))
         context.stroke(crease, with: .color(.black.opacity(0.2)), lineWidth: 1.1)
         context.stroke(crease.offsetBy(dx: 0.9, dy: 0.9), with: .color(light.opacity(0.3)), lineWidth: 0.8)
-        // Sometimes a coffee ring, often half off the edge.
-        if random.unit() < 0.6 {
-            let center = CGPoint(x: random.range(120, 250), y: random.range(220, 430)), r = random.range(24, 34)
-            let ring = Path(ellipseIn: CGRect(x: center.x - r, y: center.y - r, width: 2 * r, height: 2 * r))
-            context.fill(ring, with: .color(Color(hex: 0x6B3F12).opacity(0.07)))
-            context.stroke(ring, with: .color(Color(hex: 0x5A3210).opacity(0.3)), lineWidth: random.range(1.6, 2.6))
-        }
         // Light falling across the board, darker at the edges.
         context.fill(Path(board), with: .linearGradient(Gradient(stops: [
             .init(color: .white.opacity(0.14), location: 0), .init(color: .clear, location: 0.45), .init(color: .black.opacity(0.16), location: 1),
