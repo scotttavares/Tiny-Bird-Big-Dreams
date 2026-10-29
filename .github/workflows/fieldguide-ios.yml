@@ -60,7 +60,11 @@ jobs:
             echo "Screenshots unchanged"
           else
             git commit -m "Field Guide: refresh simulator screenshots [skip ci]"
-            git push origin HEAD:${{ github.ref_name }}
+            # The branch may have moved on while this run was building: replay onto it.
+            for attempt in 1 2 3; do
+              git pull --rebase origin ${{ github.ref_name }} && git push origin HEAD:${{ github.ref_name }} && break
+              sleep 5
+            done
           fi
 
       - name: Upload logs and results
