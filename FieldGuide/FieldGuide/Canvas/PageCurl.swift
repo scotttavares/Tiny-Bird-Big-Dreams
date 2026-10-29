@@ -101,7 +101,7 @@ struct PageCurlView: View, Animatable {
     var foldX: CGFloat
     var foldY: CGFloat
 
-    var animatableData: AnimatablePair<CGFloat, CGFloat> {
+    nonisolated var animatableData: AnimatablePair<CGFloat, CGFloat> {
         get { AnimatablePair(foldX, foldY) }
         set { foldX = newValue.first; foldY = newValue.second }
     }
