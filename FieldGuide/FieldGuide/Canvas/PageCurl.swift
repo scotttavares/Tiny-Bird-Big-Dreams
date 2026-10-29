@@ -1,178 +1,242 @@
+import PencilKit
 import SwiftUI
+import UIKit
 
-/// The geometry of a page being turned by its corner. Pure, unit-tested.
+/// Turns pages with UIKit's own page curl (`UIPageViewController` in `.pageCurl` style): the sheet
+/// bends round as it lifts, follows the finger, and shows a faint mirror of the sketch on its back.
 ///
-/// The sheet spans `0…width × 0…height` with its bound edge (the spine) at `x = 0`. Pulling the
-/// corner `C` to the point `F` folds the sheet along the perpendicular bisector of `C`–`F`: the part
-/// past the fold lifts off (revealing the page beneath) and lands mirrored on top as the flap,
-/// which shows the back of the sheet.
-struct PageCurlGeometry: Equatable, Sendable {
-    let size: CGSize
-    let corner: CGPoint
-    let fold: CGPoint
+/// It lies over the live canvas, see-through and untouchable except for a strip along each outer
+/// edge. When a turn starts, the sheet on top is filled with a snapshot of the page, so the
+/// `PKCanvasView` underneath never moves; the page change is applied once the sheet has landed.
+struct PageCurlOverlay: UIViewControllerRepresentable {
+    let model: AppModel
+    let pageSize: CGSize
+    let edgeWidth: CGFloat
+    let isEnabled: Bool
+    let appearance: UIUserInterfaceStyle
+    /// Called just before a curl changes the page, so the change needs no extra animation.
+    let onTurn: () -> Void
 
-    /// The part of the sheet still lying flat.
-    var flat: [CGPoint] { Self.clip(sheet) { -side($0) } }
-    /// The part that has lifted off, in its original position (what it no longer covers).
-    var lifted: [CGPoint] { Self.clip(sheet) { side($0) } }
-    /// The lifted part after folding over: where the back of the sheet now lies.
-    var flap: [CGPoint] { lifted.map(reflect) }
+    func makeCoordinator() -> Coordinator { Coordinator() }
 
-    /// Unit normal of the fold line, pointing toward the corner being pulled.
-    var normal: CGVector {
-        let dx = corner.x - fold.x, dy = corner.y - fold.y, length = max(hypot(dx, dy), 0.0001)
-        return CGVector(dx: dx / length, dy: dy / length)
+    func makeUIViewController(context: Context) -> CurlContainerController {
+        let container = CurlContainerController(coordinator: context.coordinator)
+        context.coordinator.container = container
+        return container
     }
 
-    /// The fold line's midpoint.
-    var crease: CGPoint { CGPoint(x: (corner.x + fold.x) / 2, y: (corner.y + fold.y) / 2) }
-
-    /// How far the corner has travelled, 0 (flat) to 1 (a full sheet width).
-    var lift: CGFloat { min(1, hypot(corner.x - fold.x, corner.y - fold.y) / max(size.width, 1)) }
-
-    /// Reflection across the fold line, as an affine transform (draws the sheet's back in place).
-    var reflection: CGAffineTransform {
-        let n = normal, k = 2 * (crease.x * n.dx + crease.y * n.dy)
-        return CGAffineTransform(a: 1 - 2 * n.dx * n.dx, b: -2 * n.dx * n.dy, c: -2 * n.dx * n.dy, d: 1 - 2 * n.dy * n.dy,
-                                 tx: k * n.dx, ty: k * n.dy)
+    func updateUIViewController(_ container: CurlContainerController, context: Context) {
+        let coordinator = context.coordinator
+        coordinator.model = model
+        coordinator.pageSize = pageSize
+        coordinator.appearance = appearance
+        coordinator.onTurn = onTurn
+        container.touchView.edgeWidth = edgeWidth
+        container.touchView.isEnabled = isEnabled && !model.canvas.isReadOnly
+        container.touchView.canGoBack = model.previousPage != nil
+        container.touchView.canGoForward = model.nextPage != nil
+        model.pageTurnHandler = isEnabled ? { [weak coordinator] offset in coordinator?.turn(by: offset) ?? false } : nil
     }
 
-    func reflect(_ point: CGPoint) -> CGPoint { point.applying(reflection) }
-
-    /// Signed distance from the fold line; positive on the corner's side.
-    func side(_ point: CGPoint) -> CGFloat {
-        (point.x - crease.x) * normal.dx + (point.y - crease.y) * normal.dy
+    static func dismantleUIViewController(_ container: CurlContainerController, coordinator: Coordinator) {
+        coordinator.model?.pageTurnHandler = nil
     }
 
-    private var sheet: [CGPoint] {
-        [.zero, CGPoint(x: size.width, y: 0), CGPoint(x: size.width, y: size.height), CGPoint(x: 0, y: size.height)]
-    }
+    @MainActor
+    final class Coordinator: NSObject, UIPageViewControllerDataSource, UIPageViewControllerDelegate, UIGestureRecognizerDelegate {
+        weak var container: CurlContainerController?
+        var model: AppModel?
+        var pageSize: CGSize = .zero
+        var appearance: UIUserInterfaceStyle = .light
+        var onTurn: () -> Void = {}
 
-    /// Keeps the part of a polygon where `f(point) >= 0` (one Sutherland–Hodgman pass).
-    static func clip(_ polygon: [CGPoint], keeping f: (CGPoint) -> CGFloat) -> [CGPoint] {
-        guard polygon.count >= 3 else { return [] }
-        var out: [CGPoint] = []
-        for i in polygon.indices {
-            let a = polygon[i], b = polygon[(i + 1) % polygon.count], fa = f(a), fb = f(b)
-            if fa >= 0 { out.append(a) }
-            if (fa >= 0) != (fb >= 0) {
-                let t = fa / (fa - fb)
-                out.append(CGPoint(x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t))
+        /// The see-through sheet that sits on top between turns.
+        let idle = PageSheetController(page: nil)
+        private var isTurning = false {
+            didSet { container?.touchView.isTurning = isTurning }
+        }
+
+        // MARK: Turning
+
+        /// Turns to the neighbouring page with the full curl (edge taps, header arrows).
+        func turn(by offset: Int) -> Bool {
+            guard !isTurning, let model, let pages = container?.pages, !model.canvas.isDrawing,
+                  let target = offset > 0 ? model.nextPage : model.previousPage else { return false }
+            prepareTopSheet()
+            isTurning = true
+            let sheet = PageSheetController(page: target)
+            sheet.image = snapshot(of: target)
+            pages.setViewControllers([sheet], direction: offset > 0 ? .forward : .reverse, animated: true) { [weak self, sheet] finished in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    if finished, let page = sheet.page { self.land(on: page, direction: offset) }
+                    self.reset()
+                }
             }
+            return true
         }
-        return out
-    }
 
-    /// Keeps the corner where the paper allows: the sheet is bound at the spine, so a corner can't
-    /// travel further from it than the sheet's width (or its diagonal, from the other spine end).
-    static func constrain(_ point: CGPoint, cornerY: CGFloat, size: CGSize) -> CGPoint {
-        var p = point
-        let near = CGPoint(x: 0, y: cornerY), far = CGPoint(x: 0, y: size.height - cornerY)
-        for (anchor, radius) in [(near, size.width), (far, hypot(size.width, size.height)), (near, size.width)] {
-            let dx = p.x - anchor.x, dy = p.y - anchor.y, d = hypot(dx, dy)
-            if d > radius { p = CGPoint(x: anchor.x + dx * radius / d, y: anchor.y + dy * radius / d) }
+        /// Fills the top sheet with the page as it is right now, so it can curl away.
+        private func prepareTopSheet() {
+            guard let model, let current = model.currentPage else { return }
+            idle.image = image(drawing: model.canvas.drawing, paper: current.paperStyle)
         }
-        return p
-    }
 
-    /// Area of a polygon (for tests and sanity checks).
-    static func area(_ polygon: [CGPoint]) -> CGFloat {
-        guard polygon.count >= 3 else { return 0 }
-        var sum: CGFloat = 0
-        for i in polygon.indices {
-            let a = polygon[i], b = polygon[(i + 1) % polygon.count]
-            sum += a.x * b.y - b.x * a.y
+        private func land(on page: Page, direction: Int) {
+            onTurn()
+            model?.open(page, direction: direction)
         }
-        return abs(sum) / 2
+
+        /// Back to the see-through sheet over the live canvas.
+        private func reset() {
+            idle.image = nil
+            container?.pages.setViewControllers([idle], direction: .forward, animated: false)
+            isTurning = false
+        }
+
+        private func snapshot(of page: Page) -> UIImage {
+            image(drawing: CanvasStore.decode(page.drawingData), paper: page.paperStyle)
+        }
+
+        private func image(drawing: PKDrawing, paper: PaperStyle) -> UIImage {
+            PageRenderer.sketchImage(drawing: drawing, paperStyle: paper, width: max(pageSize.width, 1), appearance: appearance)
+        }
+
+        // MARK: Data source
+
+        func pageViewController(_ pageViewController: UIPageViewController, viewControllerBefore viewController: UIViewController) -> UIViewController? {
+            neighbour(of: viewController, offset: -1)
+        }
+
+        func pageViewController(_ pageViewController: UIPageViewController, viewControllerAfter viewController: UIViewController) -> UIViewController? {
+            neighbour(of: viewController, offset: 1)
+        }
+
+        /// Only the sheet over the live canvas has neighbours; a sheet mid-turn never chains on.
+        private func neighbour(of viewController: UIViewController, offset: Int) -> UIViewController? {
+            guard viewController === idle, let model, !model.canvas.isDrawing,
+                  let target = offset > 0 ? model.nextPage : model.previousPage else { return nil }
+            prepareTopSheet()
+            let sheet = PageSheetController(page: target)
+            sheet.image = snapshot(of: target)
+            return sheet
+        }
+
+        // MARK: Delegate
+
+        func pageViewController(_ pageViewController: UIPageViewController, willTransitionTo pendingViewControllers: [UIViewController]) {
+            isTurning = true
+        }
+
+        func pageViewController(_ pageViewController: UIPageViewController, didFinishAnimating finished: Bool,
+                                previousViewControllers: [UIViewController], transitionCompleted completed: Bool) {
+            if completed, let sheet = pageViewController.viewControllers?.first as? PageSheetController, let page = sheet.page,
+               let model {
+                land(on: page, direction: page.id == model.nextPage?.id ? 1 : -1)
+            }
+            reset()
+        }
+
+        // MARK: Gestures
+
+        /// UIKit's own pan and tap only start on a page edge, and never while ink is going down.
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard let view = container?.touchView, !isTurning, model?.canvas.isDrawing == false else { return false }
+            return view.isOnEdge(gestureRecognizer.location(in: view))
+        }
+
+        /// A drag that ends without starting a turn leaves the top sheet see-through again.
+        @objc func edgeGestureChanged(_ recognizer: UIGestureRecognizer) {
+            guard [.ended, .cancelled, .failed].contains(recognizer.state), !isTurning else { return }
+            idle.image = nil
+        }
     }
 }
 
-/// Draws a turning page: the page underneath in the lifted sheet's shadow, the part still flat,
-/// and the curled-over flap showing the back of the sheet, with a crease, a soft highlight
-/// where the paper rolls, and the flap's shadow.
-///
-/// `foldX`/`foldY` are animatable, so a released page glides on to its resting place.
-struct PageCurlView: View, Animatable {
-    let front: Image
-    let under: Image
-    let back: Image
-    let paper: Color
-    let cornerY: CGFloat
-    var foldX: CGFloat
-    var foldY: CGFloat
+/// Hosts the page view controller. Its view lets every touch through to the canvas underneath
+/// except on the outer edges, or while a page is turning.
+final class CurlContainerController: UIViewController {
+    let pages = UIPageViewController(transitionStyle: .pageCurl, navigationOrientation: .horizontal,
+                                     options: [.spineLocation: UIPageViewController.SpineLocation.min.rawValue])
+    let touchView = EdgeTouchView()
+    private unowned let coordinator: PageCurlOverlay.Coordinator
 
-    nonisolated var animatableData: AnimatablePair<CGFloat, CGFloat> {
-        get { AnimatablePair(foldX, foldY) }
-        set { foldX = newValue.first; foldY = newValue.second }
+    init(coordinator: PageCurlOverlay.Coordinator) {
+        self.coordinator = coordinator
+        super.init(nibName: nil, bundle: nil)
     }
 
-    var body: some View {
-        Canvas { context, size in
-            let corner = CGPoint(x: size.width, y: cornerY * size.height)
-            let fold = CGPoint(x: foldX * size.width, y: foldY * size.height)
-            let curl = PageCurlGeometry(size: size, corner: corner, fold: fold)
-            let rect = CGRect(origin: .zero, size: size)
-            let n = curl.normal, m = curl.crease
-            let polygon = { (points: [CGPoint]) -> Path in
-                var path = Path()
-                if let first = points.first {
-                    path.move(to: first)
-                    path.addLines(Array(points.dropFirst()))
-                    path.closeSubpath()
-                }
-                return path
-            }
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
-            guard curl.lift > 0.002 else {
-                context.draw(front, in: rect)
-                return
-            }
-            let lifted = polygon(curl.lifted), flat = polygon(curl.flat), flap = polygon(curl.flap)
-            var extent: CGFloat = 1
-            for point in curl.lifted { extent = max(extent, curl.side(point)) }
+    override func loadView() { view = touchView }
 
-            // The page underneath, darkened where the lifted sheet shades it.
-            context.drawLayer { layer in
-                layer.clip(to: lifted)
-                layer.draw(under, in: rect)
-                let reach = min(extent, 18 + hypot(fold.x - corner.x, fold.y - corner.y) * 0.35)
-                layer.fill(lifted, with: .linearGradient(
-                    Gradient(stops: [
-                        .init(color: .black.opacity(0.42 + 0.1 * curl.lift), location: 0),
-                        .init(color: .black.opacity(0.16), location: 0.35),
-                        .init(color: .clear, location: 1),
-                    ]),
-                    startPoint: m, endPoint: CGPoint(x: m.x + n.dx * reach, y: m.y + n.dy * reach)))
-            }
-            // The part still lying flat, a touch darker where it starts to rise into the fold.
-            context.drawLayer { layer in
-                layer.clip(to: flat)
-                layer.draw(front, in: rect)
-                layer.fill(flat, with: .linearGradient(Gradient(colors: [.black.opacity(0.12), .clear]),
-                                                       startPoint: m, endPoint: CGPoint(x: m.x - n.dx * 26, y: m.y - n.dy * 26)))
-            }
-            // The flap's shadow on the flat page, then the back of the sheet.
-            context.drawLayer { layer in
-                layer.addFilter(.shadow(color: .black.opacity(0.22 + 0.18 * curl.lift), radius: 6 + 14 * curl.lift, x: -3 * curl.lift, y: 2 * curl.lift))
-                layer.fill(flap, with: .color(paper))
-            }
-            context.drawLayer { layer in
-                layer.clip(to: flap)
-                layer.concatenate(curl.reflection)
-                layer.draw(back, in: rect)
-            }
-            // Curvature: a dark crease, a highlight where the paper rolls, shade toward the corner.
-            context.fill(flap, with: .linearGradient(
-                Gradient(stops: [
-                    .init(color: .black.opacity(0.3), location: 0),
-                    .init(color: .black.opacity(0.1), location: 0.06),
-                    .init(color: .white.opacity(0.28), location: 0.22),
-                    .init(color: .white.opacity(0.06), location: 0.5),
-                    .init(color: .black.opacity(0.12), location: 1),
-                ]),
-                startPoint: m, endPoint: CGPoint(x: m.x - n.dx * extent, y: m.y - n.dy * extent)))
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .clear
+        pages.isDoubleSided = false
+        pages.dataSource = coordinator
+        pages.delegate = coordinator
+        pages.view.backgroundColor = .clear
+        addChild(pages)
+        pages.view.frame = view.bounds
+        pages.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        view.addSubview(pages.view)
+        pages.didMove(toParent: self)
+        pages.setViewControllers([coordinator.idle], direction: .forward, animated: false)
+        for recognizer in pages.gestureRecognizers {
+            recognizer.delegate = coordinator
+            recognizer.addTarget(coordinator, action: #selector(PageCurlOverlay.Coordinator.edgeGestureChanged(_:)))
         }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
+    }
+}
+
+/// Passes touches through except on a page edge that has a page to turn to, or mid-turn.
+final class EdgeTouchView: UIView {
+    var edgeWidth: CGFloat = 30
+    var isEnabled = true
+    var isTurning = false
+    var canGoBack = false
+    var canGoForward = false
+
+    func isOnEdge(_ point: CGPoint) -> Bool {
+        guard isEnabled, bounds.contains(point) else { return false }
+        return (canGoForward && point.x >= bounds.maxX - edgeWidth) || (canGoBack && point.x <= bounds.minX + edgeWidth)
+    }
+
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        guard isTurning || isOnEdge(point) else { return nil }
+        return super.hitTest(point, with: event)
+    }
+}
+
+/// One sheet of paper: a snapshot of a page, or nothing (see-through) between turns.
+final class PageSheetController: UIViewController {
+    let page: Page?
+    private let imageView = UIImageView()
+
+    var image: UIImage? {
+        didSet {
+            imageView.image = image
+            view.backgroundColor = image == nil ? .clear : UIColor(Theme.paper)
+        }
+    }
+
+    init(page: Page?) {
+        self.page = page
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = image == nil ? .clear : UIColor(Theme.paper)
+        imageView.contentMode = .scaleToFill
+        imageView.frame = view.bounds
+        imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        imageView.image = image
+        view.addSubview(imageView)
     }
 }

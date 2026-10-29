@@ -121,7 +121,7 @@ struct WorkspaceView: View {
 }
 
 /// The canvas on its paper. Pages turn like paper: drag a page's outer edge (or tap it, or use the
-/// header arrows) and the sheet curls over by its corner, showing the next page underneath.
+/// header arrows) and the sheet curls over with UIKit's page curl, showing the next page underneath.
 ///
 /// The curl is drawn over the live canvas from snapshots, so the `PKCanvasView` itself never
 /// moves; the page change is applied underneath once the sheet has landed.
@@ -131,12 +131,9 @@ struct CanvasPane: View {
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var fade: Double = 1
-    @State private var turn: PageTurn?
-    @State private var foldX: CGFloat = 1
-    @State private var foldY: CGFloat = 1
     /// The next page change comes from a finished curl, so it needs no extra animation.
     @State private var turnedByCurl = false
-    @ScaledMetric(relativeTo: .body) private var edgeWidth: CGFloat = 30
+    @ScaledMetric(relativeTo: .body) private var edgeWidth: CGFloat = 36
 
     var body: some View {
         GeometryReader { proxy in
@@ -147,28 +144,18 @@ struct CanvasPane: View {
                     .clipShape(.rect(cornerRadius: 6))
                     .opacity(fade)
 
-                if let turn {
-                    PageCurlView(front: turn.front, under: turn.under, back: turn.back, paper: Theme.paper,
-                                 cornerY: turn.cornerY, foldX: foldX, foldY: foldY)
-                        .frame(width: page.width, height: page.height)
-                        .offset(x: page.minX, y: page.minY)
+                if !model.canvas.isReadOnly && !reduceMotion {
+                    dogEar(pointsRight: true, page: page, visible: model.nextPage != nil)
+                    dogEar(pointsRight: false, page: page, visible: model.previousPage != nil)
                 }
 
-                if !model.canvas.isReadOnly {
-                    edgeHandle(offset: -1, page: page)
-                    edgeHandle(offset: 1, page: page)
+                PageCurlOverlay(model: model, pageSize: page.size, edgeWidth: edgeWidth, isEnabled: !reduceMotion,
+                                appearance: colorScheme == .dark ? .dark : .light) {
+                    turnedByCurl = true
                 }
-            }
-            .onAppear {
-                model.pageTurnHandler = { offset in
-                    startTurn(offset: offset, grabY: 0.85, pageSize: page.size, automatic: true)
-                }
-            }
-            .onChange(of: proxy.size) { _, size in
-                let page = Self.pageRect(in: size)
-                model.pageTurnHandler = { offset in
-                    startTurn(offset: offset, grabY: 0.85, pageSize: page.size, automatic: true)
-                }
+                .frame(width: page.width, height: page.height)
+                .offset(x: page.minX, y: page.minY)
+                .accessibilityHidden(true)
             }
         }
         .onChange(of: model.pageTurnCount) { _, _ in
@@ -179,7 +166,8 @@ struct CanvasPane: View {
                 withAnimation(.easeOut(duration: reduceMotion ? 0.2 : 0.3)) { fade = 1 }
             }
         }
-        .onDisappear { model.pageTurnHandler = nil }
+        .accessibilityAction(named: "Next page") { model.turnPage(by: 1) }
+        .accessibilityAction(named: "Previous page") { model.turnPage(by: -1) }
     }
 
     /// Where the page sits inside the pane (the canvas fits the whole page, centred).
@@ -190,149 +178,19 @@ struct CanvasPane: View {
         return CGRect(x: (size.width - fitted.width) / 2, y: (size.height - fitted.height) / 2, width: fitted.width, height: fitted.height)
     }
 
-    // MARK: Page edges
-
-    /// A strip along the page's outer edge (right for next, left for previous) with a folded-corner hint.
+    /// A folded-down corner at the bottom of an outer edge: the hint that the page can be turned.
     @ViewBuilder
-    private func edgeHandle(offset: Int, page: CGRect) -> some View {
-        let available = offset > 0 ? model.nextPage != nil : model.previousPage != nil
-        if available && !reduceMotion {
-            let x = offset > 0 ? page.maxX - edgeWidth : page.minX
-            DogEar(pointsRight: offset > 0)
+    private func dogEar(pointsRight: Bool, page: CGRect, visible: Bool) -> some View {
+        if visible {
+            DogEar(pointsRight: pointsRight)
                 .fill(Theme.paperEdge)
-                .shadow(color: .black.opacity(0.18), radius: 1.5, x: offset > 0 ? -1 : 1, y: -1)
+                .shadow(color: .black.opacity(0.18), radius: 1.5, x: pointsRight ? -1 : 1, y: -1)
                 .frame(width: 22, height: 22)
-                .frame(width: edgeWidth, height: page.height * 0.55, alignment: offset > 0 ? .bottomTrailing : .bottomLeading)
-                .contentShape(.rect)
-                .offset(x: x, y: page.maxY - page.height * 0.55)
-                .gesture(edgeDrag(offset: offset, page: page))
-                .accessibilityElement()
-                .accessibilityLabel(offset > 0 ? "Turn to the next page" : "Turn back a page")
-                .accessibilityAddTraits(.isButton)
-                .accessibilityAction { model.turnPage(by: offset) }
+                .offset(x: pointsRight ? page.maxX - 22 : page.minX, y: page.maxY - 22)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
     }
-
-    private func edgeDrag(offset: Int, page: CGRect) -> some Gesture {
-        DragGesture(minimumDistance: 0, coordinateSpace: .local)
-            .onChanged { value in
-                if turn == nil {
-                    let grabY = (page.height * 0.45 + value.startLocation.y) / page.height
-                    guard startTurn(offset: offset, grabY: grabY, pageSize: page.size, automatic: false) else { return }
-                }
-                follow(translation: value.translation, pageSize: page.size)
-            }
-            .onEnded { value in
-                guard let turn, !turn.isSettling else { return }
-                let moved = hypot(value.translation.width, value.translation.height) > 6
-                let flick = value.predictedEndTranslation.width - value.translation.width
-                let progress = (1 - foldX) / 2   // 0: lying flat on the right, 1: turned over to the left
-                let commit: Bool
-                if !moved {
-                    commit = true   // a tap on the edge turns the page
-                } else if abs(flick) > page.width * 0.4 {
-                    commit = turn.isForward ? flick < 0 : flick > 0
-                } else {
-                    commit = turn.isForward ? progress > 0.4 : progress < 0.6
-                }
-                finish(commit: commit)
-            }
-    }
-
-    // MARK: Turning
-
-    /// Prepares a turn to the neighbouring page. Returns false if there's nothing to turn to.
-    @discardableResult
-    private func startTurn(offset: Int, grabY: CGFloat, pageSize: CGSize, automatic: Bool) -> Bool {
-        guard turn == nil, !reduceMotion, !model.canvas.isDrawing, pageSize.width > 1,
-              let current = model.currentPage,
-              let target = offset > 0 ? model.nextPage : model.previousPage else { return false }
-        let appearance: UIUserInterfaceStyle = colorScheme == .dark ? .dark : .light
-        let render = { (drawing: PKDrawingSnapshot, faint: Bool) -> Image in
-            Image(uiImage: PageRenderer.sketchImage(drawing: drawing.drawing, paperStyle: drawing.paper, width: pageSize.width,
-                                                    appearance: appearance, inkOpacity: faint ? 0.12 : 1, showsRules: !faint))
-        }
-        let here = PKDrawingSnapshot(drawing: model.canvas.drawing, paper: current.paperStyle)
-        let there = PKDrawingSnapshot(drawing: CanvasStore.decode(target.drawingData), paper: target.paperStyle)
-        let forward = offset > 0
-        // Going forward the current sheet peels away to the left; going back the previous sheet
-        // swings back over from the left.
-        let leaf = forward ? here : there
-        let cornerY: CGFloat = grabY < 0.45 ? 0 : 1
-        turn = PageTurn(offset: offset, isForward: forward, cornerY: cornerY,
-                        front: render(leaf, false), under: render(forward ? there : here, false), back: render(leaf, true))
-        var instant = Transaction()
-        instant.disablesAnimations = true
-        withTransaction(instant) {
-            foldX = forward ? 1 : -1
-            foldY = cornerY
-        }
-        if automatic {
-            // Let the flat sheet draw once before it starts to move.
-            Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(30))
-                finish(commit: true)
-            }
-        }
-        return true
-    }
-
-    /// The corner follows the finger, held to what a bound sheet of paper can do.
-    private func follow(translation: CGSize, pageSize: CGSize) {
-        guard let turn, !turn.isSettling else { return }
-        let w = pageSize.width, h = pageSize.height
-        let startX: CGFloat = turn.isForward ? w : -w
-        let dx = translation.width * (turn.isForward ? 1 : 2)
-        let progress = max(0, min(1, (w - (startX + dx)) / (2 * w)))
-        let lift = (turn.cornerY == 0 ? 1 : -1) * sin(.pi * progress) * h * 0.08
-        let point = CGPoint(x: startX + dx, y: turn.cornerY * h + translation.height + lift)
-        let held = PageCurlGeometry.constrain(point, cornerY: turn.cornerY * h, size: pageSize)
-        var instant = Transaction()
-        instant.disablesAnimations = true
-        withTransaction(instant) {
-            foldX = held.x / w
-            foldY = held.y / h
-        }
-    }
-
-    /// Lets the page fall to one side: over to the next page (commit) or back where it was.
-    private func finish(commit: Bool) {
-        guard var settling = turn else { return }
-        settling.isSettling = true
-        turn = settling
-        let current = settling
-        let lands = commit == current.isForward
-        let distance = abs((lands ? -1 : 1) - foldX) / 2
-        withAnimation(.timingCurve(0.3, 0.1, 0.25, 1, duration: 0.25 + 0.45 * distance)) {
-            foldX = lands ? -1 : 1
-            foldY = current.cornerY
-        } completion: {
-            if commit {
-                turnedByCurl = true
-                let target = current.offset > 0 ? model.nextPage : model.previousPage
-                if let target { model.open(target, direction: current.offset) }
-            }
-            turn = nil
-        }
-    }
-}
-
-/// A page-turn in progress: snapshots of the sheet being turned (front and back) and of the
-/// page it uncovers.
-private struct PageTurn {
-    let offset: Int
-    let isForward: Bool
-    /// 0 when the top corner is held, 1 for the bottom corner.
-    let cornerY: CGFloat
-    let front: Image
-    let under: Image
-    let back: Image
-    var isSettling = false
-}
-
-private struct PKDrawingSnapshot {
-    let drawing: PKDrawing
-    let paper: PaperStyle
 }
 
 /// A folded-down page corner: the hint that a page edge can be grabbed.
