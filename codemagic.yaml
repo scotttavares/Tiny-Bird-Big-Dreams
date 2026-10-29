@@ -288,7 +288,8 @@ workflows:
         BUNDLE_ID: "com.tinybirdbigdreams.fieldguide"
         XCODE_PROJECT: "FieldGuide.xcodeproj"
         XCODE_SCHEME: "FieldGuide"
-      xcode: latest
+      # iPhone Duo badge on the App Store needs the iOS 27.1 SDK or later.
+      xcode: 27.1
     scripts:
       - name: Generate the Xcode project (XcodeGen)
         script: |
