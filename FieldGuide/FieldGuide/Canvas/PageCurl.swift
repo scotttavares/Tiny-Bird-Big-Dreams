@@ -35,7 +35,13 @@ struct PageCurlOverlay: UIViewControllerRepresentable {
         container.touchView.isEnabled = isEnabled && !model.canvas.isReadOnly
         container.touchView.canGoBack = model.previousPage != nil
         container.touchView.canGoForward = model.nextPage != nil
-        model.pageTurnHandler = isEnabled ? { [weak coordinator] offset in coordinator?.turn(by: offset) ?? false } : nil
+        if isEnabled {
+            model.pageTurnHandler = { [weak coordinator] (offset: Int) -> Bool in
+                coordinator?.turn(by: offset) ?? false
+            }
+        } else {
+            model.pageTurnHandler = nil
+        }
     }
 
     static func dismantleUIViewController(_ container: CurlContainerController, coordinator: Coordinator) {
