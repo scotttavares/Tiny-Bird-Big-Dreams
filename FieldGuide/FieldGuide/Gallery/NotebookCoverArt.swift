@@ -2,7 +2,7 @@ import SwiftUI
 
 /// A notebook's cover, drawn in code: the design for its theme, its title, and the wear of a
 /// book that has been carried around (rubbed edges, staples, scuffs, a crease).
-/// The wear is seeded by the notebook, so it never moves.
+/// The wear is seeded by the notebook and its design, so it never moves, and no two covers wear alike.
 ///
 /// Artwork is laid out on a 240 × 420 board and scaled to fill whatever shape it's shown in,
 /// so the same cover works on the outer screen and as a small thumbnail.
@@ -22,7 +22,7 @@ struct NotebookCoverArt: View {
             let scale = max(size.width / design.width, size.height / design.height)
             context.translateBy(x: (size.width - design.width * scale) / 2, y: (size.height - design.height * scale) / 2)
             context.scaleBy(x: scale, y: scale)
-            var art = CoverPainter(context: context, theme: theme, title: title, number: number, random: SeededRandom(string: seed))
+            var art = CoverPainter(context: context, theme: theme, title: title, number: number, random: SeededRandom(string: seed + theme.rawValue))
             art.paint()
         }
         .accessibilityElement()
@@ -245,13 +245,18 @@ private struct CoverPainter {
             scuffs.addLine(to: CGPoint(x: start.x + cos(angle) * length, y: start.y + sin(angle) * length))
         }
         context.stroke(scuffs, with: .color(light.opacity(0.22)), style: StrokeStyle(lineWidth: 0.7, lineCap: .round))
-        // A crease.
-        let creaseStart = CGPoint(x: width, y: random.range(60, 360))
-        var crease = Path(); crease.move(to: creaseStart)
-        crease.addQuadCurve(to: CGPoint(x: creaseStart.x - random.range(60, 140), y: creaseStart.y + random.range(-40, 40)),
-                            control: CGPoint(x: creaseStart.x - 50, y: creaseStart.y + random.range(-12, 12)))
-        context.stroke(crease, with: .color(.black.opacity(0.2)), lineWidth: 1.1)
-        context.stroke(crease.offsetBy(dx: 0.9, dy: 0.9), with: .color(light.opacity(0.3)), lineWidth: 0.8)
+        // Now and then, a corner that was once folded over: a short crease across it.
+        if random.unit() < 0.25 {
+            let top = random.unit() < 0.5
+            let corner = CGPoint(x: width, y: top ? 0 : height)
+            let reach = random.range(28, 56)
+            let start = CGPoint(x: corner.x - reach * random.range(0.8, 1.2), y: corner.y)
+            let end = CGPoint(x: corner.x, y: corner.y + (top ? 1 : -1) * reach * random.range(0.8, 1.2))
+            var crease = Path(); crease.move(to: start)
+            crease.addQuadCurve(to: end, control: CGPoint(x: (start.x + end.x) / 2 - 3, y: (start.y + end.y) / 2 + (top ? -3 : 3)))
+            context.stroke(crease, with: .color(.black.opacity(0.16)), lineWidth: 0.9)
+            context.stroke(crease.offsetBy(dx: 0.7, dy: 0.7), with: .color(light.opacity(0.22)), lineWidth: 0.7)
+        }
         // Light falling across the board, darker at the edges.
         context.fill(Path(board), with: .linearGradient(Gradient(stops: [
             .init(color: .white.opacity(0.14), location: 0), .init(color: .clear, location: 0.45), .init(color: .black.opacity(0.16), location: 1),
