@@ -120,10 +120,10 @@ struct WorkspaceView: View {
     }
 }
 
-/// The canvas on its paper. Pages turn like paper: drag a page's outer edge (or tap it, or use the
-/// header arrows) and the sheet curls over with UIKit's page curl, showing the next page underneath.
+/// The canvas on its paper. Pages turn like paper: hold a page anywhere along its outer edge and
+/// drag (or tap the edge, or use the header arrows), and the sheet rolls over from where it's held.
 ///
-/// The curl is drawn over the live canvas from snapshots, so the `PKCanvasView` itself never
+/// The turn is drawn over the live canvas from snapshots, so the `PKCanvasView` itself never
 /// moves; the page change is applied underneath once the sheet has landed.
 struct CanvasPane: View {
     let model: AppModel
@@ -131,9 +131,12 @@ struct CanvasPane: View {
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var fade: Double = 1
-    /// The next page change comes from a finished curl, so it needs no extra animation.
+    @State private var turn: PageTurn?
+    @State private var motion = PageTurnMotion()
+    /// The next page change comes from a finished turn, so it needs no extra animation.
     @State private var turnedByCurl = false
-    @ScaledMetric(relativeTo: .body) private var edgeWidth: CGFloat = 36
+
+    private static let pageSpace = "page"
 
     var body: some View {
         GeometryReader { proxy in
@@ -144,18 +147,13 @@ struct CanvasPane: View {
                     .clipShape(.rect(cornerRadius: 6))
                     .opacity(fade)
 
-                if !model.canvas.isReadOnly && !reduceMotion {
-                    dogEar(pointsRight: true, page: page, visible: model.nextPage != nil)
-                    dogEar(pointsRight: false, page: page, visible: model.previousPage != nil)
-                }
-
-                PageCurlOverlay(model: model, pageSize: page.size, edgeWidth: edgeWidth, isEnabled: !reduceMotion,
-                                appearance: colorScheme == .dark ? .dark : .light) {
-                    turnedByCurl = true
-                }
-                .frame(width: page.width, height: page.height)
-                .offset(x: page.minX, y: page.minY)
-                .accessibilityHidden(true)
+                pageLayer(size: page.size)
+                    .frame(width: page.width, height: page.height, alignment: .topLeading)
+                    .offset(x: page.minX, y: page.minY)
+            }
+            .onAppear { installTurnHandler(pageSize: page.size) }
+            .onChange(of: proxy.size) { _, size in
+                installTurnHandler(pageSize: Self.pageRect(in: size).size)
             }
         }
         .onChange(of: model.pageTurnCount) { _, _ in
@@ -166,8 +164,11 @@ struct CanvasPane: View {
                 withAnimation(.easeOut(duration: reduceMotion ? 0.2 : 0.3)) { fade = 1 }
             }
         }
-        .accessibilityAction(named: "Next page") { model.turnPage(by: 1) }
-        .accessibilityAction(named: "Previous page") { model.turnPage(by: -1) }
+        .onDisappear {
+            model.pageTurnHandler = nil
+            motion.stop()
+            turn = nil
+        }
     }
 
     /// Where the page sits inside the pane (the canvas fits the whole page, centred).
@@ -178,17 +179,131 @@ struct CanvasPane: View {
         return CGRect(x: (size.width - fitted.width) / 2, y: (size.height - fitted.height) / 2, width: fitted.width, height: fitted.height)
     }
 
+    // MARK: Page layer
+
+    /// Everything that sits on the page: the corner hints, a page mid-turn, and the edge grips.
+    @ViewBuilder
+    private func pageLayer(size: CGSize) -> some View {
+        let canTurn = !reduceMotion && !model.canvas.isReadOnly
+        let grip = max(44, size.width * 0.15)
+        ZStack(alignment: .topLeading) {
+            if canTurn && turn == nil {
+                dogEar(pointsRight: true, size: size, visible: model.nextPage != nil)
+                dogEar(pointsRight: false, size: size, visible: model.previousPage != nil)
+            }
+            if let turn {
+                PageCurlView(turn: turn, motion: motion, paper: Theme.paper)
+            }
+            if canTurn {
+                edgeGrip(offset: 1, width: grip, size: size)
+                edgeGrip(offset: -1, width: grip, size: size)
+            }
+        }
+        .frame(width: size.width, height: size.height, alignment: .topLeading)
+        .coordinateSpace(.named(Self.pageSpace))
+    }
+
     /// A folded-down corner at the bottom of an outer edge: the hint that the page can be turned.
     @ViewBuilder
-    private func dogEar(pointsRight: Bool, page: CGRect, visible: Bool) -> some View {
+    private func dogEar(pointsRight: Bool, size: CGSize, visible: Bool) -> some View {
         if visible {
             DogEar(pointsRight: pointsRight)
                 .fill(Theme.paperEdge)
                 .shadow(color: .black.opacity(0.18), radius: 1.5, x: pointsRight ? -1 : 1, y: -1)
                 .frame(width: 22, height: 22)
-                .offset(x: pointsRight ? page.maxX - 22 : page.minX, y: page.maxY - 22)
+                .offset(x: pointsRight ? size.width - 22 : 0, y: size.height - 22)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
+        }
+    }
+
+    /// A strip along the whole height of an outer edge (right for next, left for previous) where
+    /// the page can be picked up.
+    @ViewBuilder
+    private func edgeGrip(offset: Int, width: CGFloat, size: CGSize) -> some View {
+        let available = offset > 0 ? model.nextPage != nil : model.previousPage != nil
+        if available {
+            Color.clear
+                .contentShape(.rect)
+                .frame(width: width, height: size.height)
+                .offset(x: offset > 0 ? size.width - width : 0)
+                .gesture(edgeDrag(offset: offset, size: size))
+                .accessibilityElement()
+                .accessibilityLabel(offset > 0 ? "Turn to the next page" : "Turn back a page")
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction { model.turnPage(by: offset) }
+        }
+    }
+
+    private func edgeDrag(offset: Int, size: CGSize) -> some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.pageSpace))
+            .onChanged { value in
+                if turn == nil {
+                    guard begin(offset: offset, touch: value.startLocation, size: size) else { return }
+                }
+                guard let turn, !turn.isSettling, turn.offset == offset else { return }
+                motion.follow(value.location)
+            }
+            .onEnded { value in
+                guard let turn, !turn.isSettling, turn.offset == offset else { return }
+                let moved = hypot(value.translation.width, value.translation.height) > 6
+                let landsOver = turn.isForward ? value.predictedEndLocation.x < size.width / 2
+                                               : value.predictedEndLocation.x > size.width / 2
+                // A tap on the edge turns the page; a drag turns it if it's thrown or carried past halfway.
+                settle(commit: !moved || landsOver, velocity: CGVector(dx: value.velocity.width, dy: value.velocity.height))
+            }
+    }
+
+    // MARK: Turning
+
+    /// The header arrows turn the page with a flick from the bottom corner.
+    private func installTurnHandler(pageSize: CGSize) {
+        model.pageTurnHandler = { (offset: Int) -> Bool in
+            let corner = CGPoint(x: offset > 0 ? pageSize.width : 0, y: pageSize.height * 0.85)
+            guard begin(offset: offset, touch: corner, size: pageSize) else { return false }
+            settle(commit: true, velocity: CGVector(dx: offset > 0 ? -1800 : 1800, dy: -120))
+            return true
+        }
+    }
+
+    /// Picks up the page: snapshots the sheet that will move and the page under it. Returns false
+    /// if there's nothing to turn to.
+    @discardableResult
+    private func begin(offset: Int, touch: CGPoint, size: CGSize) -> Bool {
+        guard turn == nil, !reduceMotion, !model.canvas.isDrawing, size.width > 1,
+              let current = model.currentPage,
+              let target = offset > 0 ? model.nextPage : model.previousPage else { return false }
+        let appearance: UIUserInterfaceStyle = colorScheme == .dark ? .dark : .light
+        let render = { (drawing: PKDrawing, paper: PaperStyle) -> UIImage in
+            PageRenderer.sketchImage(drawing: drawing, paperStyle: paper, width: size.width, appearance: appearance)
+        }
+        let here = render(model.canvas.drawing, current.paperStyle)
+        let there = render(CanvasStore.decode(target.drawingData), target.paperStyle)
+        let forward = offset > 0
+        let y = min(max(touch.y, 0), size.height)
+        // Going forward, the current sheet is picked up where the finger is. Going back, the
+        // previous sheet lies turned over on the far side of the spine and comes back by its edge.
+        let grab = forward ? CGPoint(x: min(max(touch.x, 1), size.width), y: y) : CGPoint(x: size.width, y: y)
+        let next = PageTurn(offset: offset, target: target, isForward: forward, grab: grab, size: size,
+                            sheet: forward ? here : there, under: forward ? there : here)
+        turn = next
+        motion.start(at: forward ? next.flatPoint : next.overPoint)
+        return true
+    }
+
+    /// Lets go: the sheet carries on to land turned over (commit) or falls back where it was.
+    private func settle(commit: Bool, velocity: CGVector) {
+        guard var settling = turn else { return }
+        settling.isSettling = true
+        turn = settling
+        let finished = settling
+        let rest = commit == finished.isForward ? finished.overPoint : finished.flatPoint
+        motion.release(to: rest, velocity: velocity) {
+            if commit {
+                turnedByCurl = true
+                model.open(finished.target, direction: finished.offset)
+            }
+            turn = nil
         }
     }
 }

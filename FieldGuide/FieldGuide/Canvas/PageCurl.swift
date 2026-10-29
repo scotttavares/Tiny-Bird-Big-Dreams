@@ -1,248 +1,216 @@
-import PencilKit
+import QuartzCore
 import SwiftUI
 import UIKit
 
-/// Turns pages with UIKit's own page curl (`UIPageViewController` in `.pageCurl` style): the sheet
-/// bends round as it lifts, follows the finger, and shows a faint mirror of the sketch on its back.
+/// Where a sheet is rolled when its point `grab` is held at `finger`. Pure, unit-tested.
 ///
-/// It lies over the live canvas, see-through and untouchable except for a strip along each outer
-/// edge. When a turn starts, the sheet on top is filled with a snapshot of the page, so the
-/// `PKCanvasView` underneath never moves; the page change is applied once the sheet has landed.
-struct PageCurlOverlay: UIViewControllerRepresentable {
-    let model: AppModel
-    let pageSize: CGSize
-    let edgeWidth: CGFloat
-    let isEnabled: Bool
-    let appearance: UIUserInterfaceStyle
-    /// Called just before a curl changes the page, so the change needs no extra animation.
-    let onTurn: () -> Void
+/// The sheet spans `0…width × 0…height` with its bound edge (the spine) at `x = 0`. It rolls round
+/// a cylinder whose axis lies across the line from `grab` to `finger`; the paper past the roll lies
+/// flat on top, back side up, and the held point lands under the finger.
+struct PageCurlGeometry: Equatable, Sendable {
+    /// A point on the line where the sheet leaves the table and starts to roll.
+    var origin: CGPoint
+    /// Unit vector across that line, pointing toward the lifted part of the sheet.
+    var normal: CGVector
+    var radius: CGFloat
+    var isFlat: Bool
 
-    func makeCoordinator() -> Coordinator { Coordinator() }
-
-    func makeUIViewController(context: Context) -> CurlContainerController {
-        let container = CurlContainerController(coordinator: context.coordinator)
-        context.coordinator.container = container
-        return container
+    init(origin: CGPoint, normal: CGVector, radius: CGFloat, isFlat: Bool) {
+        self.origin = origin
+        self.normal = normal
+        self.radius = radius
+        self.isFlat = isFlat
     }
 
-    func updateUIViewController(_ container: CurlContainerController, context: Context) {
-        let coordinator = context.coordinator
-        coordinator.model = model
-        coordinator.pageSize = pageSize
-        coordinator.appearance = appearance
-        coordinator.onTurn = onTurn
-        container.touchView.edgeWidth = edgeWidth
-        container.touchView.isEnabled = isEnabled && !model.canvas.isReadOnly
-        container.touchView.canGoBack = model.previousPage != nil
-        container.touchView.canGoForward = model.nextPage != nil
-        if isEnabled {
-            model.pageTurnHandler = { [weak coordinator] (offset: Int) -> Bool in
-                coordinator?.turn(by: offset) ?? false
-            }
-        } else {
-            model.pageTurnHandler = nil
+    init(grab: CGPoint, finger: CGPoint, maxRadius: CGFloat) {
+        let dx = grab.x - finger.x, dy = grab.y - finger.y, distance = hypot(dx, dy)
+        guard distance > 0.5 else {
+            self.init(origin: CGPoint(x: 1e6, y: 0), normal: CGVector(dx: 1, dy: 0), radius: 1, isFlat: true)
+            return
         }
+        let n = CGVector(dx: dx / distance, dy: dy / distance)
+        // A small lift rolls tightly; the roll widens as the page comes up, to a natural maximum.
+        let r = max(1, min(maxRadius, distance / .pi))
+        // Halfway between grab and finger, moved back by half the roll's circumference, so the
+        // paper that has gone over the roll lands with the held point under the finger.
+        let mid = CGPoint(x: (grab.x + finger.x) / 2, y: (grab.y + finger.y) / 2)
+        self.init(origin: CGPoint(x: mid.x - n.dx * .pi * r / 2, y: mid.y - n.dy * .pi * r / 2),
+                  normal: n, radius: r, isFlat: false)
     }
 
-    static func dismantleUIViewController(_ container: CurlContainerController, coordinator: Coordinator) {
-        coordinator.model?.pageTurnHandler = nil
+    /// Signed distance from the line where the sheet starts to roll; positive toward the lifted side.
+    func side(_ point: CGPoint) -> CGFloat {
+        (point.x - origin.x) * normal.dx + (point.y - origin.y) * normal.dy
     }
 
-    @MainActor
-    final class Coordinator: NSObject, UIPageViewControllerDataSource, UIPageViewControllerDelegate, UIGestureRecognizerDelegate {
-        weak var container: CurlContainerController?
-        var model: AppModel?
-        var pageSize: CGSize = .zero
-        var appearance: UIUserInterfaceStyle = .light
-        var onTurn: () -> Void = {}
-
-        /// The see-through sheet that sits on top between turns.
-        let idle = PageSheetController(page: nil)
-        private var isTurning = false {
-            didSet { container?.touchView.isTurning = isTurning }
-        }
-
-        // MARK: Turning
-
-        /// Turns to the neighbouring page with the full curl (edge taps, header arrows).
-        func turn(by offset: Int) -> Bool {
-            guard !isTurning, let model, let pages = container?.pages, !model.canvas.isDrawing,
-                  let target = offset > 0 ? model.nextPage : model.previousPage else { return false }
-            prepareTopSheet()
-            isTurning = true
-            let sheet = PageSheetController(page: target)
-            sheet.image = snapshot(of: target)
-            pages.setViewControllers([sheet], direction: offset > 0 ? .forward : .reverse, animated: true) { [weak self, sheet] finished in
-                MainActor.assumeIsolated {
-                    guard let self else { return }
-                    if finished, let page = sheet.page { self.land(on: page, direction: offset) }
-                    self.reset()
-                }
+    /// Keeps a held point where paper bound at the spine can reach: no further from the spine than
+    /// the point was before it was lifted.
+    static func constrain(_ point: CGPoint, grab: CGPoint, size: CGSize) -> CGPoint {
+        var p = point
+        let reach: [(CGPoint, CGFloat)] = [
+            (CGPoint(x: 0, y: grab.y), grab.x),
+            (.zero, hypot(grab.x, grab.y)),
+            (CGPoint(x: 0, y: size.height), hypot(grab.x, size.height - grab.y)),
+        ]
+        for _ in 0..<2 {
+            for (anchor, radius) in reach {
+                let dx = p.x - anchor.x, dy = p.y - anchor.y, d = hypot(dx, dy)
+                if d > radius { p = CGPoint(x: anchor.x + dx * radius / d, y: anchor.y + dy * radius / d) }
             }
-            return true
         }
-
-        /// Fills the top sheet with the page as it is right now, so it can curl away.
-        private func prepareTopSheet() {
-            guard let model, let current = model.currentPage else { return }
-            idle.image = image(drawing: model.canvas.drawing, paper: current.paperStyle)
-        }
-
-        private func land(on page: Page, direction: Int) {
-            onTurn()
-            model?.open(page, direction: direction)
-        }
-
-        /// Back to the see-through sheet over the live canvas.
-        private func reset() {
-            idle.image = nil
-            container?.pages.setViewControllers([idle], direction: .forward, animated: false)
-            isTurning = false
-        }
-
-        private func snapshot(of page: Page) -> UIImage {
-            image(drawing: CanvasStore.decode(page.drawingData), paper: page.paperStyle)
-        }
-
-        private func image(drawing: PKDrawing, paper: PaperStyle) -> UIImage {
-            PageRenderer.sketchImage(drawing: drawing, paperStyle: paper, width: max(pageSize.width, 1), appearance: appearance)
-        }
-
-        // MARK: Data source
-
-        func pageViewController(_ pageViewController: UIPageViewController, viewControllerBefore viewController: UIViewController) -> UIViewController? {
-            neighbour(of: viewController, offset: -1)
-        }
-
-        func pageViewController(_ pageViewController: UIPageViewController, viewControllerAfter viewController: UIViewController) -> UIViewController? {
-            neighbour(of: viewController, offset: 1)
-        }
-
-        /// Only the sheet over the live canvas has neighbours; a sheet mid-turn never chains on.
-        private func neighbour(of viewController: UIViewController, offset: Int) -> UIViewController? {
-            guard viewController === idle, let model, !model.canvas.isDrawing,
-                  let target = offset > 0 ? model.nextPage : model.previousPage else { return nil }
-            prepareTopSheet()
-            let sheet = PageSheetController(page: target)
-            sheet.image = snapshot(of: target)
-            return sheet
-        }
-
-        // MARK: Delegate
-
-        func pageViewController(_ pageViewController: UIPageViewController, willTransitionTo pendingViewControllers: [UIViewController]) {
-            isTurning = true
-        }
-
-        func pageViewController(_ pageViewController: UIPageViewController, didFinishAnimating finished: Bool,
-                                previousViewControllers: [UIViewController], transitionCompleted completed: Bool) {
-            if completed, let sheet = pageViewController.viewControllers?.first as? PageSheetController, let page = sheet.page,
-               let model {
-                land(on: page, direction: page.id == model.nextPage?.id ? 1 : -1)
-            }
-            reset()
-        }
-
-        // MARK: Gestures
-
-        /// UIKit's own pan and tap only start on a page edge, and never while ink is going down.
-        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-            guard let view = container?.touchView, !isTurning, model?.canvas.isDrawing == false else { return false }
-            return view.isOnEdge(gestureRecognizer.location(in: view))
-        }
-
-        /// A drag that ends without starting a turn leaves the top sheet see-through again.
-        @objc func edgeGestureChanged(_ recognizer: UIGestureRecognizer) {
-            guard [.ended, .cancelled, .failed].contains(recognizer.state), !isTurning else { return }
-            idle.image = nil
-        }
+        return p
     }
 }
 
-/// Hosts the page view controller. Its view lets every touch through to the canvas underneath
-/// except on the outer edges, or while a page is turning.
-final class CurlContainerController: UIViewController {
-    let pages = UIPageViewController(transitionStyle: .pageCurl, navigationOrientation: .horizontal,
-                                     options: [.spineLocation: UIPageViewController.SpineLocation.min.rawValue])
-    let touchView = EdgeTouchView()
-    private unowned let coordinator: PageCurlOverlay.Coordinator
+/// A page being turned: snapshots of the sheet that moves and of the page it covers or uncovers,
+/// and the point on the sheet that is held.
+struct PageTurn {
+    let offset: Int
+    let target: Page
+    let isForward: Bool
+    let grab: CGPoint
+    let size: CGSize
+    let sheet: UIImage
+    let under: UIImage
+    var isSettling = false
 
-    init(coordinator: PageCurlOverlay.Coordinator) {
-        self.coordinator = coordinator
-        super.init(nibName: nil, bundle: nil)
-    }
+    /// Lying flat where it started, and turned right over onto the other side of the spine.
+    var flatPoint: CGPoint { grab }
+    var overPoint: CGPoint { CGPoint(x: -grab.x, y: grab.y) }
 
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
-
-    override func loadView() { view = touchView }
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        view.backgroundColor = .clear
-        pages.isDoubleSided = false
-        pages.dataSource = coordinator
-        pages.delegate = coordinator
-        pages.view.backgroundColor = .clear
-        addChild(pages)
-        pages.view.frame = view.bounds
-        pages.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        view.addSubview(pages.view)
-        pages.didMove(toParent: self)
-        pages.setViewControllers([coordinator.idle], direction: .forward, animated: false)
-        for recognizer in pages.gestureRecognizers {
-            recognizer.delegate = coordinator
-            recognizer.addTarget(coordinator, action: #selector(PageCurlOverlay.Coordinator.edgeGestureChanged(_:)))
-        }
+    /// Where the held point actually goes for a hand at `hand`.
+    ///
+    /// Where the page is held decides how it leans: held low, the bottom leads and the top lags;
+    /// held high, the reverse; held in the middle, it turns square. Past halfway the free side
+    /// falls over ahead of the hand, as paper does.
+    func held(at hand: CGPoint) -> CGPoint {
+        let progress = min(1, max(0, (grab.x - hand.x) / (2 * max(grab.x, 1))))
+        let lean = (grab.y / max(size.height, 1) - 0.5) * 2
+        let lift = -lean * size.height * 0.12 * sin(.pi * progress) * (1 - 1.6 * progress)
+        return PageCurlGeometry.constrain(CGPoint(x: hand.x, y: hand.y + lift), grab: grab, size: size)
     }
 }
 
-/// Passes touches through except on a page edge that has a page to turn to, or mid-turn.
-final class EdgeTouchView: UIView {
-    var edgeWidth: CGFloat = 30
-    var isEnabled = true
-    var isTurning = false
-    var canGoBack = false
-    var canGoForward = false
+/// Moves the held point toward the hand on a spring, so the paper has a little weight: it trails
+/// the finger slightly, and when let go it carries the flick on to where it lands.
+@MainActor @Observable
+final class PageTurnMotion {
+    private(set) var position: CGPoint = .zero
+    @ObservationIgnored private var velocity: CGVector = .zero
+    @ObservationIgnored private var target: CGPoint = .zero
+    @ObservationIgnored private var stiffness: CGFloat = 1400
+    @ObservationIgnored private var dampingRatio: CGFloat = 0.9
+    @ObservationIgnored private var link: CADisplayLink?
+    @ObservationIgnored private var onSettle: (@MainActor () -> Void)?
 
-    func isOnEdge(_ point: CGPoint) -> Bool {
-        guard isEnabled, bounds.contains(point) else { return false }
-        return (canGoForward && point.x >= bounds.maxX - edgeWidth) || (canGoBack && point.x <= bounds.minX + edgeWidth)
+    func start(at point: CGPoint) {
+        stop()
+        position = point
+        target = point
+        velocity = .zero
     }
 
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        guard isTurning || isOnEdge(point) else { return nil }
-        return super.hitTest(point, with: event)
+    /// Follow the finger closely.
+    func follow(_ point: CGPoint) {
+        target = point
+        stiffness = 1400
+        dampingRatio = 0.9
+        run()
+    }
+
+    /// Let go: glide on with `velocity` (points per second) and come to rest at `point`.
+    func release(to point: CGPoint, velocity: CGVector, onSettle: @escaping @MainActor () -> Void) {
+        target = point
+        self.velocity = velocity
+        stiffness = 170
+        dampingRatio = 0.92
+        self.onSettle = onSettle
+        run()
+    }
+
+    func stop() {
+        link?.invalidate()
+        link = nil
+        onSettle = nil
+    }
+
+    private func run() {
+        guard link == nil else { return }
+        let proxy = DisplayLinkProxy { [weak self] link in self?.tick(link) }
+        let link = CADisplayLink(target: proxy, selector: #selector(DisplayLinkProxy.fire(_:)))
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
+        link.add(to: .main, forMode: .common)
+        self.link = link
+    }
+
+    private func tick(_ link: CADisplayLink) {
+        let dt = min(max(link.targetTimestamp - link.timestamp, 1.0 / 240), 1.0 / 30)
+        let damping = 2 * sqrt(stiffness) * dampingRatio
+        var p = position, v = velocity
+        let steps = 4, h = CGFloat(dt) / CGFloat(steps)
+        for _ in 0..<steps {
+            let ax = stiffness * (target.x - p.x) - damping * v.dx
+            let ay = stiffness * (target.y - p.y) - damping * v.dy
+            v.dx += ax * h
+            v.dy += ay * h
+            p.x += v.dx * h
+            p.y += v.dy * h
+        }
+        velocity = v
+        let settled = hypot(target.x - p.x, target.y - p.y) < 0.5 && hypot(v.dx, v.dy) < 8
+        position = settled ? target : p
+        guard settled else { return }
+        velocity = .zero
+        let done = onSettle
+        stop()
+        done?()
     }
 }
 
-/// One sheet of paper: a snapshot of a page, or nothing (see-through) between turns.
-final class PageSheetController: UIViewController {
-    let page: Page?
-    private let imageView = UIImageView()
+/// `CADisplayLink` keeps a strong reference to its target; this keeps it off the motion itself.
+@MainActor
+private final class DisplayLinkProxy: NSObject {
+    let handler: @MainActor (CADisplayLink) -> Void
 
-    var image: UIImage? {
-        didSet {
-            imageView.image = image
-            view.backgroundColor = image == nil ? .clear : UIColor(Theme.paper)
+    init(handler: @escaping @MainActor (CADisplayLink) -> Void) {
+        self.handler = handler
+    }
+
+    @objc func fire(_ link: CADisplayLink) {
+        handler(link)
+    }
+}
+
+/// Draws a turning page: the page underneath, and the sheet rolled over it by the `pageCurl`
+/// shader (`PageCurl.metal`), which also shades the roll and casts the sheet's shadow.
+struct PageCurlView: View {
+    let turn: PageTurn
+    let motion: PageTurnMotion
+    let paper: Color
+
+    var body: some View {
+        let size = turn.size
+        let curl = PageCurlGeometry(grab: turn.grab, finger: turn.held(at: motion.position), maxRadius: size.width * 0.12)
+        ZStack {
+            Image(uiImage: turn.under)
+                .resizable()
+            Image(uiImage: turn.sheet)
+                .resizable()
+                .layerEffect(
+                    ShaderLibrary.pageCurl(
+                        .float2(size),
+                        .float2(curl.origin),
+                        .float2(curl.normal.dx, curl.normal.dy),
+                        .float(curl.radius),
+                        .color(paper)
+                    ),
+                    maxSampleOffset: size,
+                    isEnabled: !curl.isFlat
+                )
         }
-    }
-
-    init(page: Page?) {
-        self.page = page
-        super.init(nibName: nil, bundle: nil)
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        view.backgroundColor = image == nil ? .clear : UIColor(Theme.paper)
-        imageView.contentMode = .scaleToFill
-        imageView.frame = view.bounds
-        imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        imageView.image = image
-        view.addSubview(imageView)
+        .frame(width: size.width, height: size.height)
+        .clipShape(.rect(cornerRadius: 6))
+        .contentShape(.rect)
+        .accessibilityHidden(true)
     }
 }
