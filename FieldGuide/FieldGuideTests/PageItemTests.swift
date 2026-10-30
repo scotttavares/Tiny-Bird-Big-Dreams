@@ -53,4 +53,34 @@ struct PageItemTests {
         store.toolKind = .pencil
         #expect(!store.isArranging)
     }
+
+    @Test func newItemsGoOverTheInkAndStepThroughIt() throws {
+        let store = CanvasStore(autosaveDelay: .zero)
+        store.add(.sticker("🐦"), width: 150)
+        store.add(.tape(1), width: 300)
+        let bird = store.items[0].id, tape = store.items[1].id
+        #expect(store.items.allSatisfy(\.overInk))
+        #expect(!store.canMove(tape, .forward))
+
+        // Stack, bottom to top: ink, bird, tape. Backward steps past the bird, then under the ink.
+        store.move(tape, .backward)
+        #expect(PageItem.stacked(store.items).map(\.id) == [tape, bird])
+        #expect(store.items.allSatisfy(\.overInk))
+        store.move(tape, .backward)
+        #expect(try #require(store.items.first { $0.id == tape }).overInk == false)
+        #expect(!store.canMove(tape, .backward))
+
+        store.move(tape, .front)
+        #expect(PageItem.stacked(store.items).map(\.id) == [bird, tape])
+        store.move(bird, .back)
+        #expect(try #require(store.items.first { $0.id == bird }).overInk == false)
+        #expect(PageItem.stacked(store.items).map(\.id) == [bird, tape])
+    }
+
+    @Test func itemsSavedBeforeLayersStayUnderTheInk() throws {
+        let json = #"[{"id":"3B2C8E2A-0F4E-4D6A-9A43-2E1C3B5D7F10","content":{"sticker":{"_0":"🍄"}},"center":[10,20],"width":150,"rotation":0}]"#
+        let items = try JSONDecoder().decode([PageItem].self, from: Data(json.utf8))
+        #expect(items.count == 1)
+        #expect(items[0].overInk == false)
+    }
 }

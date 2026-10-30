@@ -45,9 +45,11 @@ enum PageRenderer {
                 paper: paperTint.paperColor(for: traits),
                 rule: paperTint.ruleColor(for: traits)
             )
-            PageItemArt.draw(items, in: cg)
+            PageItemArt.draw(items.filter { !$0.overInk }, in: cg)
             cg.restoreGState()
             inkImage.draw(in: CGRect(origin: .zero, size: size), blendMode: .normal, alpha: inkOpacity)
+            cg.scaleBy(x: factor, y: factor)
+            PageItemArt.draw(items.filter(\.overInk), in: cg)
         }
     }
 

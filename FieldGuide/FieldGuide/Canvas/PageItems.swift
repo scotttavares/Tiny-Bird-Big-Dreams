@@ -166,13 +166,22 @@ enum PageItemArt {
     }
 }
 
-/// The page's items in the live canvas: a layer between the paper and the ink, in page coordinates.
+/// One side of the page's items in the live canvas, in page coordinates: those under the ink
+/// (between the paper and the drawing) or those over it.
 final class PageItemsLayerView: UIView {
+    let overInk: Bool
+
     var items: [PageItem] = [] {
-        didSet { if items != oldValue { setNeedsDisplay() } }
+        didSet {
+            let side = items.filter { $0.overInk == overInk }
+            if side != drawn { drawn = side; setNeedsDisplay() }
+        }
     }
 
-    override init(frame: CGRect) {
+    private var drawn: [PageItem] = []
+
+    init(frame: CGRect, overInk: Bool) {
+        self.overInk = overInk
         super.init(frame: frame)
         isOpaque = false
         backgroundColor = .clear
@@ -187,8 +196,8 @@ final class PageItemsLayerView: UIView {
     }
 
     override func draw(_ rect: CGRect) {
-        guard let context = UIGraphicsGetCurrentContext(), !items.isEmpty else { return }
-        PageItemArt.draw(items, in: context)
+        guard let context = UIGraphicsGetCurrentContext(), !drawn.isEmpty else { return }
+        PageItemArt.draw(drawn, in: context)
     }
 }
 
@@ -247,8 +256,15 @@ struct PageItemsEditor: View {
         HStack(spacing: 4) {
             if let selected {
                 Button("Delete", systemImage: "trash", role: .destructive) { model.deleteItem(selected.id) }
-                Button("Bring to Front", systemImage: "square.3.layers.3d.top.filled") { store.bringToFront(selected.id) }
-                    .labelStyle(.iconOnly)
+                Menu {
+                    stackButton("Bring to Front", "square.3.layers.3d.top.filled", .front, selected.id)
+                    stackButton("Bring Forward", "square.2.layers.3d.top.filled", .forward, selected.id)
+                    stackButton("Send Backward", "square.2.layers.3d.bottom.filled", .backward, selected.id)
+                    stackButton("Send to Back", "square.3.layers.3d.bottom.filled", .back, selected.id)
+                } label: {
+                    Label("Arrange", systemImage: "square.3.layers.3d")
+                        .labelStyle(.iconOnly)
+                }
             }
             Button("Done") { store.endArranging() }
                 .fontWeight(.semibold)
@@ -256,6 +272,12 @@ struct PageItemsEditor: View {
         .buttonStyle(.bordered)
         .padding(6)
         .background(.regularMaterial, in: .capsule)
+    }
+
+    /// Moves the item one way through the stack, where the drawing counts as a layer.
+    private func stackButton(_ title: String, _ icon: String, _ move: CanvasStore.StackMove, _ id: UUID) -> some View {
+        Button(title, systemImage: icon) { store.move(id, move) }
+            .disabled(!store.canMove(id, move))
     }
 
     // MARK: Gestures
@@ -306,7 +328,7 @@ struct PageItemsEditor: View {
     private func begin(at point: CGPoint?) {
         if let point {
             let pagePoint = CGPoint(x: point.x / scale, y: point.y / scale)
-            let hit = store.items.last { $0.contains(pagePoint, size: PageItemArt.size(of: $0)) }
+            let hit = PageItem.stacked(store.items).last { $0.contains(pagePoint, size: PageItemArt.size(of: $0)) }
             store.selectedItemID = hit?.id
         }
         base = selected

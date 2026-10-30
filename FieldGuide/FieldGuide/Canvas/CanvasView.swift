@@ -72,6 +72,8 @@ final class FieldCanvasView: PKCanvasView {
     weak var store: CanvasStore?
 
     private let underlay = PaperUnderlayView(frame: PageGeometry.rect)
+    /// Items laid over the drawing; kept the topmost subview.
+    private let overlay = PageItemsLayerView(frame: PageGeometry.rect, overInk: true)
     private var lastBoundsSize: CGSize = .zero
     private(set) var isApplyingViewport = false
 
@@ -99,6 +101,7 @@ final class FieldCanvasView: PKCanvasView {
         showsHorizontalScrollIndicator = false
         bouncesZoom = true
         insertSubview(underlay, at: 0)
+        addSubview(overlay)
         accessibilityLabel = "Sketch canvas"
         accessibilityHint = "Draw with a finger or Apple Pencil. Pinch with two fingers to zoom."
     }
@@ -138,6 +141,9 @@ final class FieldCanvasView: PKCanvasView {
         if subviews.first !== underlay {
             sendSubviewToBack(underlay)
         }
+        if subviews.last !== overlay {
+            bringSubviewToFront(overlay)
+        }
     }
 
     /// Re-applies the store's zoom and centre for the current bounds (after a resize or page change).
@@ -173,6 +179,7 @@ final class FieldCanvasView: PKCanvasView {
 
     func updateItems(_ items: [PageItem]) {
         underlay.itemsView.items = items
+        overlay.items = items
     }
 
     func refreshUnderlayResolution() {
@@ -182,6 +189,8 @@ final class FieldCanvasView: PKCanvasView {
             underlay.setNeedsDisplay()
             underlay.itemsView.contentScaleFactor = scale
             underlay.itemsView.setNeedsDisplay()
+            overlay.contentScaleFactor = scale
+            overlay.setNeedsDisplay()
         }
     }
 
@@ -201,6 +210,8 @@ final class FieldCanvasView: PKCanvasView {
     private func positionUnderlay() {
         underlay.transform = CGAffineTransform(scaleX: zoomScale, y: zoomScale)
         underlay.center = CGPoint(x: contentSize.width / 2, y: contentSize.height / 2)
+        overlay.transform = underlay.transform
+        overlay.center = underlay.center
     }
 
     private func clampedOffset(_ point: CGPoint) -> CGPoint {
@@ -230,8 +241,8 @@ final class PaperUnderlayView: UIView {
     }
 
     private let tracingView = UIImageView()
-    /// Stickers, photos and tape, above the paper and tracing image, under the ink.
-    let itemsView = PageItemsLayerView(frame: .zero)
+    /// Stickers, photos and tape above the paper and tracing image, under the ink.
+    let itemsView = PageItemsLayerView(frame: .zero, overInk: false)
 
     override init(frame: CGRect) {
         super.init(frame: frame)

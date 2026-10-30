@@ -143,7 +143,7 @@ final class ReferenceAsset {
     }
 }
 
-/// Something stuck on a page, under the ink: a sticker, a photo or a strip of tape.
+/// Something stuck on a page, under or over the ink: a sticker, a photo or a strip of tape.
 /// Placed in page coordinates (`PageGeometry`); its height follows from its art.
 struct PageItem: Codable, Identifiable, Equatable, Sendable {
     enum Content: Codable, Hashable, Sendable {
@@ -155,12 +155,43 @@ struct PageItem: Codable, Identifiable, Equatable, Sendable {
         case tape(Int)
     }
 
-    var id = UUID()
+    var id: UUID
     var content: Content
     var center: CGPoint
     var width: CGFloat
     /// Radians, clockwise.
     var rotation: Double = 0
+    /// Lies on top of the drawing rather than under it.
+    var overInk = false
+
+    init(id: UUID = UUID(), content: Content, center: CGPoint, width: CGFloat, rotation: Double = 0, overInk: Bool = false) {
+        self.id = id
+        self.content = content
+        self.center = center
+        self.width = width
+        self.rotation = rotation
+        self.overInk = overInk
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, content, center, width, rotation, overInk
+    }
+
+    /// Pages saved before items could sit over the ink have no `overInk`; they stay under it.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        content = try container.decode(Content.self, forKey: .content)
+        center = try container.decode(CGPoint.self, forKey: .center)
+        width = try container.decode(CGFloat.self, forKey: .width)
+        rotation = try container.decodeIfPresent(Double.self, forKey: .rotation) ?? 0
+        overInk = try container.decodeIfPresent(Bool.self, forKey: .overInk) ?? false
+    }
+
+    /// Bottom to top: the items under the ink, then those over it, each group in array order.
+    static func stacked(_ items: [PageItem]) -> [PageItem] {
+        items.filter { !$0.overInk } + items.filter(\.overInk)
+    }
 
     /// Whether `point` (page coordinates) lands on this item when it is `size` big.
     func contains(_ point: CGPoint, size: CGSize) -> Bool {

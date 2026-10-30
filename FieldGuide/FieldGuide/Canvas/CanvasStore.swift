@@ -174,14 +174,15 @@ final class CanvasStore {
 
     // MARK: Stickers and photos
 
-    /// Puts `content` on the page, a little off centre and askew, and starts arranging it.
+    /// Puts `content` on top of the page, a little off centre and askew, and starts arranging it.
     func add(_ content: PageItem.Content, width: CGFloat, tilt: Double = 0) {
         let page = PageGeometry.size
         let item = PageItem(
             content: content,
             center: CGPoint(x: page.width / 2 + .random(in: -60...60), y: page.height / 2 + .random(in: -80...80)),
             width: width,
-            rotation: tilt == 0 ? 0 : .random(in: -tilt...tilt)
+            rotation: tilt == 0 ? 0 : .random(in: -tilt...tilt),
+            overInk: true
         )
         items.append(item)
         commitItems()
@@ -208,10 +209,48 @@ final class CanvasStore {
         items[index] = item
     }
 
-    func bringToFront(_ id: UUID) {
-        guard let index = items.firstIndex(where: { $0.id == id }), index != items.count - 1 else { return }
-        items.append(items.remove(at: index))
+    /// Where an item can move in the page's stack. The ink is one layer in it.
+    enum StackMove {
+        case front, forward, backward, back
+    }
+
+    /// Moves an item up or down the stack: past the next item, or across the ink.
+    func move(_ id: UUID, _ move: StackMove) {
+        var stack = layerStack
+        guard let from = stack.firstIndex(where: { $0?.id == id }) else { return }
+        let to = switch move {
+        case .front: stack.count - 1
+        case .forward: min(from + 1, stack.count - 1)
+        case .backward: max(from - 1, 0)
+        case .back: 0
+        }
+        guard to != from else { return }
+        stack.insert(stack.remove(at: from), at: to)
+        let ink = stack.firstIndex(where: { $0 == nil }) ?? 0
+        items = stack.enumerated().compactMap { index, item -> PageItem? in
+            guard var item else { return nil }
+            item.overInk = index > ink
+            return item
+        }
         commitItems()
+    }
+
+    /// The page bottom to top, with `nil` standing for the ink.
+    private var layerStack: [PageItem?] {
+        var stack: [PageItem?] = items.filter { !$0.overInk }
+        stack.append(nil)
+        stack.append(contentsOf: items.filter(\.overInk).map { Optional($0) })
+        return stack
+    }
+
+    /// Whether `move` would change anything for this item.
+    func canMove(_ id: UUID, _ move: StackMove) -> Bool {
+        let stack = layerStack
+        guard let index = stack.firstIndex(where: { $0?.id == id }) else { return false }
+        return switch move {
+        case .front, .forward: index < stack.count - 1
+        case .backward, .back: index > 0
+        }
     }
 
     @discardableResult
