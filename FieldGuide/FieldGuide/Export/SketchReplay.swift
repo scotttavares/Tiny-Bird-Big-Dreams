@@ -7,7 +7,7 @@ import UIKit
 /// to be recorded; a stroke that was erased is simply gone from the replay too.
 @MainActor
 enum SketchReplay {
-    static let maxSteps = 240
+    nonisolated static let maxSteps = 240
     static let framesPerSecond: Int32 = 30
     /// Frames the finished page stays up at the end of a video.
     static let holdFrames = 45
