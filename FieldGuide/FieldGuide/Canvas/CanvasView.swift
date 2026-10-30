@@ -248,7 +248,17 @@ final class FieldCanvasView: PKCanvasView {
 
     @objc private func fingersTapped() {
         guard let store, !store.isArranging, !store.isReadOnly else { return }
-        if drawing.strokes.count > strokesAtFirstTouch { store.undo() }
+        let leftStroke = drawing.strokes.count > strokesAtFirstTouch
+        if fingerTap.fingers == 1 {
+            // A tap on a video replays it.
+            guard let item = store.item(at: overlay.convert(fingerTap.firstLocation, from: nil)),
+                  case .video = item.content else { return }
+            if leftStroke { store.undo() }
+            underlay.itemsView.replayVideo(item.id)
+            overlay.replayVideo(item.id)
+            return
+        }
+        if leftStroke { store.undo() }
         switch fingerTap.fingers {
         case 2 where pendingUndo != nil:
             pendingUndo?.cancel()

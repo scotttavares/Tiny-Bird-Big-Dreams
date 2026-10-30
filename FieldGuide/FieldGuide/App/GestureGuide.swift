@@ -28,6 +28,8 @@ struct GestureGuide: View {
             Gesture(symbol: "hand.draw", title: "Drag", detail: "Move the selected item."),
             Gesture(symbol: "hand.pinch", title: "Pinch", detail: "Resize the selected item."),
             Gesture(symbol: "rotate.right", title: "Twist with two fingers", detail: "Turn the selected item."),
+            Gesture(symbol: "paintpalette", title: "Hold a photo or video, then tap the palette", detail: "Change its frame and color."),
+            Gesture(symbol: "arrow.counterclockwise", title: "Tap a video", detail: "Play it again."),
             Gesture(symbol: "play.fill", title: "Hold a video, then tap Play", detail: "Watch it full screen with sound."),
         ]),
         Group(title: "Pages", gestures: [

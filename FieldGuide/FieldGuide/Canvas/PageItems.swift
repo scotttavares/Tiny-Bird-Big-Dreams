@@ -36,30 +36,40 @@ enum PageItemArt {
         Tape(name: "Ink", color: UIColor(red: 0.25, green: 0.30, blue: 0.40, alpha: 1), stripes: true),
     ]
 
-    private static var cache: [PageItem.Content: UIImage] = [:]
+    private struct ArtKey: Hashable {
+        let content: PageItem.Content
+        let frame: ItemFrame
+        let look: ItemLook
+    }
 
-    /// A printed photo's white border, as a fraction of its longest side.
-    static let printBorder: CGFloat = 0.035 / 1.07
+    private static var cache: [ArtKey: UIImage] = [:]
+    private static let colorContext = CIContext()
 
-    static func image(for content: PageItem.Content) -> UIImage? {
-        if let cached = cache[content] { return cached }
+    static func image(for content: PageItem.Content, frame: ItemFrame = .print, look: ItemLook = .original) -> UIImage? {
+        let key = ArtKey(content: content, frame: frame, look: look)
+        if let cached = cache[key] { return cached }
+        let picture = { (photo: UIImage) in Self.framed(Self.colored(Self.fitted(photo), look), frame) }
         let made: UIImage?
         switch content {
         case .sticker(let emoji): made = sticker(emoji)
-        case .photo(let path): made = imageStore.image(at: path).map(printedPhoto)
-        case .video(let path): made = imageStore.image(at: ImageStore.posterPath(forVideo: path)).map(printedPhoto)
+        case .photo(let path): made = imageStore.image(at: path).map(picture)
+        case .video(let path): made = imageStore.image(at: ImageStore.posterPath(forVideo: path)).map(picture)
         case .tape(let index): made = tape(tapes[((index % tapes.count) + tapes.count) % tapes.count])
         }
         if let made {
             if cache.count > 120 { cache.removeAll() }
-            cache[content] = made
+            cache[key] = made
         }
         return made
     }
 
+    static func image(for item: PageItem) -> UIImage? {
+        image(for: item.content, frame: item.frame, look: item.look)
+    }
+
     /// The item's size on the page: its width, and the height its art calls for.
     static func size(of item: PageItem) -> CGSize {
-        guard let image = image(for: item.content), image.size.width > 0 else {
+        guard let image = image(for: item), image.size.width > 0 else {
             return CGSize(width: item.width, height: item.width)
         }
         return CGSize(width: item.width, height: item.width * image.size.height / image.size.width)
@@ -68,7 +78,7 @@ enum PageItemArt {
     /// Draws `items` in page coordinates into the current UIKit graphics context.
     static func draw(_ items: [PageItem], in context: CGContext) {
         for item in items {
-            guard let image = image(for: item.content) else { continue }
+            guard let image = image(for: item) else { continue }
             let drawn = size(of: item)
             context.saveGState()
             context.translateBy(x: item.center.x, y: item.center.y)
@@ -112,20 +122,65 @@ enum PageItemArt {
         }
     }
 
-    /// A photo printed with a thin white border.
-    private static func printedPhoto(_ photo: UIImage) -> UIImage {
-        let longest = max(photo.size.width, photo.size.height, 1)
-        let fit = min(1, 1400 / longest)
-        let inner = CGSize(width: photo.size.width * fit, height: photo.size.height * fit)
-        let border = max(inner.width, inner.height) * 0.035
-        let size = CGSize(width: inner.width + border * 2, height: inner.height + border * 2)
+    /// The photo upright, at most 1400 points on its longest side.
+    private static func fitted(_ photo: UIImage) -> UIImage {
+        let fit = min(1, 1400 / max(photo.size.width, photo.size.height, 1))
+        let size = CGSize(width: photo.size.width * fit, height: photo.size.height * fit)
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1
         format.opaque = true
+        return UIGraphicsImageRenderer(size: size, format: format).image { _ in
+            photo.draw(in: CGRect(origin: .zero, size: size))
+        }
+    }
+
+    private static func colored(_ photo: UIImage, _ look: ItemLook) -> UIImage {
+        guard look != .original, let source = photo.cgImage else { return photo }
+        let output = look.filtered(CIImage(cgImage: source))
+        return colorContext.createCGImage(output, from: output.extent).map(UIImage.init(cgImage:)) ?? photo
+    }
+
+    /// The photo mounted in `frame`.
+    private static func framed(_ photo: UIImage, _ frame: ItemFrame) -> UIImage {
+        let longest = max(photo.size.width, photo.size.height, 1)
+        let (top, side, bottom) = frame.margins
+        let size = CGSize(width: photo.size.width + side * 2 * longest,
+                          height: photo.size.height + (top + bottom) * longest)
+        let picture = CGRect(origin: CGPoint(x: side * longest, y: top * longest), size: photo.size)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = frame != .rounded
         return UIGraphicsImageRenderer(size: size, format: format).image { context in
-            UIColor(white: 0.98, alpha: 1).setFill()
-            context.fill(CGRect(origin: .zero, size: size))
-            photo.draw(in: CGRect(x: border, y: border, width: inner.width, height: inner.height))
+            let bounds = CGRect(origin: .zero, size: size)
+            switch frame {
+            case .print: UIColor(white: 0.98, alpha: 1).setFill()
+            case .instant: UIColor(red: 0.98, green: 0.97, blue: 0.93, alpha: 1).setFill()
+            case .film: UIColor(white: 0.07, alpha: 1).setFill()
+            case .kraft: UIColor(red: 0.80, green: 0.66, blue: 0.45, alpha: 1).setFill()
+            case .rounded: UIColor.clear.setFill()
+            case .none: UIColor.black.setFill()
+            }
+            context.fill(bounds)
+            if frame == .film { drawSprockets(in: size, strip: top * longest, longest: longest) }
+            if frame == .rounded {
+                UIBezierPath(roundedRect: bounds, cornerRadius: ItemFrame.cornerRadius * longest).addClip()
+            }
+            photo.draw(in: picture)
+        }
+    }
+
+    /// The holes along both edges of a film strip.
+    private static func drawSprockets(in size: CGSize, strip: CGFloat, longest: CGFloat) {
+        let hole = CGSize(width: longest * 0.028, height: longest * 0.04)
+        let step = longest * 0.07
+        UIColor(white: 0.9, alpha: 1).setFill()
+        for y in [(strip - hole.height) / 2, size.height - (strip + hole.height) / 2] {
+            var x = step / 3
+            while x < size.width {
+                UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: x, y: y), size: hole),
+                             cornerRadius: hole.width * 0.2).fill()
+                x += step
+            }
         }
     }
 
@@ -180,7 +235,9 @@ enum PageItemArt {
 final class PageItemsLayerView: UIView {
     private final class ItemLayer {
         let layer = CALayer()
-        var video: LoopingVideo?
+        var video: PageVideo?
+        var frame = ItemFrame.print
+        var look = ItemLook.original
     }
 
     let overInk: Bool
@@ -202,8 +259,6 @@ final class PageItemsLayerView: UIView {
         backgroundColor = .clear
         isUserInteractionEnabled = false
         isAccessibilityElement = false
-        NotificationCenter.default.addObserver(self, selector: #selector(resumeVideos),
-                                               name: UIApplication.didBecomeActiveNotification, object: nil)
     }
 
     @available(*, unavailable)
@@ -211,9 +266,8 @@ final class PageItemsLayerView: UIView {
         fatalError("init(coder:) is not supported")
     }
 
-    /// The system pauses players in the background.
-    @objc private func resumeVideos() {
-        itemLayers.values.forEach { $0.video?.play() }
+    func replayVideo(_ id: UUID) {
+        itemLayers[id]?.video?.replay()
     }
 
     private func syncLayers() {
@@ -228,20 +282,31 @@ final class PageItemsLayerView: UIView {
             itemLayers[id] = nil
         }
         for (index, item) in shown.enumerated() {
+            if let old = itemLayers[item.id], old.frame != item.frame || old.look != item.look {
+                old.video?.stop()
+                old.layer.removeFromSuperlayer()
+                itemLayers[item.id] = nil
+            }
             let entry = itemLayers[item.id] ?? makeLayer(for: item)
             let size = PageItemArt.size(of: item)
             entry.layer.bounds = CGRect(origin: .zero, size: size)
             entry.layer.position = item.center
             entry.layer.setAffineTransform(CGAffineTransform(rotationAngle: item.rotation))
             entry.layer.zPosition = CGFloat(index)
-            let border = max(size.width, size.height) * PageItemArt.printBorder
-            entry.video?.layer.frame = entry.layer.bounds.insetBy(dx: border, dy: border)
+            let picture = item.frame.photoRect(in: size)
+            entry.video?.layer.frame = picture
+            if item.frame == .rounded {
+                entry.video?.layer.cornerRadius = ItemFrame.cornerRadius * max(picture.width, picture.height)
+                entry.video?.layer.masksToBounds = true
+            }
         }
     }
 
     private func makeLayer(for item: PageItem) -> ItemLayer {
         let entry = ItemLayer()
-        entry.layer.contents = PageItemArt.image(for: item.content)?.cgImage
+        entry.layer.contents = PageItemArt.image(for: item)?.cgImage
+        entry.frame = item.frame
+        entry.look = item.look
         let isTape: Bool
         if case .tape = item.content { isTape = true } else { isTape = false }
         entry.layer.shadowColor = UIColor.black.cgColor
@@ -249,7 +314,7 @@ final class PageItemsLayerView: UIView {
         entry.layer.shadowRadius = isTape ? 1 : 3
         entry.layer.shadowOpacity = isTape ? 0.12 : 0.25
         if case .video(let path) = item.content {
-            let video = LoopingVideo(url: PageItemArt.imageStore.url(for: path))
+            let video = PageVideo(url: PageItemArt.imageStore.url(for: path), look: item.look)
             entry.layer.addSublayer(video.layer)
             entry.video = video
         }
@@ -259,36 +324,50 @@ final class PageItemsLayerView: UIView {
     }
 }
 
-/// A clip playing silently on the page, round and round.
+/// A clip on the page: plays once, silently, when it appears, then rests on its last frame.
 @MainActor
-final class LoopingVideo {
+final class PageVideo {
     let layer: AVPlayerLayer
 
-    private let player = AVQueuePlayer()
-    private let looper: AVPlayerLooper
+    private let player: AVPlayer
+    private var isStopped = false
 
-    init(url: URL) {
-        looper = AVPlayerLooper(player: player, templateItem: AVPlayerItem(url: url))
+    init(url: URL, look: ItemLook) {
+        let asset = AVURLAsset(url: url)
+        let item = AVPlayerItem(asset: asset)
+        player = AVPlayer(playerItem: item)
         layer = AVPlayerLayer(player: player)
         layer.videoGravity = .resizeAspectFill
         player.isMuted = true
+        player.actionAtItemEnd = .pause
         player.preventsDisplaySleepDuringVideoPlayback = false
         // Silent clips shouldn't stop the user's music.
         try? AVAudioSession.sharedInstance().setCategory(.ambient)
-        player.play()
+        guard look != .original else {
+            player.play()
+            return
+        }
+        Task { [weak self] in
+            item.videoComposition = try? await AVVideoComposition.videoComposition(with: asset) { request in
+                request.finish(with: look.filtered(request.sourceImage), context: nil)
+            }
+            guard let self, !self.isStopped else { return }
+            self.player.play()
+        }
     }
 
-    func play() {
+    func replay() {
+        player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero)
         player.play()
     }
 
     func stop() {
-        looper.disableLooping()
+        isStopped = true
         player.pause()
     }
 }
 
-/// Turns a picked video into a short clip for the page: at most `maxDuration`, at most 720p.
+/// Turns a video into a short clip for the page: at most `maxDuration`, at its own quality.
 enum VideoClip {
     static let maxDuration: Double = 15
 
@@ -297,7 +376,7 @@ enum VideoClip {
     static func prepare(_ source: URL, to target: URL) async throws -> UIImage {
         let asset = AVURLAsset(url: source)
         let duration = try await asset.load(.duration)
-        guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPreset1280x720) else {
+        guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality) else {
             throw CocoaError(.fileWriteUnknown)
         }
         session.timeRange = CMTimeRange(start: .zero, duration: CMTimeMinimum(duration, CMTime(seconds: maxDuration, preferredTimescale: 600)))
@@ -320,6 +399,51 @@ struct PickedVideo: Transferable {
             let copy = URL.temporaryDirectory.appending(path: "\(UUID().uuidString).\(received.file.pathExtension)")
             try FileManager.default.copyItem(at: received.file, to: copy)
             return PickedVideo(url: copy)
+        }
+    }
+}
+
+/// The system camera in video mode, stopping itself at `VideoClip.maxDuration`.
+struct VideoRecorder: UIViewControllerRepresentable {
+    let onRecorded: (URL) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    static var isAvailable: Bool { UIImagePickerController.isSourceTypeAvailable(.camera) }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.mediaTypes = [UTType.movie.identifier]
+        picker.cameraCaptureMode = .video
+        picker.videoMaximumDuration = VideoClip.maxDuration
+        picker.videoQuality = .typeHigh
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ picker: UIImagePickerController, context: Context) {}
+
+    @MainActor
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        private let recorder: VideoRecorder
+
+        init(_ recorder: VideoRecorder) {
+            self.recorder = recorder
+        }
+
+        func imagePickerController(_ picker: UIImagePickerController,
+                                   didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            if let url = info[.mediaURL] as? URL { recorder.onRecorded(url) }
+            recorder.dismiss()
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            recorder.dismiss()
         }
     }
 }
@@ -412,6 +536,7 @@ struct PageItemsEditor: View {
         HStack(spacing: 4) {
             if let selected {
                 Button("Delete", systemImage: "trash", role: .destructive) { model.deleteItem(selected.id) }
+                    .labelStyle(.iconOnly)
                 Menu {
                     stackButton("Bring to Front", "square.3.layers.3d.top.filled", .front, selected.id)
                     stackButton("Bring Forward", "square.2.layers.3d.top.filled", .forward, selected.id)
@@ -421,6 +546,9 @@ struct PageItemsEditor: View {
                     Label("Arrange", systemImage: "square.3.layers.3d")
                         .labelStyle(.iconOnly)
                 }
+            }
+            if let selected, selected.canBeStyled {
+                styleMenu(selected)
             }
             if let selected, case .video(let path) = selected.content {
                 Button("Play with Sound", systemImage: "play.fill") { playingVideo = model.imageStore.url(for: path) }
@@ -432,6 +560,34 @@ struct PageItemsEditor: View {
         .buttonStyle(.bordered)
         .padding(6)
         .background(.regularMaterial, in: .capsule)
+    }
+
+    /// The item's frame and color, which change on the page as they're picked.
+    private func styleMenu(_ item: PageItem) -> some View {
+        Menu {
+            Picker("Frame", selection: styleBinding(\.frame, of: item)) {
+                ForEach(ItemFrame.allCases) { Text($0.title).tag($0) }
+            }
+            .pickerStyle(.inline)
+            Picker("Color", selection: styleBinding(\.look, of: item)) {
+                ForEach(ItemLook.allCases) { Text($0.title).tag($0) }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            Label("Frame and Color", systemImage: "paintpalette")
+                .labelStyle(.iconOnly)
+        }
+    }
+
+    private func styleBinding<Value>(_ keyPath: WritableKeyPath<PageItem, Value>, of item: PageItem) -> Binding<Value> {
+        Binding {
+            item[keyPath: keyPath]
+        } set: { value in
+            var changed = item
+            changed[keyPath: keyPath] = value
+            store.update(changed)
+            store.commitItems()
+        }
     }
 
     /// Moves the item one way through the stack, where the drawing counts as a layer.
@@ -532,6 +688,7 @@ struct StickerPicker: View {
     @State private var videoItem: PhotosPickerItem?
     @State private var isAddingVideo = false
     @State private var videoFailed = false
+    @State private var isRecordingVideo = false
 
     var body: some View {
         NavigationStack {
@@ -565,14 +722,23 @@ struct StickerPicker: View {
                         .tint(Theme.inkText)
                         // The picker's label is a Sendable closure, so it takes a copy, not the state.
                         let videoTitle = isAddingVideo ? "Adding Video…" : "Choose Video"
-                        PhotosPicker(selection: $videoItem, matching: .videos) {
-                            Label(videoTitle, systemImage: "video")
-                                .frame(maxWidth: .infinity, minHeight: 44)
+                        HStack(spacing: 12) {
+                            PhotosPicker(selection: $videoItem, matching: .videos) {
+                                Label(videoTitle, systemImage: "video")
+                                    .frame(maxWidth: .infinity, minHeight: 44)
+                            }
+                            Button {
+                                isRecordingVideo = true
+                            } label: {
+                                Label("Take Video", systemImage: "video.badge.plus")
+                                    .frame(maxWidth: .infinity, minHeight: 44)
+                            }
+                            .disabled(!VideoRecorder.isAvailable)
                         }
                         .buttonStyle(.bordered)
                         .tint(Theme.inkText)
                         .disabled(isAddingVideo)
-                        Text(videoFailed ? "That video couldn't be added." : "Longer videos are trimmed to their first 15 seconds.")
+                        Text(videoFailed ? "That video couldn't be added." : "Videos are up to 15 seconds. Longer ones are trimmed to their first 15.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
@@ -640,6 +806,12 @@ struct StickerPicker: View {
         .onChange(of: isShowingCamera) { _, showing in
             if !showing && addedFromCamera { dismiss() }
         }
+        .fullScreenCover(isPresented: $isRecordingVideo) {
+            VideoRecorder { url in
+                Task { await addVideo(at: url) }
+            }
+            .ignoresSafeArea()
+        }
     }
 
     private func section(_ title: String, @ViewBuilder content: () -> some View) -> some View {
@@ -672,8 +844,16 @@ struct StickerPicker: View {
             videoFailed = true
             return
         }
-        let added = await model.addVideo(from: picked.url)
-        try? FileManager.default.removeItem(at: picked.url)
+        await addVideo(at: picked.url)
+    }
+
+    /// Adds the clip and removes the temporary file it came from.
+    private func addVideo(at url: URL) async {
+        isAddingVideo = true
+        videoFailed = false
+        defer { isAddingVideo = false }
+        let added = await model.addVideo(from: url)
+        try? FileManager.default.removeItem(at: url)
         if added { dismiss() } else { videoFailed = true }
     }
 

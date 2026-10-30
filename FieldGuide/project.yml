@@ -57,7 +57,8 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         # Only HTTPS/system crypto: no export-compliance questions on each TestFlight upload.
         ITSAppUsesNonExemptEncryption: false
-        NSCameraUsageDescription: Field Guide uses the camera to capture a reference photo for the page you are sketching.
+        NSCameraUsageDescription: Field Guide uses the camera to capture photos and short videos for the page you are sketching.
+        NSMicrophoneUsageDescription: Field Guide records sound with the short videos you take for a page.
         NSLocationWhenInUseUsageDescription: Field Guide looks up the name of your current place only when you tap “Use current place”.
         CFBundleURLTypes:
           - CFBundleURLName: com.tinybirdbigdreams.fieldguide

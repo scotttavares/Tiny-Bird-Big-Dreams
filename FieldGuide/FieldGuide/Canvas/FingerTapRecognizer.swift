@@ -29,14 +29,14 @@ struct FingerTap {
     /// Fingers lifted. Once the last is up, returns how many fingers tapped, if it was a tap.
     mutating func lift(_ count: Int, at time: TimeInterval) -> Int? {
         down = max(down - count, 0)
-        guard down == 0, peak >= 2, !hasMoved, time - firstTouch <= Self.maxDuration else { return nil }
+        guard down == 0, peak >= 1, !hasMoved, time - firstTouch <= Self.maxDuration else { return nil }
         return peak
     }
 
     var isFinished: Bool { down == 0 }
 }
 
-/// Reports multi-finger taps without taking part in gesture arbitration.
+/// Reports finger taps without taking part in gesture arbitration.
 ///
 /// It's added to the window so it also sees touches on the page-edge grips, and it can neither
 /// be prevented by PencilKit's drawing recognizer nor prevent anything itself.
@@ -48,8 +48,10 @@ final class FingerTapRecognizer: UIGestureRecognizer {
     /// A second finger came down, and `dropStroke` says it was soon enough to be no stroke.
     var onSecondFinger: (_ dropStroke: Bool) -> Void = { _ in }
 
-    /// How many fingers made the last tap; read in the action.
+    /// How many fingers made the last tap, and where the first landed, in window coordinates.
+    /// Read in the action.
     private(set) var fingers = 0
+    private(set) var firstLocation: CGPoint = .zero
 
     private var tap = FingerTap()
     private var starts: [ObjectIdentifier: CGPoint] = [:]
@@ -61,7 +63,10 @@ final class FingerTapRecognizer: UIGestureRecognizer {
         }
         let time = touches.first?.timestamp ?? 0
         let wasPeak = tap.peak
-        if wasPeak == 0 { onFirstTouch() }
+        if wasPeak == 0 {
+            firstLocation = touches.first?.location(in: nil) ?? .zero
+            onFirstTouch()
+        }
         for touch in touches {
             starts[ObjectIdentifier(touch)] = touch.location(in: nil)
         }

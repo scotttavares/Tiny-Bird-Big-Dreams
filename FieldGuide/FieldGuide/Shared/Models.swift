@@ -1,3 +1,4 @@
+import CoreImage
 import Foundation
 import SwiftData
 import UIKit
@@ -165,18 +166,25 @@ struct PageItem: Codable, Identifiable, Equatable, Sendable {
     var rotation: Double = 0
     /// Lies on top of the drawing rather than under it.
     var overInk = false
+    /// How a photo or video is mounted.
+    var frame = ItemFrame.print
+    /// The color treatment of a photo or video.
+    var look = ItemLook.original
 
-    init(id: UUID = UUID(), content: Content, center: CGPoint, width: CGFloat, rotation: Double = 0, overInk: Bool = false) {
+    init(id: UUID = UUID(), content: Content, center: CGPoint, width: CGFloat, rotation: Double = 0, overInk: Bool = false,
+         frame: ItemFrame = .print, look: ItemLook = .original) {
         self.id = id
         self.content = content
         self.center = center
         self.width = width
         self.rotation = rotation
         self.overInk = overInk
+        self.frame = frame
+        self.look = look
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, content, center, width, rotation, overInk
+        case id, content, center, width, rotation, overInk, frame, look
     }
 
     /// Pages saved before items could sit over the ink have no `overInk`; they stay under it.
@@ -188,6 +196,16 @@ struct PageItem: Codable, Identifiable, Equatable, Sendable {
         width = try container.decode(CGFloat.self, forKey: .width)
         rotation = try container.decodeIfPresent(Double.self, forKey: .rotation) ?? 0
         overInk = try container.decodeIfPresent(Bool.self, forKey: .overInk) ?? false
+        frame = try container.decodeIfPresent(ItemFrame.self, forKey: .frame) ?? .print
+        look = try container.decodeIfPresent(ItemLook.self, forKey: .look) ?? .original
+    }
+
+    /// Photos and videos can change their frame and color.
+    var canBeStyled: Bool {
+        switch content {
+        case .photo, .video: true
+        case .sticker, .tape: false
+        }
     }
 
     /// Bottom to top: the items under the ink, then those over it, each group in array order.
@@ -204,6 +222,100 @@ struct PageItem: Codable, Identifiable, Equatable, Sendable {
         let x = dx * c - dy * s
         let y = dx * s + dy * c
         return abs(x) <= size.width / 2 && abs(y) <= size.height / 2
+    }
+}
+
+/// How a photo or video is mounted on the page.
+enum ItemFrame: String, Codable, CaseIterable, Identifiable, Sendable {
+    case print
+    case instant
+    case film
+    case kraft
+    case rounded
+    case none
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .print: "White Border"
+        case .instant: "Instant Photo"
+        case .film: "Film Strip"
+        case .kraft: "Kraft Mat"
+        case .rounded: "Rounded"
+        case .none: "No Frame"
+        }
+    }
+
+    /// Margins around the picture, as fractions of its longest side.
+    var margins: (top: CGFloat, side: CGFloat, bottom: CGFloat) {
+        switch self {
+        case .print: (0.035, 0.035, 0.035)
+        case .instant: (0.05, 0.05, 0.18)
+        case .film: (0.09, 0.02, 0.09)
+        case .kraft: (0.07, 0.07, 0.07)
+        case .rounded, .none: (0, 0, 0)
+        }
+    }
+
+    /// Corner radius of the `.rounded` frame, as a fraction of the picture's longest side.
+    static let cornerRadius: CGFloat = 0.05
+
+    /// Where the picture sits in framed art of size `art`.
+    func photoRect(in art: CGSize) -> CGRect {
+        let (top, side, bottom) = margins
+        let across = side * 2
+        let down = top + bottom
+        var longest = art.width / (1 + across)
+        if art.height - down * longest > longest { longest = art.height / (1 + down) }
+        return CGRect(x: side * longest, y: top * longest,
+                      width: art.width - across * longest, height: art.height - down * longest)
+    }
+}
+
+/// A color treatment for a photo or video.
+enum ItemLook: String, Codable, CaseIterable, Identifiable, Sendable {
+    case original
+    case blackAndWhite
+    case noir
+    case sepia
+    case faded
+    case vivid
+    case warm
+    case cool
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .original: "Original"
+        case .blackAndWhite: "Black & White"
+        case .noir: "Noir"
+        case .sepia: "Sepia"
+        case .faded: "Faded"
+        case .vivid: "Vivid"
+        case .warm: "Warm"
+        case .cool: "Cool"
+        }
+    }
+
+    private var filterName: String? {
+        switch self {
+        case .original: nil
+        case .blackAndWhite: "CIPhotoEffectMono"
+        case .noir: "CIPhotoEffectNoir"
+        case .sepia: "CISepiaTone"
+        case .faded: "CIPhotoEffectFade"
+        case .vivid: "CIPhotoEffectChrome"
+        case .warm: "CIPhotoEffectInstant"
+        case .cool: "CIPhotoEffectProcess"
+        }
+    }
+
+    func filtered(_ image: CIImage) -> CIImage {
+        guard let filterName, let filter = CIFilter(name: filterName) else { return image }
+        filter.setValue(image, forKey: kCIInputImageKey)
+        return filter.outputImage?.cropped(to: image.extent) ?? image
     }
 }
 

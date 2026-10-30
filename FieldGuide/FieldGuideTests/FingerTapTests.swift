@@ -18,10 +18,10 @@ struct FingerTapTests {
         #expect(tap.lift(2, at: 0.2) == 3)
     }
 
-    @Test func oneFingerIsNotATap() {
+    @Test func oneFingerIsAOneFingerTap() {
         var tap = FingerTap()
         _ = tap.press(1, at: 0)
-        #expect(tap.lift(1, at: 0.1) == nil)
+        #expect(tap.lift(1, at: 0.1) == 1)
     }
 
     @Test func aSlowPressIsNotATap() {

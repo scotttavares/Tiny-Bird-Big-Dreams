@@ -1,3 +1,4 @@
+import CoreImage
 import Foundation
 import Testing
 import UIKit
@@ -109,5 +110,51 @@ struct PageItemTests {
         let items = try JSONDecoder().decode([PageItem].self, from: Data(json.utf8))
         #expect(items.count == 1)
         #expect(items[0].overInk == false)
+    }
+
+    @Test func itemsSavedBeforeStylesKeepTheWhiteBorderAndOriginalColor() throws {
+        let saved = #"""
+        {"id":"7C9E6679-7425-40DE-944B-E07FC1F90AE7","content":{"photo":{"_0":"References/a.jpg"}},
+         "center":[10,20],"width":100}
+        """#
+        let item = try JSONDecoder().decode(PageItem.self, from: Data(saved.utf8))
+        #expect(item.frame == .print)
+        #expect(item.look == .original)
+    }
+
+    @Test func frameAndLookSurviveSaving() throws {
+        let item = PageItem(content: .photo("References/a.jpg"), center: .zero, width: 100, frame: .film, look: .sepia)
+        let copy = try JSONDecoder().decode(PageItem.self, from: JSONEncoder().encode(item))
+        #expect(copy == item)
+    }
+
+    @Test func onlyPhotosAndVideosCanBeStyled() {
+        func item(_ content: PageItem.Content) -> PageItem { PageItem(content: content, center: .zero, width: 100) }
+        #expect(item(.photo("a.jpg")).canBeStyled)
+        #expect(item(.video("a.mp4")).canBeStyled)
+        #expect(!item(.sticker("🌿")).canBeStyled)
+        #expect(!item(.tape(0)).canBeStyled)
+    }
+
+    @Test(arguments: ItemFrame.allCases)
+    func framedPictureSitsInsideItsMargins(frame: ItemFrame) {
+        let (top, side, bottom) = frame.margins
+        for picture in [CGSize(width: 1000, height: 600), CGSize(width: 600, height: 1000)] {
+            let longest = max(picture.width, picture.height)
+            let art = CGSize(width: picture.width + side * 2 * longest,
+                             height: picture.height + (top + bottom) * longest)
+            let rect = frame.photoRect(in: art)
+            #expect(abs(rect.width - picture.width) < 0.01)
+            #expect(abs(rect.height - picture.height) < 0.01)
+            #expect(abs(rect.minX - side * longest) < 0.01)
+            #expect(abs(rect.minY - top * longest) < 0.01)
+        }
+    }
+
+    @Test func everyLookFiltersAnImage() {
+        let image = CIImage(color: CIColor(red: 0.8, green: 0.2, blue: 0.1)).cropped(to: CGRect(x: 0, y: 0, width: 4, height: 4))
+        for look in ItemLook.allCases {
+            #expect(look.filtered(image).extent == image.extent)
+        }
     }
 }
