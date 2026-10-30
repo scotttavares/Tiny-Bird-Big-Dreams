@@ -59,13 +59,13 @@ struct PageItemTests {
         store.add(.sticker("🐦"), width: 150)
         store.add(.tape(1), width: 300)
         let bird = store.items[0].id, tape = store.items[1].id
-        #expect(store.items.allSatisfy(\.overInk))
+        #expect(allOverInk(store))
         #expect(!store.canMove(tape, .forward))
 
         // Stack, bottom to top: ink, bird, tape. Backward steps past the bird, then under the ink.
         store.move(tape, .backward)
         #expect(PageItem.stacked(store.items).map(\.id) == [tape, bird])
-        #expect(store.items.allSatisfy(\.overInk))
+        #expect(allOverInk(store))
         store.move(tape, .backward)
         #expect(try #require(store.items.first { $0.id == tape }).overInk == false)
         #expect(!store.canMove(tape, .backward))
@@ -75,6 +75,10 @@ struct PageItemTests {
         store.move(bird, .back)
         #expect(try #require(store.items.first { $0.id == bird }).overInk == false)
         #expect(PageItem.stacked(store.items).map(\.id) == [bird, tape])
+    }
+
+    private func allOverInk(_ store: CanvasStore) -> Bool {
+        store.items.allSatisfy(\.overInk)
     }
 
     @Test func itemsSavedBeforeLayersStayUnderTheInk() throws {
