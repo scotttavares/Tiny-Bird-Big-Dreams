@@ -16,6 +16,12 @@ The Cloudflare deploy runs automatically via GitHub Actions on every push to `ma
 - **KV namespace**: `VISITORS` (binding) → `TBBD_VISITORS` (namespace, ID: `37261423339b4133b6ebdb46d0cf6293`)
 - **Dev branch convention**: `claude/relaxed-planck-QczTz`
 
+## Orbit sub-site (the Orbit product pages)
+
+- **Pages**: `orbit.html` (`/orbit`), `orbit-privacy.html` (`/orbit-privacy`), `orbit-support.html` (`/orbit-support`) — the marketing site for the **Orbit** iOS app (a warm lifestyle app for staying close to friends & family).
+- **Own light theme**: these use `assets/orbit.css` — a warm, light "golden-hour" lifestyle look (Bricolage Grotesque + Hanken Grotesk), deliberately separate from the Tiny Bird studio theme (`assets/site.css`). Keep it light and warm; do **not** revert to the earlier dark cosmic style.
+- **Faces must be REAL and EMBEDDED.** The orbit "balls" and the "moments" cards show real face photos — never initials or hotlinked image URLs. The deploy/preview environment blocks external image hosts (randomuser.me, Unsplash, …), so faces are **base64-embedded** as `.f-*` `background-image` classes inside `orbit.html`'s `<style>`. When adding or swapping a person, embed their photo the same way — don't leave a face as an initial or an external URL. (Current set: PrimeFaces demo avatars used as placeholders; swap for the user's own or properly-licensed stock when available.)
+
 ## Key Systems
 
 ### AI Visitor Personalization
