@@ -96,6 +96,14 @@ struct PageItemTests {
         #expect(missed == nil)
     }
 
+    @Test func videoKeepsItsFirstFrameBesideIt() throws {
+        #expect(ImageStore.posterPath(forVideo: "References/a.mp4") == "References/a.jpg")
+        let item = PageItem(content: .video("References/a.mp4"), center: .zero, width: 380)
+        let data = try JSONEncoder().encode([item])
+        let decoded = try JSONDecoder().decode([PageItem].self, from: data)
+        #expect(decoded == [item])
+    }
+
     @Test func itemsSavedBeforeLayersStayUnderTheInk() throws {
         let json = #"[{"id":"3B2C8E2A-0F4E-4D6A-9A43-2E1C3B5D7F10","content":{"sticker":{"_0":"🍄"}},"center":[10,20],"width":150,"rotation":0}]"#
         let items = try JSONDecoder().decode([PageItem].self, from: Data(json.utf8))

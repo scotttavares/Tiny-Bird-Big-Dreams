@@ -23,11 +23,12 @@ struct GestureGuide: View {
             Gesture(symbol: "arrow.up.left.and.down.right.magnifyingglass", title: "Two-finger double-tap", detail: "Show the whole page again."),
             Gesture(symbol: "slider.horizontal.3", title: "Hold a tool", detail: "Change its color and size."),
         ]),
-        Group(title: "Stickers and Photos", gestures: [
+        Group(title: "Stickers, Photos and Videos", gestures: [
             Gesture(symbol: "hand.tap", title: "Touch and hold an item", detail: "Select it, and keep dragging to move it."),
             Gesture(symbol: "hand.draw", title: "Drag", detail: "Move the selected item."),
             Gesture(symbol: "hand.pinch", title: "Pinch", detail: "Resize the selected item."),
             Gesture(symbol: "rotate.right", title: "Twist with two fingers", detail: "Turn the selected item."),
+            Gesture(symbol: "play.fill", title: "Hold a video, then tap Play", detail: "Watch it full screen with sound."),
         ]),
         Group(title: "Pages", gestures: [
             Gesture(symbol: "book", title: "Drag the page edge", detail: "Turn the page. Where you hold it changes how it curls."),

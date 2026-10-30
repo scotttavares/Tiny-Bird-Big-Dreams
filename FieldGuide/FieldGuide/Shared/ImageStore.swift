@@ -29,6 +29,28 @@ struct ImageStore: Sendable {
         return relativePath
     }
 
+    /// A new, empty place for a clip, returned relative to `root`.
+    func newVideoPath() throws -> String {
+        let directory = root.appending(path: Self.directoryName, directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return "\(Self.directoryName)/\(UUID().uuidString).mp4"
+    }
+
+    /// Where a clip's first frame is kept: beside it.
+    static func posterPath(forVideo relativePath: String) -> String {
+        (relativePath as NSString).deletingPathExtension + ".jpg"
+    }
+
+    func savePoster(_ image: UIImage, forVideo relativePath: String) throws {
+        guard let data = image.jpegData(compressionQuality: 0.85) else { throw CocoaError(.fileWriteUnknown) }
+        try data.write(to: url(for: Self.posterPath(forVideo: relativePath)), options: [.atomic, .completeFileProtection])
+    }
+
+    func deleteVideo(_ relativePath: String) {
+        delete(relativePath)
+        delete(Self.posterPath(forVideo: relativePath))
+    }
+
     func url(for relativePath: String) -> URL {
         root.appending(path: relativePath)
     }

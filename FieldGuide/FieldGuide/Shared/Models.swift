@@ -143,7 +143,7 @@ final class ReferenceAsset {
     }
 }
 
-/// Something stuck on a page, under or over the ink: a sticker, a photo or a strip of tape.
+/// Something stuck on a page, under or over the ink: a sticker, a photo, a video or a strip of tape.
 /// Placed in page coordinates (`PageGeometry`); its height follows from its art.
 struct PageItem: Codable, Identifiable, Equatable, Sendable {
     enum Content: Codable, Hashable, Sendable {
@@ -151,6 +151,8 @@ struct PageItem: Codable, Identifiable, Equatable, Sendable {
         case sticker(String)
         /// A photo file, path relative to `ImageStore.root`.
         case photo(String)
+        /// A short clip, path relative to `ImageStore.root`, its first frame beside it.
+        case video(String)
         /// A strip of washi tape, by index into `PageItemArt.tapes`.
         case tape(Int)
     }

@@ -1,9 +1,13 @@
+import AVFoundation
+import AVKit
+import CoreTransferable
 import PhotosUI
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
-/// The art for stickers, photos and tape, and how they're drawn onto a page.
-/// One drawing path for the live page, thumbnails, page turns and exports.
+/// The art for stickers, photos, videos and tape, and how they're drawn onto a page. Thumbnails,
+/// page turns and exports draw it here (a video as its first frame); the live page uses its layers.
 @MainActor
 enum PageItemArt {
     /// Where photo items are read from. Set by `AppModel`.
@@ -34,12 +38,16 @@ enum PageItemArt {
 
     private static var cache: [PageItem.Content: UIImage] = [:]
 
+    /// A printed photo's white border, as a fraction of its longest side.
+    static let printBorder: CGFloat = 0.035 / 1.07
+
     static func image(for content: PageItem.Content) -> UIImage? {
         if let cached = cache[content] { return cached }
         let made: UIImage?
         switch content {
         case .sticker(let emoji): made = sticker(emoji)
         case .photo(let path): made = imageStore.image(at: path).map(printedPhoto)
+        case .video(let path): made = imageStore.image(at: ImageStore.posterPath(forVideo: path)).map(printedPhoto)
         case .tape(let index): made = tape(tapes[((index % tapes.count) + tapes.count) % tapes.count])
         }
         if let made {
@@ -167,18 +175,25 @@ enum PageItemArt {
 }
 
 /// One side of the page's items in the live canvas, in page coordinates: those under the ink
-/// (between the paper and the drawing) or those over it.
+/// (between the paper and the drawing) or those over it. Each item is its own layer, so videos
+/// keep their place in the stack and items move without redrawing the page.
 final class PageItemsLayerView: UIView {
+    private final class ItemLayer {
+        let layer = CALayer()
+        var video: LoopingVideo?
+    }
+
     let overInk: Bool
 
     var items: [PageItem] = [] {
         didSet {
             let side = items.filter { $0.overInk == overInk }
-            if side != drawn { drawn = side; setNeedsDisplay() }
+            if side != shown { shown = side; syncLayers() }
         }
     }
 
-    private var drawn: [PageItem] = []
+    private var shown: [PageItem] = []
+    private var itemLayers: [UUID: ItemLayer] = [:]
 
     init(frame: CGRect, overInk: Bool) {
         self.overInk = overInk
@@ -186,8 +201,9 @@ final class PageItemsLayerView: UIView {
         isOpaque = false
         backgroundColor = .clear
         isUserInteractionEnabled = false
-        contentMode = .redraw
         isAccessibilityElement = false
+        NotificationCenter.default.addObserver(self, selector: #selector(resumeVideos),
+                                               name: UIApplication.didBecomeActiveNotification, object: nil)
     }
 
     @available(*, unavailable)
@@ -195,9 +211,145 @@ final class PageItemsLayerView: UIView {
         fatalError("init(coder:) is not supported")
     }
 
-    override func draw(_ rect: CGRect) {
-        guard let context = UIGraphicsGetCurrentContext(), !drawn.isEmpty else { return }
-        PageItemArt.draw(drawn, in: context)
+    /// The system pauses players in the background.
+    @objc private func resumeVideos() {
+        itemLayers.values.forEach { $0.video?.play() }
+    }
+
+    private func syncLayers() {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        defer { CATransaction.commit() }
+
+        let keep = Set(shown.map(\.id))
+        for (id, entry) in itemLayers where !keep.contains(id) {
+            entry.video?.stop()
+            entry.layer.removeFromSuperlayer()
+            itemLayers[id] = nil
+        }
+        for (index, item) in shown.enumerated() {
+            let entry = itemLayers[item.id] ?? makeLayer(for: item)
+            let size = PageItemArt.size(of: item)
+            entry.layer.bounds = CGRect(origin: .zero, size: size)
+            entry.layer.position = item.center
+            entry.layer.setAffineTransform(CGAffineTransform(rotationAngle: item.rotation))
+            entry.layer.zPosition = CGFloat(index)
+            let border = max(size.width, size.height) * PageItemArt.printBorder
+            entry.video?.layer.frame = entry.layer.bounds.insetBy(dx: border, dy: border)
+        }
+    }
+
+    private func makeLayer(for item: PageItem) -> ItemLayer {
+        let entry = ItemLayer()
+        entry.layer.contents = PageItemArt.image(for: item.content)?.cgImage
+        let isTape: Bool
+        if case .tape = item.content { isTape = true } else { isTape = false }
+        entry.layer.shadowColor = UIColor.black.cgColor
+        entry.layer.shadowOffset = CGSize(width: 0, height: isTape ? 1 : 3)
+        entry.layer.shadowRadius = isTape ? 1 : 3
+        entry.layer.shadowOpacity = isTape ? 0.12 : 0.25
+        if case .video(let path) = item.content {
+            let video = LoopingVideo(url: PageItemArt.imageStore.url(for: path))
+            entry.layer.addSublayer(video.layer)
+            entry.video = video
+        }
+        layer.addSublayer(entry.layer)
+        itemLayers[item.id] = entry
+        return entry
+    }
+}
+
+/// A clip playing silently on the page, round and round.
+@MainActor
+final class LoopingVideo {
+    let layer: AVPlayerLayer
+
+    private let player = AVQueuePlayer()
+    private let looper: AVPlayerLooper
+
+    init(url: URL) {
+        looper = AVPlayerLooper(player: player, templateItem: AVPlayerItem(url: url))
+        layer = AVPlayerLayer(player: player)
+        layer.videoGravity = .resizeAspectFill
+        player.isMuted = true
+        player.preventsDisplaySleepDuringVideoPlayback = false
+        // Silent clips shouldn't stop the user's music.
+        try? AVAudioSession.sharedInstance().setCategory(.ambient)
+        player.play()
+    }
+
+    func play() {
+        player.play()
+    }
+
+    func stop() {
+        looper.disableLooping()
+        player.pause()
+    }
+}
+
+/// Turns a picked video into a short clip for the page: at most `maxDuration`, at most 720p.
+enum VideoClip {
+    static let maxDuration: Double = 15
+
+    /// Writes the clip to `target` and returns its first frame.
+    @MainActor
+    static func prepare(_ source: URL, to target: URL) async throws -> UIImage {
+        let asset = AVURLAsset(url: source)
+        let duration = try await asset.load(.duration)
+        guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPreset1280x720) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        session.timeRange = CMTimeRange(start: .zero, duration: CMTimeMinimum(duration, CMTime(seconds: maxDuration, preferredTimescale: 600)))
+        try await session.export(to: target, as: .mp4)
+
+        let generator = AVAssetImageGenerator(asset: AVURLAsset(url: target))
+        generator.appliesPreferredTrackTransform = true
+        generator.maximumSize = CGSize(width: 1400, height: 1400)
+        let frame = try await generator.image(at: .zero)
+        return UIImage(cgImage: frame.image)
+    }
+}
+
+/// A video from the photo library, copied somewhere the app can read it.
+struct PickedVideo: Transferable {
+    let url: URL
+
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(importedContentType: .movie) { received in
+            let copy = URL.temporaryDirectory.appending(path: "\(UUID().uuidString).\(received.file.pathExtension)")
+            try FileManager.default.copyItem(at: received.file, to: copy)
+            return PickedVideo(url: copy)
+        }
+    }
+}
+
+/// A clip full screen, with sound.
+struct ClipPlayer: View {
+    let url: URL
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var player: AVPlayer?
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            Color.black.ignoresSafeArea()
+            VideoPlayer(player: player)
+                .ignoresSafeArea()
+            Button("Done") { dismiss() }
+                .buttonStyle(.borderedProminent)
+                .padding()
+        }
+        .onAppear {
+            try? AVAudioSession.sharedInstance().setCategory(.playback)
+            let player = AVPlayer(url: url)
+            self.player = player
+            player.play()
+        }
+        .onDisappear {
+            player?.pause()
+            try? AVAudioSession.sharedInstance().setCategory(.ambient)
+        }
     }
 }
 
@@ -213,6 +365,7 @@ struct PageItemsEditor: View {
     @State private var offset: CGSize = .zero
     @State private var magnification: CGFloat = 1
     @State private var turn: Angle = .zero
+    @State private var playingVideo: URL?
 
     private var store: CanvasStore { model.canvas }
     /// Screen points per page point.
@@ -241,6 +394,9 @@ struct PageItemsEditor: View {
         }
         .frame(width: size.width, height: size.height)
         .overlay(alignment: .top) { controls.padding(8) }
+        .fullScreenCover(isPresented: Binding { playingVideo != nil } set: { if !$0 { playingVideo = nil } }) {
+            if let playingVideo { ClipPlayer(url: playingVideo) }
+        }
         .overlay(alignment: .bottom) {
             Text(selected == nil ? "Tap a sticker or photo to move it" : "Drag to move · Pinch to resize · Twist to turn")
                 .font(.footnote.weight(.medium))
@@ -265,6 +421,10 @@ struct PageItemsEditor: View {
                     Label("Arrange", systemImage: "square.3.layers.3d")
                         .labelStyle(.iconOnly)
                 }
+            }
+            if let selected, case .video(let path) = selected.content {
+                Button("Play with Sound", systemImage: "play.fill") { playingVideo = model.imageStore.url(for: path) }
+                    .labelStyle(.iconOnly)
             }
             Button("Done") { store.endArranging() }
                 .fontWeight(.semibold)
@@ -369,6 +529,9 @@ struct StickerPicker: View {
     @State private var photoItem: PhotosPickerItem?
     @State private var isShowingCamera = false
     @State private var addedFromCamera = false
+    @State private var videoItem: PhotosPickerItem?
+    @State private var isAddingVideo = false
+    @State private var videoFailed = false
 
     var body: some View {
         NavigationStack {
@@ -385,7 +548,7 @@ struct StickerPicker: View {
                         .buttonStyle(.borderedProminent)
                     }
 
-                    section("Photos") {
+                    section("Photos and Videos") {
                         HStack(spacing: 12) {
                             PhotosPicker(selection: $photoItem, matching: .images) {
                                 Label("Choose Photo", systemImage: "photo")
@@ -400,6 +563,16 @@ struct StickerPicker: View {
                         }
                         .buttonStyle(.bordered)
                         .tint(Theme.inkText)
+                        PhotosPicker(selection: $videoItem, matching: .videos) {
+                            Label(isAddingVideo ? "Adding Video…" : "Choose Video", systemImage: "video")
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(Theme.inkText)
+                        .disabled(isAddingVideo)
+                        Text(videoFailed ? "That video couldn't be added." : "Longer videos are trimmed to their first 15 seconds.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
 
                     section("Stickers") {
@@ -452,6 +625,10 @@ struct StickerPicker: View {
             guard let item else { return }
             Task { await loadPhoto(item) }
         }
+        .onChange(of: videoItem) { _, item in
+            guard let item else { return }
+            Task { await loadVideo(item) }
+        }
         .fullScreenCover(isPresented: $isShowingCamera) {
             CameraCaptureView { image in
                 model.addPhoto(image.downscaled(maxDimension: 2000))
@@ -480,6 +657,22 @@ struct StickerPicker: View {
                 .scaledToFit()
                 .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
         }
+    }
+
+    private func loadVideo(_ item: PhotosPickerItem) async {
+        isAddingVideo = true
+        videoFailed = false
+        defer {
+            isAddingVideo = false
+            videoItem = nil
+        }
+        guard let picked = try? await item.loadTransferable(type: PickedVideo.self) else {
+            videoFailed = true
+            return
+        }
+        let added = await model.addVideo(from: picked.url)
+        try? FileManager.default.removeItem(at: picked.url)
+        if added { dismiss() } else { videoFailed = true }
     }
 
     private func loadPhoto(_ item: PhotosPickerItem) async {

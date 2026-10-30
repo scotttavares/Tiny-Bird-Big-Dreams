@@ -243,7 +243,7 @@ final class AppModel {
         switch content {
         case .sticker: canvas.add(content, width: 150, tilt: 0.15, at: point)
         case .tape: canvas.add(content, width: 300, tilt: 0.35, at: point)
-        case .photo: canvas.add(content, width: 380, tilt: 0.08, at: point)
+        case .photo, .video: canvas.add(content, width: 380, tilt: 0.08, at: point)
         }
     }
 
@@ -259,16 +259,36 @@ final class AppModel {
         addPhoto(image, at: point)
     }
 
+    /// Makes a short clip from the video at `source` and sticks it on the page.
+    func addVideo(from source: URL) async -> Bool {
+        guard currentPage != nil, let path = try? imageStore.newVideoPath() else { return false }
+        do {
+            let poster = try await VideoClip.prepare(source, to: imageStore.url(for: path))
+            try imageStore.savePoster(poster, forVideo: path)
+            addItem(.video(path))
+            return true
+        } catch {
+            imageStore.deleteVideo(path)
+            return false
+        }
+    }
+
     func deleteItem(_ id: UUID) {
-        if let removed = canvas.removeItem(id), case .photo(let path) = removed.content {
-            imageStore.delete(path)
+        if let removed = canvas.removeItem(id) { deleteFile(of: removed) }
+    }
+
+    private func deleteFile(of item: PageItem) {
+        switch item.content {
+        case .photo(let path): imageStore.delete(path)
+        case .video(let path): imageStore.deleteVideo(path)
+        case .sticker, .tape: break
         }
     }
 
     private func deleteFiles(of page: Page) {
         imageStore.delete(page.reference?.relativeImagePath)
         for item in page.items {
-            if case .photo(let path) = item.content { imageStore.delete(path) }
+            deleteFile(of: item)
         }
     }
 
