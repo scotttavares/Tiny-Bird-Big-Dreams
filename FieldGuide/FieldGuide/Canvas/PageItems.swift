@@ -328,7 +328,7 @@ struct PageItemsEditor: View {
     private func begin(at point: CGPoint?) {
         if let point {
             let pagePoint = CGPoint(x: point.x / scale, y: point.y / scale)
-            let hit = PageItem.stacked(store.items).last { $0.contains(pagePoint, size: PageItemArt.size(of: $0)) }
+            let hit = store.item(at: pagePoint)
             store.selectedItemID = hit?.id
         }
         base = selected

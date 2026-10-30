@@ -203,6 +203,11 @@ final class CanvasStore {
         selectedItemID = nil
     }
 
+    /// The frontmost item at `point` (page coordinates).
+    func item(at point: CGPoint) -> PageItem? {
+        PageItem.stacked(items).last { $0.contains(point, size: PageItemArt.size(of: $0)) }
+    }
+
     /// Live change while a gesture is under way; `commitItems` saves it.
     func update(_ item: PageItem) {
         guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }

@@ -81,6 +81,21 @@ struct PageItemTests {
         store.items.allSatisfy(\.overInk)
     }
 
+    @Test func theFrontmostItemIsTheOneHeld() throws {
+        let store = CanvasStore(autosaveDelay: .zero)
+        store.add(.sticker("🐦"), width: 150)
+        store.add(.sticker("🍄"), width: 150)
+        var (under, over) = (store.items[0], store.items[1])
+        under.center = CGPoint(x: 400, y: 500)
+        over.center = CGPoint(x: 400, y: 500)
+        store.update(under)
+        store.update(over)
+        let held = store.item(at: CGPoint(x: 400, y: 500))
+        #expect(held?.id == over.id)
+        let missed = store.item(at: .zero)
+        #expect(missed == nil)
+    }
+
     @Test func itemsSavedBeforeLayersStayUnderTheInk() throws {
         let json = #"[{"id":"3B2C8E2A-0F4E-4D6A-9A43-2E1C3B5D7F10","content":{"sticker":{"_0":"🍄"}},"center":[10,20],"width":150,"rotation":0}]"#
         let items = try JSONDecoder().decode([PageItem].self, from: Data(json.utf8))

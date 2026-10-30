@@ -74,6 +74,10 @@ final class FieldCanvasView: PKCanvasView {
     private let underlay = PaperUnderlayView(frame: PageGeometry.rect)
     /// Items laid over the drawing; kept the topmost subview.
     private let overlay = PageItemsLayerView(frame: PageGeometry.rect, overInk: true)
+    /// Touch and hold an item to start arranging it, and keep dragging to move it.
+    private let itemHold = UILongPressGestureRecognizer()
+    private let itemHoldDelegate = ItemHoldDelegate()
+    private var heldItem: (item: PageItem, touch: CGPoint)?
     private var lastBoundsSize: CGSize = .zero
     private(set) var isApplyingViewport = false
 
@@ -102,6 +106,14 @@ final class FieldCanvasView: PKCanvasView {
         bouncesZoom = true
         insertSubview(underlay, at: 0)
         addSubview(overlay)
+        itemHold.minimumPressDuration = 0.45
+        itemHold.allowableMovement = 10
+        itemHold.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.direct.rawValue)]
+        itemHold.cancelsTouchesInView = false
+        itemHoldDelegate.canvas = self
+        itemHold.delegate = itemHoldDelegate
+        itemHold.addTarget(self, action: #selector(itemHoldChanged(_:)))
+        addGestureRecognizer(itemHold)
         accessibilityLabel = "Sketch canvas"
         accessibilityHint = "Draw with a finger or Apple Pencil. Pinch with two fingers to zoom."
     }
@@ -177,6 +189,41 @@ final class FieldCanvasView: PKCanvasView {
         underlay.tracingImage = visible ? image : nil
     }
 
+    /// The item a hold at the recognizer's touch would pick up, if any.
+    func itemUnderHold() -> PageItem? {
+        guard let store, !store.isArranging else { return nil }
+        return store.item(at: itemHold.location(in: overlay))
+    }
+
+    @objc private func itemHoldChanged(_ recognizer: UILongPressGestureRecognizer) {
+        guard let store else { return }
+        // The overlay's coordinates are page coordinates, at any zoom.
+        let point = recognizer.location(in: overlay)
+        switch recognizer.state {
+        case .began:
+            guard let item = store.item(at: point) else { return }
+            heldItem = (item, point)
+            // Drops the dot the finger started drawing.
+            drawingGestureRecognizer.isEnabled = false
+            drawingGestureRecognizer.isEnabled = true
+            store.beginArranging(selecting: item.id)
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        case .changed:
+            guard var (item, touch) = heldItem else { return }
+            let page = PageGeometry.size
+            item.center = CGPoint(x: min(max(item.center.x + point.x - touch.x, 0), page.width),
+                                  y: min(max(item.center.y + point.y - touch.y, 0), page.height))
+            touch = point
+            heldItem = (item, touch)
+            store.update(item)
+        case .ended, .cancelled, .failed:
+            if heldItem != nil { store.commitItems() }
+            heldItem = nil
+        default:
+            break
+        }
+    }
+
     func updateItems(_ items: [PageItem]) {
         underlay.itemsView.items = items
         overlay.items = items
@@ -220,6 +267,21 @@ final class FieldCanvasView: PKCanvasView {
         let maxX = max(minX, contentSize.width + contentInset.right - bounds.width)
         let maxY = max(minY, contentSize.height + contentInset.bottom - bounds.height)
         return CGPoint(x: min(max(point.x, minX), maxX), y: min(max(point.y, minY), maxY))
+    }
+}
+
+/// Lets a hold run alongside drawing, and only start on an item.
+@MainActor
+private final class ItemHoldDelegate: NSObject, UIGestureRecognizerDelegate {
+    weak var canvas: FieldCanvasView?
+
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        canvas?.itemUnderHold() != nil
+    }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                           shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+        true
     }
 }
 
