@@ -563,8 +563,10 @@ struct StickerPicker: View {
                         }
                         .buttonStyle(.bordered)
                         .tint(Theme.inkText)
+                        // The picker's label is a Sendable closure, so it takes a copy, not the state.
+                        let videoTitle = isAddingVideo ? "Adding Video…" : "Choose Video"
                         PhotosPicker(selection: $videoItem, matching: .videos) {
-                            Label(isAddingVideo ? "Adding Video…" : "Choose Video", systemImage: "video")
+                            Label(videoTitle, systemImage: "video")
                                 .frame(maxWidth: .infinity, minHeight: 44)
                         }
                         .buttonStyle(.bordered)
