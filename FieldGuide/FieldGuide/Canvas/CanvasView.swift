@@ -78,6 +78,11 @@ final class FieldCanvasView: PKCanvasView {
     private let itemHold = UILongPressGestureRecognizer()
     private let itemHoldDelegate = ItemHoldDelegate()
     private let shortcutDelegate = ShortcutGestureDelegate()
+    private let fingerTap = FingerTapRecognizer()
+    /// Strokes on the page when the current touches began, to spot a dot a tap left behind.
+    private var strokesAtFirstTouch = 0
+    /// A two-finger tap waiting to see if it's the first of a double-tap.
+    private var pendingUndo: Task<Void, Never>?
     private var heldItem: (item: PageItem, touch: CGPoint)?
     private var lastBoundsSize: CGSize = .zero
     private(set) var isApplyingViewport = false
@@ -194,33 +199,75 @@ final class FieldCanvasView: PKCanvasView {
     /// Three fingers belong to redo and page turns here, not the system's editing shortcuts.
     override var editingInteractionConfiguration: UIEditingInteractionConfiguration { .none }
 
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        fingerTap.view?.removeGestureRecognizer(fingerTap)
+        window?.addGestureRecognizer(fingerTap)
+    }
+
     /// Two-finger tap undoes, three-finger tap redoes, a two-finger double-tap shows the whole
     /// page, and a three-finger swipe turns the page.
     private func addShortcutGestures() {
-        let resetZoom = UITapGestureRecognizer(target: self, action: #selector(resetZoomTapped))
-        resetZoom.numberOfTouchesRequired = 2
-        resetZoom.numberOfTapsRequired = 2
-        let undo = UITapGestureRecognizer(target: self, action: #selector(undoTapped))
-        undo.numberOfTouchesRequired = 2
-        undo.require(toFail: resetZoom)
-        let redo = UITapGestureRecognizer(target: self, action: #selector(redoTapped))
-        redo.numberOfTouchesRequired = 3
+        fingerTap.cancelsTouchesInView = false
+        fingerTap.delaysTouchesEnded = false
+        fingerTap.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.direct.rawValue)]
+        fingerTap.delegate = shortcutDelegate
+        fingerTap.addTarget(self, action: #selector(fingersTapped))
+        fingerTap.accepts = { [weak self] touch in
+            guard let self, self.window?.rootViewController?.presentedViewController == nil else { return false }
+            return self.bounds.contains(touch.location(in: self))
+        }
+        fingerTap.onFirstTouch = { [weak self] in
+            guard let self else { return }
+            self.strokesAtFirstTouch = self.drawing.strokes.count
+            self.store?.isMultiFingerTouch = false
+        }
+        fingerTap.onSecondFinger = { [weak self] dropStroke in
+            guard let self else { return }
+            self.store?.isMultiFingerTouch = true
+            if dropStroke { self.dropCurrentStroke() }
+        }
         let nextPage = UISwipeGestureRecognizer(target: self, action: #selector(swipedToNextPage))
         nextPage.numberOfTouchesRequired = 3
         nextPage.direction = .left
         let previousPage = UISwipeGestureRecognizer(target: self, action: #selector(swipedToPreviousPage))
         previousPage.numberOfTouchesRequired = 3
         previousPage.direction = .right
-        for gesture in [resetZoom, undo, redo, nextPage, previousPage] as [UIGestureRecognizer] {
+        for gesture in [nextPage, previousPage] {
             gesture.cancelsTouchesInView = false
             gesture.delegate = shortcutDelegate
             addGestureRecognizer(gesture)
         }
     }
 
-    @objc private func undoTapped() { store?.undo() }
-    @objc private func redoTapped() { store?.redo() }
-    @objc private func resetZoomTapped() { store?.showWholePage() }
+    /// Drops the dot the finger started drawing.
+    private func dropCurrentStroke() {
+        drawingGestureRecognizer.isEnabled = false
+        drawingGestureRecognizer.isEnabled = true
+    }
+
+    @objc private func fingersTapped() {
+        guard let store, !store.isArranging, !store.isReadOnly else { return }
+        if drawing.strokes.count > strokesAtFirstTouch { store.undo() }
+        switch fingerTap.fingers {
+        case 2 where pendingUndo != nil:
+            pendingUndo?.cancel()
+            pendingUndo = nil
+            store.showWholePage()
+        case 2:
+            pendingUndo = Task { [weak self] in
+                try? await Task.sleep(for: .milliseconds(300))
+                guard let self, !Task.isCancelled else { return }
+                self.pendingUndo = nil
+                self.store?.undo()
+            }
+        case 3:
+            store.redo()
+        default:
+            break
+        }
+    }
+
     @objc private func swipedToNextPage() { store?.onTurnPage?(1) }
     @objc private func swipedToPreviousPage() { store?.onTurnPage?(-1) }
 
@@ -238,9 +285,7 @@ final class FieldCanvasView: PKCanvasView {
         case .began:
             guard let item = store.item(at: point) else { return }
             heldItem = (item, point)
-            // Drops the dot the finger started drawing.
-            drawingGestureRecognizer.isEnabled = false
-            drawingGestureRecognizer.isEnabled = true
+            dropCurrentStroke()
             store.beginArranging(selecting: item.id)
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         case .changed:

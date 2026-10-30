@@ -101,6 +101,8 @@ final class CanvasStore {
     private(set) var canRedo = false
     /// True between a stroke's first touch and its end. Posture changes wait for it.
     private(set) var isDrawing = false
+    /// The latest touches included a second finger, so they weren't a tap on the page edge.
+    @ObservationIgnored var isMultiFingerTouch = false
     /// Changes that haven't been handed to `onPersist` yet.
     private(set) var hasUnsavedChanges = false
     private(set) var pageID: UUID?

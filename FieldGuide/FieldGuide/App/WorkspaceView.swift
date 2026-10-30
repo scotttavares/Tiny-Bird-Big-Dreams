@@ -290,7 +290,9 @@ struct CanvasPane: View {
                 let landsOver = turn.isForward ? value.predictedEndLocation.x < size.width / 2
                                                : value.predictedEndLocation.x > size.width / 2
                 // A tap on the edge turns the page; a drag turns it if it's thrown or carried past halfway.
-                settle(commit: !moved || landsOver, velocity: CGVector(dx: value.velocity.width, dy: value.velocity.height))
+                // Two fingers tapping here are an undo.
+                let tapped = !moved && !model.canvas.isMultiFingerTouch
+                settle(commit: tapped || (moved && landsOver), velocity: CGVector(dx: value.velocity.width, dy: value.velocity.height))
             }
     }
 
