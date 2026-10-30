@@ -84,7 +84,10 @@ final class CanvasStore {
     }
     /// Stickers, photos and tape on the page, under the ink.
     var items: [PageItem] = [] {
-        didSet { canvasView?.updateItems(items) }
+        didSet {
+            canvasView?.updateItems(items)
+            revision += 1
+        }
     }
     /// Arranging items: the page shows whole, and touches move items instead of drawing.
     private(set) var isArranging = false
@@ -99,6 +102,8 @@ final class CanvasStore {
     private(set) var drawing = PKDrawing()
     private(set) var canUndo = false
     private(set) var canRedo = false
+    /// Bumped whenever the page's look changes, for live copies of it.
+    private(set) var revision = 0
     /// A word saying what a finger shortcut just did, shown briefly over the page.
     private(set) var shortcutNote: String?
     /// True between a stroke's first touch and its end. Posture changes wait for it.
@@ -150,6 +155,7 @@ final class CanvasStore {
 
         self.pageID = pageID
         drawing = Self.decode(drawingData)
+        revision += 1
         isArranging = false
         selectedItemID = nil
         self.items = items
@@ -208,6 +214,20 @@ final class CanvasStore {
         zoomFactor = 1
         normalizedCenter = CGPoint(x: 0.5, y: 0.5)
         canvasView?.restoreViewport()
+    }
+
+    /// Moves the zoomed canvas to `point` (page coordinates).
+    func centerView(on point: CGPoint) {
+        let page = PageGeometry.size
+        normalizedCenter = CGPoint(x: min(max(point.x / page.width, 0), 1), y: min(max(point.y / page.height, 0), 1))
+        canvasView?.restoreViewport()
+    }
+
+    /// Sticks down a finished item, ready to be placed.
+    func place(_ item: PageItem) {
+        items.append(item)
+        commitItems()
+        beginArranging(selecting: item.id)
     }
 
     /// Shows the whole page so items can be moved where they'll stay.
@@ -299,6 +319,7 @@ final class CanvasStore {
             redoStack = []
         }
         drawing = newDrawing
+        revision += 1
         hasUnsavedChanges = true
         refreshUndoState()
         // Eraser and undo don't produce begin/end events; save them on the same debounce.
@@ -339,8 +360,17 @@ final class CanvasStore {
         refreshUndoState()
     }
 
+    /// Wipes the page's ink, as one step that can be undone.
+    func clearDrawing() {
+        guard !drawing.strokes.isEmpty else { return }
+        undoStack.append(drawing)
+        redoStack = []
+        restore(PKDrawing())
+    }
+
     private func restore(_ version: PKDrawing) {
         drawing = version
+        revision += 1
         canvasView?.drawing = version
         hasUnsavedChanges = true
         refreshUndoState()

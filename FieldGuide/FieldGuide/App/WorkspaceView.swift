@@ -27,20 +27,32 @@ struct WorkspaceView: View {
     @State private var isShowingStickers = false
     /// Closed by a swipe on the top bar, in any posture.
     @State private var isClosed = false
+    /// Both sides of a tent in use, for showing a page or playing the drawing game.
+    @State private var stage: TentStage?
+
+    private func frames(for current: ShownPosture, size: CGSize) -> WorkspaceFrames {
+        var frames = WorkspaceLayout.frames(
+            posture: current.posture,
+            size: size,
+            hinge: current.hinge,
+            headerHeight: headerHeight,
+            toolHeight: toolHeight
+        )
+        if stage != nil, current.posture == .tent {
+            // This half holds the canvas above the controls; the other half faces the audience.
+            let top = size.height / 2 + 8
+            frames.canvas = CGRect(x: 12, y: top, width: size.width - 24, height: max(size.height - top - 76, 0))
+        }
+        return frames
+    }
 
     var body: some View {
         GeometryReader { proxy in
             let current = effective(size: proxy.size)
-            let frames = WorkspaceLayout.frames(
-                posture: current.posture,
-                size: proxy.size,
-                hinge: current.hinge,
-                headerHeight: headerHeight,
-                toolHeight: toolHeight
-            )
+            let frames = frames(for: current, size: proxy.size)
 
             ZStack(alignment: .topLeading) {
-                ReferenceSlot(model: model)
+                LeftPage(model: model)
                     .placed(in: frames.reference, visible: frames.showsReference)
 
                 HingeGutter(axis: current.posture == .laptop ? .horizontal : .vertical)
@@ -59,9 +71,16 @@ struct WorkspaceView: View {
                     postureProvider: postureProvider,
                     posture: current.posture,
                     onReturnToDraw: returnToDraw,
-                    onCloseNotebook: { withAnimation(.smooth(duration: 0.3)) { isClosed = true } }
+                    onCloseNotebook: closeNotebook,
+                    onStage: { stage = $0 }
                 )
-                .placed(in: frames.header, visible: true)
+                .placed(in: frames.header, visible: stage == nil)
+
+                if let stage, current.posture == .tent {
+                    TentStageView(model: model, stage: stage) { self.stage = nil }
+                        .frame(width: proxy.size.width, height: proxy.size.height)
+                        .zIndex(1)
+                }
 
                 if isClosed || (current.posture == .closed && !coverOpen) {
                     CoverScreen(model: model) {
@@ -76,10 +95,17 @@ struct WorkspaceView: View {
             }
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
             .animation(Theme.postureAnimation(reduceMotion: reduceMotion), value: current)
+            .onChange(of: stage) { _, stage in
+                model.canvas.isReadOnly = current.posture == .tent && stage != .game
+            }
             .onChange(of: current.posture, initial: true) { old, posture in
-                model.canvas.isReadOnly = posture == .tent
+                if posture != .tent { stage = nil }
+                model.canvas.isReadOnly = posture == .tent && stage != .game
                 // Folding the phone shut closes the book again.
-                if posture == .closed && old != .closed { coverOpen = false }
+                if posture == .closed && old != .closed {
+                    coverOpen = false
+                    savedByClosing()
+                }
                 // Unfolding opens it to the page, however it was closed.
                 if posture != old { isClosed = false }
             }
@@ -100,6 +126,18 @@ struct WorkspaceView: View {
             if !isDrawing { applyPostureIfIdle() }
         }
         .sensoryFeedback(.impact(flexibility: .soft), trigger: model.pageTurnCount)
+    }
+
+    // MARK: Closing
+
+    private func closeNotebook() {
+        withAnimation(.smooth(duration: 0.3)) { isClosed = true }
+        savedByClosing()
+    }
+
+    private func savedByClosing() {
+        model.flushAll()
+        BookSound.playClose()
     }
 
     // MARK: Posture
@@ -166,9 +204,16 @@ struct CanvasPane: View {
                     .offset(x: page.minX, y: page.minY)
             }
             .dropDestination(for: String.self) { tokens, location in
-                guard tokens.first == ReferenceSlot.dragToken else { return false }
+                guard let token = tokens.first else { return false }
                 let scale = PageGeometry.size.width / max(page.width, 1)
-                model.stickReferencePhoto(at: CGPoint(x: (location.x - page.minX) * scale, y: (location.y - page.minY) * scale))
+                let point = CGPoint(x: (location.x - page.minX) * scale, y: (location.y - page.minY) * scale)
+                if token == ReferenceSlot.dragToken {
+                    model.stickReferencePhoto(at: point)
+                } else if let id = LastPageSpread.itemID(from: token) {
+                    model.copyPreviousItem(id, at: point)
+                } else {
+                    return false
+                }
                 return true
             }
             .onAppear { installTurnHandler(pageSize: page.size) }
@@ -193,10 +238,7 @@ struct CanvasPane: View {
 
     /// Where the page sits inside the pane (the canvas fits the whole page, centred).
     static func pageRect(in size: CGSize) -> CGRect {
-        let page = PageGeometry.size
-        let scale = min(size.width / page.width, size.height / page.height)
-        let fitted = CGSize(width: page.width * scale, height: page.height * scale)
-        return CGRect(x: (size.width - fitted.width) / 2, y: (size.height - fitted.height) / 2, width: fitted.width, height: fitted.height)
+        WorkspaceCanvasGeometry.pageRect(in: size)
     }
 
     // MARK: Page layer
@@ -366,6 +408,16 @@ struct CanvasPane: View {
             }
             turn = nil
         }
+    }
+}
+
+enum WorkspaceCanvasGeometry {
+    /// A whole page fitted and centred in `size`.
+    static func pageRect(in size: CGSize) -> CGRect {
+        let page = PageGeometry.size
+        let scale = min(size.width / page.width, size.height / page.height)
+        let fitted = CGSize(width: page.width * scale, height: page.height * scale)
+        return CGRect(x: (size.width - fitted.width) / 2, y: (size.height - fitted.height) / 2, width: fitted.width, height: fitted.height)
     }
 }
 

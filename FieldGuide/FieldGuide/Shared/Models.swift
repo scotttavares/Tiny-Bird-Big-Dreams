@@ -63,6 +63,12 @@ final class Page {
     var paperTintRaw: String = PaperTint.automatic.rawValue
     /// JSON `[PageItem]`: stickers, photos and tape on the page. Defaulted so older stores migrate.
     var itemsData: Data = Data()
+    /// `FieldWeather` raw value, empty if not set. Defaulted so older stores migrate.
+    var weatherRaw: String = ""
+    /// Written field notes. Defaulted so older stores migrate.
+    var fieldNotes: String = ""
+    /// JSON `[VoiceNote]`. Defaulted so older stores migrate.
+    var voiceNotesData: Data = Data()
 
     // Field metadata
     var locationName: String
@@ -104,6 +110,16 @@ final class Page {
     var items: [PageItem] {
         get { (try? JSONDecoder().decode([PageItem].self, from: itemsData)) ?? [] }
         set { itemsData = newValue.isEmpty ? Data() : ((try? JSONEncoder().encode(newValue)) ?? Data()) }
+    }
+
+    var weather: FieldWeather? {
+        get { FieldWeather(rawValue: weatherRaw) }
+        set { weatherRaw = newValue?.rawValue ?? "" }
+    }
+
+    var voiceNotes: [VoiceNote] {
+        get { (try? JSONDecoder().decode([VoiceNote].self, from: voiceNotesData)) ?? [] }
+        set { voiceNotesData = newValue.isEmpty ? Data() : ((try? JSONEncoder().encode(newValue)) ?? Data()) }
     }
 
     /// The title a page gets when it is created: an auto timestamp.
@@ -223,6 +239,56 @@ struct PageItem: Codable, Identifiable, Equatable, Sendable {
         let y = dx * s + dy * c
         return abs(x) <= size.width / 2 && abs(y) <= size.height / 2
     }
+}
+
+/// The weather noted on a page.
+enum FieldWeather: String, CaseIterable, Identifiable, Sendable {
+    case sunny
+    case partlyCloudy
+    case cloudy
+    case rainy
+    case stormy
+    case snowy
+    case windy
+    case foggy
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .sunny: "Sunny"
+        case .partlyCloudy: "Partly Cloudy"
+        case .cloudy: "Cloudy"
+        case .rainy: "Rainy"
+        case .stormy: "Stormy"
+        case .snowy: "Snowy"
+        case .windy: "Windy"
+        case .foggy: "Foggy"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .sunny: "sun.max"
+        case .partlyCloudy: "cloud.sun"
+        case .cloudy: "cloud"
+        case .rainy: "cloud.rain"
+        case .stormy: "cloud.bolt.rain"
+        case .snowy: "cloud.snow"
+        case .windy: "wind"
+        case .foggy: "cloud.fog"
+        }
+    }
+}
+
+/// A short recording kept with a page, in a file beside its photos.
+struct VoiceNote: Codable, Identifiable, Equatable, Sendable {
+    var id = UUID()
+    /// Path relative to `ImageStore.root`.
+    var path: String
+    var date: Date
+    /// Seconds.
+    var duration: Double
 }
 
 /// How a photo or video is mounted on the page.

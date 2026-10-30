@@ -14,6 +14,13 @@ struct CoverScreen: View {
     var body: some View {
         let notebook = model.currentNotebook
         ZStack(alignment: .bottom) {
+            if let page = model.currentPage {
+                // The page you were on, peeking out from under the cover.
+                PageThumbnail(page: page)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.vertical, 10)
+                    .shadow(color: .black.opacity(0.2), radius: 3)
+            }
             NotebookCoverArt(
                 title: notebook?.title ?? "Field Notes",
                 theme: notebook?.theme ?? .journal,
@@ -21,6 +28,7 @@ struct CoverScreen: View {
                 number: model.notebookNumber
             )
             .clipShape(.rect(cornerRadius: 18))
+            .padding(.trailing, 16)
             .overlay(alignment: .topTrailing) {
                 Text("Tap to open")
                     .font(.caption2.weight(.semibold))
@@ -31,7 +39,7 @@ struct CoverScreen: View {
                     .padding(.vertical, 5)
                     .background(.black.opacity(0.3), in: .capsule)
                     .padding(.top, notebook?.theme.isSpiralBound == true ? 56 : 14)
-                    .padding(.trailing, 14)
+                    .padding(.trailing, 30)
                     .accessibilityHidden(true)
             }
 

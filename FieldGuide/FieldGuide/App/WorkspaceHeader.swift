@@ -12,6 +12,7 @@ struct WorkspaceHeader: View {
     let posture: Posture
     let onReturnToDraw: () -> Void
     let onCloseNotebook: () -> Void
+    let onStage: (TentStage) -> Void
 
     @ScaledMetric(relativeTo: .body) private var buttonSize: CGFloat = 44
     @State private var isShowingCamera = false
@@ -20,6 +21,7 @@ struct WorkspaceHeader: View {
     @State private var isShowingLibrary = false
     @State private var infoPage: Page?
     @State private var sharedFile: SharedFile?
+    @State private var replayPage: ExportPage?
 
     var body: some View {
         Group {
@@ -49,6 +51,9 @@ struct WorkspaceHeader: View {
         .sheet(item: $sharedFile) { file in
             ShareSheet(file: file)
                 .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: Binding { replayPage != nil } set: { if !$0 { replayPage = nil } }) {
+            if let replayPage { ReplayView(page: replayPage) }
         }
         .fullScreenCover(isPresented: $isShowingCamera) {
             CameraCaptureView { image in
@@ -113,6 +118,12 @@ struct WorkspaceHeader: View {
             titleText
                 .padding(.leading, 8)
             Spacer(minLength: 8)
+            Button("Show Both Sides", systemImage: "rectangle.split.1x2") { onStage(.show) }
+                .labelStyle(.iconOnly)
+                .buttonStyle(.bordered)
+            Button("Drawing Game", systemImage: "gamecontroller") { onStage(.game) }
+                .labelStyle(.iconOnly)
+                .buttonStyle(.bordered)
             Button(action: onReturnToDraw) {
                 Label("Return to draw", systemImage: "pencil.tip.crop.circle")
                     .font(.headline)
@@ -135,6 +146,12 @@ struct WorkspaceHeader: View {
                       value.translation.height > abs(value.translation.width) else { return }
                 onCloseNotebook()
             }
+    }
+
+    private func showReplay() {
+        guard let page = model.currentPage else { return }
+        model.canvas.flush()
+        replayPage = ExportPage(page: page, imageStore: model.imageStore, liveDrawing: model.canvas.drawing)
     }
 
     private var gesturesButton: some View {
@@ -274,6 +291,7 @@ struct WorkspaceHeader: View {
                     }
                 }
             }
+            Button("Replay Sketch", systemImage: "play.square") { showReplay() }
             Button("Present", systemImage: "triangle") { postureProvider.override = .tent }
             ExportMenuItems(model: model, sharedFile: $sharedFile)
             Section("Layout") {

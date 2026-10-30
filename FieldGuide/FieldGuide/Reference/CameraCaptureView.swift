@@ -165,7 +165,7 @@ extension CameraController: AVCapturePhotoCaptureDelegate {
 }
 
 /// Live preview layer, kept level with the horizon as the device rotates.
-private struct CameraPreview: UIViewRepresentable {
+struct CameraPreview: UIViewRepresentable {
     let camera: CameraController
 
     func makeUIView(context: Context) -> PreviewView {

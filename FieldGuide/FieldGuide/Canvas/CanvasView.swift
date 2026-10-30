@@ -196,6 +196,11 @@ final class FieldCanvasView: PKCanvasView {
         underlay.tracingImage = visible ? image : nil
     }
 
+    /// The part of the page in view, in page coordinates.
+    var visiblePageRect: CGRect {
+        convert(bounds, to: overlay).intersection(PageGeometry.rect)
+    }
+
     /// Three fingers belong to redo and page turns here, not the system's editing shortcuts.
     override var editingInteractionConfiguration: UIEditingInteractionConfiguration { .none }
 

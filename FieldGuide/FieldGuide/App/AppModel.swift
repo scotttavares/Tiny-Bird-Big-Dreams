@@ -273,6 +273,30 @@ final class AppModel {
         }
     }
 
+    /// Copies an item from the previous page onto this one, at `point` (page coordinates).
+    func copyPreviousItem(_ id: UUID, at point: CGPoint) {
+        guard var item = previousPage?.items.first(where: { $0.id == id }) else { return }
+        do {
+            switch item.content {
+            case .photo(let path): item.content = .photo(try imageStore.copy(path))
+            case .video(let path): item.content = .video(try imageStore.copyVideo(path))
+            case .sticker, .tape: break
+            }
+        } catch {
+            return
+        }
+        item.id = UUID()
+        item.center = point
+        item.overInk = true
+        canvas.place(item)
+    }
+
+    func deleteVoiceNote(_ note: VoiceNote, from page: Page) {
+        imageStore.delete(note.path)
+        page.voiceNotes.removeAll { $0.id == note.id }
+        save()
+    }
+
     func deleteItem(_ id: UUID) {
         if let removed = canvas.removeItem(id) { deleteFile(of: removed) }
     }
@@ -287,6 +311,9 @@ final class AppModel {
 
     private func deleteFiles(of page: Page) {
         imageStore.delete(page.reference?.relativeImagePath)
+        for note in page.voiceNotes {
+            imageStore.delete(note.path)
+        }
         for item in page.items {
             deleteFile(of: item)
         }

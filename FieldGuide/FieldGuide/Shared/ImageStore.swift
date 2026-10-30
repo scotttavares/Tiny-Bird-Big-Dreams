@@ -36,6 +36,28 @@ struct ImageStore: Sendable {
         return "\(Self.directoryName)/\(UUID().uuidString).mp4"
     }
 
+    /// A new, empty place for a voice note, returned relative to `root`.
+    func newAudioPath() throws -> String {
+        let directory = root.appending(path: Self.directoryName, directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return "\(Self.directoryName)/\(UUID().uuidString).m4a"
+    }
+
+    /// A separate copy of a file, so two items never share one, returned relative to `root`.
+    func copy(_ relativePath: String) throws -> String {
+        let copy = "\(Self.directoryName)/\(UUID().uuidString).\((relativePath as NSString).pathExtension)"
+        try FileManager.default.copyItem(at: url(for: relativePath), to: url(for: copy))
+        return copy
+    }
+
+    /// A separate copy of a clip and its first frame.
+    func copyVideo(_ relativePath: String) throws -> String {
+        let copy = try copy(relativePath)
+        try FileManager.default.copyItem(at: url(for: Self.posterPath(forVideo: relativePath)),
+                                         to: url(for: Self.posterPath(forVideo: copy)))
+        return copy
+    }
+
     /// Where a clip's first frame is kept: beside it.
     static func posterPath(forVideo relativePath: String) -> String {
         (relativePath as NSString).deletingPathExtension + ".jpg"

@@ -42,6 +42,8 @@ struct GestureGuide: View {
             Gesture(symbol: "photo", title: "Hold and drag the left-page photo", detail: "Drop it on the right page to stick down a copy."),
             Gesture(symbol: "arrow.up.left.and.arrow.down.right", title: "Tap or double-tap the left-page photo", detail: "Open it full screen. Double-tap resets it when it's zoomed in."),
             Gesture(symbol: "triangle", title: "Swipe while presenting", detail: "Half-fold the phone or choose Present, then swipe through your pages."),
+            Gesture(symbol: "book.pages", title: "Drag from the last page", detail: "Open Last Page on the left, then drag a sticker or photo across the fold to copy it."),
+            Gesture(symbol: "viewfinder", title: "Tap the whole page", detail: "While zoomed in, tap a spot on the Whole Page view to go there."),
         ]),
     ]
 
