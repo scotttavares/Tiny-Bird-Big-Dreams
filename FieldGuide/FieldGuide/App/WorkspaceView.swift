@@ -29,6 +29,7 @@ struct WorkspaceView: View {
     @State private var isClosed = false
     /// Both sides of a tent in use, for showing a page or playing the drawing game.
     @State private var stage: TentStage?
+    @AppStorage("hasSeenWelcomeTour") private var hasSeenTour = false
 
     private func frames(for current: ShownPosture, size: CGSize) -> WorkspaceFrames {
         var frames = WorkspaceLayout.frames(
@@ -114,6 +115,9 @@ struct WorkspaceView: View {
         .sheet(isPresented: $isShowingStickers) {
             StickerPicker(model: model)
         }
+        .sheet(isPresented: Binding { tourIsDue } set: { if !$0 { hasSeenTour = true } }) {
+            WelcomeTour { hasSeenTour = true }
+        }
         .readsPosture(into: postureProvider)
         .onChange(of: postureProvider.posture, initial: true) { _, posture in
             if posture != .tent { tentDismissed = false }
@@ -126,6 +130,13 @@ struct WorkspaceView: View {
             if !isDrawing { applyPostureIfIdle() }
         }
         .sensoryFeedback(.impact(flexibility: .soft), trigger: model.pageTurnCount)
+    }
+
+    /// Waits for the cover to be opened, and stays out of the demo notebook used for screenshots.
+    private var tourIsDue: Bool {
+        guard let shown else { return false }
+        return WelcomeTour.isDue(hasSeen: hasSeenTour, coverShowing: isClosed || (shown.posture == .closed && !coverOpen),
+                                 isDemo: ProcessInfo.processInfo.arguments.contains("-FGSeedDemo"))
     }
 
     // MARK: Closing

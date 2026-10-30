@@ -15,7 +15,7 @@ protocol PostureProvider: AnyObject, Observable {
     var hingeRect: CGRect { get }
     /// The latest raw inputs, for diagnostics.
     var inputs: PostureInputs { get }
-    /// A forced posture (debug menu, launch argument, or the manual "Present" mode).
+    /// A forced posture (debug menu, launch argument, or the manual "Show Sketch" mode).
     var override: Posture? { get set }
     /// Feed new geometry/hinge readings.
     func ingest(_ inputs: PostureInputs)

@@ -10,9 +10,9 @@ enum ExportKind: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .pagePNG: "Share Page (PNG)"
-        case .spreadPNG: "Share Spread (PNG)"
-        case .notebookPDF: "Share Notebook (PDF)"
+        case .pagePNG: "Share Page as Image"
+        case .spreadPNG: "Share Both Pages as Image"
+        case .notebookPDF: "Share Notebook as PDF"
         }
     }
 
@@ -75,7 +75,7 @@ struct ExportMenuItems: View {
     @Binding var sharedFile: SharedFile?
 
     var body: some View {
-        Section("Export") {
+        Section("Share") {
             ForEach(ExportKind.allCases) { kind in
                 Button(kind.title, systemImage: kind.symbol) {
                     sharedFile = model.exportFile(kind, page: page)

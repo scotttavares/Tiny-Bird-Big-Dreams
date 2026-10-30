@@ -292,7 +292,7 @@ struct WorkspaceHeader: View {
                 }
             }
             Button("Replay Sketch", systemImage: "play.square") { showReplay() }
-            Button("Present", systemImage: "triangle") { postureProvider.override = .tent }
+            Button("Show Sketch", systemImage: "triangle") { postureProvider.override = .tent }
             ExportMenuItems(model: model, sharedFile: $sharedFile)
             Section("Layout") {
                 Button {

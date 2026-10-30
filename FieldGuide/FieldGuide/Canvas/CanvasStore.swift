@@ -383,11 +383,11 @@ final class CanvasStore {
     }
 
     /// Shows `note` over the page for a moment.
-    func announce(_ note: String) {
+    func announce(_ note: String, for seconds: Double = 1) {
         shortcutNote = note
         noteTask?.cancel()
         noteTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(1))
+            try? await Task.sleep(for: .seconds(seconds))
             guard let self, !Task.isCancelled else { return }
             self.shortcutNote = nil
         }

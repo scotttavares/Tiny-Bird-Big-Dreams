@@ -199,6 +199,7 @@ final class AppModel {
             canvas.referenceImage = image
         } catch {
             // Leave the slot unchanged if the file can't be written.
+            announceOutOfSpace()
         }
     }
 
@@ -249,7 +250,11 @@ final class AppModel {
 
     /// Saves `image` and sticks it on the page, at `point` (page coordinates) if given.
     func addPhoto(_ image: UIImage, at point: CGPoint? = nil) {
-        guard currentPage != nil, let path = try? imageStore.save(image) else { return }
+        guard currentPage != nil else { return }
+        guard let path = try? imageStore.save(image) else {
+            announceOutOfSpace()
+            return
+        }
         addItem(.photo(path), at: point)
     }
 
@@ -283,6 +288,7 @@ final class AppModel {
             case .sticker, .tape: break
             }
         } catch {
+            announceOutOfSpace()
             return
         }
         item.id = UUID()
@@ -352,7 +358,15 @@ final class AppModel {
 
     func save() {
         guard context.hasChanges else { return }
-        try? context.save()
+        do {
+            try context.save()
+        } catch {
+            announceOutOfSpace()
+        }
+    }
+
+    private func announceOutOfSpace() {
+        canvas.announce("Couldn't save. Your phone may be out of space.", for: 4)
     }
 
     // MARK: Deep links
