@@ -14,6 +14,7 @@ struct ToolStrip: View {
     var onStickers: () -> Void = {}
 
     @State private var customColor: Color = .black
+    @State private var tuningTool: CanvasStore.ToolKind?
     @ScaledMetric(relativeTo: .body) private var buttonSize: CGFloat = 44
 
     var body: some View {
@@ -80,9 +81,34 @@ struct ToolStrip: View {
                     .background(isSelected ? Color.accentColor : .clear, in: .rect(cornerRadius: 12))
             }
             .buttonStyle(.plain)
+            // Hold a tool for its colour and size, wherever they are on this strip.
+            .simultaneousGesture(
+                LongPressGesture(minimumDuration: 0.4).onEnded { _ in
+                    store.toolKind = kind
+                    if kind != .eraser { tuningTool = kind }
+                }
+            )
+            .popover(isPresented: Binding { tuningTool == kind } set: { if !$0 { tuningTool = nil } }) {
+                toolTuning(kind)
+            }
             .accessibilityLabel(kind.title)
             .accessibilityAddTraits(isSelected ? .isSelected : [])
         }
+    }
+
+    private func toolTuning(_ kind: CanvasStore.ToolKind) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(kind.title)
+                .font(.headline)
+                .foregroundStyle(Theme.inkText)
+            LazyVGrid(columns: Array(repeating: GridItem(.fixed(buttonSize * 0.85), spacing: 4), count: 5), spacing: 4) {
+                swatches
+            }
+            widthSlider
+                .frame(width: 220)
+        }
+        .padding(14)
+        .presentationCompactAdaptation(.popover)
     }
 
     private var swatches: some View {

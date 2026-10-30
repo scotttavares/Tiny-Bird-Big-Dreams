@@ -118,6 +118,8 @@ final class CanvasStore {
     @ObservationIgnored var onPaperStyleChange: ((PaperStyle) -> Void)?
     @ObservationIgnored var onPaperTintChange: ((PaperTint) -> Void)?
     @ObservationIgnored var onItemsChange: (([PageItem]) -> Void)?
+    /// A gesture on the canvas asked to turn the page by this many pages.
+    @ObservationIgnored var onTurnPage: ((Int) -> Void)?
     @ObservationIgnored weak var canvasView: FieldCanvasView?
 
     @ObservationIgnored private var saveTask: Task<Void, Never>?
@@ -175,11 +177,12 @@ final class CanvasStore {
     // MARK: Stickers and photos
 
     /// Puts `content` on top of the page, a little off centre and askew, and starts arranging it.
-    func add(_ content: PageItem.Content, width: CGFloat, tilt: Double = 0) {
+    /// Pass `point` to place it exactly (a drop).
+    func add(_ content: PageItem.Content, width: CGFloat, tilt: Double = 0, at point: CGPoint? = nil) {
         let page = PageGeometry.size
         let item = PageItem(
             content: content,
-            center: CGPoint(x: page.width / 2 + .random(in: -60...60), y: page.height / 2 + .random(in: -80...80)),
+            center: point ?? CGPoint(x: page.width / 2 + .random(in: -60...60), y: page.height / 2 + .random(in: -80...80)),
             width: width,
             rotation: tilt == 0 ? 0 : .random(in: -tilt...tilt),
             overInk: true
@@ -189,11 +192,16 @@ final class CanvasStore {
         beginArranging(selecting: item.id)
     }
 
-    /// Shows the whole page so items can be moved where they'll stay.
-    func beginArranging(selecting id: UUID? = nil) {
+    /// Resets the zoom so the whole page fits.
+    func showWholePage() {
         zoomFactor = 1
         normalizedCenter = CGPoint(x: 0.5, y: 0.5)
         canvasView?.restoreViewport()
+    }
+
+    /// Shows the whole page so items can be moved where they'll stay.
+    func beginArranging(selecting id: UUID? = nil) {
+        showWholePage()
         selectedItemID = id
         isArranging = true
     }

@@ -25,6 +25,8 @@ struct WorkspaceView: View {
     /// Folded shut, the outer screen shows the notebook's cover until it's opened.
     @State private var coverOpen = ProcessInfo.processInfo.arguments.contains("-FGCoverOpen")
     @State private var isShowingStickers = false
+    /// Closed by a swipe on the top bar, in any posture.
+    @State private var isClosed = false
 
     var body: some View {
         GeometryReader { proxy in
@@ -56,12 +58,16 @@ struct WorkspaceView: View {
                     model: model,
                     postureProvider: postureProvider,
                     posture: current.posture,
-                    onReturnToDraw: returnToDraw
+                    onReturnToDraw: returnToDraw,
+                    onCloseNotebook: { withAnimation(.smooth(duration: 0.3)) { isClosed = true } }
                 )
                 .placed(in: frames.header, visible: true)
 
-                if current.posture == .closed && !coverOpen {
-                    CoverScreen(model: model) { coverOpen = true }
+                if isClosed || (current.posture == .closed && !coverOpen) {
+                    CoverScreen(model: model) {
+                        coverOpen = true
+                        isClosed = false
+                    }
                         .padding(4)
                         .frame(width: proxy.size.width, height: proxy.size.height)
                         .transition(.opacity)
@@ -74,6 +80,8 @@ struct WorkspaceView: View {
                 model.canvas.isReadOnly = posture == .tent
                 // Folding the phone shut closes the book again.
                 if posture == .closed && old != .closed { coverOpen = false }
+                // Unfolding opens it to the page, however it was closed.
+                if posture != old { isClosed = false }
             }
         }
         .background(Theme.chrome.ignoresSafeArea())
@@ -157,6 +165,12 @@ struct CanvasPane: View {
                     .frame(width: page.width, height: page.height, alignment: .topLeading)
                     .offset(x: page.minX, y: page.minY)
             }
+            .dropDestination(for: String.self) { tokens, location in
+                guard tokens.first == ReferenceSlot.dragToken else { return false }
+                let scale = PageGeometry.size.width / max(page.width, 1)
+                model.stickReferencePhoto(at: CGPoint(x: (location.x - page.minX) * scale, y: (location.y - page.minY) * scale))
+                return true
+            }
             .onAppear { installTurnHandler(pageSize: page.size) }
             .onChange(of: proxy.size) { _, size in
                 installTurnHandler(pageSize: Self.pageRect(in: size).size)
@@ -208,6 +222,13 @@ struct CanvasPane: View {
             if isArranging && !model.canvas.isReadOnly {
                 PageItemsEditor(model: model, size: size)
             }
+            if model.canvas.isReadOnly {
+                // Presenting: swipe through the pages like a slideshow.
+                Color.clear
+                    .contentShape(.rect)
+                    .gesture(presentSwipe)
+                    .accessibilityHidden(true)
+            }
         }
         .frame(width: size.width, height: size.height, alignment: .topLeading)
         .coordinateSpace(.named(Self.pageSpace))
@@ -243,6 +264,15 @@ struct CanvasPane: View {
                 .accessibilityAddTraits(.isButton)
                 .accessibilityAction { model.turnPage(by: offset) }
         }
+    }
+
+    private var presentSwipe: some Gesture {
+        DragGesture(minimumDistance: 24)
+            .onEnded { value in
+                let across = value.translation.width
+                guard turn == nil, abs(across) > 50, abs(across) > abs(value.translation.height) else { return }
+                model.turnPage(by: across < 0 ? 1 : -1)
+            }
     }
 
     private func edgeDrag(offset: Int, size: CGSize) -> some Gesture {

@@ -77,6 +77,7 @@ final class FieldCanvasView: PKCanvasView {
     /// Touch and hold an item to start arranging it, and keep dragging to move it.
     private let itemHold = UILongPressGestureRecognizer()
     private let itemHoldDelegate = ItemHoldDelegate()
+    private let shortcutDelegate = ShortcutGestureDelegate()
     private var heldItem: (item: PageItem, touch: CGPoint)?
     private var lastBoundsSize: CGSize = .zero
     private(set) var isApplyingViewport = false
@@ -114,6 +115,7 @@ final class FieldCanvasView: PKCanvasView {
         itemHold.delegate = itemHoldDelegate
         itemHold.addTarget(self, action: #selector(itemHoldChanged(_:)))
         addGestureRecognizer(itemHold)
+        addShortcutGestures()
         accessibilityLabel = "Sketch canvas"
         accessibilityHint = "Draw with a finger or Apple Pencil. Pinch with two fingers to zoom."
     }
@@ -188,6 +190,39 @@ final class FieldCanvasView: PKCanvasView {
     func updateTracing(image: UIImage?, visible: Bool) {
         underlay.tracingImage = visible ? image : nil
     }
+
+    /// Three fingers belong to redo and page turns here, not the system's editing shortcuts.
+    override var editingInteractionConfiguration: UIEditingInteractionConfiguration { .none }
+
+    /// Two-finger tap undoes, three-finger tap redoes, a two-finger double-tap shows the whole
+    /// page, and a three-finger swipe turns the page.
+    private func addShortcutGestures() {
+        let resetZoom = UITapGestureRecognizer(target: self, action: #selector(resetZoomTapped))
+        resetZoom.numberOfTouchesRequired = 2
+        resetZoom.numberOfTapsRequired = 2
+        let undo = UITapGestureRecognizer(target: self, action: #selector(undoTapped))
+        undo.numberOfTouchesRequired = 2
+        undo.require(toFail: resetZoom)
+        let redo = UITapGestureRecognizer(target: self, action: #selector(redoTapped))
+        redo.numberOfTouchesRequired = 3
+        let nextPage = UISwipeGestureRecognizer(target: self, action: #selector(swipedToNextPage))
+        nextPage.numberOfTouchesRequired = 3
+        nextPage.direction = .left
+        let previousPage = UISwipeGestureRecognizer(target: self, action: #selector(swipedToPreviousPage))
+        previousPage.numberOfTouchesRequired = 3
+        previousPage.direction = .right
+        for gesture in [resetZoom, undo, redo, nextPage, previousPage] as [UIGestureRecognizer] {
+            gesture.cancelsTouchesInView = false
+            gesture.delegate = shortcutDelegate
+            addGestureRecognizer(gesture)
+        }
+    }
+
+    @objc private func undoTapped() { store?.undo() }
+    @objc private func redoTapped() { store?.redo() }
+    @objc private func resetZoomTapped() { store?.showWholePage() }
+    @objc private func swipedToNextPage() { store?.onTurnPage?(1) }
+    @objc private func swipedToPreviousPage() { store?.onTurnPage?(-1) }
 
     /// The item a hold at the recognizer's touch would pick up, if any.
     func itemUnderHold() -> PageItem? {
@@ -267,6 +302,15 @@ final class FieldCanvasView: PKCanvasView {
         let maxX = max(minX, contentSize.width + contentInset.right - bounds.width)
         let maxY = max(minY, contentSize.height + contentInset.bottom - bounds.height)
         return CGPoint(x: min(max(point.x, minX), maxX), y: min(max(point.y, minY), maxY))
+    }
+}
+
+/// Lets the multi-finger shortcuts run alongside PencilKit's drawing and zooming gestures.
+@MainActor
+private final class ShortcutGestureDelegate: NSObject, UIGestureRecognizerDelegate {
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                           shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+        true
     }
 }
 

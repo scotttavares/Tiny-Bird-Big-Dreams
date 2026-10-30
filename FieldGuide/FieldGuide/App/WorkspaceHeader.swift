@@ -11,10 +11,12 @@ struct WorkspaceHeader: View {
     let postureProvider: any PostureProvider
     let posture: Posture
     let onReturnToDraw: () -> Void
+    let onCloseNotebook: () -> Void
 
     @ScaledMetric(relativeTo: .body) private var buttonSize: CGFloat = 44
     @State private var isShowingCamera = false
     @State private var isShowingReference = false
+    @State private var isShowingGestures = false
     @State private var isShowingLibrary = false
     @State private var infoPage: Page?
     @State private var sharedFile: SharedFile?
@@ -34,6 +36,10 @@ struct WorkspaceHeader: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.regularMaterial, in: .rect(cornerRadius: 16))
         .foregroundStyle(Theme.inkText)
+        .simultaneousGesture(closeSwipe)
+        .sheet(isPresented: $isShowingGestures) {
+            GestureGuide()
+        }
         .sheet(isPresented: $isShowingLibrary) {
             LibraryView(model: model)
         }
@@ -65,6 +71,7 @@ struct WorkspaceHeader: View {
             titleBlock
             Spacer(minLength: 4)
             pageTurnButton(offset: 1)
+            gesturesButton
             moreMenu
         }
     }
@@ -96,6 +103,7 @@ struct WorkspaceHeader: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("New page")
+            gesturesButton
             moreMenu
         }
     }
@@ -118,6 +126,28 @@ struct WorkspaceHeader: View {
     }
 
     // MARK: Pieces
+
+    /// Swipe down on the bar to close the notebook.
+    private var closeSwipe: some Gesture {
+        DragGesture(minimumDistance: 20)
+            .onEnded { value in
+                guard posture != .tent, value.translation.height > 40,
+                      value.translation.height > abs(value.translation.width) else { return }
+                onCloseNotebook()
+            }
+    }
+
+    private var gesturesButton: some View {
+        Button {
+            isShowingGestures = true
+        } label: {
+            Image(systemName: "info.circle")
+                .font(.title3)
+                .frame(width: buttonSize * 0.8, height: buttonSize)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Gestures")
+    }
 
     private var libraryButton: some View {
         Button {
@@ -230,7 +260,8 @@ struct WorkspaceHeader: View {
     private var moreMenu: some View {
         Menu {
             Button("New Page", systemImage: "plus") { model.newPage() }
-            Button("Page Info", systemImage: "info.circle") { infoPage = model.currentPage }
+            Button("Page Info", systemImage: "doc.text") { infoPage = model.currentPage }
+            Button("Close Notebook", systemImage: "book.closed") { onCloseNotebook() }
             Menu("Paper", systemImage: "doc.plaintext") {
                 Picker("Paper Color", selection: Binding { model.canvas.paperTint } set: { model.canvas.paperTint = $0 }) {
                     ForEach(PaperTint.allCases) { tint in

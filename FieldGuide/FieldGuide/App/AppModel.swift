@@ -42,6 +42,9 @@ final class AppModel {
             self?.refreshThumbnail(for: page)
             self?.save()
         }
+        canvas.onTurnPage = { [weak self] offset in
+            self?.turnPage(by: offset)
+        }
         PageItemArt.imageStore = imageStore
         canvas.onItemsChange = { [weak self] items in
             guard let page = self?.currentPage else { return }
@@ -236,18 +239,24 @@ final class AppModel {
 
     // MARK: Stickers and photos
 
-    func addItem(_ content: PageItem.Content) {
+    func addItem(_ content: PageItem.Content, at point: CGPoint? = nil) {
         switch content {
-        case .sticker: canvas.add(content, width: 150, tilt: 0.15)
-        case .tape: canvas.add(content, width: 300, tilt: 0.35)
-        case .photo: canvas.add(content, width: 380, tilt: 0.08)
+        case .sticker: canvas.add(content, width: 150, tilt: 0.15, at: point)
+        case .tape: canvas.add(content, width: 300, tilt: 0.35, at: point)
+        case .photo: canvas.add(content, width: 380, tilt: 0.08, at: point)
         }
     }
 
-    /// Saves `image` and sticks it on the page.
-    func addPhoto(_ image: UIImage) {
+    /// Saves `image` and sticks it on the page, at `point` (page coordinates) if given.
+    func addPhoto(_ image: UIImage, at point: CGPoint? = nil) {
         guard currentPage != nil, let path = try? imageStore.save(image) else { return }
-        addItem(.photo(path))
+        addItem(.photo(path), at: point)
+    }
+
+    /// Sticks a copy of the reference photo on the page: dragged across the hinge.
+    func stickReferencePhoto(at point: CGPoint) {
+        guard let image = canvas.referenceImage else { return }
+        addPhoto(image, at: point)
     }
 
     func deleteItem(_ id: UUID) {

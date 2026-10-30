@@ -4,6 +4,9 @@ import UIKit
 
 /// The left page: a photo or typed notes to sketch from.
 struct ReferenceSlot: View {
+    /// What dragging the photo carries; the drop on the page sticks down a copy.
+    static let dragToken = "fieldguide-reference-photo"
+
     let model: AppModel
 
     @State private var photoItem: PhotosPickerItem?
@@ -55,6 +58,13 @@ struct ReferenceSlot: View {
         if let reference, let image = model.canvas.referenceImage, reference.kind != .notes {
             ZoomableImage(image: image) {
                 isExpanded = true
+            }
+            .draggable(Self.dragToken) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 150)
+                    .clipShape(.rect(cornerRadius: 6))
             }
             .accessibilityLabel(reference.kind == .camera ? "Reference photo" : "Reference image")
             .accessibilityHint("Pinch to zoom. Use the Expand action to view full screen.")
@@ -154,7 +164,7 @@ struct ReferenceSlot: View {
     }
 }
 
-/// Pinch to zoom, drag when zoomed, tap to expand, double-tap to reset the zoom.
+/// Pinch to zoom, drag when zoomed, tap or double-tap to expand; double-tap resets a zoomed image.
 struct ZoomableImage: View {
     let image: UIImage
     var onExpand: (() -> Void)?
@@ -175,7 +185,11 @@ struct ZoomableImage: View {
                 .contentShape(.rect)
                 .gesture(magnify.simultaneously(with: pan))
                 .onTapGesture(count: 2) {
-                    withAnimation(.smooth) { reset() }
+                    if scale > 1 {
+                        withAnimation(.smooth) { reset() }
+                    } else {
+                        onExpand?()
+                    }
                 }
                 .onTapGesture {
                     onExpand?()
