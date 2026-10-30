@@ -48,11 +48,8 @@ struct ToolStrip: View {
                     if store.referenceImage != nil {
                         TracingToggle(store: store)
                     }
-                    divider
                 }
-                undoRedo
                 if style == .full {
-                    divider
                     PaperStylePicker(store: store)
                     TracingToggle(store: store)
                 }
@@ -184,32 +181,6 @@ struct ToolStrip: View {
         .foregroundStyle(Theme.inkText)
     }
 
-    private var undoRedo: some View {
-        HStack(spacing: 2) {
-            Button {
-                store.undo()
-            } label: {
-                Image(systemName: "arrow.uturn.backward")
-                    .font(.title3)
-                    .frame(width: buttonSize, height: buttonSize)
-            }
-            .disabled(!store.canUndo)
-            .accessibilityLabel("Undo")
-
-            Button {
-                store.redo()
-            } label: {
-                Image(systemName: "arrow.uturn.forward")
-                    .font(.title3)
-                    .frame(width: buttonSize, height: buttonSize)
-            }
-            .disabled(!store.canRedo)
-            .accessibilityLabel("Redo")
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(Theme.inkText)
-    }
-
     private var divider: some View {
         Rectangle()
             .fill(Theme.rule)
@@ -225,6 +196,35 @@ struct ToolStrip: View {
             store.inkColor = UIColor(newValue)
             if store.toolKind == .eraser { store.toolKind = .pen }
         }
+    }
+}
+
+/// Undo and redo, floating in the corner of the page.
+struct PageUndoButtons: View {
+    let store: CanvasStore
+
+    @ScaledMetric(relativeTo: .body) private var buttonSize: CGFloat = 40
+
+    var body: some View {
+        HStack(spacing: 0) {
+            button("Undo", "arrow.uturn.backward", enabled: store.canUndo) { store.undo() }
+            button("Redo", "arrow.uturn.forward", enabled: store.canRedo) { store.redo() }
+        }
+        .padding(.horizontal, 4)
+        .background(.regularMaterial, in: .capsule)
+        .foregroundStyle(Theme.inkText)
+    }
+
+    private func button(_ title: String, _ icon: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.body.weight(.medium))
+                .frame(width: buttonSize, height: buttonSize)
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .opacity(enabled ? 1 : 0.35)
+        .accessibilityLabel(title)
     }
 }
 

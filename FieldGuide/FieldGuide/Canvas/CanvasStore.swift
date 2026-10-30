@@ -99,6 +99,8 @@ final class CanvasStore {
     private(set) var drawing = PKDrawing()
     private(set) var canUndo = false
     private(set) var canRedo = false
+    /// A word saying what a finger shortcut just did, shown briefly over the page.
+    private(set) var shortcutNote: String?
     /// True between a stroke's first touch and its end. Posture changes wait for it.
     private(set) var isDrawing = false
     /// The latest touches included a second finger, so they weren't a tap on the page edge.
@@ -114,6 +116,11 @@ final class CanvasStore {
     @ObservationIgnored var normalizedCenter = CGPoint(x: 0.5, y: 0.5)
 
     let undoManager = UndoManager()
+    /// Earlier and undone versions of the drawing. `PKDrawing` shares its strokes, so these are cheap.
+    @ObservationIgnored private var undoStack: [PKDrawing] = []
+    @ObservationIgnored private var redoStack: [PKDrawing] = []
+    @ObservationIgnored private var noteTask: Task<Void, Never>?
+    private static let undoLimit = 100
 
     /// Called with the drawing to persist (debounced after strokes, immediately on `flush`).
     @ObservationIgnored var onPersist: ((UUID, PKDrawing) -> Void)?
@@ -147,6 +154,8 @@ final class CanvasStore {
         selectedItemID = nil
         self.items = items
         undoManager.removeAllActions()
+        undoStack = []
+        redoStack = []
         zoomFactor = 1
         normalizedCenter = CGPoint(x: 0.5, y: 0.5)
         self.paperStyle = paperStyle
@@ -284,6 +293,11 @@ final class CanvasStore {
 
     func drawingDidChange(_ newDrawing: PKDrawing) {
         guard !isLoading else { return }
+        if newDrawing != drawing {
+            undoStack.append(drawing)
+            if undoStack.count > Self.undoLimit { undoStack.removeFirst() }
+            redoStack = []
+        }
         drawing = newDrawing
         hasUnsavedChanges = true
         refreshUndoState()
@@ -303,28 +317,50 @@ final class CanvasStore {
 
     // MARK: Undo
 
-    func undo() {
-        guard undoManager.canUndo else { return }
-        undoManager.undo()
-        syncFromView()
+    @discardableResult
+    func undo() -> Bool {
+        guard let earlier = undoStack.popLast() else { return false }
+        redoStack.append(drawing)
+        restore(earlier)
+        return true
     }
 
-    func redo() {
-        guard undoManager.canRedo else { return }
-        undoManager.redo()
-        syncFromView()
+    @discardableResult
+    func redo() -> Bool {
+        guard let later = redoStack.popLast() else { return false }
+        undoStack.append(drawing)
+        restore(later)
+        return true
     }
 
-    private func syncFromView() {
-        if let canvasView, canvasView.drawing != drawing {
-            drawingDidChange(canvasView.drawing)
-        }
+    /// Removes the last change for good: a mark left by a tap, which nobody meant to redo.
+    func discardLastChange() {
+        if undo() { redoStack.removeLast() }
         refreshUndoState()
     }
 
+    private func restore(_ version: PKDrawing) {
+        drawing = version
+        canvasView?.drawing = version
+        hasUnsavedChanges = true
+        refreshUndoState()
+        scheduleSave()
+    }
+
     func refreshUndoState() {
-        canUndo = undoManager.canUndo
-        canRedo = undoManager.canRedo
+        canUndo = !undoStack.isEmpty
+        canRedo = !redoStack.isEmpty
+    }
+
+    /// Shows `note` over the page for a moment.
+    func announce(_ note: String) {
+        shortcutNote = note
+        noteTask?.cancel()
+        noteTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1))
+            guard let self, !Task.isCancelled else { return }
+            self.shortcutNote = nil
+        }
     }
 
     // MARK: Autosave

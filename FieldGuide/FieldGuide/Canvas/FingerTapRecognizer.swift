@@ -93,8 +93,10 @@ final class FingerTapRecognizer: UIGestureRecognizer {
         }
     }
 
+    /// PencilKit and the scroll view can cancel fingers that were only tapping, so a cancelled
+    /// touch counts as lifted. The time and movement limits still rule out anything else.
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
-        state = .failed
+        touchesEnded(touches, with: event)
     }
 
     override func reset() {

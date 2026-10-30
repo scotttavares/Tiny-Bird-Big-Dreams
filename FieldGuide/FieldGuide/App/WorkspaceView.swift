@@ -219,8 +219,24 @@ struct CanvasPane: View {
                 edgeGrip(offset: 1, width: grip, size: size)
                 edgeGrip(offset: -1, width: grip, size: size)
             }
+            if !isArranging && !model.canvas.isReadOnly {
+                PageUndoButtons(store: model.canvas)
+                    .padding(8)
+                    .frame(width: size.width, height: size.height, alignment: .topTrailing)
+            }
             if isArranging && !model.canvas.isReadOnly {
                 PageItemsEditor(model: model, size: size)
+            }
+            if let note = model.canvas.shortcutNote {
+                Text(note)
+                    .font(.footnote.weight(.semibold))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(.regularMaterial, in: .capsule)
+                    .frame(width: size.width, height: size.height, alignment: .top)
+                    .padding(.top, 10)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
             }
             if model.canvas.isReadOnly {
                 // Presenting: swipe through the pages like a slideshow.

@@ -253,26 +253,29 @@ final class FieldCanvasView: PKCanvasView {
             // A tap on a video replays it.
             guard let item = store.item(at: overlay.convert(fingerTap.firstLocation, from: nil)),
                   case .video = item.content else { return }
-            if leftStroke { store.undo() }
+            if leftStroke { store.discardLastChange() }
             underlay.itemsView.replayVideo(item.id)
             overlay.replayVideo(item.id)
             return
         }
-        if leftStroke { store.undo() }
+        if leftStroke { store.discardLastChange() }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
         switch fingerTap.fingers {
         case 2 where pendingUndo != nil:
             pendingUndo?.cancel()
             pendingUndo = nil
             store.showWholePage()
+            store.announce("Whole Page")
         case 2:
             pendingUndo = Task { [weak self] in
                 try? await Task.sleep(for: .milliseconds(300))
                 guard let self, !Task.isCancelled else { return }
                 self.pendingUndo = nil
-                self.store?.undo()
+                guard let store = self.store else { return }
+                store.announce(store.undo() ? "Undo" : "Nothing to Undo")
             }
         case 3:
-            store.redo()
+            store.announce(store.redo() ? "Redo" : "Nothing to Redo")
         default:
             break
         }
