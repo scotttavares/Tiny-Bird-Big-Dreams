@@ -332,3 +332,36 @@ workflows:
       app_store_connect:
         auth: integration
         # Upload only: the build appears in TestFlight for Internal Testing.
+
+  # Puts FieldGuide/CloudKit/schema.ckdb in the iCloud container's Development
+  # environment. Run by hand, then press Deploy Schema Changes in the CloudKit
+  # console. Needs the Secure var CLOUDKIT_MANAGEMENT_TOKEN in group orbit_signing.
+  fieldguide-cloudkit-schema:
+    name: Field Guide iCloud schema
+    max_build_duration: 15
+    instance_type: mac_mini_m2
+    working_directory: FieldGuide
+    environment:
+      groups:
+        - orbit_signing
+      vars:
+        TEAM_ID: "23D9BZ3692"
+        CONTAINER_ID: "iCloud.com.tinybirdbigdreams.fieldguide"
+      xcode: 27.1
+    scripts:
+      - name: Import the schema into Development
+        script: |
+          set -e
+          xcrun cktool import-schema \
+            --token "$CLOUDKIT_MANAGEMENT_TOKEN" \
+            --team-id "$TEAM_ID" \
+            --container-id "$CONTAINER_ID" \
+            --environment development \
+            --file CloudKit/schema.ckdb
+      - name: Print what Development now holds
+        script: |
+          xcrun cktool export-schema \
+            --token "$CLOUDKIT_MANAGEMENT_TOKEN" \
+            --team-id "$TEAM_ID" \
+            --container-id "$CONTAINER_ID" \
+            --environment development
