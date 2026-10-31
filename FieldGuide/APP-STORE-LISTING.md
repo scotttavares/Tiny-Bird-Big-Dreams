@@ -36,7 +36,7 @@ KEEP MORE THAN DRAWINGS
 • Replay a sketch stroke by stroke, and share it as a video
 
 YOURS, AND ONLY YOURS
-No account, no ads and no tracking. Your notebooks stay on your phone until you choose to share them.
+No account, no ads and no tracking. Your notebooks stay on your devices and in your own iCloud, where only you can see them.
 
 Field Guide works on any iPhone or iPad running iOS 26 or later, and it's at its best on iPhone Duo.
 
@@ -56,7 +56,7 @@ Field Guide works on any iPhone or iPad running iOS 26 or later, and it's at its
 
 ## App Privacy answers
 
-Data collection: **No, we do not collect data from this app.** Camera, microphone, photos and location are used on the device only, and nothing reaches a server of ours. The location lookup goes through Apple's own service.
+Data collection: **No, we do not collect data from this app.** Notebooks sync through the user's private iCloud database, which we can't read. Camera, microphone, photos and location are otherwise used on the device only, and nothing reaches a server of ours. The location lookup goes through Apple's own service.
 
 ## Notes for App Review
 

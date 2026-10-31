@@ -1,3 +1,4 @@
+import CoreData
 import SwiftData
 import SwiftUI
 
@@ -24,6 +25,9 @@ struct RootView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { model?.flushAll() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSPersistentStoreRemoteChange).map { _ in }.receive(on: RunLoop.main)) {
+            model?.adoptSyncedChanges()
         }
         .onOpenURL { url in
             model?.handle(url: url)

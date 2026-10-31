@@ -10,11 +10,19 @@ struct FieldGuideApp: App {
         let inMemory = ProcessInfo.processInfo.arguments.contains("-FGInMemoryStore")
         // SwiftData's default store lives in Application Support, which doesn't exist on first launch.
         try? FileManager.default.createDirectory(at: .applicationSupportDirectory, withIntermediateDirectories: true)
-        let configuration = ModelConfiguration(isStoredInMemoryOnly: inMemory)
+        let schema = Schema(FieldGuideSchema.models)
+        // `.automatic` syncs through the iCloud container in the app's entitlements.
+        let configuration = ModelConfiguration(isStoredInMemoryOnly: inMemory, cloudKitDatabase: .automatic)
         do {
-            container = try ModelContainer(for: Schema(FieldGuideSchema.models), configurations: configuration)
+            container = try ModelContainer(for: schema, configurations: configuration)
         } catch {
-            fatalError("Could not open the Field Guide store: \(error)")
+            // A notebook that won't sync is better than an app that won't open.
+            let local = ModelConfiguration(isStoredInMemoryOnly: inMemory, cloudKitDatabase: .none)
+            do {
+                container = try ModelContainer(for: schema, configurations: local)
+            } catch {
+                fatalError("Could not open the Field Guide store: \(error)")
+            }
         }
     }
 
