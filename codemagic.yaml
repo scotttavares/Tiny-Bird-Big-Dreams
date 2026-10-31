@@ -349,6 +349,15 @@ workflows:
         CONTAINER_ID: "iCloud.com.tinybirdbigdreams.fieldguide"
       xcode: 27.1
     scripts:
+      - name: Check the token
+        script: |
+          # Length only, never the value: a stray space or line break breaks it.
+          echo "Token length: ${#CLOUDKIT_MANAGEMENT_TOKEN}"
+          TRIMMED=$(printf '%s' "$CLOUDKIT_MANAGEMENT_TOKEN" | tr -d '[:space:]')
+          echo "Length without spaces: ${#TRIMMED}"
+          xcrun cktool save-token --help || true
+          xcrun cktool import-schema --help || true
+          xcrun cktool get-teams --token "$TRIMMED" || true
       - name: Import the schema into Development
         script: |
           set -e
