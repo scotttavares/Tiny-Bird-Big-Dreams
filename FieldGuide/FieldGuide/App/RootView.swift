@@ -26,7 +26,8 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { model?.flushAll() }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .NSPersistentStoreRemoteChange).map { _ in }.receive(on: RunLoop.main)) {
+        // No closure before `receive(on:)`: in a view it would be main-actor and trap on the store's queue.
+        .onReceive(NotificationCenter.default.publisher(for: .NSPersistentStoreRemoteChange).receive(on: RunLoop.main)) { _ in
             model?.adoptSyncedChanges()
         }
         .onOpenURL { url in
