@@ -6,15 +6,20 @@ import UIKit
 /// A named collection of pages.
 @Model
 final class Notebook {
-    var id: UUID
-    var title: String
-    var createdAt: Date
-    var updatedAt: Date
+    // iCloud needs every stored property defaulted or optional, and every relationship optional.
+    var id: UUID = UUID()
+    var title: String = ""
+    var createdAt: Date = Date.now
+    var updatedAt: Date = Date.now
     /// `NotebookTheme` raw value: the cover design. Defaulted so older stores migrate.
     var themeRaw: String = NotebookTheme.pines.rawValue
+    /// Made automatically on first launch, so a second device doesn't keep its own empty one.
+    var isStarter: Bool = false
 
     @Relationship(deleteRule: .cascade, inverse: \Page.notebook)
-    var pages: [Page] = []
+    var pages: [Page]? = []
+
+    var allPages: [Page] { pages ?? [] }
 
     init(title: String, createdAt: Date = .now) {
         self.id = UUID()
@@ -30,7 +35,7 @@ final class Notebook {
 
     /// Pages in the order they were added to the notebook.
     var orderedPages: [Page] {
-        pages.sorted { lhs, rhs in
+        allPages.sorted { lhs, rhs in
             lhs.sortIndex == rhs.sortIndex ? lhs.createdAt < rhs.createdAt : lhs.sortIndex < rhs.sortIndex
         }
     }
@@ -39,26 +44,35 @@ final class Notebook {
     @discardableResult
     func addPage(now: Date = .now) -> Page {
         let page = Page(title: Page.defaultTitle(for: now), createdAt: now)
-        page.sortIndex = (pages.map(\.sortIndex).max() ?? -1) + 1
+        page.sortIndex = (allPages.map(\.sortIndex).max() ?? -1) + 1
         page.notebook = self
-        pages.append(page)
+        pages?.append(page)
         updatedAt = now
         return page
+    }
+
+    /// Starter notebooks with nothing in them that another notebook makes unnecessary. Every
+    /// device picks the same ones, so two new devices can't each delete the other's.
+    static func redundantStarters(in notebooks: [Notebook]) -> [Notebook] {
+        let empty = notebooks.filter { $0.isStarter && $0.allPages.allSatisfy(\.isBlank) }
+        let keeper = notebooks.count == empty.count
+            ? empty.min { ($0.createdAt, $0.id.uuidString) < ($1.createdAt, $1.id.uuidString) } : nil
+        return empty.filter { $0 !== keeper }
     }
 }
 
 /// One spread: a reference slot on the left page, a sketch on the right page.
 @Model
 final class Page {
-    var id: UUID
-    var title: String
-    var createdAt: Date
-    var updatedAt: Date
-    var sortIndex: Int
+    var id: UUID = UUID()
+    var title: String = ""
+    var createdAt: Date = Date.now
+    var updatedAt: Date = Date.now
+    var sortIndex: Int = 0
 
     /// `PKDrawing.dataRepresentation()`; empty data means an empty drawing.
-    var drawingData: Data
-    var paperStyleRaw: String
+    var drawingData: Data = Data()
+    var paperStyleRaw: String = PaperStyle.dotted.rawValue
     /// `PaperTint` raw value: the paper's colour. Defaulted so older stores migrate.
     var paperTintRaw: String = PaperTint.automatic.rawValue
     /// JSON `[PageItem]`: stickers, photos and tape on the page. Defaulted so older stores migrate.
@@ -71,9 +85,9 @@ final class Page {
     var voiceNotesData: Data = Data()
 
     // Field metadata
-    var locationName: String
-    var fieldDate: Date
-    var tags: [String]
+    var locationName: String = ""
+    var fieldDate: Date = Date.now
+    var tags: [String] = []
 
     /// Small JPEG rendered on autosave for the gallery grid. Kept out of the main store.
     @Attribute(.externalStorage)
@@ -122,6 +136,25 @@ final class Page {
         set { voiceNotesData = newValue.isEmpty ? Data() : ((try? JSONEncoder().encode(newValue)) ?? Data()) }
     }
 
+    /// Nothing has been put on this page yet.
+    var isBlank: Bool {
+        drawingData.isEmpty && itemsData.isEmpty && voiceNotesData.isEmpty && fieldNotes.isEmpty
+            && reference == nil && tags.isEmpty && locationName.isEmpty && weatherRaw.isEmpty
+    }
+
+    /// Every media file this page uses, as paths relative to `ImageStore.root`.
+    var mediaPaths: [String] {
+        var paths = [reference?.relativeImagePath].compactMap { $0 } + voiceNotes.map(\.path)
+        for item in items {
+            switch item.content {
+            case .photo(let path): paths.append(path)
+            case .video(let path): paths += [path, ImageStore.posterPath(forVideo: path)]
+            case .sticker, .tape: break
+            }
+        }
+        return paths
+    }
+
     /// The title a page gets when it is created: an auto timestamp.
     static func defaultTitle(for date: Date) -> String {
         "Page · " + date.formatted(.dateTime.month(.abbreviated).day().hour().minute())
@@ -140,11 +173,11 @@ final class Page {
 /// What sits in the reference slot of a page. Images live on disk; only the relative path is stored.
 @Model
 final class ReferenceAsset {
-    var kindRaw: String
+    var kindRaw: String = ReferenceKind.notes.rawValue
     /// Path relative to `ImageStore.root`, e.g. `References/6F1C….jpg`.
     var relativeImagePath: String?
-    var notes: String
-    var createdAt: Date
+    var notes: String = ""
+    var createdAt: Date = Date.now
     var page: Page?
 
     init(kind: ReferenceKind, relativeImagePath: String? = nil, notes: String = "", createdAt: Date = .now) {
@@ -157,6 +190,21 @@ final class ReferenceAsset {
     var kind: ReferenceKind {
         get { ReferenceKind(rawValue: kindRaw) ?? .notes }
         set { kindRaw = newValue.rawValue }
+    }
+}
+
+/// A copy of one file from `ImageStore`, so iCloud carries it to the user's other devices.
+@Model
+final class MediaFile {
+    /// Path relative to `ImageStore.root`.
+    var path: String = ""
+    @Attribute(.externalStorage)
+    var data: Data?
+    var createdAt: Date = Date.now
+
+    init(path: String, data: Data) {
+        self.path = path
+        self.data = data
     }
 }
 
@@ -419,7 +467,7 @@ enum PaperStyle: String, CaseIterable, Identifiable, Sendable {
 }
 
 enum FieldGuideSchema {
-    static var models: [any PersistentModel.Type] { [Notebook.self, Page.self, ReferenceAsset.self] }
+    static var models: [any PersistentModel.Type] { [Notebook.self, Page.self, ReferenceAsset.self, MediaFile.self] }
 }
 
 /// The colour of a page's paper. `automatic` is warm cream in light appearance and slate in dark;

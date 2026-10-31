@@ -77,6 +77,22 @@ struct ImageStore: Sendable {
         root.appending(path: relativePath)
     }
 
+    func exists(_ relativePath: String) -> Bool {
+        FileManager.default.fileExists(atPath: url(for: relativePath).path(percentEncoded: false))
+    }
+
+    /// The file's size in bytes, or nil if it isn't here.
+    func size(of relativePath: String) -> Int? {
+        try? url(for: relativePath).resourceValues(forKeys: [.fileSizeKey]).fileSize
+    }
+
+    /// Puts a file that came from another device at `relativePath`.
+    func write(_ data: Data, to relativePath: String) throws {
+        let target = url(for: relativePath)
+        try FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try data.write(to: target, options: [.atomic, .completeFileProtection])
+    }
+
     func image(at relativePath: String?) -> UIImage? {
         guard let relativePath else { return nil }
         return UIImage(contentsOfFile: url(for: relativePath).path(percentEncoded: false))

@@ -123,7 +123,7 @@ private struct NotebookRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(notebook.title)
                     .font(.headline)
-                Text("\(notebook.pages.count) pages · \(notebook.updatedAt.formatted(date: .abbreviated, time: .omitted))")
+                Text("\(notebook.allPages.count) pages · \(notebook.updatedAt.formatted(date: .abbreviated, time: .omitted))")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -215,7 +215,7 @@ struct GalleryView: View {
     }
 
     private var allTags: [String] {
-        Array(Set(notebook.pages.flatMap(\.tags))).sorted()
+        Array(Set(notebook.allPages.flatMap(\.tags))).sorted()
     }
 
     var body: some View {

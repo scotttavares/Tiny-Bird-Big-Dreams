@@ -23,10 +23,17 @@ final class AppModel {
     /// let the page change happen straight away (Reduce Motion, nothing to turn to).
     @ObservationIgnored var pageTurnHandler: (@MainActor (Int) -> Bool)?
 
+    @ObservationIgnored private let mediaSync: MediaSync
+    @ObservationIgnored private var mediaSyncTask: Task<Void, Never>?
+    /// The open page's ink and items as this device last had them; a difference came from iCloud.
+    @ObservationIgnored private var openDrawingData = Data()
+    @ObservationIgnored private var openItemsData = Data()
+
     init(context: ModelContext, canvas: CanvasStore = CanvasStore(), imageStore: ImageStore = .standard) {
         self.context = context
         self.canvas = canvas
         self.imageStore = imageStore
+        mediaSync = MediaSync(modelContainer: context.container)
         canvas.onPersist = { [weak self] pageID, drawing in
             self?.persist(drawing: drawing, pageID: pageID)
         }
@@ -51,8 +58,10 @@ final class AppModel {
             page.items = items
             page.updatedAt = .now
             page.notebook?.updatedAt = .now
+            self?.openItemsData = page.itemsData
             self?.refreshThumbnail(for: page)
             self?.save()
+            self?.syncMedia()
         }
     }
 
@@ -64,10 +73,80 @@ final class AppModel {
             DemoContent.seed(into: context, imageStore: imageStore)
         }
         let notebooks = (try? context.fetch(FetchDescriptor<Notebook>(sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]))) ?? []
-        let notebook = notebooks.first ?? createNotebook(title: "Field Notes")
-        let page = notebook.pages.max { $0.updatedAt < $1.updatedAt } ?? notebook.addPage()
+        let notebook = notebooks.first ?? createStarterNotebook()
+        let page = notebook.allPages.max { $0.updatedAt < $1.updatedAt } ?? notebook.addPage()
         save()
         open(page)
+        syncMedia()
+    }
+
+    private func createStarterNotebook() -> Notebook {
+        let notebook = createNotebook(title: "Field Notes")
+        notebook.isStarter = true
+        return notebook
+    }
+
+    // MARK: iCloud
+
+    /// Catches up with changes from the user's other devices. Called when the store changes.
+    func adoptSyncedChanges() {
+        let notebooks = (try? context.fetch(FetchDescriptor<Notebook>())) ?? []
+        for starter in Notebook.redundantStarters(in: notebooks) {
+            context.delete(starter)
+        }
+        save()
+        let stillThere = currentPage.map { open in
+            ((try? context.fetch(FetchDescriptor<Page>())) ?? []).contains { $0.id == open.id }
+        }
+        if stillThere == false {
+            // Deleted elsewhere, or an empty starter notebook that real notebooks replaced.
+            currentPage = nil
+            currentNotebook = nil
+            bootstrap()
+        } else if let currentPage, currentPage.drawingData != openDrawingData || currentPage.itemsData != openItemsData {
+            reloadOpenPage()
+        }
+        syncMedia()
+    }
+
+    /// Brings `ImageStore` and iCloud level shortly after the last change.
+    private func syncMedia() {
+        mediaSyncTask?.cancel()
+        mediaSyncTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(2))
+            guard let self, !Task.isCancelled else { return }
+            if await mediaSync.reconcile(imageStore: imageStore) {
+                reloadOpenPage()
+            }
+        }
+    }
+
+    /// Shows the open page's stored state, without a page turn.
+    private func reloadOpenPage() {
+        guard let page = currentPage else { return }
+        canvas.load(
+            pageID: page.id,
+            drawingData: page.drawingData,
+            paperStyle: page.paperStyle,
+            paperTint: page.paperTint,
+            items: page.items,
+            referenceImage: imageStore.image(at: page.reference?.relativeImagePath)
+        )
+        openDrawingData = page.drawingData
+        openItemsData = page.itemsData
+    }
+
+    /// Deletes a media file here and, through its copy, on the user's other devices.
+    private func forget(_ path: String?) {
+        guard let path else { return }
+        imageStore.delete(path)
+        let copies = (try? context.fetch(FetchDescriptor<MediaFile>(predicate: #Predicate { $0.path == path }))) ?? []
+        copies.forEach(context.delete)
+    }
+
+    private func forgetVideo(_ path: String) {
+        forget(path)
+        forget(ImageStore.posterPath(forVideo: path))
     }
 
     // MARK: Notebooks
@@ -104,7 +183,7 @@ final class AppModel {
     }
 
     func delete(_ notebook: Notebook) {
-        for page in notebook.pages {
+        for page in notebook.allPages {
             deleteFiles(of: page)
         }
         let wasCurrent = notebook.id == currentNotebook?.id
@@ -134,6 +213,8 @@ final class AppModel {
             items: page.items,
             referenceImage: imageStore.image(at: page.reference?.relativeImagePath)
         )
+        openDrawingData = page.drawingData
+        openItemsData = page.itemsData
         if canvas.referenceImage == nil {
             canvas.isTracing = false
         }
@@ -218,7 +299,7 @@ final class AppModel {
 
     func removeReference() {
         guard let page = currentPage, let reference = page.reference else { return }
-        imageStore.delete(reference.relativeImagePath)
+        forget(reference.relativeImagePath)
         page.reference = nil
         context.delete(reference)
         canvas.referenceImage = nil
@@ -229,13 +310,14 @@ final class AppModel {
 
     private func replaceReference(on page: Page, with asset: ReferenceAsset) {
         if let old = page.reference {
-            imageStore.delete(old.relativeImagePath)
+            forget(old.relativeImagePath)
             context.delete(old)
         }
         context.insert(asset)
         page.reference = asset
         page.updatedAt = .now
         save()
+        syncMedia()
     }
 
     // MARK: Stickers and photos
@@ -298,7 +380,7 @@ final class AppModel {
     }
 
     func deleteVoiceNote(_ note: VoiceNote, from page: Page) {
-        imageStore.delete(note.path)
+        forget(note.path)
         page.voiceNotes.removeAll { $0.id == note.id }
         save()
     }
@@ -309,16 +391,16 @@ final class AppModel {
 
     private func deleteFile(of item: PageItem) {
         switch item.content {
-        case .photo(let path): imageStore.delete(path)
-        case .video(let path): imageStore.deleteVideo(path)
+        case .photo(let path): forget(path)
+        case .video(let path): forgetVideo(path)
         case .sticker, .tape: break
         }
     }
 
     private func deleteFiles(of page: Page) {
-        imageStore.delete(page.reference?.relativeImagePath)
+        forget(page.reference?.relativeImagePath)
         for note in page.voiceNotes {
-            imageStore.delete(note.path)
+            forget(note.path)
         }
         for item in page.items {
             deleteFile(of: item)
@@ -338,6 +420,7 @@ final class AppModel {
         page.drawingData = CanvasStore.encode(drawing)
         page.updatedAt = .now
         page.notebook?.updatedAt = .now
+        if page.id == currentPage?.id { openDrawingData = page.drawingData }
         page.thumbnailData = PageRenderer.thumbnailData(drawing: drawing, paperStyle: page.paperStyle,
                                                         paperTint: page.paperTint, items: page.items)
         save()
@@ -354,6 +437,7 @@ final class AppModel {
     func flushAll() {
         canvas.flush()
         save()
+        syncMedia()
     }
 
     func save() {
