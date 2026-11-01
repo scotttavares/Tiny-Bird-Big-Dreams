@@ -292,6 +292,7 @@ final class AppModel {
             return
         }
         item.id = UUID()
+        item.addedAt = .now
         item.center = point
         item.overInk = true
         canvas.place(item)

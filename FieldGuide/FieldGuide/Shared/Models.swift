@@ -186,9 +186,12 @@ struct PageItem: Codable, Identifiable, Equatable, Sendable {
     var frame = ItemFrame.print
     /// The color treatment of a photo or video.
     var look = ItemLook.original
+    /// When it went on the page, so a replay can bring it in at the right moment. Items from
+    /// before this was recorded have none.
+    var addedAt: Date?
 
     init(id: UUID = UUID(), content: Content, center: CGPoint, width: CGFloat, rotation: Double = 0, overInk: Bool = false,
-         frame: ItemFrame = .print, look: ItemLook = .original) {
+         frame: ItemFrame = .print, look: ItemLook = .original, addedAt: Date? = nil) {
         self.id = id
         self.content = content
         self.center = center
@@ -197,10 +200,11 @@ struct PageItem: Codable, Identifiable, Equatable, Sendable {
         self.overInk = overInk
         self.frame = frame
         self.look = look
+        self.addedAt = addedAt
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, content, center, width, rotation, overInk, frame, look
+        case id, content, center, width, rotation, overInk, frame, look, addedAt
     }
 
     /// Pages saved before items could sit over the ink have no `overInk`; they stay under it.
@@ -214,6 +218,7 @@ struct PageItem: Codable, Identifiable, Equatable, Sendable {
         overInk = try container.decodeIfPresent(Bool.self, forKey: .overInk) ?? false
         frame = try container.decodeIfPresent(ItemFrame.self, forKey: .frame) ?? .print
         look = try container.decodeIfPresent(ItemLook.self, forKey: .look) ?? .original
+        addedAt = try container.decodeIfPresent(Date.self, forKey: .addedAt)
     }
 
     /// Photos and videos can change their frame and color.

@@ -9,6 +9,7 @@ import UIKit
 enum PageRenderer {
     /// - Parameter appearance: `.light` for exports; the page-turn uses the screen's own appearance
     ///   so the turning sheet matches the live page.
+    /// - Parameter overlay: Draws over everything, in page coordinates.
     static func sketchImage(
         drawing: PKDrawing,
         paperStyle: PaperStyle,
@@ -18,7 +19,8 @@ enum PageRenderer {
         scale: CGFloat = 2,
         appearance: UIUserInterfaceStyle = .light,
         inkOpacity: CGFloat = 1,
-        showsRules: Bool = true
+        showsRules: Bool = true,
+        overlay: ((CGContext) -> Void)? = nil
     ) -> UIImage {
         let pageSize = PageGeometry.size
         let factor = width / pageSize.width
@@ -50,6 +52,7 @@ enum PageRenderer {
             inkImage.draw(in: CGRect(origin: .zero, size: size), blendMode: .normal, alpha: inkOpacity)
             cg.scaleBy(x: factor, y: factor)
             PageItemArt.draw(items.filter(\.overInk), in: cg)
+            overlay?(cg)
         }
     }
 

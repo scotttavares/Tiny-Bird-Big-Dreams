@@ -15,6 +15,58 @@ struct FoldFeatureTests {
         #expect(long == long.sorted())
     }
 
+    private func sticker(addedAt: Date? = nil) -> PageItem {
+        PageItem(content: .sticker("🦋"), center: CGPoint(x: 200, y: 200), width: 150, addedAt: addedAt)
+    }
+
+    @Test func itemsLandBetweenTheStrokesTheyWereAddedBetween() throws {
+        let start = Date(timeIntervalSince1970: 1_000)
+        let dates = [0, 10, 20].map { start.addingTimeInterval($0) }
+        let item = sticker(addedAt: start.addingTimeInterval(5))
+        let frames = SketchReplay.timeline(strokeDates: dates, items: [item])
+        let landing = try #require(frames.first { $0.entering == item.id })
+        #expect(landing.strokes == 1)
+        #expect(!landing.shown.contains(item.id))
+        let last = try #require(frames.last)
+        #expect(last.strokes == 3)
+        #expect(last.shown == [item.id])
+        #expect(last.entering == nil)
+    }
+
+    @Test func itemsWithNoDateAreSpreadThroughTheDrawing() throws {
+        let dates = (0..<4).map { Date(timeIntervalSince1970: Double($0)) }
+        let first = sticker()
+        let second = sticker()
+        let frames = SketchReplay.timeline(strokeDates: dates, items: [first, second])
+        #expect(try #require(frames.first { $0.entering == first.id }).strokes == 0)
+        #expect(try #require(frames.first { $0.entering == second.id }).strokes == 2)
+    }
+
+    @Test func aPageOfOnlyItemsStillReplaysAndSettles() throws {
+        let item = sticker()
+        let frames = SketchReplay.timeline(strokeDates: [], items: [item])
+        #expect(frames.count == SketchReplay.entranceFrames(itemCount: 1) + 1)
+        #expect(try #require(frames.last).shown == [item.id])
+        #expect(SketchReplay.timeline(strokeDates: [], items: []).count == 1)
+    }
+
+    @Test func anEntranceFallsBigAndSettlesExactlyInPlace() {
+        #expect(SketchReplay.entrancePose(progress: 0).scale > 3)
+        #expect(SketchReplay.entrancePose(progress: 0.56).scale < 1)
+        #expect(SketchReplay.entrancePose(progress: 0.56).burst != nil)
+        let rest = SketchReplay.entrancePose(progress: 1)
+        #expect(abs(rest.scale - 1) < 0.0001)
+        #expect(abs(rest.spin) < 0.0001)
+        #expect(rest.burst == nil)
+    }
+
+    @Test func aReplayDrawsItsItems() {
+        let item = sticker()
+        let page = ExportPage(title: "Replay", fieldDate: .now, locationName: "", tags: [], drawing: PKDrawing(), paperStyle: .blank, items: [item])
+        let frames = SketchReplay.timeline(for: page)
+        #expect(SketchReplay.image(page, frame: frames[0], width: 200).size.width == 200)
+    }
+
     @Test func aGuessedWordScoresAndASkippedOneDoesNot() {
         var game = DrawingGame(words: ["owl", "fox", "bear"])
         #expect(game.word == "owl")
