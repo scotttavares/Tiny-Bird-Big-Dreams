@@ -1,0 +1,4 @@
+build/
+FieldGuide.xcodeproj/
+*.xcresult
+DerivedData/
