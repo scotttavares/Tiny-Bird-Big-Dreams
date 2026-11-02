@@ -21,7 +21,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin" />
 <link href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Caveat:wght@700&family=Permanent+Marker&family=Special+Elite&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="assets/fieldguide.css?v=7" />
+<link rel="stylesheet" href="assets/fieldguide.css?v=10" />
 </head>
 <body>
 
@@ -274,13 +274,50 @@
     <div class="wrap">
       <span class="eyebrow">iPhone Duo</span>
       <h2>Made for the fold.</h2>
-      <ul>
-        <li>Draw on the right, with a photo, the live camera, your last page or notes on the left</li>
-        <li>Drag photos and stickers across the fold to copy them</li>
-        <li>Half-fold it like a tent to show off your sketch</li>
-        <li>Play the timed drawing game together, one on each side</li>
-        <li>Close the phone and the book closes too</li>
-      </ul>
+      <p class="hand">open it, fold it, flip it, play it</p>
+      <div class="fold-grid">
+        <article class="fold-card">
+          <div class="fold-art">
+            <div class="mini-duo"><div class="mini-screen"><img src="/assets/fieldguide/sunflower-photo.webp" alt="" loading="lazy" /></div><div class="mini-hinge"></div><div class="mini-screen"><img src="/assets/fieldguide/page-summer.webp" alt="" loading="lazy" /></div></div>
+          </div>
+          <h3>Open it up</h3>
+          <p>Sketch on the right with a photo, the live camera, your last page or notes on the left.</p>
+        </article>
+        <article class="fold-card">
+          <div class="fold-art">
+            <div class="mini-duo"><div class="mini-screen"><img src="/assets/fieldguide/page-cute.webp" alt="" loading="lazy" /></div><div class="mini-hinge"></div><div class="mini-screen blank"></div></div>
+            <img class="drag-sticker" src="/assets/fieldguide/s-frog.webp" alt="" loading="lazy" />
+            <span class="drag-arrow" aria-hidden="true"></span>
+          </div>
+          <h3>Drag across the fold</h3>
+          <p>Slide a photo or sticker over the hinge to copy it to the other page.</p>
+        </article>
+        <article class="fold-card">
+          <div class="fold-art">
+            <div class="tent3d" aria-hidden="true"><div class="tent-back"></div><div class="tent-front"><img src="/assets/fieldguide/page-summer.webp" alt="" loading="lazy" /></div></div>
+            <span class="tent-ground" aria-hidden="true"></span>
+          </div>
+          <h3>Pitch a tent</h3>
+          <p>Half-fold it to show your sketch to someone across the table.</p>
+        </article>
+        <article class="fold-card">
+          <div class="fold-art">
+            <div class="tent3d" aria-hidden="true"><div class="tent-back"></div><div class="tent-front"><img class="game-eagle" src="/assets/fieldguide/s-eagle.webp" alt="" loading="lazy" /></div></div><span class="guess-chip">Other side: Guess!</span>
+            <span class="tent-ground" aria-hidden="true"></span>
+            <span class="game-word">Draw: EAGLE</span>
+            <span class="game-timer">0:42</span>
+          </div>
+          <h3>Play together</h3>
+          <p>A timed drawing game, one of you on each side.</p>
+        </article>
+        <article class="fold-card">
+          <div class="fold-art">
+            <img class="closed-book" src="/assets/fieldguide/cover.webp" alt="" loading="lazy" />
+          </div>
+          <h3>Close the book</h3>
+          <p>Fold it shut and the cover closes on your work.</p>
+        </article>
+      </div>
     </div>
   </section>
 
@@ -330,7 +367,7 @@
     </div>
     <div class="foot-bottom">
       <p>An app by <a href="/">Tiny Bird, Big Dreams</a> · © 2026</p>
-      <p>Made with Claude · Shipped from scratch</p>
+      <p>Made with fun in mind · Shipped from scratch</p>
     </div>
   </div>
 </footer>
