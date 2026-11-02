@@ -1,0 +1,73 @@
+name: Talkstand
+
+options:
+  bundleIdPrefix: com.tinybirdbigdreams
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    GCC_TREAT_WARNINGS_AS_ERRORS: NO
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: NO
+
+targets:
+  Talkstand:
+    type: application
+    platform: iOS
+    sources:
+      - path: Talkstand
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.tinybirdbigdreams.talkstand
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    info:
+      path: Talkstand/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Talkstand
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen:
+          UIColorName: StageColor
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        # Videos are vertical, and stand mode folds across a portrait screen.
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIRequiresFullScreen: true
+        ITSAppUsesNonExemptEncryption: false
+        NSCameraUsageDescription: Talkstand films you while your script scrolls.
+        NSMicrophoneUsageDescription: Talkstand records your voice with the video.
+
+  TalkstandTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: TalkstandTests
+    dependencies:
+      - target: Talkstand
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.tinybirdbigdreams.talkstand.tests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  Talkstand:
+    build:
+      targets:
+        Talkstand: all
+        TalkstandTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - TalkstandTests

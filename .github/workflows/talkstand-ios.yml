@@ -1,0 +1,53 @@
+name: Talkstand iOS
+
+# Builds and tests the Talkstand iOS app (Talkstand/) on a macOS runner.
+# Path-filtered so other changes never start a Mac job.
+on:
+  push:
+    branches: ['claude/**']
+    paths:
+      - 'Talkstand/**'
+      - '.github/workflows/talkstand-ios.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: talkstand-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Build and test
+    runs-on: macos-26
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: Talkstand
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select newest Xcode
+        run: |
+          XCODE="$(ls -d /Applications/Xcode_*.app | sort -V | tail -n 1)"
+          echo "Using $XCODE"
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          xcodebuild -version
+
+      - name: Install xcodegen
+        run: command -v xcodegen || brew install xcodegen
+
+      - name: Build and test (zero warnings)
+        run: scripts/ci.sh
+
+      - name: Upload logs and results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: talkstand-build
+          path: |
+            Talkstand/build/xcodebuild.log
+            Talkstand/build/warnings.txt
+            Talkstand/build/Talkstand.xcresult
+          if-no-files-found: ignore

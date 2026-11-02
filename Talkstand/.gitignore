@@ -1,0 +1,4 @@
+build/
+Talkstand.xcodeproj/
+*.xcresult
+DerivedData/
