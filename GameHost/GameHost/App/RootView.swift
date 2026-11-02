@@ -39,8 +39,9 @@ struct RootView: View {
             switch postureProvider.posture {
             case .closed:
                 TabView(selection: $page) {
-                    TableSideView(store: store).tag(Page.table)
-                    RulesSideView(store: store).tag(Page.rules)
+                    // Room at the bottom so the page dots don't sit on Pass Turn or the rules.
+                    TableSideView(store: store).padding(.bottom, 24).tag(Page.table)
+                    RulesSideView(store: store).padding(.bottom, 24).tag(Page.rules)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .always))
                 .indexViewStyle(.page(backgroundDisplayMode: .always))
