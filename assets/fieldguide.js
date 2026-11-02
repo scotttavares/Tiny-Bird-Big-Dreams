@@ -18,6 +18,26 @@
   }, { threshold: .25 });
   document.querySelectorAll('.land').forEach(function (el) { landing.observe(el); });
 
+  // The traced outline draws itself over the photo, like a pencil going around it.
+  var trace = document.querySelector('.trace-paper svg');
+  if (trace) {
+    var lines = Array.prototype.slice.call(trace.querySelectorAll('path'));
+    lines.forEach(function (line) {
+      var length = line.getTotalLength();
+      line.style.strokeDasharray = length;
+      line.style.strokeDashoffset = length;
+    });
+    new IntersectionObserver(function (entries, watcher) {
+      if (!entries[0].isIntersecting) return;
+      watcher.disconnect();
+      lines.forEach(function (line, i) {
+        var length = line.getTotalLength();
+        line.animate([{ strokeDashoffset: length }, { strokeDashoffset: 0 }],
+          { duration: Math.max(260, length * 6), delay: 300 + i * 140, easing: 'ease-in-out', fill: 'forwards' });
+      });
+    }, { threshold: .4 }).observe(trace);
+  }
+
   var stage = document.getElementById('replay');
   if (!stage) return;
   var steps = Array.prototype.slice.call(stage.querySelectorAll('[data-step]'));
