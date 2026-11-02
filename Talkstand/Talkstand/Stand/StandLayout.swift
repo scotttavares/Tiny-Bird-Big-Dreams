@@ -55,7 +55,7 @@ struct FoldReader: ViewModifier {
         }
     }
 
-    private static func activeDivision(_ proxy: GeometryProxy) -> CGRect? {
+    nonisolated private static func activeDivision(_ proxy: GeometryProxy) -> CGRect? {
         #if TALKSTAND_DUO_SDK
         if #available(iOS 27.1, *) {
             return proxy.reservedRegions(kind: .division).first?.frame
