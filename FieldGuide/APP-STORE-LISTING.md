@@ -48,9 +48,9 @@ Field Guide works on any iPhone or iPad running iOS 26 or later, and it's at its
 
 **Privacy policy URL:** https://www.tinybirdbigdreams.com/fieldguide-privacy
 
-**Support URL:** https://www.tinybirdbigdreams.com/fieldguide-privacy
+**Support URL:** https://www.tinybirdbigdreams.com/fieldguide-support
 
-**Marketing URL:** leave empty
+**Marketing URL:** https://www.tinybirdbigdreams.com/fieldguide
 
 **Copyright:** 2026 Tiny Bird, Big Dreams
 

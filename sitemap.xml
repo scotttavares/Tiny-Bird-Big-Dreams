@@ -16,6 +16,20 @@
   </url>
 
   <url>
+    <loc>https://www.tinybirdbigdreams.com/fieldguide</loc>
+    <lastmod>2026-11-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://www.tinybirdbigdreams.com/fieldguide-support</loc>
+    <lastmod>2026-11-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
+  <url>
     <loc>https://www.tinybirdbigdreams.com/provenance</loc>
     <lastmod>2026-09-29</lastmod>
     <changefreq>monthly</changefreq>
