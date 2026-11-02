@@ -251,3 +251,6 @@ h1, h2, h3 { font-family:'Caprasimo', Georgia, serif; font-weight:400; letter-sp
 @media (prefers-reduced-motion:reduce) { .clip-window img, .clip-bar span { animation:none; } }
 .film-pile .clip > img { position:relative; }
 .film-pile .clip-window img { position:static; display:block; }
+
+.lol { position:absolute; right:-9%; top:24%; padding:10px 22px 12px; border-radius:16px; background:#FBDE8F; color:var(--forest); font:400 clamp(38px, 5vw, 58px)/1 'Permanent Marker', cursive; transform:rotate(9deg); box-shadow:6px 9px 0 rgba(0,0,0,.25); }
+@media (max-width:820px) { .lol { right:-4%; } }
