@@ -160,7 +160,7 @@ final class ReferenceAsset {
     }
 }
 
-/// Something stuck on a page, under or over the ink: a sticker, a photo, a video or a strip of tape.
+/// Something stuck on a page, under or over the ink: a sticker, a photo, a video, a strip of tape or a text box.
 /// Placed in page coordinates (`PageGeometry`); its height follows from its art.
 struct PageItem: Codable, Identifiable, Equatable, Sendable {
     enum Content: Codable, Hashable, Sendable {
@@ -172,6 +172,8 @@ struct PageItem: Codable, Identifiable, Equatable, Sendable {
         case video(String)
         /// A strip of washi tape, by index into `PageItemArt.tapes`.
         case tape(Int)
+        /// Words in a font, on a colored or clear box.
+        case text(TextBox)
     }
 
     var id: UUID
@@ -225,7 +227,16 @@ struct PageItem: Codable, Identifiable, Equatable, Sendable {
     var canBeStyled: Bool {
         switch content {
         case .photo, .video: true
-        case .sticker, .tape: false
+        case .sticker, .tape, .text: false
+        }
+    }
+
+    /// Tape and clear text boxes lie flat on the paper, with barely a shadow.
+    var liesFlat: Bool {
+        switch content {
+        case .tape: true
+        case .text(let box): box.boxColor.isClear
+        case .sticker, .photo, .video: false
         }
     }
 

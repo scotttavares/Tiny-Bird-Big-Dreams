@@ -14,6 +14,8 @@ struct PageItemTests {
             PageItem(content: .sticker("🍄"), center: CGPoint(x: 120, y: 300), width: 150, rotation: 0.1),
             PageItem(content: .photo("References/a.jpg"), center: CGPoint(x: 400, y: 500), width: 380),
             PageItem(content: .tape(2), center: CGPoint(x: 400, y: 320), width: 300, rotation: -0.2),
+            PageItem(content: .text(TextBox(text: "Hello", font: .marker, textColor: TextBox.textColors[3], boxColor: TextBox.boxColors[3])),
+                     center: CGPoint(x: 300, y: 200), width: 200),
         ]
         page.items = items
         #expect(page.items == items)

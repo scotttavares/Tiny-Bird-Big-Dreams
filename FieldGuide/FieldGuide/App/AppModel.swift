@@ -244,6 +244,7 @@ final class AppModel {
         switch content {
         case .sticker: canvas.add(content, width: 150, tilt: 0.15, at: point)
         case .tape: canvas.add(content, width: 300, tilt: 0.35, at: point)
+        case .text(let box): canvas.add(content, width: PageItemArt.startingWidth(for: box), tilt: 0.04, at: point)
         case .photo, .video: canvas.add(content, width: 380, tilt: 0.08, at: point)
         }
     }
@@ -285,7 +286,7 @@ final class AppModel {
             switch item.content {
             case .photo(let path): item.content = .photo(try imageStore.copy(path))
             case .video(let path): item.content = .video(try imageStore.copyVideo(path))
-            case .sticker, .tape: break
+            case .sticker, .tape, .text: break
             }
         } catch {
             announceOutOfSpace()
@@ -312,7 +313,7 @@ final class AppModel {
         switch item.content {
         case .photo(let path): imageStore.delete(path)
         case .video(let path): imageStore.deleteVideo(path)
-        case .sticker, .tape: break
+        case .sticker, .tape, .text: break
         }
     }
 

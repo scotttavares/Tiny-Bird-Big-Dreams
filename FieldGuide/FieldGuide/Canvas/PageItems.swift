@@ -55,6 +55,7 @@ enum PageItemArt {
         case .photo(let path): made = imageStore.image(at: path).map(picture)
         case .video(let path): made = imageStore.image(at: ImageStore.posterPath(forVideo: path)).map(picture)
         case .tape(let index): made = tape(tapes[((index % tapes.count) + tapes.count) % tapes.count])
+        case .text(let box): made = textArt(box)
         }
         if let made {
             if cache.count > 120 { cache.removeAll() }
@@ -83,10 +84,8 @@ enum PageItemArt {
             context.saveGState()
             context.translateBy(x: item.center.x, y: item.center.y)
             context.rotate(by: item.rotation)
-            let isTape: Bool
-            if case .tape = item.content { isTape = true } else { isTape = false }
-            context.setShadow(offset: CGSize(width: 0, height: isTape ? 1 : 3), blur: isTape ? 2 : 6,
-                              color: UIColor.black.withAlphaComponent(isTape ? 0.12 : 0.25).cgColor)
+            context.setShadow(offset: CGSize(width: 0, height: item.liesFlat ? 1 : 3), blur: item.liesFlat ? 2 : 6,
+                              color: UIColor.black.withAlphaComponent(item.liesFlat ? 0.12 : 0.25).cgColor)
             image.draw(in: CGRect(x: -drawn.width / 2, y: -drawn.height / 2, width: drawn.width, height: drawn.height))
             context.restoreGState()
         }
@@ -236,6 +235,7 @@ final class PageItemsLayerView: UIView {
     private final class ItemLayer {
         let layer = CALayer()
         var video: PageVideo?
+        var content: PageItem.Content?
         var frame = ItemFrame.print
         var look = ItemLook.original
     }
@@ -282,7 +282,7 @@ final class PageItemsLayerView: UIView {
             itemLayers[id] = nil
         }
         for (index, item) in shown.enumerated() {
-            if let old = itemLayers[item.id], old.frame != item.frame || old.look != item.look {
+            if let old = itemLayers[item.id], old.content != item.content || old.frame != item.frame || old.look != item.look {
                 old.video?.stop()
                 old.layer.removeFromSuperlayer()
                 itemLayers[item.id] = nil
@@ -305,14 +305,13 @@ final class PageItemsLayerView: UIView {
     private func makeLayer(for item: PageItem) -> ItemLayer {
         let entry = ItemLayer()
         entry.layer.contents = PageItemArt.image(for: item)?.cgImage
+        entry.content = item.content
         entry.frame = item.frame
         entry.look = item.look
-        let isTape: Bool
-        if case .tape = item.content { isTape = true } else { isTape = false }
         entry.layer.shadowColor = UIColor.black.cgColor
-        entry.layer.shadowOffset = CGSize(width: 0, height: isTape ? 1 : 3)
-        entry.layer.shadowRadius = isTape ? 1 : 3
-        entry.layer.shadowOpacity = isTape ? 0.12 : 0.25
+        entry.layer.shadowOffset = CGSize(width: 0, height: item.liesFlat ? 1 : 3)
+        entry.layer.shadowRadius = item.liesFlat ? 1 : 3
+        entry.layer.shadowOpacity = item.liesFlat ? 0.12 : 0.25
         if case .video(let path) = item.content {
             let video = PageVideo(url: PageItemArt.imageStore.url(for: path), look: item.look)
             entry.layer.addSublayer(video.layer)
@@ -490,6 +489,7 @@ struct PageItemsEditor: View {
     @State private var magnification: CGFloat = 1
     @State private var turn: Angle = .zero
     @State private var playingVideo: URL?
+    @State private var editingText: PageItem?
 
     private var store: CanvasStore { model.canvas }
     /// Screen points per page point.
@@ -520,6 +520,11 @@ struct PageItemsEditor: View {
         .overlay(alignment: .top) { controls.padding(8) }
         .fullScreenCover(isPresented: Binding { playingVideo != nil } set: { if !$0 { playingVideo = nil } }) {
             if let playingVideo { ClipPlayer(url: playingVideo) }
+        }
+        .sheet(item: $editingText) { item in
+            if case .text(let box) = item.content {
+                TextBoxEditor(title: "Edit Text", box: box) { save($0, to: item) }
+            }
         }
         .overlay(alignment: .bottom) {
             Text(selected == nil ? "Tap a sticker or photo to move it" : "Drag to move · Pinch to resize · Twist to turn")
@@ -552,6 +557,10 @@ struct PageItemsEditor: View {
             }
             if let selected, case .video(let path) = selected.content {
                 Button("Play with Sound", systemImage: "play.fill") { playingVideo = model.imageStore.url(for: path) }
+                    .labelStyle(.iconOnly)
+            }
+            if let selected, case .text = selected.content {
+                Button("Edit Text", systemImage: "character.cursor.ibeam") { editingText = selected }
                     .labelStyle(.iconOnly)
             }
             Button("Done") { store.endArranging() }
@@ -588,6 +597,15 @@ struct PageItemsEditor: View {
             store.update(changed)
             store.commitItems()
         }
+    }
+
+    /// Keeps the letters the same size on the page, whatever changed.
+    private func save(_ box: TextBox, to item: PageItem) {
+        var changed = item
+        changed.width = PageItemArt.width(of: item, afterChangingTo: box)
+        changed.content = .text(box)
+        store.update(changed)
+        store.commitItems()
     }
 
     /// Moves the item one way through the stack, where the drawing counts as a layer.
@@ -689,6 +707,8 @@ struct StickerPicker: View {
     @State private var isAddingVideo = false
     @State private var videoFailed = false
     @State private var isRecordingVideo = false
+    @State private var isWritingText = false
+    @State private var addedText = false
 
     var body: some View {
         NavigationStack {
@@ -741,6 +761,17 @@ struct StickerPicker: View {
                         Text(videoFailed ? "That video couldn't be added." : "Videos are up to 15 seconds. Longer ones are trimmed to their first 15.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
+                    }
+
+                    section("Text") {
+                        Button {
+                            isWritingText = true
+                        } label: {
+                            Label("Add Text Box", systemImage: "textformat")
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(Theme.inkText)
                     }
 
                     section("Stickers") {
@@ -805,6 +836,15 @@ struct StickerPicker: View {
         }
         .onChange(of: isShowingCamera) { _, showing in
             if !showing && addedFromCamera { dismiss() }
+        }
+        .sheet(isPresented: $isWritingText) {
+            TextBoxEditor(title: "Add Text Box") { box in
+                model.addItem(.text(box))
+                addedText = true
+            }
+        }
+        .onChange(of: isWritingText) { _, writing in
+            if !writing && addedText { dismiss() }
         }
         .fullScreenCover(isPresented: $isRecordingVideo) {
             VideoRecorder { url in

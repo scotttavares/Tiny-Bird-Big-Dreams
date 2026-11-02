@@ -60,6 +60,32 @@ struct FoldFeatureTests {
         #expect(rest.burst == nil)
     }
 
+    @Test func aTextBoxGrowsWithItsWordsAndKeepsItsLetterSize() {
+        let short = TextBox(text: "Owl")
+        let long = TextBox(text: "A very long line about an owl we saw at the edge of the field")
+        #expect(PageItemArt.textArt(long).size.height > PageItemArt.textArt(short).size.height)
+        let item = PageItem(content: .text(short), center: .zero, width: PageItemArt.startingWidth(for: short))
+        #expect(PageItemArt.width(of: item, afterChangingTo: short) == item.width)
+        #expect(PageItemArt.width(of: item, afterChangingTo: long) > item.width)
+    }
+
+    @Test func aTextBoxCanBeClearOrColored() throws {
+        var box = TextBox(text: "Owl")
+        #expect(box.boxColor.isClear)
+        #expect(PageItem(content: .text(box), center: .zero, width: 100).liesFlat)
+        let clear = try #require(PageItemArt.textArt(box).pngData())
+        box.boxColor = TextBox.boxColors[3]
+        #expect(!PageItem(content: .text(box), center: .zero, width: 100).liesFlat)
+        #expect(try #require(PageItemArt.textArt(box).pngData()) != clear)
+    }
+
+    @Test func everyTextBoxFontIsInstalled() {
+        for font in TextBoxFont.allCases {
+            #expect(font.uiFont(size: 20).pointSize == 20)
+        }
+        #expect(TextBoxFont.marker.uiFont(size: 20).fontName != TextBoxFont.serif.uiFont(size: 20).fontName)
+    }
+
     @Test func aReplayDrawsItsItems() {
         let item = sticker()
         let page = ExportPage(title: "Replay", fieldDate: .now, locationName: "", tags: [], drawing: PKDrawing(), paperStyle: .blank, items: [item])
