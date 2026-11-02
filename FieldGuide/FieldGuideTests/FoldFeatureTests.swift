@@ -86,6 +86,34 @@ struct FoldFeatureTests {
         #expect(TextBoxFont.marker.uiFont(size: 20).fontName != TextBoxFont.serif.uiFont(size: 20).fontName)
     }
 
+    @Test func everyEffectStartsAwayAndEndsExactlyAtRest() {
+        for effect in ReplayEffect.allCases {
+            let start = SketchReplay.entrancePose(progress: 0.05, effect: effect)
+            #expect(start != ReplayEntrancePose(scale: 1, spin: 0, opacity: 1, burst: nil))
+            #expect(SketchReplay.entrancePose(progress: 1, effect: effect) == ReplayEntrancePose(scale: 1, spin: 0, opacity: 1, burst: nil))
+            let late = SketchReplay.entrancePose(progress: 0.999, effect: effect)
+            #expect(abs(late.scale - 1) < 0.01)
+            #expect(abs(late.dx) < 5)
+            #expect(abs(late.dy) < 5)
+        }
+    }
+
+    @Test func itemsTakeTurnsWithTheEffects() {
+        let items = ReplayEffect.allCases.map { _ in sticker() }
+        let frames = SketchReplay.timeline(strokeDates: [], items: items)
+        let used = Set(frames.filter { $0.entering != nil }.map(\.effect.rawValue))
+        #expect(used.count == ReplayEffect.allCases.count)
+    }
+
+    @Test func everyEffectDraws() {
+        let item = sticker()
+        let page = ExportPage(title: "Replay", fieldDate: .now, locationName: "", tags: [], drawing: PKDrawing(), paperStyle: .blank, items: [item])
+        for effect in ReplayEffect.allCases {
+            let frame = ReplayFrame(strokes: 0, shown: [], entering: item.id, progress: 0.8, effect: effect)
+            #expect(SketchReplay.image(page, frame: frame, width: 200).size.width == 200)
+        }
+    }
+
     @Test func aReplayDrawsItsItems() {
         let item = sticker()
         let page = ExportPage(title: "Replay", fieldDate: .now, locationName: "", tags: [], drawing: PKDrawing(), paperStyle: .blank, items: [item])

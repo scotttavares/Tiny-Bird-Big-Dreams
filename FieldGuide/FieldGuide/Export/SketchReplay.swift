@@ -10,6 +10,24 @@ struct ReplayFrame: Equatable, Sendable {
     var entering: UUID?
     /// How far through its entrance the entering item is, 0 to 1.
     var progress: Double = 0
+    var effect = ReplayEffect.slam
+}
+
+/// The ways an item can arrive. Items take turns, so a busy page stays surprising.
+enum ReplayEffect: Int, CaseIterable, Sendable {
+    case slam, whirl, swoopLeft, bounce, pop, swoopRight
+
+    /// What flies off an item as it arrives.
+    enum Burst: Sendable {
+        case rays, confetti
+    }
+
+    var burst: Burst {
+        switch self {
+        case .slam, .bounce: .rays
+        case .whirl, .pop, .swoopLeft, .swoopRight: .confetti
+        }
+    }
 }
 
 /// How an item looks partway through its entrance.
@@ -19,10 +37,13 @@ struct ReplayEntrancePose: Equatable, Sendable {
     var opacity: Double
     /// How far the burst around a landing has spread, 0 to 1; nil before it lands and after it fades.
     var burst: Double?
+    /// How far from its resting place it is, in page points.
+    var dx = 0.0
+    var dy = 0.0
 }
 
-/// A page rebuilt stroke by stroke, with stickers, photos, videos and tape slamming down between
-/// the strokes. Strokes keep the order they were made and the time they were made, so items only
+/// A page rebuilt stroke by stroke, with stickers, photos, videos, tape and text making an entrance
+/// between the strokes. Strokes keep the order they were made and the time they were made, so items only
 /// have to remember when they were added; anything erased or removed is simply gone from the replay.
 @MainActor
 enum SketchReplay {
@@ -65,7 +86,7 @@ enum SketchReplay {
         var shown: Set<UUID> = []
         var strokes = 0
         var pending = steps(strokeCount: strokeCount, maxSteps: maxSteps)[...]
-        for arrival in arrivals {
+        for (index, arrival) in arrivals.enumerated() {
             while let next = pending.first, next <= arrival.strokes {
                 if next > strokes {
                     strokes = next
@@ -76,7 +97,8 @@ enum SketchReplay {
             strokes = max(strokes, arrival.strokes)
             for step in 1...entrance {
                 frames.append(ReplayFrame(strokes: strokes, shown: shown, entering: arrival.item.id,
-                                          progress: Double(step) / Double(entrance)))
+                                          progress: Double(step) / Double(entrance),
+                                          effect: ReplayEffect.allCases[index % ReplayEffect.allCases.count]))
             }
             shown.insert(arrival.item.id)
         }
@@ -94,10 +116,23 @@ enum SketchReplay {
         timeline(strokeDates: page.drawing.strokes.map(\.path.creationDate), items: page.items)
     }
 
-    /// Falls from huge while spinning, squashes as it hits, then bounces to rest.
-    nonisolated static func entrancePose(progress: Double) -> ReplayEntrancePose {
-        let landing = 0.55
+    /// How an item looks partway through `effect`. Every effect ends exactly at rest.
+    nonisolated static func entrancePose(progress: Double, effect: ReplayEffect = .slam) -> ReplayEntrancePose {
         let progress = min(max(progress, 0), 1)
+        guard progress < 1 else { return ReplayEntrancePose(scale: 1, spin: 0, opacity: 1, burst: nil) }
+        switch effect {
+        case .slam: return slam(progress)
+        case .whirl: return whirl(progress)
+        case .swoopLeft: return swoop(progress, from: -1)
+        case .swoopRight: return swoop(progress, from: 1)
+        case .bounce: return bounce(progress)
+        case .pop: return pop(progress)
+        }
+    }
+
+    /// Falls from huge while spinning, squashes as it hits, then bounces to rest.
+    private nonisolated static func slam(_ progress: Double) -> ReplayEntrancePose {
+        let landing = 0.55
         if progress < landing {
             let fall = progress / landing
             return ReplayEntrancePose(scale: 3.2 - 2.34 * fall * fall, spin: 0.6 * (1 - fall * fall),
@@ -109,11 +144,56 @@ enum SketchReplay {
                                   opacity: 1, burst: settle < 0.7 ? settle / 0.7 : nil)
     }
 
-    private static func drawEntrance(of item: PageItem, progress: Double, in context: CGContext) {
-        let pose = entrancePose(progress: progress)
+    /// Spirals in from nothing, spinning twice, and throws confetti as it stops.
+    private nonisolated static func whirl(_ progress: Double) -> ReplayEntrancePose {
+        let eased = 1 - pow(1 - progress, 3)
+        let left = 1 - eased
+        return ReplayEntrancePose(scale: 0.15 + 0.85 * eased, spin: -4 * .pi * left, opacity: min(1, progress * 6),
+                                  burst: progress > 0.7 ? (progress - 0.7) / 0.3 : nil,
+                                  dx: cos(left * 5 * .pi) * 280 * left, dy: sin(left * 5 * .pi) * 280 * left)
+    }
+
+    /// Flies in from the side, overshoots, and leans back into place.
+    private nonisolated static func swoop(_ progress: Double, from side: Double) -> ReplayEntrancePose {
+        let back = 1.7
+        let time = progress - 1
+        let left = 1 - (1 + (back + 1) * time * time * time + back * time * time)
+        return ReplayEntrancePose(scale: 1 + 0.25 * max(left, 0), spin: side * 0.5 * left, opacity: 1,
+                                  burst: progress > 0.6 ? (progress - 0.6) / 0.4 : nil,
+                                  dx: side * 1100 * left, dy: -140 * sin(.pi * progress))
+    }
+
+    /// Falls from above the page and bounces twice.
+    private nonisolated static func bounce(_ progress: Double) -> ReplayEntrancePose {
+        let wobble = 0.2 * sin(progress * 10) * (1 - progress)
+        if progress < 0.4 {
+            let fall = progress / 0.4
+            return ReplayEntrancePose(scale: 1, spin: wobble, opacity: 1, burst: nil, dy: -1300 * (1 - fall * fall))
+        }
+        let (start, length, height) = progress < 0.7 ? (0.4, 0.3, 220.0) : (0.7, 0.3, 70.0)
+        let hop = (progress - start) / length
+        return ReplayEntrancePose(scale: 1, spin: wobble, opacity: 1, burst: progress < 0.75 ? (progress - 0.4) / 0.35 : nil,
+                                  dy: -height * 4 * hop * (1 - hop))
+    }
+
+    /// Balloons up from nothing, then jiggles down to size.
+    private nonisolated static func pop(_ progress: Double) -> ReplayEntrancePose {
+        let peak = 0.45
+        if progress < peak {
+            return ReplayEntrancePose(scale: 1.5 * progress / peak, spin: 0, opacity: min(1, progress * 8), burst: nil)
+        }
+        let settle = (progress - peak) / (1 - peak)
+        return ReplayEntrancePose(scale: 1 + 0.5 * cos(settle * 3 * .pi) * (1 - settle), spin: 0, opacity: 1,
+                                  burst: settle < 0.8 ? settle / 0.8 : nil)
+    }
+
+    private static func drawEntrance(of item: PageItem, frame: ReplayFrame, in context: CGContext) {
+        let pose = entrancePose(progress: frame.progress, effect: frame.effect)
         var moved = item
         moved.width *= CGFloat(pose.scale)
         moved.rotation += pose.spin
+        moved.center.x += CGFloat(pose.dx)
+        moved.center.y += CGFloat(pose.dy)
         context.saveGState()
         context.setAlpha(CGFloat(pose.opacity))
         PageItemArt.draw([moved], in: context)
@@ -121,8 +201,16 @@ enum SketchReplay {
 
         guard let burst = pose.burst.map({ CGFloat($0) }) else { return }
         let size = PageItemArt.size(of: item)
-        let radius: CGFloat = max(size.width, size.height) / 2 * (1.05 + 0.4 * burst)
-        let length: CGFloat = 46 * (1 - burst)
+        let radius: CGFloat = max(size.width, size.height) / 2
+        switch frame.effect.burst {
+        case .rays: drawRays(around: item.center, radius: radius, burst: burst, in: context)
+        case .confetti: drawConfetti(around: item.center, radius: radius, burst: burst, in: context)
+        }
+    }
+
+    private static func drawRays(around center: CGPoint, radius: CGFloat, burst: CGFloat, in context: CGContext) {
+        let inner: CGFloat = radius * (1.05 + 0.4 * burst)
+        let outer: CGFloat = inner + 46 * (1 - burst)
         context.saveGState()
         context.setStrokeColor(UIColor(red: 0.77, green: 0.33, blue: 0.17, alpha: 1 - burst).cgColor)
         context.setLineWidth(9)
@@ -130,11 +218,31 @@ enum SketchReplay {
         for ray in 0..<12 {
             let angle = Double(ray) / 12 * 2 * .pi
             let direction = CGVector(dx: CGFloat(cos(angle)), dy: CGFloat(sin(angle)))
-            context.move(to: CGPoint(x: item.center.x + direction.dx * radius, y: item.center.y + direction.dy * radius))
-            context.addLine(to: CGPoint(x: item.center.x + direction.dx * (radius + length),
-                                        y: item.center.y + direction.dy * (radius + length)))
+            context.move(to: CGPoint(x: center.x + direction.dx * inner, y: center.y + direction.dy * inner))
+            context.addLine(to: CGPoint(x: center.x + direction.dx * outer, y: center.y + direction.dy * outer))
         }
         context.strokePath()
+        context.restoreGState()
+    }
+
+    /// Bits of colored paper that fly out and fall.
+    private static func drawConfetti(around center: CGPoint, radius: CGFloat, burst: CGFloat, in context: CGContext) {
+        let colors = InkSwatch.palette.map(\.uiColor) + PageItemArt.tapes.map(\.color)
+        let reach: CGFloat = radius * (0.9 + 0.9 * burst)
+        context.saveGState()
+        context.setAlpha(1 - burst * burst)
+        for piece in 0..<18 {
+            let angle = Double(piece) * 2.4
+            let spread = CGFloat(0.7 + 0.3 * sin(Double(piece) * 1.7))
+            let x: CGFloat = center.x + CGFloat(cos(angle)) * reach * spread
+            let y: CGFloat = center.y + CGFloat(sin(angle)) * reach * spread + 140 * burst * burst
+            context.saveGState()
+            context.translateBy(x: x, y: y)
+            context.rotate(by: angle + Double(burst) * 6)
+            context.setFillColor(colors[piece % colors.count].cgColor)
+            context.fill(CGRect(x: -9, y: -5, width: 18, height: 10))
+            context.restoreGState()
+        }
         context.restoreGState()
     }
 
@@ -143,7 +251,7 @@ enum SketchReplay {
         return PageRenderer.sketchImage(
             drawing: PKDrawing(strokes: page.drawing.strokes.prefix(frame.strokes)), paperStyle: page.paperStyle,
             paperTint: page.paperTint, items: page.items.filter { frame.shown.contains($0.id) }, width: width, scale: 1,
-            overlay: entering.map { item in { drawEntrance(of: item, progress: frame.progress, in: $0) } }
+            overlay: entering.map { item in { drawEntrance(of: item, frame: frame, in: $0) } }
         )
     }
 
