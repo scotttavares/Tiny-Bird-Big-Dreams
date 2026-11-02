@@ -21,7 +21,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin" />
 <link href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Caveat:wght@700&family=Permanent+Marker&family=Special+Elite&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="assets/fieldguide.css?v=2" />
+<link rel="stylesheet" href="assets/fieldguide.css?v=3" />
 </head>
 <body>
 
@@ -128,12 +128,30 @@
       <div class="band-copy">
         <span class="eyebrow">Drawing</span>
         <h2>Scribble over the good stuff.</h2>
-        <p class="hand">four drawing tools, eight inks</p>
-        <p>Pen, pencil, marker and chalk, on paper in your choice of color and pattern. Draw on the page, or right across your photos. Two fingers to undo, three to redo.</p>
+        <p class="hand">four drawing tools, any ink color</p>
+        <p>Pen, pencil, marker and chalk, in eight field inks or any custom color, at the width you like. Pick your paper color and pattern: blank, lined, dotted, grid or blueprint. Draw on the page or right across your photos. Two fingers to undo, three to redo.</p>
       </div>
       <div class="scribble-art">
         <img class="scribble-page land" data-turn="3deg" src="/assets/fieldguide/page-cute.webp" alt="The word Cute painted across a photo of a brick house" loading="lazy" />
         <img class="tools land" data-turn="-2deg" src="/assets/fieldguide/tools.webp" alt="The drawing tool bar" loading="lazy" />
+      </div>
+    </div>
+  </section>
+
+  <section class="band trace-band">
+    <div class="wrap band-grid">
+      <div class="band-copy">
+        <span class="eyebrow">Camera background</span>
+        <h2>Snap it. Trace it.</h2>
+        <p class="hand">your camera, behind your paper</p>
+        <p>Take a photo and it sits faintly behind your page, like tracing paper over the real thing. Sketch that butterfly before it flies, then turn the photo off and keep your drawing.</p>
+      </div>
+      <div class="trace-art">
+        <div class="trace-paper land" data-turn="2deg">
+          <img src="/assets/fieldguide/dessert.webp" alt="A photo showing faintly behind the paper" loading="lazy" />
+          <svg viewBox="0 0 400 520" aria-hidden="true"><g fill="none" stroke="#6B4570" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"><path d="M92 214C70 300 110 420 200 432C300 442 340 320 316 214" /><path d="M86 200C150 176 260 176 322 202" /><path d="M130 300C160 240 250 236 276 296C230 322 170 322 130 300Z" /></g></svg>
+        </div>
+        <img class="trace-cam land" data-turn="-9deg" src="/assets/fieldguide/s-camera.webp" alt="" loading="lazy" />
       </div>
     </div>
   </section>
@@ -155,6 +173,40 @@
     </div>
   </section>
 
+  <section class="band share-band">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Sharing</span>
+        <h2>Show it off.</h2>
+        <p class="hand">four ways to send your good stuff</p>
+      </div>
+      <div class="share-grid">
+        <article class="share-card land" data-turn="-1.5deg"><img src="/assets/fieldguide/page-summer.webp" alt="" loading="lazy" /><h3>Replay video</h3><p>Send the whole show, with every stroke and entrance.</p></article>
+        <article class="share-card land" data-turn="1.5deg"><img src="/assets/fieldguide/page-cute.webp" alt="" loading="lazy" /><h3>Page as an image</h3><p>One finished page, ready to post or text.</p></article>
+        <article class="share-card land" data-turn="-1deg"><div class="spread"><img src="/assets/fieldguide/page-summer.webp" alt="" loading="lazy" /><img src="/assets/fieldguide/page-cute.webp" alt="" loading="lazy" /></div><h3>Both pages as an image</h3><p>Your drawing and your reference, side by side.</p></article>
+        <article class="share-card land" data-turn="1deg"><div class="stack"><img src="/assets/fieldguide/page-cute.webp" alt="" loading="lazy" /><img src="/assets/fieldguide/page-summer.webp" alt="" loading="lazy" /></div><h3>Notebook as a PDF</h3><p>The whole notebook in one file, to print or keep.</p></article>
+      </div>
+      <p class="share-note">Tap Show Sketch or half-fold your phone to show a page to someone right in front of you.</p>
+    </div>
+  </section>
+
+  <section class="band cloud-band">
+    <div class="wrap band-grid flip">
+      <div class="band-copy">
+        <span class="eyebrow">iCloud</span>
+        <h2>Safe in your iCloud.</h2>
+        <p class="hand">new phone? your notebooks follow you</p>
+        <p>When you’re signed in to iCloud, your notebooks, photos, videos and voice notes back up to your own private storage and sync to your other devices. Only you can see them, and there’s no account to make.</p>
+      </div>
+      <div class="cloud-art" aria-hidden="true">
+        <svg viewBox="0 0 520 300"><path fill="#FBF6EA" d="M130 262C60 262 16 216 22 162C28 112 72 84 118 92C138 34 198 10 256 28C298 42 326 72 334 110C392 86 462 112 482 170C502 232 456 262 398 262Z" /></svg>
+        <img class="c1 land" data-turn="-8deg" src="/assets/fieldguide/page-summer.webp" alt="" loading="lazy" />
+        <img class="c2 land" data-turn="6deg" src="/assets/fieldguide/page-cute.webp" alt="" loading="lazy" />
+        <img class="c3 land" data-turn="9deg" src="/assets/fieldguide/s-star.webp" alt="" loading="lazy" />
+      </div>
+    </div>
+  </section>
+
   <section class="more">
     <div class="wrap">
       <div class="section-head">
@@ -162,9 +214,12 @@
         <h2>And that’s just the cover.</h2>
       </div>
       <div class="grid">
-        <article class="feature"><img src="/assets/fieldguide/s-star.webp" alt="" loading="lazy" /><h3>Remember the moment</h3><p>Voice notes, weather and field notes on every page.</p></article>
-        <article class="feature"><img src="/assets/fieldguide/s-map.webp" alt="" loading="lazy" /><h3>Pages that turn</h3><p>Pages turn and curl under your finger, just like paper.</p></article>
-        <article class="feature"><img src="/assets/fieldguide/s-daisy.webp" alt="" loading="lazy" /><h3>Make it yours</h3><p>Pick a notebook cover, then choose an app icon to match.</p></article>
+        <article class="feature"><img src="/assets/fieldguide/s-star.webp" alt="" loading="lazy" /><h3>Voice notes</h3><p>Record the birdsong, the waves or your own thoughts right on the page.</p></article>
+        <article class="feature"><img src="/assets/fieldguide/s-rainbow.webp" alt="" loading="lazy" /><h3>Weather and field notes</h3><p>Log the sky, the date, the place and your notes, and add tags to find it all later.</p></article>
+        <article class="feature"><img src="/assets/fieldguide/s-map.webp" alt="" loading="lazy" /><h3>Pages that turn</h3><p>Pages curl under your finger, and a gallery shows a whole notebook at a glance.</p></article>
+        <article class="feature"><img src="/assets/fieldguide/s-tree.webp" alt="" loading="lazy" /><h3>Seven notebook covers</h3><p>From Wild Pines to Kraft Memo, with your notebook’s name right on the front.</p></article>
+        <article class="feature"><img src="/assets/fieldguide/s-daisy.webp" alt="" loading="lazy" /><h3>Four app icons</h3><p>Pick the color you like best for your home screen.</p></article>
+        <article class="feature"><img src="/assets/fieldguide/s-frog.webp" alt="" loading="lazy" /><h3>One-tap new page</h3><p>Add a widget to your Home Screen or Lock Screen and start a page right away.</p></article>
       </div>
     </div>
   </section>
@@ -190,10 +245,10 @@
       <span class="eyebrow">iPhone Duo</span>
       <h2>Made for the fold.</h2>
       <ul>
-        <li>Draw on the right and keep your reference on the left</li>
+        <li>Draw on the right, with a photo, the live camera, your last page or notes on the left</li>
         <li>Drag photos and stickers across the fold to copy them</li>
         <li>Half-fold it like a tent to show off your sketch</li>
-        <li>Play the drawing game together, one on each side</li>
+        <li>Play the timed drawing game together, one on each side</li>
         <li>Close the phone and the book closes too</li>
       </ul>
     </div>
@@ -203,7 +258,7 @@
     <div class="wrap">
       <span class="eyebrow">Private by design</span>
       <h2>Your notebooks are yours.</h2>
-      <p>No accounts, no ads, no analytics and no tracking. We never receive your sketches, photos, videos, notes or recordings. <a href="/fieldguide-privacy">Read the privacy policy</a></p>
+      <p>No accounts, no ads, no analytics and no tracking. Your work stays on your devices and in your own iCloud, and we never receive any of it. <a href="/fieldguide-privacy">Read the privacy policy</a></p>
     </div>
   </section>
 
