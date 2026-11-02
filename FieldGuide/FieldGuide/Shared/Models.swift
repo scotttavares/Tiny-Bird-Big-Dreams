@@ -160,7 +160,7 @@ final class ReferenceAsset {
     }
 }
 
-/// Something stuck on a page, under or over the ink: a sticker, a photo, a video or a strip of tape.
+/// Something stuck on a page, under or over the ink: a sticker, a photo, a video, a strip of tape or a text box.
 /// Placed in page coordinates (`PageGeometry`); its height follows from its art.
 struct PageItem: Codable, Identifiable, Equatable, Sendable {
     enum Content: Codable, Hashable, Sendable {
@@ -172,6 +172,8 @@ struct PageItem: Codable, Identifiable, Equatable, Sendable {
         case video(String)
         /// A strip of washi tape, by index into `PageItemArt.tapes`.
         case tape(Int)
+        /// Words in a font, on a colored or clear box.
+        case text(TextBox)
     }
 
     var id: UUID
@@ -186,9 +188,12 @@ struct PageItem: Codable, Identifiable, Equatable, Sendable {
     var frame = ItemFrame.print
     /// The color treatment of a photo or video.
     var look = ItemLook.original
+    /// When it went on the page, so a replay can bring it in at the right moment. Items from
+    /// before this was recorded have none.
+    var addedAt: Date?
 
     init(id: UUID = UUID(), content: Content, center: CGPoint, width: CGFloat, rotation: Double = 0, overInk: Bool = false,
-         frame: ItemFrame = .print, look: ItemLook = .original) {
+         frame: ItemFrame = .print, look: ItemLook = .original, addedAt: Date? = nil) {
         self.id = id
         self.content = content
         self.center = center
@@ -197,10 +202,11 @@ struct PageItem: Codable, Identifiable, Equatable, Sendable {
         self.overInk = overInk
         self.frame = frame
         self.look = look
+        self.addedAt = addedAt
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, content, center, width, rotation, overInk, frame, look
+        case id, content, center, width, rotation, overInk, frame, look, addedAt
     }
 
     /// Pages saved before items could sit over the ink have no `overInk`; they stay under it.
@@ -214,13 +220,23 @@ struct PageItem: Codable, Identifiable, Equatable, Sendable {
         overInk = try container.decodeIfPresent(Bool.self, forKey: .overInk) ?? false
         frame = try container.decodeIfPresent(ItemFrame.self, forKey: .frame) ?? .print
         look = try container.decodeIfPresent(ItemLook.self, forKey: .look) ?? .original
+        addedAt = try container.decodeIfPresent(Date.self, forKey: .addedAt)
     }
 
     /// Photos and videos can change their frame and color.
     var canBeStyled: Bool {
         switch content {
         case .photo, .video: true
-        case .sticker, .tape: false
+        case .sticker, .tape, .text: false
+        }
+    }
+
+    /// Tape and clear text boxes lie flat on the paper, with barely a shadow.
+    var liesFlat: Bool {
+        switch content {
+        case .tape: true
+        case .text(let box): box.boxColor.isClear
+        case .sticker, .photo, .video: false
         }
     }
 

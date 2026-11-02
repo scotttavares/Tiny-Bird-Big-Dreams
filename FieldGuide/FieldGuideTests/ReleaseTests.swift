@@ -36,5 +36,6 @@ struct ReleaseTests {
         let item = try JSONDecoder().decode(PageItem.self, from: Data(saved.utf8))
         #expect(item.frame == .print)
         #expect(item.look == .original)
+        #expect(item.addedAt == nil)
     }
 }

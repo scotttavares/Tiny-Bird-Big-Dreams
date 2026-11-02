@@ -202,7 +202,8 @@ final class CanvasStore {
             center: point ?? CGPoint(x: page.width / 2 + .random(in: -60...60), y: page.height / 2 + .random(in: -80...80)),
             width: width,
             rotation: tilt == 0 ? 0 : .random(in: -tilt...tilt),
-            overInk: true
+            overInk: true,
+            addedAt: .now
         )
         items.append(item)
         commitItems()
