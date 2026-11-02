@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import UIKit
 @testable import FieldGuide
 
 @MainActor
@@ -13,6 +14,21 @@ struct ReleaseTests {
 
     @Test func theAppShipsAPrivacyManifest() {
         #expect(Bundle.main.url(forResource: "PrivacyInfo", withExtension: "xcprivacy") != nil)
+    }
+
+    @Test func everyAppIconChoiceShipsWithTheApp() throws {
+        let icons = try #require(Bundle.main.object(forInfoDictionaryKey: "CFBundleIcons") as? [String: Any])
+        let alternates = try #require(icons["CFBundleAlternateIcons"] as? [String: Any])
+        #expect(Set(alternates.keys) == Set(AppIconChoice.allCases.compactMap(\.iconName)))
+        for choice in AppIconChoice.allCases {
+            #expect(UIImage(named: choice.previewName) != nil)
+        }
+    }
+
+    @Test func anUnknownAppIconFallsBackToTheDefault() {
+        #expect(AppIconChoice.current(alternateIconName: nil) == .ochre)
+        #expect(AppIconChoice.current(alternateIconName: "AppIcon-Rust") == .rust)
+        #expect(AppIconChoice.current(alternateIconName: "Retired") == .ochre)
     }
 
     @Test func itemsSavedBeforeFramesStillOpen() throws {

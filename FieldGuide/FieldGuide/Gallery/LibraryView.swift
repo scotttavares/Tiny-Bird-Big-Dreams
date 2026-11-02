@@ -13,6 +13,7 @@ struct LibraryView: View {
     @State private var isCreating = false
     @State private var newTitle = ""
     @State private var choosingCover: Notebook?
+    @State private var isShowingAppIcons = false
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -49,6 +50,9 @@ struct LibraryView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }
                 }
+                ToolbarItem(placement: .secondaryAction) {
+                    Button("App Icon", systemImage: "app.badge") { isShowingAppIcons = true }
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button("New Notebook", systemImage: "plus") {
                         newTitle = ""
@@ -69,6 +73,9 @@ struct LibraryView: View {
             }
             .sheet(item: $choosingCover) { notebook in
                 CoverPickerSheet(model: model, notebook: notebook)
+            }
+            .sheet(isPresented: $isShowingAppIcons) {
+                AppIconPickerSheet()
             }
             .alert("Rename Notebook", isPresented: renameBinding) {
                 TextField("Title", text: $renameText)
