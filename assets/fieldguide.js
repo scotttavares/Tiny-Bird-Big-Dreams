@@ -18,6 +18,26 @@
   }, { threshold: .25 });
   document.querySelectorAll('.land').forEach(function (el) { landing.observe(el); });
 
+  // The traced outline draws itself over the photo, like a pencil going around it.
+  var trace = document.querySelector('.trace-paper svg');
+  if (trace) {
+    var lines = Array.prototype.slice.call(trace.querySelectorAll('path'));
+    lines.forEach(function (line) {
+      var length = line.getTotalLength();
+      line.style.strokeDasharray = length;
+      line.style.strokeDashoffset = length;
+    });
+    new IntersectionObserver(function (entries, watcher) {
+      if (!entries[0].isIntersecting) return;
+      watcher.disconnect();
+      lines.forEach(function (line, i) {
+        var length = line.getTotalLength();
+        line.animate([{ strokeDashoffset: length }, { strokeDashoffset: 0 }],
+          { duration: Math.max(260, length * 6), delay: 300 + i * 140, easing: 'ease-in-out', fill: 'forwards' });
+      });
+    }, { threshold: .4 }).observe(trace);
+  }
+
   var stage = document.getElementById('replay');
   if (!stage) return;
   var steps = Array.prototype.slice.call(stage.querySelectorAll('[data-step]'));
@@ -115,6 +135,42 @@
     return motion.finished;
   }
 
+  var shareBits = Array.prototype.slice.call(stage.querySelectorAll('[data-share]'));
+  var dim = stage.querySelector('.share-dim');
+  var button = stage.querySelector('.share-btn');
+  var messages = Array.prototype.slice.call(stage.querySelectorAll('.msg'));
+  var hearts = Array.prototype.slice.call(stage.querySelectorAll('.heart'));
+
+  function show(el, frames, ms) {
+    return el.animate(frames, { duration: ms, easing: 'ease-out', fill: 'forwards' }).finished;
+  }
+
+  // The finished page goes out as a video, and the family chimes in.
+  function share() {
+    label.textContent = 'share with family';
+    return show(button, [{ opacity: 0, transform: 'translateX(-50%) scale(0)' }, { opacity: 1, transform: 'translateX(-50%) scale(1.15)', offset: .7 }, { opacity: 1, transform: 'translateX(-50%) scale(1)' }], 420)
+      .then(function () { return pause(450); })
+      .then(function () { return show(button, [{ opacity: 1, transform: 'translateX(-50%) scale(1)' }, { opacity: 1, transform: 'translateX(-50%) scale(.88)', offset: .4 }, { opacity: 0, transform: 'translateX(-50%) scale(1.2)' }], 380); })
+      .then(function () { return show(dim, [{ opacity: 0 }, { opacity: 1 }], 300); })
+      .then(function () {
+        var chain = Promise.resolve();
+        messages.forEach(function (msg, i) {
+          chain = chain.then(function () {
+            return show(msg, [{ opacity: 0, transform: 'translateY(24px) scale(.9)' }, { opacity: 1, transform: 'none' }], 340);
+          }).then(function () { return pause(i === 0 ? 650 : 480); });
+        });
+        return chain;
+      })
+      .then(function () {
+        hearts.forEach(function (heart, i) {
+          heart.animate([{ opacity: 0, transform: 'translateY(0) scale(.6)' }, { opacity: 1, transform: 'translateY(-60px) scale(1.2)', offset: .3 }, { opacity: 0, transform: 'translateY(-200px) scale(1)' }],
+            { duration: 1600, delay: i * 180, easing: 'ease-out' });
+        });
+        return pause(2600);
+      })
+      .then(function () { return Promise.all(shareBits.map(function (el) { return show(el, [{ opacity: getComputedStyle(el).opacity }, { opacity: 0 }], 300); })); });
+  }
+
   function reset() {
     label.textContent = 'replay';
     stage.getAnimations({ subtree: true }).forEach(function (a) { a.cancel(); });
@@ -136,7 +192,7 @@
         return land(el);
       }).then(function () { return pause(140); });
     });
-    chain.then(function () { label.textContent = 'tada'; return pause(2800); }).then(run);
+    chain.then(function () { label.textContent = 'tada'; return pause(1400); }).then(share).then(run);
   }
   run();
 })();

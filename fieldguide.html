@@ -4,15 +4,15 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Field Guide: Sketch Journal for iPhone Duo — Tiny Bird, Big Dreams</title>
-<meta name="description" content="A sketch journal made for the fold. Draw on two-page spreads, stick down photos, videos and stickers, and replay your page like a tiny show. Coming soon to the App Store." />
+<meta name="description" content="A sketch journal made for fun. Draw on two-page spreads, stick down photos, videos and stickers, and replay your page like a tiny show. Coming soon to the App Store." />
 <meta property="og:title" content="Field Guide: Sketch Journal" />
-<meta property="og:description" content="Your days, way more fun. A sketch journal made for the fold, coming soon to the App Store." />
+<meta property="og:description" content="Your days, way more fun. A sketch journal made for fun, coming soon to the App Store." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://www.tinybirdbigdreams.com/fieldguide" />
 <meta property="og:image" content="https://www.tinybirdbigdreams.com/assets/fieldguide/og.jpg" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Field Guide: Sketch Journal" />
-<meta name="twitter:description" content="Your days, way more fun. A sketch journal made for the fold." />
+<meta name="twitter:description" content="Your days, way more fun. A sketch journal made for fun." />
 <meta name="twitter:image" content="https://www.tinybirdbigdreams.com/assets/fieldguide/og.jpg" />
 <link rel="canonical" href="https://www.tinybirdbigdreams.com/fieldguide" />
 <link rel="icon" type="image/png" href="/assets/fieldguide/favicon.png" />
@@ -21,7 +21,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin" />
 <link href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Caveat:wght@700&family=Permanent+Marker&family=Special+Elite&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="assets/fieldguide.css?v=3" />
+<link rel="stylesheet" href="assets/fieldguide.css?v=10" />
 </head>
 <body>
 
@@ -41,16 +41,24 @@
     <div class="wrap">
       <div class="hero-copy">
         <h1>Your days, way more fun.</h1>
-        <p class="hand">a sketch journal made for the fold</p>
+        <p class="hand">A sketch journal made for fun</p>
         <p class="lede">Field Guide turns your iPhone Duo into a sketchbook that opens like a real one. Draw, stick, scribble and fill two pages with the good stuff.</p>
         <span class="soon">Coming soon to the App Store</span>
         <span class="hero-note">Free, with no accounts and no ads.</span>
       </div>
-      <div class="hero-shot">
-        <img src="/assets/fieldguide/hero.webp" alt="A My Summer journal page with butterfly photos, washi tape and sunflower stickers" width="804" height="1200" />
-        <img class="float f1" src="/assets/fieldguide/s-rainbow.webp" alt="" />
-        <img class="float f2" src="/assets/fieldguide/s-frog.webp" alt="" />
-        <img class="float f3" src="/assets/fieldguide/s-star.webp" alt="" />
+      <div class="hero-shot duo-stage">
+        <div class="duo" role="img" aria-label="Field Guide open on iPhone Duo, with a photo page on the left screen and a summer journal page on the right">
+          <div class="duo-screen"><img src="/assets/fieldguide/page-cute.webp" alt="" /></div>
+          <div class="duo-hinge" aria-hidden="true"></div>
+          <div class="duo-screen"><img src="/assets/fieldguide/page-summer.webp" alt="" /></div>
+        </div>
+        <img class="float pop-film" src="/assets/fieldguide/film-deer.webp" alt="" />
+        <img class="float pop-rainbow" src="/assets/fieldguide/s-rainbow.webp" alt="" />
+        <img class="float pop-frog" src="/assets/fieldguide/s-frog.webp" alt="" />
+        <img class="float pop-star" src="/assets/fieldguide/s-star.webp" alt="" />
+        <span class="float pop-note" aria-hidden="true">Best hike ever!</span>
+        <span class="float pop-replay" aria-hidden="true">&#9654; Replay</span>
+        <img class="pop-tools" src="/assets/fieldguide/tools.webp" alt="" />
       </div>
     </div>
   </section>
@@ -62,8 +70,8 @@
       <div class="band-copy">
         <span class="eyebrow">Sketch replay</span>
         <h2>Watch your page throw a party.</h2>
-        <p class="hand">it slams, swoops, bounces and pops</p>
-        <p>Every line draws itself back, and every sticker, photo and text box makes a grand entrance, right when you added it. Share the whole show as a video.</p>
+        <p class="hand">then send the show to everyone you love</p>
+        <p>Every line draws itself back, and every sticker, photo and text box makes a grand entrance, right when you added it. Then share the whole show as a video with friends and family.</p>
         <p class="now-playing">Now playing: <strong id="replay-effect">replay</strong></p>
       </div>
       <div class="replay-paper" id="replay" role="img" aria-label="A sticker map page rebuilding itself, with a trail drawing and stickers landing one by one">
@@ -79,11 +87,24 @@
         <span class="replay-title" data-step="write">My Map</span>
         <img data-step="item" data-effect="slam" src="/assets/fieldguide/s-tent2.webp" alt="" style="left:.8%;top:76.2%;width:27.2%" />
         <img data-step="item" data-effect="whirl" src="/assets/fieldguide/s-mountain.webp" alt="" style="left:21.9%;top:44.2%;width:32.1%" />
+        <img data-step="item" data-effect="pop" class="photo" src="/assets/fieldguide/butterfly.webp" alt="" style="left:-14%;top:-2%;width:44%;--turn:-7deg" />
         <img data-step="item" data-effect="swoop left" src="/assets/fieldguide/s-eagle.webp" alt="" style="left:13.5%;top:17.2%;width:26.6%" />
         <img data-step="item" data-effect="bounce" src="/assets/fieldguide/s-rainbow.webp" alt="" style="left:57.1%;top:5%;width:30.7%" />
         <img data-step="item" data-effect="pop" src="/assets/fieldguide/s-frog.webp" alt="" style="left:73%;top:18.4%;width:18.7%" />
         <img data-step="item" data-effect="swoop right" src="/assets/fieldguide/s-star.webp" alt="" style="left:75.1%;top:33.3%;width:24%" />
         <img data-step="item" data-effect="slam" src="/assets/fieldguide/s-map.webp" alt="" style="left:53%;top:62.6%;width:34.9%" />
+        <img data-step="item" data-effect="swoop right" class="photo" src="/assets/fieldguide/film-deer.webp" alt="" style="left:48%;top:86%;width:54%;--turn:5deg" />
+        <div class="share-dim" data-share></div>
+        <button class="share-btn" type="button" tabindex="-1" aria-hidden="true" data-share>Share as Video</button>
+        <div class="chat" aria-hidden="true">
+          <div class="msg out" data-share><img src="/assets/fieldguide/butterfly.webp" alt="" /><span>Our Saturday hike &#9654;</span></div>
+          <div class="msg in" data-share><b>Mom</b>That butterfly!! &#128525;</div>
+          <div class="msg in" data-share><b>Sam</b>Ok the frog is everything &#128056;</div>
+          <div class="msg in" data-share><b>Grandpa</b>Take me next time!</div>
+        </div>
+        <span class="heart" data-share style="left:22%">&#10084;&#65039;</span>
+        <span class="heart" data-share style="left:46%">&#10084;&#65039;</span>
+        <span class="heart" data-share style="left:70%">&#10084;&#65039;</span>
       </div>
     </div>
   </section>
@@ -116,7 +137,14 @@
         <div class="tags"><span>Film Strip</span><span>Instant Photo</span><span>Kraft Mat</span><span>Sepia</span><span>Noir</span><span>Vivid</span></div>
       </div>
       <div class="film-pile">
-        <img class="film land" data-turn="-4deg" src="/assets/fieldguide/film-deer.webp" alt="A video of a deer in a film strip frame" loading="lazy" />
+        <div class="film clip land" data-turn="-4deg" role="img" aria-label="A video of a deer playing in a film strip frame">
+          <img src="/assets/fieldguide/film-deer.webp" alt="" loading="lazy" />
+          <div class="clip-window" aria-hidden="true">
+            <img src="/assets/fieldguide/deer-photo.webp" alt="" loading="lazy" />
+            <span class="clip-badge">&#9654; 0:08</span>
+            <span class="clip-bar"><span></span></span>
+          </div>
+        </div>
         <img class="dessert land" data-turn="6deg" src="/assets/fieldguide/dessert.webp" alt="A photo of a dessert in a glass terrarium" loading="lazy" />
         <img class="cam land" data-turn="-8deg" src="/assets/fieldguide/s-camera.webp" alt="" loading="lazy" />
       </div>
@@ -128,12 +156,14 @@
       <div class="band-copy">
         <span class="eyebrow">Drawing</span>
         <h2>Scribble over the good stuff.</h2>
-        <p class="hand">four drawing tools, any ink color</p>
+        <p class="hand">four drawing tools, any ink color, and text boxes</p>
         <p>Pen, pencil, marker and chalk, in eight field inks or any custom color, at the width you like. Pick your paper color and pattern: blank, lined, dotted, grid or blueprint. Draw on the page or right across your photos. Two fingers to undo, three to redo.</p>
+        <p>Want to say it in words? Drop in a text box in any of eight fonts, with any text color, on a bright box or a see-through one, and spin it like a sticker. Sometimes a page just needs a big LOL.</p>
       </div>
       <div class="scribble-art">
         <img class="scribble-page land" data-turn="3deg" src="/assets/fieldguide/page-cute.webp" alt="The word Cute painted across a photo of a brick house" loading="lazy" />
         <img class="tools land" data-turn="-2deg" src="/assets/fieldguide/tools.webp" alt="The drawing tool bar" loading="lazy" />
+        <span class="lol land" data-turn="9deg">LOL</span>
       </div>
     </div>
   </section>
@@ -144,12 +174,12 @@
         <span class="eyebrow">Camera background</span>
         <h2>Snap it. Trace it.</h2>
         <p class="hand">your camera, behind your paper</p>
-        <p>Take a photo and it sits faintly behind your page, like tracing paper over the real thing. Sketch that butterfly before it flies, then turn the photo off and keep your drawing.</p>
+        <p>Take a photo and it sits faintly behind your page, like tracing paper over the real thing. Sketch that sunflower before the light changes, then turn the photo off and keep your drawing.</p>
       </div>
       <div class="trace-art">
         <div class="trace-paper land" data-turn="2deg">
-          <img src="/assets/fieldguide/dessert.webp" alt="A photo showing faintly behind the paper" loading="lazy" />
-          <svg viewBox="0 0 400 520" aria-hidden="true"><g fill="none" stroke="#6B4570" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"><path d="M92 214C70 300 110 420 200 432C300 442 340 320 316 214" /><path d="M86 200C150 176 260 176 322 202" /><path d="M130 300C160 240 250 236 276 296C230 322 170 322 130 300Z" /></g></svg>
+          <img src="/assets/fieldguide/sunflower-photo.webp" alt="A photo of a sunflower showing faintly behind the paper" loading="lazy" />
+          <svg viewBox="0 0 400 520" aria-hidden="true"><g fill="none" stroke="#6B4570" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M231.5 249.5A30.4 30.4 0 1 1 231.4 248.5" /><path d="M197.2 219.3Q186.9 179.2 201.1 159.8Q215.4 179.2 205.1 219.3" /><path d="M207.2 219.7Q210.5 178.4 230.3 164.7Q237.4 187.6 214.7 222.2" /><path d="M216.5 223.3Q233.1 185.3 256.2 178.7Q255.6 202.8 222.8 228.1" /><path d="M224.2 229.7Q252.2 199.1 276.2 200.4Q267.8 223.0 228.5 236.3" /><path d="M229.4 238.3Q265.8 218.4 288.1 227.5Q272.8 246.0 231.3 245.9" /><path d="M231.5 248.0Q272.4 241.1 290.5 256.9Q270.0 269.5 230.9 255.9" /><path d="M230.3 258.0Q271.2 264.7 283.2 285.5Q259.8 290.8 227.2 265.2" /><path d="M226.0 267.0Q262.5 286.6 267.1 310.2Q243.2 307.6 220.7 272.8" /><path d="M219.0 274.1Q247.1 304.5 243.8 328.3Q222.1 318.1 212.0 277.9" /><path d="M210.0 278.6Q226.8 316.5 215.9 337.9Q198.7 321.2 202.2 279.9" /><path d="M200.1 279.9Q203.6 321.2 186.4 337.9Q175.5 316.5 192.3 278.6" /><path d="M190.3 277.9Q180.2 318.1 158.5 328.3Q155.2 304.5 183.3 274.1" /><path d="M181.6 272.8Q159.1 307.6 135.2 310.2Q139.8 286.6 176.3 267.0" /><path d="M175.1 265.2Q142.5 290.8 119.0 285.5Q131.0 264.7 171.9 258.0" /><path d="M171.4 255.9Q132.3 269.5 111.8 256.9Q129.9 241.1 170.8 248.0" /><path d="M170.9 245.9Q129.5 246.0 114.2 227.5Q136.5 218.4 172.9 238.3" /><path d="M173.7 236.3Q134.5 223.0 126.1 200.4Q150.1 199.1 178.1 229.7" /><path d="M179.5 228.1Q146.7 202.8 146.1 178.7Q169.2 185.3 185.7 223.3" /><path d="M187.6 222.2Q164.8 187.6 172.0 164.7Q191.8 178.4 195.1 219.7" /><path d="M183.6 346.9Q166.1 428.8 151.2 518.4" /><path d="M189.4 343.0Q255.7 319.6 265.5 364.5Q216.7 374.2 189.4 343.0" /></g></svg>
         </div>
         <img class="trace-cam land" data-turn="-9deg" src="/assets/fieldguide/s-camera.webp" alt="" loading="lazy" />
       </div>
@@ -196,7 +226,7 @@
         <span class="eyebrow">iCloud</span>
         <h2>Safe in your iCloud.</h2>
         <p class="hand">new phone? your notebooks follow you</p>
-        <p>When you’re signed in to iCloud, your notebooks, photos, videos and voice notes back up to your own private storage and sync to your other devices. Only you can see them, and there’s no account to make.</p>
+        <p>When you’re signed in to iCloud, your notebooks, photos, videos and voice notes back up to your own private storage, so they come back when you reinstall or get a new phone. Only you can see them, and there’s no account to make.</p>
       </div>
       <div class="cloud-art" aria-hidden="true">
         <svg viewBox="0 0 520 300"><path fill="#FBF6EA" d="M130 262C60 262 16 216 22 162C28 112 72 84 118 92C138 34 198 10 256 28C298 42 326 72 334 110C392 86 462 112 482 170C502 232 456 262 398 262Z" /></svg>
@@ -244,13 +274,50 @@
     <div class="wrap">
       <span class="eyebrow">iPhone Duo</span>
       <h2>Made for the fold.</h2>
-      <ul>
-        <li>Draw on the right, with a photo, the live camera, your last page or notes on the left</li>
-        <li>Drag photos and stickers across the fold to copy them</li>
-        <li>Half-fold it like a tent to show off your sketch</li>
-        <li>Play the timed drawing game together, one on each side</li>
-        <li>Close the phone and the book closes too</li>
-      </ul>
+      <p class="hand">open it, fold it, flip it, play it</p>
+      <div class="fold-grid">
+        <article class="fold-card">
+          <div class="fold-art">
+            <div class="mini-duo"><div class="mini-screen"><img src="/assets/fieldguide/sunflower-photo.webp" alt="" loading="lazy" /></div><div class="mini-hinge"></div><div class="mini-screen"><img src="/assets/fieldguide/page-summer.webp" alt="" loading="lazy" /></div></div>
+          </div>
+          <h3>Open it up</h3>
+          <p>Sketch on the right with a photo, the live camera, your last page or notes on the left.</p>
+        </article>
+        <article class="fold-card">
+          <div class="fold-art">
+            <div class="mini-duo"><div class="mini-screen"><img src="/assets/fieldguide/page-cute.webp" alt="" loading="lazy" /></div><div class="mini-hinge"></div><div class="mini-screen blank"></div></div>
+            <img class="drag-sticker" src="/assets/fieldguide/s-frog.webp" alt="" loading="lazy" />
+            <span class="drag-arrow" aria-hidden="true"></span>
+          </div>
+          <h3>Drag across the fold</h3>
+          <p>Slide a photo or sticker over the hinge to copy it to the other page.</p>
+        </article>
+        <article class="fold-card">
+          <div class="fold-art">
+            <div class="tent3d" aria-hidden="true"><div class="tent-back"></div><div class="tent-front"><img src="/assets/fieldguide/page-summer.webp" alt="" loading="lazy" /></div></div>
+            <span class="tent-ground" aria-hidden="true"></span>
+          </div>
+          <h3>Pitch a tent</h3>
+          <p>Half-fold it to show your sketch to someone across the table.</p>
+        </article>
+        <article class="fold-card">
+          <div class="fold-art">
+            <div class="tent3d" aria-hidden="true"><div class="tent-back"></div><div class="tent-front"><img class="game-eagle" src="/assets/fieldguide/s-eagle.webp" alt="" loading="lazy" /></div></div><span class="guess-chip">Other side: Guess!</span>
+            <span class="tent-ground" aria-hidden="true"></span>
+            <span class="game-word">Draw: EAGLE</span>
+            <span class="game-timer">0:42</span>
+          </div>
+          <h3>Play together</h3>
+          <p>A timed drawing game, one of you on each side.</p>
+        </article>
+        <article class="fold-card">
+          <div class="fold-art">
+            <img class="closed-book" src="/assets/fieldguide/cover.webp" alt="" loading="lazy" />
+          </div>
+          <h3>Close the book</h3>
+          <p>Fold it shut and the cover closes on your work.</p>
+        </article>
+      </div>
     </div>
   </section>
 
@@ -300,11 +367,11 @@
     </div>
     <div class="foot-bottom">
       <p>An app by <a href="/">Tiny Bird, Big Dreams</a> · © 2026</p>
-      <p>Made with Claude · Shipped from scratch</p>
+      <p>Made with fun in mind · Shipped from scratch</p>
     </div>
   </div>
 </footer>
 
-<script src="assets/fieldguide.js?v=1" defer></script>
+<script src="assets/fieldguide.js?v=3" defer></script>
 </body>
 </html>
