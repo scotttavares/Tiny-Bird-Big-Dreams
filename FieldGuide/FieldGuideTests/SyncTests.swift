@@ -152,6 +152,17 @@ struct SyncTests {
         #expect(Notebook.redundantStarters(in: [starter, real]).isEmpty)
     }
 
+    @Test func aStarterStillDownloadingItsPagesIsKept() throws {
+        let context = try memoryContext()
+        let starter = Notebook(title: "Field Notes")
+        starter.isStarter = true
+        let real = Notebook(title: "Field Notes")
+        real.addPage().fieldNotes = "A wren"
+        context.insert(starter)
+        context.insert(real)
+        #expect(Notebook.redundantStarters(in: [starter, real]).isEmpty)
+    }
+
     @Test func twoNewDevicesKeepTheSameStarter() throws {
         let context = try memoryContext()
         let date = Date.now
@@ -159,6 +170,8 @@ struct SyncTests {
         let second = Notebook(title: "Field Notes", createdAt: date.addingTimeInterval(5))
         first.isStarter = true
         second.isStarter = true
+        first.addPage()
+        second.addPage()
         context.insert(first)
         context.insert(second)
         #expect(Notebook.redundantStarters(in: [first, second]) == [second])

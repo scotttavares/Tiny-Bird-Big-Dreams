@@ -52,9 +52,10 @@ final class Notebook {
     }
 
     /// Starter notebooks with nothing in them that another notebook makes unnecessary. Every
-    /// device picks the same ones, so two new devices can't each delete the other's.
+    /// device picks the same ones, so two new devices can't each delete the other's. A notebook
+    /// with no pages may only be partway through downloading from iCloud, so it's never empty here.
     static func redundantStarters(in notebooks: [Notebook]) -> [Notebook] {
-        let empty = notebooks.filter { $0.isStarter && $0.allPages.allSatisfy(\.isBlank) }
+        let empty = notebooks.filter { $0.isStarter && !$0.allPages.isEmpty && $0.allPages.allSatisfy(\.isBlank) }
         let keeper = notebooks.count == empty.count
             ? empty.min { ($0.createdAt, $0.id.uuidString) < ($1.createdAt, $1.id.uuidString) } : nil
         return empty.filter { $0 !== keeper }
