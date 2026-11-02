@@ -19,6 +19,7 @@ struct WorkspaceHeader: View {
     @State private var isShowingReference = false
     @State private var isShowingGestures = false
     @State private var isShowingLibrary = false
+    @State private var isShowingAppIcons = false
     @State private var infoPage: Page?
     @State private var sharedFile: SharedFile?
     @State private var replayPage: ExportPage?
@@ -44,6 +45,9 @@ struct WorkspaceHeader: View {
         }
         .sheet(isPresented: $isShowingLibrary) {
             LibraryView(model: model)
+        }
+        .sheet(isPresented: $isShowingAppIcons) {
+            AppIconPickerSheet()
         }
         .sheet(item: $infoPage) { page in
             PageInfoSheet(model: model, page: page)
@@ -294,6 +298,7 @@ struct WorkspaceHeader: View {
             Button("Replay Sketch", systemImage: "play.square") { showReplay() }
             Button("Show Sketch", systemImage: "triangle") { postureProvider.override = .tent }
             ExportMenuItems(model: model, sharedFile: $sharedFile)
+            Button("App Icon", systemImage: "app.badge") { isShowingAppIcons = true }
             Section("Layout") {
                 Button {
                     postureProvider.override = nil
