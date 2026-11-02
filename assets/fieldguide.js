@@ -18,24 +18,95 @@
   }, { threshold: .25 });
   document.querySelectorAll('.land').forEach(function (el) { landing.observe(el); });
 
-  // The traced outline draws itself over the photo, like a pencil going around it.
+  // The notebook starts shut, swings open, then the good stuff pops out. It closes and plays again.
+  var hero = document.querySelector('.duo-stage');
+  if (hero && document.documentElement.classList.contains('fg-intro')) {
+    var opened = hero.querySelector('.duo-box > .duo-sketch:not(.duo-closed)');
+    var shut = hero.querySelector('.duo-closed');
+    var bits = Array.prototype.slice.call(hero.querySelectorAll('.float, .pop-tools'));
+    var wait = function (ms) { return new Promise(function (go) { setTimeout(go, ms); }); };
+    var run = function (el, frames, ms, delay) {
+      return el.animate(frames, { duration: ms, delay: delay || 0, easing: 'ease-in-out', fill: 'forwards' }).finished;
+    };
+    var cycle = function () {
+      return wait(1300)
+        .then(function () {
+          return Promise.all([
+            run(shut, [{ transform: 'rotate(-2deg) scaleX(1)' }, { transform: 'rotate(-2deg) scaleX(0)' }], 600),
+            run(opened, [{ clipPath: 'inset(0 0 0 50%)' }, { clipPath: 'inset(0 0 0 0%)' }], 750, 120)
+          ]);
+        })
+        .then(function () {
+          return Promise.all(bits.map(function (bit, i) {
+            return run(bit, [{ opacity: 0, scale: 0 }, { opacity: 1, scale: 1.25, offset: .6 }, { opacity: 1, scale: 1 }], 480, i * 130);
+          }));
+        })
+        .then(function () { return wait(9000); })
+        .then(function () {
+          return Promise.all(bits.map(function (bit) { return run(bit, [{ opacity: 1, scale: 1 }, { opacity: 0, scale: .4 }], 300); }));
+        })
+        .then(function () {
+          return Promise.all([
+            run(opened, [{ clipPath: 'inset(0 0 0 0%)' }, { clipPath: 'inset(0 0 0 50%)' }], 600),
+            run(shut, [{ transform: 'rotate(-2deg) scaleX(0)' }, { transform: 'rotate(-2deg) scaleX(1)' }], 500, 120)
+          ]);
+        })
+        .then(cycle);
+    };
+    cycle();
+  }
+
+  // A pencil traces the photo every time it scrolls into view.
   var trace = document.querySelector('.trace-paper svg');
   if (trace) {
-    var lines = Array.prototype.slice.call(trace.querySelectorAll('path'));
-    lines.forEach(function (line) {
-      var length = line.getTotalLength();
-      line.style.strokeDasharray = length;
-      line.style.strokeDashoffset = length;
-    });
-    new IntersectionObserver(function (entries, watcher) {
-      if (!entries[0].isIntersecting) return;
-      watcher.disconnect();
-      lines.forEach(function (line, i) {
-        var length = line.getTotalLength();
-        line.animate([{ strokeDashoffset: length }, { strokeDashoffset: 0 }],
-          { duration: Math.max(260, length * 6), delay: 300 + i * 140, easing: 'ease-in-out', fill: 'forwards' });
-      });
+    var lines = Array.prototype.slice.call(trace.querySelectorAll('g[stroke] path'));
+    var pencil = trace.querySelector('.trace-pencil');
+    var lengths = lines.map(function (line) { return line.getTotalLength(); });
+    var token = 0;
+    var clear = function () {
+      lines.forEach(function (line, i) { line.style.strokeDasharray = lengths[i]; line.style.strokeDashoffset = lengths[i]; });
+      pencil.style.opacity = 0;
+    };
+    var draw = function (mine) {
+      var i = 0;
+      var next = function () {
+        if (mine !== token) return;
+        if (i >= lines.length) { pencil.style.opacity = 0; return; }
+        var line = lines[i], length = lengths[i], ms = Math.min(900, Math.max(170, length * 3.2)), start = null;
+        var step = function (now) {
+          if (mine !== token) return;
+          if (start === null) start = now;
+          var k = Math.min(1, (now - start) / ms), done = length * k, point = line.getPointAtLength(done);
+          line.style.strokeDashoffset = length - done;
+          pencil.setAttribute('transform', 'translate(' + point.x + ' ' + point.y + ')');
+          if (k < 1) { requestAnimationFrame(step); } else { i++; setTimeout(next, 50); }
+        };
+        pencil.style.opacity = 1;
+        requestAnimationFrame(step);
+      };
+      setTimeout(next, 400);
+    };
+    clear();
+    new IntersectionObserver(function (entries) {
+      token++;
+      clear();
+      if (entries[0].isIntersecting) draw(token);
     }, { threshold: .4 }).observe(trace);
+  }
+
+  // Text boxes pop onto the page one by one whenever the section comes into view.
+  var notes = Array.prototype.slice.call(document.querySelectorAll('.notes .note'));
+  if (notes.length && document.documentElement.classList.contains('fg-intro')) {
+    new IntersectionObserver(function (entries) {
+      var visible = entries[0].isIntersecting;
+      notes.forEach(function (note, i) {
+        note.getAnimations().forEach(function (a) { if (a.id === 'pop') a.cancel(); });
+        if (!visible) return;
+        var pop = note.animate([{ scale: 0, opacity: 0 }, { scale: 1.3, opacity: 1, offset: .6 }, { scale: .92, opacity: 1, offset: .8 }, { scale: 1, opacity: 1 }],
+          { duration: 520, delay: 150 + i * 170, easing: 'ease-out', fill: 'forwards' });
+        pop.id = 'pop';
+      });
+    }, { threshold: .35 }).observe(document.querySelector('.notes'));
   }
 
   var stage = document.getElementById('replay');

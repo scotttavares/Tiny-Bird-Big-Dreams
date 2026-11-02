@@ -156,12 +156,12 @@ h1, h2, h3 { font-family:'Caprasimo', Georgia, serif; font-weight:400; letter-sp
 .tools { position:absolute; bottom:0; left:-12%; width:124%; max-width:none; border-radius:36px; transform:rotate(-2deg); box-shadow:6px 9px 0 rgba(0,0,0,.25); }
 
 .text-band { background:var(--ochre); }
-.notes { display:grid; gap:18px; justify-items:center; }
-.note { display:inline-block; padding:16px 28px; border-radius:16px; }
-.n1 { font:400 clamp(30px, 4vw, 44px)/1.1 'Permanent Marker', cursive; background:var(--forest); color:#FBDE8F; transform:rotate(-5deg); }
-.n2 { font:700 clamp(44px, 6vw, 66px)/1 'Caveat', cursive; color:var(--rust); transform:rotate(4deg); }
-.n3 { font:400 clamp(26px, 3.4vw, 36px)/1.1 'Special Elite', monospace; background:var(--paper); transform:rotate(-2deg); }
-.n4 { font:400 clamp(28px, 3.6vw, 40px)/1.1 'Caprasimo', Georgia, serif; background:var(--rust); color:var(--cream); transform:rotate(3deg); }
+.notes { display:flex; flex-wrap:wrap; gap:16px 18px; justify-content:center; align-items:center; }
+.note { display:inline-block; padding:12px 22px; border-radius:16px; box-shadow:5px 7px 0 rgba(33,56,45,.18); animation:bob 3.4s ease-in-out infinite alternate; }
+.n1 { font:400 clamp(26px, 3.2vw, 36px)/1.1 'Permanent Marker', cursive; background:var(--forest); color:#FBDE8F; transform:rotate(-5deg); }
+.n2 { font:700 clamp(38px, 5vw, 54px)/1 'Caveat', cursive; color:var(--rust); transform:rotate(4deg); }
+.n3 { font:400 clamp(22px, 2.8vw, 30px)/1.1 'Special Elite', monospace; background:var(--paper); transform:rotate(-2deg); }
+.n4 { font:400 clamp(24px, 3vw, 34px)/1.1 'Caprasimo', Georgia, serif; background:var(--rust); color:var(--cream); transform:rotate(3deg); }
 
 .more { padding:clamp(56px, 9vw, 96px) 0; }
 .feature img { height:74px; width:auto; margin-bottom:12px; transform:rotate(-5deg); }
@@ -275,3 +275,21 @@ h1, h2, h3 { font-family:'Caprasimo', Georgia, serif; font-weight:400; letter-sp
 .rock { animation:tent-rock 4s ease-in-out infinite alternate; transform-origin:50% 90%; }
 .closed-book { animation:book-close 4.5s ease-in-out infinite; transform-origin:50% 50%; }
 @keyframes book-close { 0%, 55%, 100% { transform:rotate(-4deg) scaleX(1); } 70% { transform:rotate(-4deg) scaleX(.86); } 80% { transform:rotate(-4deg) scaleX(1.03); } }
+
+.duo-box { position:relative; }
+.duo-closed { position:absolute; inset:0; opacity:0; pointer-events:none; }
+.fg-intro .duo-closed { opacity:1; }
+.fg-intro .duo-box > .duo-sketch:not(.duo-closed) { clip-path:inset(0 0 0 50%); }
+.fg-intro .duo-stage .float, .fg-intro .duo-stage .pop-tools { opacity:0; scale:0; }
+
+.n2, .n9 { box-shadow:none; }
+.n5 { font:400 clamp(40px, 5.4vw, 60px)/1 'Caprasimo', Georgia, serif; background:#E89E9E; color:var(--forest); transform:rotate(-7deg); }
+.n6 { font:400 clamp(38px, 5vw, 56px)/1 'Permanent Marker', cursive; background:#FBDE8F; color:var(--forest); transform:rotate(6deg); }
+.n7 { font:700 clamp(32px, 4.2vw, 46px)/1 'Caveat', cursive; background:var(--sage); color:var(--cream); transform:rotate(-4deg); }
+.n8 { font:400 clamp(22px, 2.8vw, 30px)/1.1 'Caprasimo', Georgia, serif; background:#8FB7C0; color:var(--forest); transform:rotate(3deg); }
+.n9 { font:400 clamp(40px, 5.4vw, 62px)/1 'Permanent Marker', cursive; color:var(--cream); text-shadow:3px 4px 0 var(--forest); transform:rotate(-9deg); }
+.note:nth-child(2n) { animation-delay:-1.2s; }
+.note:nth-child(3n) { animation-delay:-2.3s; }
+@keyframes bob { from { translate:0 0; } to { translate:0 -8px; } }
+.fg-intro .notes .note { scale:0; opacity:0; }
+@media (prefers-reduced-motion:reduce) { .note { animation:none; } }
