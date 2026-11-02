@@ -149,7 +149,7 @@ final class Page {
             switch item.content {
             case .photo(let path): paths.append(path)
             case .video(let path): paths += [path, ImageStore.posterPath(forVideo: path)]
-            case .sticker, .tape: break
+            case .sticker, .tape, .text: break
             }
         }
         return paths
