@@ -21,7 +21,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin" />
 <link href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Caveat:wght@700&family=Permanent+Marker&family=Special+Elite&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="assets/fieldguide.css?v=4" />
+<link rel="stylesheet" href="assets/fieldguide.css?v=6" />
 </head>
 <body>
 
@@ -70,8 +70,8 @@
       <div class="band-copy">
         <span class="eyebrow">Sketch replay</span>
         <h2>Watch your page throw a party.</h2>
-        <p class="hand">it slams, swoops, bounces and pops</p>
-        <p>Every line draws itself back, and every sticker, photo and text box makes a grand entrance, right when you added it. Share the whole show as a video.</p>
+        <p class="hand">then send the show to everyone you love</p>
+        <p>Every line draws itself back, and every sticker, photo and text box makes a grand entrance, right when you added it. Then share the whole show as a video with friends and family.</p>
         <p class="now-playing">Now playing: <strong id="replay-effect">replay</strong></p>
       </div>
       <div class="replay-paper" id="replay" role="img" aria-label="A sticker map page rebuilding itself, with a trail drawing and stickers landing one by one">
@@ -87,11 +87,24 @@
         <span class="replay-title" data-step="write">My Map</span>
         <img data-step="item" data-effect="slam" src="/assets/fieldguide/s-tent2.webp" alt="" style="left:.8%;top:76.2%;width:27.2%" />
         <img data-step="item" data-effect="whirl" src="/assets/fieldguide/s-mountain.webp" alt="" style="left:21.9%;top:44.2%;width:32.1%" />
+        <img data-step="item" data-effect="pop" class="photo" src="/assets/fieldguide/butterfly.webp" alt="" style="left:-14%;top:-2%;width:44%;--turn:-7deg" />
         <img data-step="item" data-effect="swoop left" src="/assets/fieldguide/s-eagle.webp" alt="" style="left:13.5%;top:17.2%;width:26.6%" />
         <img data-step="item" data-effect="bounce" src="/assets/fieldguide/s-rainbow.webp" alt="" style="left:57.1%;top:5%;width:30.7%" />
         <img data-step="item" data-effect="pop" src="/assets/fieldguide/s-frog.webp" alt="" style="left:73%;top:18.4%;width:18.7%" />
         <img data-step="item" data-effect="swoop right" src="/assets/fieldguide/s-star.webp" alt="" style="left:75.1%;top:33.3%;width:24%" />
         <img data-step="item" data-effect="slam" src="/assets/fieldguide/s-map.webp" alt="" style="left:53%;top:62.6%;width:34.9%" />
+        <img data-step="item" data-effect="swoop right" class="photo" src="/assets/fieldguide/film-deer.webp" alt="" style="left:48%;top:86%;width:54%;--turn:5deg" />
+        <div class="share-dim" data-share></div>
+        <button class="share-btn" type="button" tabindex="-1" aria-hidden="true" data-share>Share as Video</button>
+        <div class="chat" aria-hidden="true">
+          <div class="msg out" data-share><img src="/assets/fieldguide/butterfly.webp" alt="" /><span>Our Saturday hike &#9654;</span></div>
+          <div class="msg in" data-share><b>Mom</b>That butterfly!! &#128525;</div>
+          <div class="msg in" data-share><b>Sam</b>Ok the frog is everything &#128056;</div>
+          <div class="msg in" data-share><b>Grandpa</b>Take me next time!</div>
+        </div>
+        <span class="heart" data-share style="left:22%">&#10084;&#65039;</span>
+        <span class="heart" data-share style="left:46%">&#10084;&#65039;</span>
+        <span class="heart" data-share style="left:70%">&#10084;&#65039;</span>
       </div>
     </div>
   </section>
@@ -124,7 +137,14 @@
         <div class="tags"><span>Film Strip</span><span>Instant Photo</span><span>Kraft Mat</span><span>Sepia</span><span>Noir</span><span>Vivid</span></div>
       </div>
       <div class="film-pile">
-        <img class="film land" data-turn="-4deg" src="/assets/fieldguide/film-deer.webp" alt="A video of a deer in a film strip frame" loading="lazy" />
+        <div class="film clip land" data-turn="-4deg" role="img" aria-label="A video of a deer playing in a film strip frame">
+          <img src="/assets/fieldguide/film-deer.webp" alt="" loading="lazy" />
+          <div class="clip-window" aria-hidden="true">
+            <img src="/assets/fieldguide/deer-photo.webp" alt="" loading="lazy" />
+            <span class="clip-badge">&#9654; 0:08</span>
+            <span class="clip-bar"><span></span></span>
+          </div>
+        </div>
         <img class="dessert land" data-turn="6deg" src="/assets/fieldguide/dessert.webp" alt="A photo of a dessert in a glass terrarium" loading="lazy" />
         <img class="cam land" data-turn="-8deg" src="/assets/fieldguide/s-camera.webp" alt="" loading="lazy" />
       </div>
@@ -313,6 +333,6 @@
   </div>
 </footer>
 
-<script src="assets/fieldguide.js?v=1" defer></script>
+<script src="assets/fieldguide.js?v=2" defer></script>
 </body>
 </html>
