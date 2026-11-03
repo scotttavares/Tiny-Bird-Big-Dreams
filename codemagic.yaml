@@ -374,3 +374,64 @@ workflows:
             --team-id "$TEAM_ID" \
             --container-id "$CONTAINER_ID" \
             --environment development
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Paper Wars (PaperWars/) → TestFlight. Started by hand from the Field Guide
+  # Codemagic app (same repo, same orbit_signing group and ASC key); pick this
+  # workflow in the start dialog. Before the first run, register the bundle id
+  # com.tinybirdbigdreams.paperwars with the iCloud capability (key-value
+  # storage) and create the "Paper Wars" app in App Store Connect.
+  # ─────────────────────────────────────────────────────────────────────────
+  paperwars-testflight:
+    name: Paper Wars iOS → TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    working_directory: PaperWars
+    integrations:
+      app_store_connect: Orbit ASC API key
+    environment:
+      groups:
+        - orbit_signing
+      vars:
+        BUNDLE_ID: "com.tinybirdbigdreams.paperwars"
+        XCODE_PROJECT: "PaperWars.xcodeproj"
+        XCODE_SCHEME: "PaperWars"
+      # The iPhone Duo hinge APIs (tent mode) need the iOS 27.1 SDK or later.
+      xcode: 27.1
+    scripts:
+      - name: Generate the Xcode project (XcodeGen)
+        script: |
+          command -v xcodegen >/dev/null || brew install xcodegen
+          xcodegen generate
+      - name: Set up code signing (persistent cert from CERTIFICATE_PRIVATE_KEY)
+        script: |
+          set -e
+          if [ -z "$CERTIFICATE_PRIVATE_KEY" ]; then
+            echo "❌ CERTIFICATE_PRIVATE_KEY is not set (Secure var in group orbit_signing)."
+            exit 1
+          fi
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles --project "$XCODE_PROJECT"
+      - name: Build IPA
+        script: |
+          # Codemagic's per-app build counter keeps every upload's build number unique.
+          BUILD="${PROJECT_BUILD_NUMBER:-$BUILD_NUMBER}"
+          # PAPERWARS_DUO_SDK compiles in the hinge code (PostureProvider.swift); without it
+          # the app never sees the tent posture, so the two-halves mode never starts.
+          xcode-project build-ipa \
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME" \
+            --archive-xcargs "CURRENT_PROJECT_VERSION=$BUILD SWIFT_ACTIVE_COMPILATION_CONDITIONS=PAPERWARS_DUO_SDK"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - build/ios/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Upload only: the build appears in TestFlight for Internal Testing.

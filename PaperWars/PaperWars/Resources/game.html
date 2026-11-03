@@ -125,6 +125,13 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
 .medal small{display:block;color:#6d6a62;font-size:13px;line-height:1.2}
 @keyframes stamp{to{opacity:1;transform:none}}
 /* The intro (user, 2026-11-03: "a super cool intro"): a paper orders card, then an 8 s pencil-and-paper animation. */
+#tent{position:fixed;inset:0;z-index:4;background:var(--bg);display:flex;flex-direction:column}
+#tent.hidden{display:none}
+#tent .half{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px 8px;min-height:0;overflow:hidden}
+#tent .far{transform:rotate(180deg);border-top:2px dashed var(--border)}
+#tent .tstatus{font-size:16px;line-height:1.25;text-align:center;min-height:2.6em;max-width:520px;display:flex;align-items:center;justify-content:center}
+#tent canvas{border-radius:12px;box-shadow:0 2px 10px #0003;touch-action:none;flex:none}
+#tent .bar{margin:2px 0;min-height:42px;align-items:center}
 #intro{position:fixed;inset:0;z-index:50;background:#1b1b1b;display:flex;align-items:center;justify-content:center;perspective:1200px}
 #intro.hidden{display:none}
 #introCv{display:block;border-radius:18px;box-shadow:0 14px 40px #0008;transform-origin:50% 50%;transition:transform .7s ease-in,opacity .7s ease-in}
@@ -228,6 +235,12 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
     </div></div>
   </div>
   <div class="bar" id="bar"></div>
+</section>
+
+<!-- Tent mode (iPhone Duo standing as a tent): each player gets their own half; the far half is upside down for the player across the table. -->
+<section id="tent" class="hidden">
+  <div class="half far" id="half1"><div class="tstatus" id="tstatus1"></div><canvas id="tcv1"></canvas><div class="bar" id="tbar1"></div></div>
+  <div class="half near" id="half0"><div class="tstatus" id="tstatus0"></div><canvas id="tcv0"></canvas><div class="bar" id="tbar0"></div></div>
 </section>
 
 <section id="over" class="hidden" style="display:flex;flex-direction:column;align-items:center">
@@ -422,9 +435,10 @@ let INK = ["#1f4fa8", "#1e7a46"]; // blue vs green by default (user, 2026-11-03)
 try { const s = JSON.parse(localStorage.getItem("paperWarsInk")); if (Array.isArray(s) && s.length === 2 && s.every(h => /^#[0-9a-f]{6}$/i.test(h))) INK = s; } catch (e) {}
 function saveInk() { try { localStorage.setItem("paperWarsInk", JSON.stringify(INK)); } catch (e) {} }
 const $ = id => document.getElementById(id);
-const cv = $("cv"), ctx = cv.getContext("2d");
+const cv = $("cv"), mainCtx = cv.getContext("2d");
+let ctx = mainCtx; // swapped to a tent half's canvas while that half is drawn
 
-let opts, players, phase, cur, first, pending, flick, lastResult, startedAt, dragIdx = -1, shotType = "dot";
+let opts, players, phase, cur, first, pending, flick, lastResult, startedAt, shotType = "dot";
 
 // ---------- geometry ----------
 const sc = () => opts.size / 46;
@@ -661,38 +675,44 @@ function pt(e) { const r = cv.getBoundingClientRect(); return {x: (e.clientX - r
 const inPaper = (x, y) => x >= 0 && x <= W && y >= 0 && y <= H;
 
 let tapsIgnoredUntil = 0; // set when a file flips open, so a double-tap can't pick a card underneath
-cv.addEventListener("pointerdown", e => {
+const drags = {}; // pointerId -> the unit being dragged during setup (two players can drag at once in tent mode)
+cv.addEventListener("pointerdown", e => !tentOn() && pointerDown(e, cv, cur, pt(e)));
+cv.addEventListener("pointermove", e => !tentOn() && pointerMove(e, cur, pt(e)));
+cv.addEventListener("pointerup", e => !tentOn() && pointerUp(e, cur));
+function pointerDown(e, el, who, {x, y}) {
   if (performance.now() < tapsIgnoredUntil) return;
   if (phase === "result" && vsCpu()) return next(); // against the computer, a tap skips ahead
-  const {x, y} = pt(e), p = players && players[cur];
-  if (phase === "rps") { const i = rpsCardAt(x, y); if (i !== -1) rpsPick(i); return; }
+  const p = players && players[who];
+  if (phase === "rps") { const i = rpsCardAt(x, y); if (i !== -1) rpsPick(i, who); return; }
   if (phase === "setup") {
-    dragIdx = unitAt(p, x, y);
-    if (dragIdx === -1) placeUnit(p, x, y);
-    cv.setPointerCapture(e.pointerId);
+    if (tentOn() && p.setupReady) return;
+    const idx = unitAt(p, x, y);
+    if (idx === -1) placeUnit(p, x, y); else drags[e.pointerId] = {p, idx};
+    try { el.setPointerCapture(e.pointerId); } catch (err) {}
+  } else if (who !== cur) { // tent mode: it's the other player's turn
   } else if (phase === "aim" && airdrop) { // wait for the reinforcement to land
   } else if (phase === "aim" && shotType === "dot") {
     pending = {x: clamp(x, 2, W - 2), y: clamp(y, 2, H - 2)}; sound("click"); render(); updateUI();
   } else if (phase === "aim" && shotType === "fling" && !pending && !flick) {
     const u = p.soldiers.find(u => u.alive && Math.hypot(x - u.x, y - (u.y + 20 * sc())) < 24 * sc() + 8);
-    if (u) { flick = {sx: u.x, sy: u.y + 20 * sc(), dx: 0, dy: 0, aiming: true}; cv.setPointerCapture(e.pointerId); render(); }
+    if (u) { flick = {sx: u.x, sy: u.y + 20 * sc(), dx: 0, dy: 0, aiming: true}; try { el.setPointerCapture(e.pointerId); } catch (err) {} render(); }
   }
-});
-cv.addEventListener("pointermove", e => {
-  const {x, y} = pt(e), p = players && players[cur];
-  if (phase === "setup" && dragIdx !== -1) { moveUnit(p, dragIdx, x, y); render(); }
-  if (flick && flick.aiming) {
+}
+function pointerMove(e, who, {x, y}) {
+  const d = drags[e.pointerId];
+  if (phase === "setup" && d) { moveUnit(d.p, d.idx, x, y); render(); }
+  if (flick && flick.aiming && who === cur) {
     flick.dx = x - flick.sx; flick.dy = y - flick.sy; render(); // aim: the way you drag
   }
-});
-cv.addEventListener("pointerup", () => {
-  dragIdx = -1;
-  if (flick && flick.aiming) {
+}
+function pointerUp(e, who) {
+  delete drags[e.pointerId];
+  if (flick && flick.aiming && who === cur) {
     flick.aiming = false;
     if (Math.hypot(flick.dx, flick.dy) < 12) { flick = null; render(); return; }
     runBurst();
   }
-});
+}
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // ---------- setup ----------
@@ -729,11 +749,11 @@ function placeUnit(p, x, y) {
     const pos = legalPos(x, y, false, p);
     p.soldiers.push({...pos, alive: true, pose: p.soldiers.length % 2, seed: Math.floor(Math.random() * 99999), name: soldierName(p)});
     if (!readyBag.length) readyBag = [...READY_WORDS].sort(() => Math.random() - .5);
-    say(p.soldiers.length - 1, readyBag.pop());
+    say(p.soldiers.length - 1, readyBag.pop()); setupTalk.p = p;
     sound("click");
   } else if (opts.fort && !p.fort) {
     p.fort = {...legalPos(x, y, true, p), hp: 3}; sound("click");
-    say("fort", FORT_WORDS[Math.floor(Math.random() * FORT_WORDS.length)]);
+    say("fort", FORT_WORDS[Math.floor(Math.random() * FORT_WORDS.length)]); setupTalk.p = p;
   }
   render(); updateUI();
 }
@@ -862,6 +882,49 @@ function drawAirdrop(c, a) {
   }
 }
 
+// ---------- tent mode (iPhone Duo) ----------
+// When the Duo stands as a tent (the app tells us through window.paperWarsNative; ?tent forces it for testing),
+// a match between two people splits the screen: the near half is Player 1's page, the far half, upside down,
+// is Player 2's. Each only ever sees their own army. Setup and Rock, Paper, Scissors happen at the same time.
+const TENT = [0, 1].map(i => ({cv: $("tcv" + i), ctx: $("tcv" + i).getContext("2d"), st: $("tstatus" + i), bar: $("tbar" + i), half: $("half" + i)}));
+const tentWanted = () => !!(window.paperWarsNative && window.paperWarsNative.posture === "tent") || /[?&]tent\b/.test(location.search);
+const tentOn = () => !!(opts && opts.tent && players);
+function fitTent() {
+  if (!tentOn()) return;
+  const dpr = window.devicePixelRatio || 1;
+  TENT.forEach(h => {
+    const avH = h.half.clientHeight - h.st.offsetHeight - h.bar.offsetHeight - 24, avW = h.half.clientWidth - 16;
+    const w = Math.max(150, Math.min(avW, avH * W / H));
+    h.cv.style.width = w + "px"; h.cv.style.height = w * H / W + "px";
+    h.cv.width = W * dpr; h.cv.height = H * dpr; h.ctx.setTransform(h.cv.width / W, 0, 0, h.cv.height / H, 0, 0);
+  });
+  render();
+}
+TENT.forEach((h, who) => {
+  const at = e => { // the far half is turned upside down, so its taps are too
+    const r = h.cv.getBoundingClientRect(), x = (e.clientX - r.left) * W / r.width, y = (e.clientY - r.top) * H / r.height;
+    return who === 1 ? {x: W - x, y: H - y} : {x, y};
+  };
+  h.cv.addEventListener("pointerdown", e => tentOn() && pointerDown(e, h.cv, who, at(e)));
+  h.cv.addEventListener("pointermove", e => tentOn() && pointerMove(e, who, at(e)));
+  h.cv.addEventListener("pointerup", e => tentOn() && pointerUp(e, who));
+});
+window.addEventListener("resize", fitTent);
+// What the player being shot at reads on their half.
+function defenderText(res, me) {
+  if (!res) return "";
+  const p = players[me], foe = players[1 - me], who = i => p.soldiers[i] ? p.soldiers[i].name : "A soldier";
+  switch (res.type) {
+    case "soldier": return res.kills > 1 ? `Incoming! You lost ${res.kills} soldiers.` : `Incoming! ${who(res.i)} is down!`;
+    case "fort": return p.fort && p.fort.hp > 0 ? `Your fort was hit! ${p.fort.hp} hit${p.fort.hp > 1 ? "s" : ""} left.` : "Your fort is rubble!";
+    case "scratch": return "Just a scratch! Your soldier is still standing.";
+    case "off": return res.timeout ? `${foe.name} ran out of time.` : `${foe.name}'s shot went off the paper.`;
+    case "rock": return "Ping! Your boulder took the hit.";
+    case "slide": return "Rockslide! ...but nobody was standing below the mountain.";
+    default: return res.fart ? `They missed... ${res.fart.poop ? `*squelch* ${who(res.i)} pooped their pants.` : `*pfffrt* ${who(res.i)} got nervous.`}` : "They missed!";
+  }
+}
+
 // ---------- turn timer ----------
 // Optional seconds per shot (user, 2026-11-03). People only; the computer and Boot Camp are never timed.
 // When it runs out: a placed dot or lined-up burst fires by itself, otherwise the shot is wasted (counts as a miss).
@@ -891,6 +954,9 @@ function newMatch(preset) {
     reveal: +$("optReveal").value, reinforce: +$("optReinforce").value, timer: +$("optTimer").value,
     foe: document.querySelector("input[name=foe]:checked").value, level: document.querySelector("input[name=level]:checked").value, bootcamp: false, map: $("optMap").value,
   };
+  // Tent mode: two people, phone standing as a tent. Both set up and pick at once; no hand-off screens.
+  opts.tent = opts.foe === "human" && !opts.bootcamp && tentWanted();
+  if (opts.tent) opts.fireBy = "tap";
   if (!MAPS[opts.map]) { const ids = Object.keys(MAPS).filter(k => k !== "plain"); opts.map = ids[Math.floor(Math.random() * ids.length)]; }
   coachSeen.clear(); coachQ.length = 0; $("coach").classList.add("hidden"); // shown with its first line
   players = [0, 1].map(i => ({name: i && opts.foe === "cpu" ? "Computer" : `Player ${i + 1}`, cpu: i === 1 && opts.foe === "cpu",
@@ -900,8 +966,10 @@ function newMatch(preset) {
   replay = {names: players.map(p => p.name), armies: null, events: [], winner: null, terrain: players.map(p => p.terrain), map: opts.map};
   $("menu").classList.add("hidden"); $("over").classList.add("hidden"); $("game").classList.remove("hidden");
   cur = 0;
-  if (vsCpu()) { go("setup"); coach("setup", 400); } else showCover("Player 1", "Hide your army. Player 2: divert your eyes, soldier!", () => go("setup"));
-  fit();
+  $("tent").classList.toggle("hidden", !opts.tent);
+  if (opts.tent) $("game").classList.add("hidden");
+  if (vsCpu()) { go("setup"); coach("setup", 400); } else if (opts.tent) go("setup"); else showCover("Player 1", "Hide your army. Player 2: divert your eyes, soldier!", () => go("setup"));
+  fit(); if (opts.tent) requestAnimationFrame(fitTent);
 }
 function go(ph) {
   phase = ph; hideCover();
@@ -940,9 +1008,12 @@ function showCover(title, text, onTap) {
   updateUI();
 }
 function hideCover() { $("cover").classList.add("hidden"); $("cover").classList.remove("opening"); }
-function ready() {
+function ready(who) {
   setupTalk = null; // don't carry a speech bubble onto the other player's page
-  if (cur === 0) {
+  if (tentOn()) { // both armies are hidden at once; carry on when both are ready
+    players[who].setupReady = true; sound("click");
+    if (!players.every(q => q.setupReady)) { render(); updateUI(); return; }
+  } else if (cur === 0) {
     if (vsCpu()) cpuSetup(players[1]);
     else { cur = 1; showCover("Player 2", "Hide your army. Player 1: divert your eyes, soldier!", () => go("setup")); return; }
   }
@@ -950,6 +1021,7 @@ function ready() {
   if (opts.bootcamp) { first = cur = 0; coach("hidden"); go("aim"); return; } // no Rock, Paper, Scissors in training
   if (rematchFirst !== null) { // the loser of the last battle opens the rematch
     first = cur = rematchFirst; sound("drum");
+    if (tentOn()) return startBattle();
     const why = !vsCpu() ? `${players[cur].name}, you lost the last battle, so you shoot first. Pass the phone.`
       : cur ? "The computer lost the last battle, so it shoots first." : "You lost the last battle, so you shoot first.";
     showCover(Math.random() < .5 ? "Loser goes first!" : "Winner goes last!", why, startBattle);
@@ -966,10 +1038,16 @@ const beats = (a, b) => (a - b + 3) % 3 === 1; // Paper beats Rock, Scissors bea
 let rps = null, rematchFirst = null;
 function startRps() {
   rps = {picks: [null, null]}; cur = 0;
-  if (vsCpu()) return go("rps");
+  if (vsCpu() || tentOn()) return go("rps");
   showCover("Player 1", "Rock, Paper, Scissors for the first shot. Pick in secret. Player 2: divert your eyes, soldier!", () => go("rps"));
 }
-function rpsPick(i) {
+function rpsPick(i, who = cur) {
+  if (tentOn()) { // both pick at once on their own half
+    if (rps.picks[who] != null) return;
+    rps.picks[who] = i; sound("click");
+    if (rps.picks.some(v => v == null)) { render(); updateUI(); return; }
+    phase = "rpsReveal"; sound("drum"); render(); updateUI(); return;
+  }
   rps.picks[cur] = i; sound("click");
   if (cur === 0) {
     if (vsCpu()) rps.picks[1] = Math.floor(Math.random() * 3);
@@ -1017,7 +1095,7 @@ function fire() {
   phase = "fold"; updateUI(); // ignore a second fire while the shot is on its way
   if (opts.fireBy === "tap" || players[cur].cpu) {
     sound(pending.fling ? "gun" : "thump"); navigator.vibrate && navigator.vibrate(pending.fling ? [20, 30, 20, 30, 20] : 30);
-    cv.animate([{filter: "brightness(1.6)"}, {filter: "none"}], {duration: 250});
+    (tentOn() ? TENT[cur].cv : cv).animate([{filter: "brightness(1.6)"}, {filter: "none"}], {duration: 250});
     const id = matchId; setTimeout(() => id === matchId && resolveShot(), 380); // a late shot never lands in a newer match
     return;
   }
@@ -1130,7 +1208,7 @@ function resolveShot() {
   // Against the computer there's nothing to hide, so play just moves on once the result has been seen and heard
   // (user, 2026-11-03: no "Your turn" / "Computer's turn" buttons). A tap on the page skips ahead.
   const id = matchId, shots = shooter.shots.length, talk = res.death || res.fart || res.ouch;
-  const wait = !vsCpu() ? 8000 : armyGone(def) ? 3200 : talk ? 3400 : 2000;
+  const wait = tentOn() ? (armyGone(def) ? 3200 : talk ? 4200 : 3000) : !vsCpu() ? 8000 : armyGone(def) ? 3200 : talk ? 3400 : 2000;
   setTimeout(() => { if (id === matchId && phase === "result" && players[cur] === shooter && shooter.shots.length === shots) next(); }, wait);
 }
 const armyGone = p => p.soldiers.every(u => !u.alive) && (!opts.fortWin || !p.fort || p.fort.hp <= 0);
@@ -1155,13 +1233,14 @@ function shotText(res, who) {
 function next() {
   if (armyGone(players[1 - cur])) return gameOver(cur);
   const prev = cur; cur = 1 - cur;
+  if (tentOn()) return go("aim");
   if (vsCpu()) return players[cur].cpu ? cpuTurn() : go("aim");
   showCover(players[cur].name, `Your turn. ${players[prev].name}: divert your eyes, soldier!`, () => go("aim"));
 }
 function gameOver(winner) {
   phase = "over"; rematchFirst = 1 - winner; replay.winner = winner;
   coachQ.length = 0; coach(winner === 0 ? "win" : "lose", 1600); // drop tips still waiting
-  $("game").classList.add("hidden"); $("over").classList.remove("hidden");
+  $("game").classList.add("hidden"); $("tent").classList.add("hidden"); $("over").classList.remove("hidden");
   $("overTitle").textContent = vsCpu() ? (winner ? "The computer wins!" : "You win!") : `${players[winner].name} wins!`; setTimeout(() => sound("victory"), 900);
   [0, 1].forEach(i => { const c = $("cap" + i); c.textContent = `${players[i].name} (${inkName(INK[i])})`; c.style.color = INK[i]; });
   $("rp").classList.add("hidden"); $("videoNote").classList.add("hidden"); replayButtons(false);
@@ -1787,8 +1866,16 @@ function terrainSound(res) {
 // ---------- render & UI ----------
 function render() {
   if (!players) return;
-  const pi = cur, p = players[pi];
-  if (phase === "rps") {
+  if (tentOn()) { [0, 1].forEach(i => { ctx = TENT[i].ctx; renderView(i); }); ctx = mainCtx; return; }
+  renderView(cur);
+}
+// Draws what player pi sees. Without tent mode that's always the player whose turn it is.
+function renderView(pi) {
+  const p = players[pi];
+  if (phase === "rps" && tentOn() && rps.picks[pi] != null) { // picked; the other side is still choosing
+    paper(ctx); label(ctx, "Picked!", W / 2, 120, 40, INK[pi], "Caveat");
+    drawRps(ctx, rps.picks[pi], W / 2, 240, 42, INK[pi]); label(ctx, "Waiting for the other side...", W / 2, 360, 22, "#6d6a62");
+  } else if (phase === "rps") {
     paper(ctx);
     label(ctx, "Pick in secret", W / 2, 46, 30, INK[pi], "Caveat");
     RPS.forEach((name, i) => {
@@ -1827,7 +1914,11 @@ function render() {
     ctx.save(); ctx.font = '18px "Patrick Hand"'; const mw = ctx.measureText(msg).width + 20; ctx.restore();
     ctx.fillStyle = "#fbf8efdd"; ctx.fillRect(W / 2 - mw / 2, H - 32, mw, 26); // keep the hint readable over units
     label(ctx, msg, W / 2, H - 14, 18, "#6d6a62");
-    if (setupTalk && Date.now() < setupTalk.until) {
+    if (tentOn() && p.setupReady) {
+      ctx.fillStyle = "#fbf8efcc"; ctx.fillRect(0, H / 2 - 40, W, 80);
+      label(ctx, "Ready! Waiting for the other side...", W / 2, H / 2 + 8, 28, INK[pi], "Caveat");
+    }
+    if (setupTalk && Date.now() < setupTalk.until && (!setupTalk.p || setupTalk.p === p)) {
       const u = setupTalk.who === "fort" ? p.fort && {x: p.fort.x, y: p.fort.y - 4} : p.soldiers[setupTalk.who];
       if (u) bubble(ctx, setupTalk.text, u.x, u.y, INK[pi]);
     }
@@ -1835,6 +1926,14 @@ function render() {
     // The computer's turn: you only ever see your own half, with its shot landing on it.
     drawHalf(ctx, 0, {highlightLast: phase === "result"});
     const b = players[0].incoming[players[0].incoming.length - 1];
+    if (phase === "result" && b && b.res !== "off") {
+      const hit = b.res === "soldier" || b.res === "fort";
+      label(ctx, resLabel(b.res), clamp(b.x, 50, W - 50), clamp(b.y + 40, 40, H - 10), hit ? 40 : 30, hit ? RED : "#6d6a62", "Caveat");
+    }
+  } else if (tentOn() && pi !== cur && (phase === "aim" || phase === "fold" || phase === "result")) {
+    // Tent mode, the player being shot at: their own army, with the shot landing on it.
+    drawHalf(ctx, pi, {highlightLast: phase === "result"});
+    const b = p.incoming[p.incoming.length - 1];
     if (phase === "result" && b && b.res !== "off") {
       const hit = b.res === "soldier" || b.res === "fort";
       label(ctx, resLabel(b.res), clamp(b.x, 50, W - 50), clamp(b.y + 40, 40, H - 10), hit ? 40 : 30, hit ? RED : "#6d6a62", "Caveat");
@@ -1877,7 +1976,7 @@ function render() {
       }
     }
   }
-  drawSparks(ctx, sparks);
+  if (!tentOn() || pi === cur) drawSparks(ctx, sparks);
 }
 function strokePath(c, path, color, alpha = 1) { // bullet lines: written as pen dashes
   c.save(); c.globalAlpha = alpha; c.strokeStyle = color; c.lineWidth = 2.2; c.lineCap = "round"; c.lineJoin = "round"; c.setLineDash([7, 5]);
@@ -1887,10 +1986,30 @@ function inkPath(path, alpha = 1) {
   ctx.save(); ctx.globalAlpha = alpha; ctx.strokeStyle = INK[cur]; ctx.lineWidth = 2.2; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.setLineDash([7, 5]);
   ctx.beginPath(); path.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); ctx.restore();
 }
+let uiWho = 0, uiTentPass = false;
 function updateUI() {
-  const bar = $("bar"), st = $("status"); bar.innerHTML = "";
+  if (tentOn() && !uiTentPass) { // once for each half
+    uiTentPass = true;
+    try { [0, 1].forEach(i => { uiWho = i; updateUI(); }); } finally { uiTentPass = false; }
+    return;
+  }
+  const tent = tentOn(), me = tent ? uiWho : cur;
+  const bar = tent ? TENT[me].bar : $("bar"), st = tent ? TENT[me].st : $("status"); bar.innerHTML = "";
   const btn = (t, cls, fn, dis) => { const b = document.createElement("button"); b.textContent = t; b.className = cls || ""; b.onclick = fn; b.disabled = !!dis; bar.appendChild(b); };
   const p = players && players[cur], foe = players && players[1 - cur];
+  if (tent && phase === "setup") {
+    const q = players[me];
+    if (q.setupReady) { st.textContent = "Ready! Waiting for the other side..."; return; }
+    st.textContent = `${q.name}: hide your army at ${MAPS[opts.map].name}`;
+    btn("Clear", "", () => { q.soldiers = []; q.fort = null; render(); updateUI(); });
+    btn("Ready", "primary", () => ready(me), !setupDone(q));
+    return;
+  }
+  if (tent && phase === "rps") { st.textContent = rps.picks[me] == null ? `${players[me].name}: Rock, Paper or Scissors? Pick in secret.` : "Picked! Waiting for the other side..."; return; }
+  if (tent && me !== cur && (phase === "aim" || phase === "fold")) {
+    st.textContent = (p.tauntOut ? `${p.name} yells "${p.tauntOut}" ` : "") + `Incoming! ${p.name} is aiming at you...`; return;
+  }
+  if (tent && me !== cur && phase === "result") { st.textContent = defenderText(lastResult, me); return; }
   if (phase === "setup") {
     st.textContent = `${p.name}: hide your army at ${MAPS[opts.map].name}`;
     btn("Clear", "", () => { p.soldiers = []; p.fort = null; render(); updateUI(); });
@@ -1916,7 +2035,7 @@ function updateUI() {
   } else if (phase === "result") {
     st.textContent = shotText(lastResult, cur) + (lastResult.spotted ? ` Ink bleed spotted ${lastResult.spotted} new target${lastResult.spotted > 1 ? "s" : ""}!` : "")
       + (lastResult.reinforced ? ` That's ${opts.reinforce} misses in a row: the enemy gets reinforcements!` : "");
-    if (!foe.cpu) btn(armyGone(foe) ? "See the battlefield" : `Pass to ${foe.name}`, "primary", next);
+    if (!foe.cpu && !tent) btn(armyGone(foe) ? "See the battlefield" : `Pass to ${foe.name}`, "primary", next);
   } else if (phase === "rps") {
     st.textContent = `${p.name}: Rock, Paper or Scissors?`;
   } else if (phase === "rpsReveal") {
@@ -1928,7 +2047,7 @@ function updateUI() {
       else {
         const f = rps.orders.first;
         st.textContent = `${rps.orders.text} ${players[f].name} shoots first.`;
-        btn("To battle", "primary", () => { first = cur = f; if (vsCpu()) return startBattle(); showCover(`${players[f].name} shoots first`, rps.orders.text + " Pass the phone.", () => go("aim")); });
+        btn("To battle", "primary", () => { first = cur = f; if (vsCpu() || tentOn()) return startBattle(); showCover(`${players[f].name} shoots first`, rps.orders.text + " Pass the phone.", () => go("aim")); });
       }
     }
   } else if (phase === "cover" || phase === "fold") {
