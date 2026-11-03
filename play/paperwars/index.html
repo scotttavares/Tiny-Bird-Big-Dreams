@@ -2134,6 +2134,27 @@ function penBox(c, x, y, w, h, color, seed, k = 1, lw = 2.6) {
   });
   c.restore();
 }
+// The FOLD & FIRE stamp, inked once onto its own canvas (2x for sharpness): Stardos Stencil in a heavy frame,
+// then worn with seeded specks and scuffs knocked out of the ink so it reads as a real rubber stamp.
+let ffStamp = null;
+function foldFireStamp() {
+  if (ffStamp) return ffStamp;
+  const k = 2, cnv = document.createElement("canvas"), g = cnv.getContext("2d"), text = "FOLD & FIRE";
+  g.font = '700 30px "Stardos Stencil", "Special Elite", monospace'; const tw = g.measureText(text).width;
+  cnv.width = (tw + 54) * k; cnv.height = 66 * k; g.scale(k, k);
+  const w = tw + 54, h = 66;
+  g.strokeStyle = g.fillStyle = "#b3261e"; g.lineWidth = 4.5; g.strokeRect(5, 5, w - 10, h - 10); g.lineWidth = 1.6; g.strokeRect(11, 11, w - 22, h - 22);
+  g.font = '700 30px "Stardos Stencil", "Special Elite", monospace'; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(text, w / 2, h / 2 + 2);
+  const r = rand(909); g.globalCompositeOperation = "destination-out";
+  for (let i = 0; i < 520; i++) { g.globalAlpha = .35 + r() * .65; g.beginPath(); g.arc(r() * w, r() * h, .3 + r() * 1.1, 0, 7); g.fill(); } // ink specks
+  for (let i = 0; i < 9; i++) { // dry scuffs where the rubber didn't take ink
+    g.globalAlpha = .25 + r() * .35; g.lineWidth = 1 + r() * 2.5; g.lineCap = "round";
+    const x = r() * w, y = r() * h; g.beginPath(); g.moveTo(x, y); g.lineTo(x + 10 + r() * 30, y + (r() - .5) * 6); g.stroke();
+  }
+  g.globalAlpha = .3; const grd = g.createLinearGradient(0, 0, w, 0); grd.addColorStop(0, "#000"); grd.addColorStop(.25, "transparent"); grd.addColorStop(1, "transparent");
+  g.fillStyle = grd; g.fillRect(0, 0, w, h); // one side pressed lighter
+  ffStamp = cnv; return cnv;
+}
 // ---------- intro ----------
 // About 8 seconds of pencil and paper: the studio credit types out, a pencil writes the title, a FOLD & FIRE stamp,
 // two stick armies stamp in, one shot arcs across (BOOM), the paper plane parachutes in a replacement, the drill
@@ -2171,14 +2192,19 @@ function drawIntro(t) {
       c.restore();
     }
   }
-  // 3. "Fold & Fire!" sketched in red pen: the box, then the words (user, 2026-11-03: everything drawn on paper)
-  if (t > 2000) {
-    c.save(); c.translate(W / 2, 212); c.rotate(-.06);
-    c.font = '700 40px "Caveat"'; const tw = c.measureText("Fold & Fire!").width;
-    penBox(c, -tw / 2 - 16, -30, tw + 32, 46, RED, 21, Math.min(1, (t - 2000) / 420));
-    const k = Math.min(1, Math.max(0, (t - 2250) / 650));
-    c.beginPath(); c.rect(-tw / 2 - 4, -40, (tw + 8) * k, 70); c.clip(); label(c, "Fold & Fire!", 0, 6, 40, RED, "Caveat");
-    c.restore();
+  // 3. FOLD & FIRE rubber stamp, like the top-secret folder's (user, 2026-11-03): it drops in big and faint,
+  //    slams onto the page with a little squash and shake, and leaves a worn, patchy ink print.
+  if (t > 1700) {
+    const img = foldFireStamp(), u = t - 1700, land = 260;
+    let sc2 = 1, a = .9, dx = 0, dy = 0;
+    if (u < land) { const e = u / land; sc2 = 1.7 - .7 * e * e; a = .2 + .7 * e * e; } // falling toward the paper
+    else if (u < land + 220) { const e = (u - land) / 220; sc2 = 1 - .07 * Math.sin(e * Math.PI) ; dx = Math.sin(e * 40) * 3 * (1 - e); dy = Math.cos(e * 33) * 2 * (1 - e); } // the thump
+    if (u < land) { // the stamp's shadow on the paper, shrinking as it comes down
+      const e = u / land; c.save(); c.globalAlpha = .1 * e; c.fillStyle = "#3c301c"; c.filter = "blur(6px)"; c.translate(W / 2 + 4 + 10 * (1 - e), 214 + 8 * (1 - e)); c.rotate(-.09);
+      c.fillRect(-img.width / 4 * .9, -img.height / 4 * .9, img.width / 2 * .9, img.height / 2 * .9); c.restore();
+    }
+    c.save(); c.translate(W / 2 + dx, 212 + dy); c.rotate(-.09); c.scale(sc2, sc2); c.globalAlpha = a;
+    c.drawImage(img, -img.width / 4, -img.height / 4, img.width / 2, img.height / 2); c.restore();
   }
   // 4. the armies stamp in, one by one
   const s = sc();
@@ -2225,7 +2251,7 @@ function playIntro() { introDrop.ink = INK[1]; // the reinforcement joins the gr
     if (run !== introRun) return;
     const t = (performance.now() - introT0) / INTRO_SLOW; introDrop.t0 = performance.now() - (t - 4700); // the airdrop follows the slowed clock
     cue("pencil", 520, t, () => sound("pencil"));
-    cue("stamp", 2000, t, () => sound("pencil"));
+    cue("stamp", 1960, t, () => sound("thump")); // lands at 1960 (1700 + the 260 ms drop)
     [...BLUE_ARMY, ...BLACK_ARMY].forEach((_, i) => cue("s" + i, (i < 3 ? 2300 + i * 160 : 2380 + (i - 3) * 160), t, () => sound("click")));
     cue("drum", 3300, t, () => sound("drum"));
     cue("fire", 3900, t, () => sound("thump"));
@@ -2245,7 +2271,7 @@ function showIntroCard() {
 }
 $("introCard").onclick = async () => {
   loadSfx(); ac.state !== "running" && ac.resume();
-  await Promise.all([document.fonts.load('17px "Patrick Hand"'), document.fonts.load('700 30px Caveat')]).catch(() => {});
+  await Promise.all([document.fonts.load('17px "Patrick Hand"'), document.fonts.load('700 30px Caveat'), document.fonts.load('700 30px "Stardos Stencil"')]).catch(() => {});
   playIntro();
 };
 $("introSkip").onclick = e => { e.stopPropagation(); introAtEnd ? foldAway() : finishIntro(); }; // Skip jumps to the last frame
