@@ -2122,7 +2122,7 @@ function awards() {
   const farts = {};
   ev.forEach(e => { if (e.res.fart && !e.res.fart.poop) { const k = `${1 - e.who}:${e.res.i}`; farts[k] = (farts[k] || 0) + 1; } });
   const fk = Object.keys(farts).sort((a, b) => farts[b] - farts[a])[0];
-  if (fk) { const [w, i] = fk.split(":").map(Number); A.push({title: "Nervous Farter of the Day", who: w, name: nameOf(w, i), why: farts[fk] > 1 ? `${farts[fk]} nervous farts` : "one very nervous fart"}); }
+  if (fk && farts[fk] > 1) { const [w, i] = fk.split(":").map(Number); A.push({title: "Nervous Farter of the Day", who: w, name: nameOf(w, i), why: farts[fk] > 1 ? `${farts[fk]} nervous farts` : "one very nervous fart"}); }
   const left = players[replay.winner].soldiers.filter(u => u.alive);
   if (left.length === 1) A.push({title: "Last Soldier Standing", who: replay.winner, name: left[0].name, why: "won the war alone"});
   const slideEv = ev.filter(e => e.res.slide && e.killed.length).sort((a, b) => b.killed.length - a.killed.length)[0];
@@ -2130,27 +2130,26 @@ function awards() {
   const splashEv = ev.find(e => e.res.splash && e.killed.length);
   if (splashEv) A.push({title: "Cannonball!", who: splashEv.who, name: N[splashEv.who], why: `soaked ${armyName(1 - splashEv.who, splashEv.killed[0])}`});
   const pings = [0, 1].map(w => by(w).filter(e => e.res.type === "rock").length), pw = pings[0] >= pings[1] ? 0 : 1;
-  if (pings[pw] >= 2) A.push({title: "Rock Collector", who: pw, name: N[pw], why: `${pings[pw]} shots into boulders`});
+  if (pings[pw] >= 3) A.push({title: "Rock Collector", who: pw, name: N[pw], why: `${pings[pw]} shots into boulders`});
   const multi = ev.filter(e => e.res.kills > 1 && !e.res.slide).sort((a, b) => b.res.kills - a.res.kills)[0];
   if (multi) A.push({title: "Mowed 'Em Down", who: multi.who, name: N[multi.who], why: `${multi.res.kills} soldiers with one burst`});
   // Couldn't Hit a Barn: longest run of misses
   const streak = [0, 1].map(w => { let best = 0, run = 0; by(w).forEach(e => { run = e.res.type === "soldier" || e.res.type === "fort" ? 0 : run + 1; best = Math.max(best, run); }); return best; });
   const bw = streak[0] >= streak[1] ? 0 : 1;
-  if (streak[bw] >= 4) A.push({title: "Couldn't Hit a Barn", who: bw, name: N[bw], why: `${streak[bw]} misses in a row`});
+  if (streak[bw] >= 6) A.push({title: "Couldn't Hit a Barn", who: bw, name: N[bw], why: `${streak[bw]} misses in a row`});
   // Spray and Pray: a machine-gun burst that hit nothing at all
   const spray = ev.find(e => e.shot.fling && !e.killed.length && !e.fortHit);
   if (spray) A.push({title: "Spray and Pray", who: spray.who, name: N[spray.who], why: "a whole burst, not one hit"});
-  const close = ev.filter(e => e.res.type === "miss" && e.res.nearIdx != null && e.res.near < NEAR).sort((a, b) => a.res.near - b.res.near)[0];
+  const close = ev.filter(e => e.res.type === "miss" && e.res.nearIdx != null && e.res.near < NEAR * .5).sort((a, b) => a.res.near - b.res.near)[0];
   if (close) A.push({title: "Closest Call", who: 1 - close.who, name: nameOf(1 - close.who, close.res.nearIdx), why: "a shot missed by a hair"});
   const wreck = ev.find(e => e.fortHit && e.fortHp === 0);
   if (wreck) A.push({title: "Fort Wrecker", who: wreck.who, name: N[wreck.who], why: "knocked the fort to rubble"});
   const acc = [0, 1].map(w => by(w).length ? hits(w) / by(w).length : 0), sw = acc[0] === acc[1] ? replay.winner : acc[0] > acc[1] ? 0 : 1;
-  if (hits(sw) >= 2) A.push({title: "Sharpshooter", who: sw, name: N[sw], why: `${Math.round(acc[sw] * 100)}% of shots hit`});
-  const fb = ev.find(e => e.killed.length);
-  if (fb) A.push({title: "First Blood", who: fb.who, name: N[fb.who], why: `got ${armyName(1 - fb.who, fb.killed[0])} first`});
+  if (hits(sw) >= 4 && acc[sw] >= .6) A.push({title: "Sharpshooter", who: sw, name: N[sw], why: `${Math.round(acc[sw] * 100)}% of shots hit`});
+  // (First Blood is retired: somebody always got it. User, 2026-11-04: medals should make sense and not come every game.)
   const scr = [0, 1].map(w => ev.filter(e => e.who !== w && e.res.type === "scratch").length), sk = scr[0] >= scr[1] ? 0 : 1;
   if (scr[sk] >= 2) A.push({title: "Band-Aid Brigade", who: sk, name: N[sk], why: `${scr[sk]} scratches, still fighting`});
-  return A.slice(0, 5);
+  return A.slice(0, 3); // the rarest few, in the order above
 }
 // A hand-drawn gold trophy for each award (user, 2026-11-03: "nervous farter gets a golden butt"), outlined in the winner's ink.
 // Each is drawn in a 48x48 box; the same SVG is used on the medal cards and, as an image, on the replay video's medal board.
@@ -2408,26 +2407,27 @@ function pageTurn(el) { // flip a copy of el away like a notebook page; call it 
 // Player 1's career builds over every match: service points promote them from Private to General of the Army, each
 // medal type adds a ribbon to their rack, and skill badges come in Basic / Senior / Master. All are our own pen-drawn
 // designs (generic chevrons, bars, leaves, eagle and stars; no official insignia or real ribbon patterns).
+// Service points per rank (doubled 2026-11-04 so a first win doesn't always mean a promotion).
 const CAREER_RANKS = [
-  ["Private", 0, "e", 0, 0], ["Private First Class", 150, "e", 1, 1], ["Corporal", 400, "e", 2, 0], ["Sergeant", 800, "e", 3, 0],
-  ["Staff Sergeant", 1300, "e", 3, 1], ["Sergeant First Class", 2000, "e", 3, 2], ["Master Sergeant", 2900, "e", 3, 3],
-  ["Sergeant Major", 4000, "e", 3, 3, 1], ["Second Lieutenant", 5300, "bar", 1, "gold"], ["First Lieutenant", 6800, "bar", 1, "silver"],
-  ["Captain", 8500, "bar", 2, "silver"], ["Major", 10500, "leaf", "gold"], ["Lieutenant Colonel", 12800, "leaf", "silver"],
-  ["Colonel", 15500, "eagle"], ["Brigadier General", 18500, "stars", 1], ["Major General", 22000, "stars", 2],
-  ["Lieutenant General", 26000, "stars", 3], ["General", 30500, "stars", 4], ["General of the Army", 36000, "stars", 5],
+  ["Private", 0, "e", 0, 0], ["Private First Class", 300, "e", 1, 1], ["Corporal", 800, "e", 2, 0], ["Sergeant", 1600, "e", 3, 0],
+  ["Staff Sergeant", 2600, "e", 3, 1], ["Sergeant First Class", 4000, "e", 3, 2], ["Master Sergeant", 5800, "e", 3, 3],
+  ["Sergeant Major", 8000, "e", 3, 3, 1], ["Second Lieutenant", 10600, "bar", 1, "gold"], ["First Lieutenant", 13600, "bar", 1, "silver"],
+  ["Captain", 17000, "bar", 2, "silver"], ["Major", 21000, "leaf", "gold"], ["Lieutenant Colonel", 25600, "leaf", "silver"],
+  ["Colonel", 31000, "eagle"], ["Brigadier General", 37000, "stars", 1], ["Major General", 44000, "stars", 2],
+  ["Lieutenant General", 52000, "stars", 3], ["General", 61000, "stars", 4], ["General of the Army", 72000, "stars", 5],
 ];
 const rankOf = pts => { let k = 0; CAREER_RANKS.forEach((r, i) => { if (pts >= r[1]) k = i; }); return k; };
 // Skill badges: [id, name, stat, tiers (counts for Basic/Senior/Master, or one count), what earns it, Full Arsenal only?]
 const BADGES = [
   ["marksman", "Marksman", "hits", [25, 100, 300], "hits on the enemy", false],
-  ["infantry", "Infantry", "wins", [1, 10, 50], "battles won", false],
+  ["infantry", "Infantry", "wins", [3, 25, 100], "battles won", false],
   ["parachutist", "Parachutist", "drops", [5, 25, 75], "reinforcements dropped in for you", false],
   ["gunner", "Machine Gunner", "mgKills", [5, 25, 75], "soldiers taken out with a burst", false],
-  ["demolition", "Demolitions", "forts", [1, 10, 30], "enemy forts turned to rubble", false],
+  ["demolition", "Demolitions", "forts", [3, 15, 50], "enemy forts turned to rubble", false],
   ["medic", "Combat Medic", "scratches", [5, 25, 75], "soldiers who shook off a scratch", false],
   ["drill", "Drill Sergeant", "bootcamp", [1], "Boot Camp finished", false],
   ["pathfinder", "Pathfinder", "mapsWon", [5], "a win on every battlefield", true],
-  ["diver", "Diver", "wetWins", [1], "a win at the river or the lake", true],
+  ["diver", "Diver", "wetWins", [1], "a win with a soldier wading in the river", true],
   ["ranger", "Ranger", "generalWins", [1], "the General beaten", true],
   ["onemanarmy", "One-Man Army", "flawless", [1], "a win without losing a single soldier", true],
 ];
@@ -2498,7 +2498,7 @@ function careerFromMatch(winner) {
   };
   const won = winner === 0;
   c.points = (won ? 120 : 30) + c.hits * 12 + c.forts * 60 + c.mgKills * 10 + (opts.level === "general" && vsCpu() ? 40 : 0);
-  return {c, won, flawless: won && players[0].soldiers.every(u => u.alive), map: opts.map, wet: won && (opts.map === "river" || opts.map === "lake"),
+  return {c, won, flawless: won && players[0].soldiers.every(u => u.alive), map: opts.map, wet: won && players[0].soldiers.some(u => u.alive && u.wading), // Diver: one of yours held the river (no one can stand in a lake)
     beatGeneral: won && vsCpu() && opts.level === "general", bootcamp: !!opts.bootcamp};
 }
 function careerStats(r) { const st = {...(r.stats || {})}; st.wins = r.wins | 0; st.mapsWon = Object.keys(r.mapsWon || {}).length; return st; }
