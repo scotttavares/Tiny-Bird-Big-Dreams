@@ -419,8 +419,12 @@ workflows:
           xcode-project use-profiles --project "$XCODE_PROJECT"
       - name: Build IPA
         script: |
-          # Codemagic's per-app build counter keeps every upload's build number unique.
-          BUILD="${PROJECT_BUILD_NUMBER:-$BUILD_NUMBER}"
+          # Paper Wars has its own Codemagic app now (its counter restarted), so the build number
+          # continues from TestFlight's latest Paper Wars build (ASC app 6830389783).
+          LATEST=$(app-store-connect get-latest-testflight-build-number 6830389783 2>/dev/null | tail -1 | tr -dc '0-9')
+          BUILD=$(( ${LATEST:-0} + 1 ))
+          if [ "$BUILD" -le 1 ]; then BUILD=$(( ${PROJECT_BUILD_NUMBER:-$BUILD_NUMBER} + 100 )); fi
+          echo "Build number: $BUILD (latest in TestFlight: ${LATEST:-unknown})"
           # PAPERWARS_DUO_SDK compiles in the hinge code (PostureProvider.swift); without it
           # the app never sees the tent posture, so the two-halves mode never starts.
           xcode-project build-ipa \
