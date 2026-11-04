@@ -2927,7 +2927,7 @@ function drawInkPickers() {
 // shows at once next launch. The web version can't sell it: there the sheet points to the iPhone app (?arsenal=1 previews it).
 const ARSENAL = {key: "paperWarsArsenal", owned: false, price: "$4.99",
   maps: ["pass", "river", "lake"], levels: ["general"], freePens: ["#1f4fa8", "#2a2a2a", "#1e7a46", "#b3261e"]};
-try { ARSENAL.owned = localStorage.getItem(ARSENAL.key) === "1" || /[?&]arsenal=1/.test(location.search); } catch (e) {}
+ARSENAL.owned = true; // website stays unlocked until the app launches
 const fullArsenal = () => ARSENAL.owned;
 const inApp = () => !!(window.webkit && webkit.messageHandlers && webkit.messageHandlers.paperWars);
 function setArsenal(owned, price) { // called by the iPhone app
