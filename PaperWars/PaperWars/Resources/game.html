@@ -200,7 +200,19 @@ button.awol.sure{color:var(--red);font-weight:700}
 .sw.locked::after,.wheel.locked::after{content:"\1F512";position:absolute;inset:0;display:grid;place-items:center;font-size:12px}
 .row.locked{opacity:.55}
 .row.locked::after{content:"\1F512 Full Arsenal";grid-column:2;font-size:13px;color:#b3261e}
-.arsenalBtn{border-color:#b3261e !important;color:#b3261e !important}
+#arsenalDepot.hidden{display:none}
+.crate{position:relative;display:block;width:100%;margin:2px 0 6px;padding:12px 14px 14px;text-align:left;cursor:pointer;color:#3d3f22;
+  background:repeating-linear-gradient(180deg,#cfc196 0 30px,#b9aa7c 30px 32px),#cfc196;border:3px solid #6b5f3a;border-radius:6px;
+  box-shadow:inset 0 0 0 6px #cfc19600,inset 0 0 18px #6b5f3a55,3px 4px 0 #0002;transform:rotate(-.6deg);animation:crateNudge 5s 2s infinite}
+.crate::before,.crate::after{content:"";position:absolute;top:6px;bottom:6px;width:10px;border-left:3px solid #6b5f3a;border-right:3px solid #6b5f3a;opacity:.55}
+.crate::before{left:6px}.crate::after{right:6px}
+.crate:active{transform:rotate(-.6deg) scale(.97)}
+.crateTop{display:block;font:700 11px/1 "Stardos Stencil","Special Elite",monospace;letter-spacing:.14em;opacity:.7;margin-left:16px}
+.crateName{display:block;white-space:nowrap;font:700 min(28px, 7.2vw)/1.05 "Stardos Stencil","Special Elite",monospace;letter-spacing:.06em;margin:4px 0 2px 16px;color:#33361a}
+.crateList{display:block;font-size:16px;margin-left:16px;margin-right:84px;line-height:1.25}
+.cratePrice{position:absolute;right:20px;bottom:12px;font:700 22px/1 "Stardos Stencil","Special Elite",monospace;color:#b3261e;border:3px double #b3261e;
+  border-radius:4px;padding:5px 7px 3px;transform:rotate(-8deg);background:#f7f1dccc}
+@keyframes crateNudge{0%,92%,100%{transform:rotate(-.6deg)}94%{transform:rotate(-1.6deg)}96%{transform:rotate(.4deg)}98%{transform:rotate(-1deg)}}
 #arsenalSheet{position:fixed;inset:0;z-index:60;background:#000a;display:flex;align-items:center;justify-content:center;padding:max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom))}
 #arsenalSheet.hidden{display:none}
 .arsenalCard{max-width:420px;animation:menuArrive .35s both}
@@ -347,7 +359,15 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
   </div>
   <select id="optMap" class="hidden" aria-label="Map"><option value="random">Surprise me</option><option value="plain">No Man's Land</option><option value="boulders">Monte Cassino</option><option value="pass">Kasserine Pass</option><option value="river">The Somme</option><option value="lake">Masurian Lakes</option></select>
   <div class="go"><button class="stampbtn" id="startBtn">START MISSION</button></div>
-  <div class="bar small"><button id="bootBtn">&#9733; Boot Camp <small>first time?</small></button><button id="introBtn">&#9654; Intro</button><button id="cabBtn">Medals <small id="cabCount"></small></button><button id="arsenalBtn" class="arsenalBtn">&#9733; Full Arsenal</button></div>
+  <div class="bar small"><button id="bootBtn">&#9733; Boot Camp <small>first time?</small></button><button id="introBtn">&#9654; Intro</button><button id="cabBtn">Medals <small id="cabCount"></small></button></div>
+  <!-- Supply depot (user, 2026-11-04: "under upgrades or something military sounding ... was hard to notice") -->
+  <div id="arsenalDepot"><h4>Supply depot</h4>
+    <button type="button" id="arsenalBtn" class="crate" aria-label="Full Arsenal upgrade">
+      <span class="crateTop">US &#9733; SUPPLY &middot; HANDLE WITH CARE</span>
+      <span class="crateName">FULL ARSENAL</span>
+      <span class="crateList">The General &middot; 3 battlefields &middot; 5 voices &middot; every pen</span>
+      <span class="cratePrice" id="arsenalPrice">$4.99</span>
+    </button></div>
   <details class="more"><summary>More orders</summary>
     <div class="row"><canvas class="ico" data-ico="timer"></canvas><span>Turn timer<small>Seconds per shot</small></span>
       <select id="optTimer"><option value="0">Off</option><option value="10">10 s</option><option value="15">15 s</option><option value="20">20 s</option><option value="30">30 s</option><option value="60">60 s</option></select></div>
@@ -3135,7 +3155,8 @@ function applyArsenal() {
     let fixed = false; [0, 1].forEach(i => { if (!ARSENAL.freePens.includes(INK[i])) { INK[i] = ["#1f4fa8", "#1e7a46"][i]; fixed = true; } });
     if (fixed && INK[0] === INK[1]) INK[1] = "#b3261e";
   } else if ($("reinforceVal").textContent === "off") { $("optReinforce").value = 3; $("reinforceVal").textContent = 3; }
-  $("arsenalBtn").classList.toggle("hidden", own);
+  $("arsenalDepot").classList.toggle("hidden", own);
+  $("arsenalPrice").textContent = ARSENAL.price;
   drawInkPickers();
 }
 function openArsenal(why) {
