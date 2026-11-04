@@ -4,13 +4,15 @@ import WebKit
 /// Hosts the bundled game page (`game.html`) and bridges it to the app:
 /// - the page's saved values (keys starting with `paperWars`) go to `CloudSaves`, and come back
 ///   before the page starts, so settings, inks, stats and medals follow the player's iCloud;
-/// - the fold posture is pushed in, so the page can split into two halves when the Duo is a tent.
+/// - the fold posture is pushed in, so the page can split into two halves when the Duo is a tent;
+/// - the Full Arsenal purchase: the page asks to buy, restore or check it, and is told the result.
 struct GameWebView: UIViewRepresentable {
     let posture: Posture
     let saves: CloudSaves
+    let store: ArsenalStore
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(saves: saves)
+        Coordinator(saves: saves, store: store)
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -44,6 +46,12 @@ struct GameWebView: UIViewRepresentable {
         saves.onExternalChange = { [weak coordinator = context.coordinator] key, value in
             coordinator?.run(GameBridge.storedScript(key: key, value: value))
         }
+        store.onChange = { [weak coordinator = context.coordinator] owned, price in
+            coordinator?.run(GameBridge.arsenalScript(owned: owned, price: price))
+        }
+        store.onFailure = { [weak coordinator = context.coordinator] message in
+            coordinator?.run(GameBridge.arsenalFailedScript(message))
+        }
         return web
     }
 
@@ -58,11 +66,13 @@ struct GameWebView: UIViewRepresentable {
     @MainActor
     final class Coordinator: NSObject, WKScriptMessageHandler {
         let saves: CloudSaves
+        let store: ArsenalStore
         weak var webView: WKWebView?
         var lastPosture: Posture?
 
-        init(saves: CloudSaves) {
+        init(saves: CloudSaves, store: ArsenalStore) {
             self.saves = saves
+            self.store = store
         }
 
         func send(posture: Posture) {
@@ -76,6 +86,17 @@ struct GameWebView: UIViewRepresentable {
         }
 
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+            if let request = GameBridge.StoreRequest(message.body) {
+                let store = self.store
+                Task {
+                    switch request {
+                    case .buy: await store.buy()
+                    case .restore: await store.restore()
+                    case .status: await store.refresh()
+                    }
+                }
+                return
+            }
             guard let save = GameBridge.Save(message.body) else { return }
             saves.set(save.value, forKey: save.key)
         }

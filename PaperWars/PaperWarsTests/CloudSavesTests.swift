@@ -77,6 +77,26 @@ struct GameBridgeTests {
     }
 }
 
+struct StoreBridgeTests {
+    @Test func readsStoreRequests() {
+        #expect(GameBridge.StoreRequest(["store": "buy"]) == .buy)
+        #expect(GameBridge.StoreRequest(["store": "restore"]) == .restore)
+        #expect(GameBridge.StoreRequest(["store": "status"]) == .status)
+        #expect(GameBridge.StoreRequest(["store": "steal"]) == nil)
+        #expect(GameBridge.StoreRequest(["key": "paperWarsInk", "value": "x"]) == nil)
+    }
+
+    @Test func arsenalScriptsTellThePage() {
+        #expect(GameBridge.arsenalScript(owned: true, price: "$4.99").contains("set(true, \"$4.99\")"))
+        #expect(GameBridge.arsenalScript(owned: false, price: nil).contains("set(false, null)"))
+        #expect(GameBridge.arsenalFailedScript("No \"luck\"").contains("failed(\"No \\\"luck\\\"\")"))
+    }
+
+    @Test func storeMessagesAreNotSaves() {
+        #expect(GameBridge.Save(["store": "buy"]) == nil)
+    }
+}
+
 struct PostureMapperTests {
     @Test func tentWhenAHorizontalFoldIsHalfOpen() {
         let inputs = PostureInputs(hingeStatus: .partiallyOpen, hingeAngleDegrees: 70,
