@@ -4,10 +4,11 @@ import SwiftUI
 struct PaperWarsApp: App {
     @State private var posture = SystemPostureProvider()
     @State private var saves = CloudSaves()
+    @State private var store = ArsenalStore()
 
     var body: some Scene {
         WindowGroup {
-            GameScreen(posture: posture, saves: saves)
+            GameScreen(posture: posture, saves: saves, store: store)
         }
     }
 }
@@ -17,9 +18,10 @@ struct PaperWarsApp: App {
 struct GameScreen: View {
     let posture: SystemPostureProvider
     let saves: CloudSaves
+    let store: ArsenalStore
 
     var body: some View {
-        GameWebView(posture: posture.posture, saves: saves)
+        GameWebView(posture: posture.posture, saves: saves, store: store)
             .ignoresSafeArea()
             .background(Color("PaperColor"))
             .readsPosture(into: posture)

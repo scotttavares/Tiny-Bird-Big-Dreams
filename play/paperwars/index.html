@@ -136,6 +136,42 @@ button.awol.sure{color:var(--red);font-weight:700}
 .cab b{display:block;font:700 19px/1 Caveat,cursive}
 .cab .n{position:absolute;top:-4px;right:6px;background:#b3261e;color:#fff;border-radius:999px;font-size:13px;padding:0 6px}
 .cab.locked{opacity:.28;filter:grayscale(1)}
+/* career */
+.careerNews{display:flex;flex-direction:column;align-items:center;gap:8px;margin:6px 0}
+.careerNews.hidden{display:none}
+.promo{display:flex;align-items:center;gap:10px;background:#fbf8ef;color:#2b2a27;border-radius:12px;padding:6px 16px 6px 8px;box-shadow:0 3px 10px #0005;animation:tapSlam .45s 2.2s both}
+.promo small,.badgeNew small{display:block;font:12px "Special Elite",monospace;letter-spacing:.15em;color:#b3261e}
+.promo b{font:700 26px/1 Caveat,cursive}
+.badgeNew{display:flex;align-items:center;gap:8px;background:#fbf8ef;color:#2b2a27;border-radius:12px;padding:4px 14px 4px 6px;opacity:0;transform:scale(.6) rotate(-6deg);animation:stamp .35s forwards}
+.badgeNew b{font:700 22px/1 Caveat,cursive}
+.cabRank{display:flex;align-items:center;gap:10px;margin:4px 0 2px}
+.cabRank b{display:block;font:700 26px/1.05 Caveat,cursive;color:#1f4fa8}
+.cabRank small{display:block;color:#7d776a;font-size:14px}
+.cabRank .bar{display:block;height:7px;background:#e3dccb;border-radius:4px;margin-top:4px;overflow:hidden;width:200px;max-width:100%}
+.cabRank .bar i{display:block;height:100%;background:#b3261e}
+.ribbons{display:flex;flex-wrap:wrap;gap:3px 4px;max-width:240px;padding:4px 0}
+.ribbons .empty{color:#7d776a}
+.badges .cab small{display:block;color:#7d776a;font-size:12px;line-height:1.15}
+/* Full Arsenal locks and sheet */
+.tile.locked{opacity:.55;filter:saturate(.4)}
+.tile.locked::before{content:"\1F512";position:absolute;top:4px;left:6px;font-size:15px;filter:none;opacity:.9}
+.tile.locked:has(input:checked)::after{display:none}
+.sw.locked,.wheel.locked{position:relative;opacity:.45}
+.sw.locked::after,.wheel.locked::after{content:"\1F512";position:absolute;inset:0;display:grid;place-items:center;font-size:12px}
+.row.locked{opacity:.55}
+.row.locked::after{content:"\1F512 Full Arsenal";grid-column:2;font-size:13px;color:#b3261e}
+.arsenalBtn{border-color:#b3261e !important;color:#b3261e !important}
+#arsenalSheet{position:fixed;inset:0;z-index:60;background:#000a;display:flex;align-items:center;justify-content:center;padding:max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom))}
+#arsenalSheet.hidden{display:none}
+.arsenalCard{max-width:420px;animation:menuArrive .35s both}
+.arsStamp{font:700 34px/1 "Stardos Stencil","Special Elite",monospace;letter-spacing:.06em;color:#b3261e;border:5px double #b3261e;border-radius:6px;padding:8px 14px 6px;
+  display:inline-block;transform:rotate(-3deg);margin:4px 0 8px;animation:tapSlam .4s .1s both}
+.arsWhy{margin:0;color:#b3261e;font-size:17px}
+.arsList{list-style:none;padding:0;margin:8px 0;font-size:18px;line-height:1.3;display:grid;gap:6px}
+.arsList li{display:flex;gap:8px;align-items:baseline}
+.arsList b{flex:none;width:30px;text-align:center;color:#1f4fa8}
+.arsNote{margin:0 0 6px;color:#7d776a;font-size:15px}
+.arsMsg{margin:4px 0 0;color:#b3261e;font-size:15px;min-height:1em}
 .tip{margin:10px 0 0;color:#7d776a;font-size:15px;text-align:center}
 .over{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
 .over figure{margin:0;text-align:center}
@@ -271,7 +307,7 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
   </div>
   <select id="optMap" class="hidden" aria-label="Map"><option value="random">Surprise me</option><option value="plain">No Man's Land</option><option value="boulders">Monte Cassino</option><option value="pass">Kasserine Pass</option><option value="river">The Somme</option><option value="lake">Masurian Lakes</option></select>
   <div class="go"><button class="stampbtn" id="startBtn">START MISSION</button></div>
-  <div class="bar small"><button id="bootBtn">&#9733; Boot Camp <small>first time?</small></button><button id="introBtn">&#9654; Intro</button><button id="cabBtn">Medals <small id="cabCount"></small></button></div>
+  <div class="bar small"><button id="bootBtn">&#9733; Boot Camp <small>first time?</small></button><button id="introBtn">&#9654; Intro</button><button id="cabBtn">Medals <small id="cabCount"></small></button><button id="arsenalBtn" class="arsenalBtn">&#9733; Full Arsenal</button></div>
   <details class="more"><summary>More orders</summary>
     <div class="row"><canvas class="ico" data-ico="timer"></canvas><span>Turn timer<small>Seconds per shot</small></span>
       <select id="optTimer"><option value="0">Off</option><option value="10">10 s</option><option value="15">15 s</option><option value="20">20 s</option><option value="30">30 s</option><option value="60">60 s</option></select></div>
@@ -350,6 +386,7 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
   <h3 style="font-family:Caveat;font-size:32px;margin:6px 0 2px">Medal ceremony</h3>
   <div id="medals" class="medals"></div>
   <p class="record" id="recordNote"></p>
+  <div id="careerNews" class="careerNews hidden"></div>
   <p class="stats" id="stats"></p>
   <div class="bar"><button class="primary big" id="watchBtn">&#9654; Watch the replay</button></div>
   <div class="bar"><button class="primary" id="rematchBtn">Rematch</button><button id="menuBtn">Change settings</button></div>
@@ -365,10 +402,33 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
   <p class="stats hidden" id="videoNote" style="margin:0"></p>
 </section>
 
+<!-- The Full Arsenal sheet: what the one purchase unlocks, with Unlock and Restore (in the iPhone app). -->
+<section id="arsenalSheet" class="hidden"><div class="menu arsenalCard">
+  <div class="arsStamp">FULL ARSENAL</div>
+  <p id="arsenalWhy" class="arsWhy"></p>
+  <ul class="arsList">
+    <li><b>&#9733;&#9733;</b> The General, the toughest computer</li>
+    <li><b>&#9650;</b> Mountains, River and Lake battlefields</li>
+    <li><b>&#9741;</b> Reinforcements and Fort must fall</li>
+    <li><b>&#128227;</b> 5 more soldier voices</li>
+    <li><b>&#9998;</b> Every pen, plus the colour wheel</li>
+    <li><b>&#9733;</b> Full Arsenal medal and the One-Man Army badge</li>
+  </ul>
+  <p class="arsNote">One purchase, yours to keep, shared with your family.</p>
+  <div class="bar"><button class="primary big" id="arsenalBuy">Unlock for $4.99</button></div>
+  <div class="bar small"><button id="arsenalRestore">Restore purchase</button><button id="arsenalClose">Not now</button></div>
+  <p id="arsenalMsg" class="arsMsg"></p>
+</div></section>
+
 <!-- Your service record: every win and medal Player 1 (this phone's owner) earns, kept on the device and in iCloud. -->
 <section id="cabinet" class="hidden"><div class="menu cabpage">
   <h3 class="mtitle">Service record</h3>
+  <div id="cabRank" class="cabRank"></div>
   <p id="cabStats" class="cabstats"></p>
+  <h4>Ribbon rack</h4>
+  <div id="cabRibbons" class="ribbons"></div>
+  <h4>Skill badges</h4>
+  <div id="cabBadges" class="cabgrid badges"></div>
   <h4>Medal cabinet</h4>
   <div id="cabGrid" class="cabgrid"></div>
   <div class="bar"><button class="primary" id="cabClose">Back to HQ</button></div>
@@ -385,6 +445,8 @@ let H = IH;
 const RED = "#c0392b";
 // Soldier lines live in voice-lines.json; build-sounds.py inlines them here, plus their recorded voices.
 const LINES = {/*LINES*/"ready": ["Ready for battle!", "Reporting for duty!", "Sir, yes sir!", "Locked and loaded!", "Born for this. Like, just now.", "Where do you want me, Sarge?", "Pencil sharp, spirit sharper!", "Is this the right page?", "Ready when you are!", "Hold the line! ...Which line? They're all lines.", "This spot looks safe. Probably.", "Fresh ink, fresh courage!", "I'll guard this margin with my life!", "Present and accounted for!", "Nobody fold the paper, okay?", "Let's draw some glory!", "Standing by!", "Do I get a helmet? No? Okay.", "Mom, I'm on the page!", "For the notebook!", "Private Pencil, ready to scribble!", "I was told there'd be snacks.", "Facing the right way? Good.", "Can I stand next to the cool guy?", "I've trained for this my whole three seconds.", "Somebody draw me a sandwich.", "Don't erase me, I'm new!", "Permission to look brave, Sarge?", "I can see my house from here! It's a doodle.", "Ink dry. Courage... mostly dry.", "Stand tall. Well, as tall as a stick can.", "I promise not to wander off the page.", "Is it too late to join the art club?", "Who's got my back? Anyone? Hello?", "Feeling pointy, Sarge!", "Another glorious day in the Corps!", "Another glorious day in the Notebook!", "I love the smell of pencil shavings in the morning!", "Oorah!", "Hooah!", "Oscar Mike!", "Roger that!", "Wilco!"], "fort": ["Fort's up! Nobody lean on it.", "Walls drawn, Sarge!", "Home sweet fort.", "Built to last. Three hits, anyway.", "Drawbridge? We forgot the drawbridge.", "Four walls and a dream!", "It's not much, but it's ink.", "Fort ready. Please knock first.", "Strongest fort on the whole page!", "Built it myself. Don't look too close.", "Hold the line!"], "death": ["Tell my mom... I coloured inside the lines.", "It's only a flesh scribble!", "I was two days from retirement!", "Go on without me... I'm just ink now.", "Avenge meeee... in pencil!", "I regret nothing. Except standing here.", "Medic! ...Does anyone have an eraser?", "Not like this... not in ballpoint!", "I see the light... oh, it's the margin.", "Remember me as I was: a stick.", "They got my torso! My only torso!", "Whatever you do... don't fold!", "Should've stayed a doodle in art class.", "This is fine. Totally fine.", "Ow. That's permanent ink.", "Tell the Sarge I'm taking a long nap.", "Who drew this war, anyway?!", "See you next round, soldier.", "Retreat! RETREAT! ...Too late.", "At least I died doing what I loved: standing still.", "Tell the eraser I forgive him.", "They spelled my name wrong on the memorial!", "Worth it. Probably. No.", "Write home for me... wait, we ARE the writing.", "I should have taken the eraser job.", "Tell my pencil case I loved it.", "Was it something I said?", "My whole life flashed before my eyes. It was short.", "I'm not dead, I'm just very, very flat.", "Bury me in the pencil case.", "Ouch. Right in the doodle.", "That was my favourite body!", "I knew I should have stood behind the fort.", "Goodbye, cruel notebook!", "Whoever drew me, I'm sorry.", "Tell the others... I was the handsome one.", "Next time, I'm hiding in the margin.", "Is that... red pen? That's never good.", "I didn't even finish my sandwich.", "Make sure my ink goes to a good home.", "Freedom isn't free... it costs one eraser."], "medic": ["Medic!!", "MEDIC!!", "Man down! Medic!", "Corpsman up!"], "group": ["Huddling was a bad idea, lads!", "Not the buddy system!", "We go down together, boys!", "Who said 'stand in a line'?!", "Group hug! Bad idea! Bad idea!", "Well, that's the whole squad.", "Should've spread out, fellas!", "Two for one! Lucky them!", "We were standing so nicely, too!", "Line up, they said. It'll be fun, they said."], "fart": ["I'm a nervous farter!", "Sorry! That one was scared out of me!", "That wasn't me. Okay, it was me.", "Too close! My tummy can't take it!", "Excuse me. Battle nerves.", "Did anyone else hear that? No? Good.", "That was a warning shot. From my pants.", "Sarge, I need a new uniform."], "taunt": ["Missed me! Missed me!", "My grandma aims better than that!", "Is that a pencil or a noodle?", "You call that a shot?", "Nice try, cadet!", "Come out, come out, wherever you are!", "Ready to surrender yet?", "My helmet is made of eraser!", "I've seen better aim at a water balloon fight!", "We're not over here. Definitely not over here.", "Over here! No, the other over here!", "Are you aiming with your elbow?", "I've had scarier paper cuts!", "Is your pencil even sharpened?", "Swing and a miss!", "Try closing your other eye!", "My fort laughs at you! Ha ha ha!", "You fight like a crayon!", "I could do this all day! I'm a drawing!", "Your aim is so bad, the paper's laughing!", "Yoo-hoo! Wrong side of the page!", "Boring! Shoot something already!", "You missed so wide, you hit the next notebook!", "Knock knock! Who's there? Not your shot!", "Is that all you've got? Seriously?", "I love the smell of napalm in the morning.", "What is your major malfunction, numbnuts?", "What is your major malfunction, doodle-brain?", "Your aim is FUBAR!", "Total SNAFU over there!"], "scratch": ["Just a scratch! I've got three more limbs!", "Ow! My good arm!", "It's fine! I wasn't using that leg!", "Ha! Missed the important bits!", "Ouch! I'll walk it off. Slowly.", "That's going to leave a smudge.", "Is my arm still on? Okay, good.", "Hey! I need that to salute!", "Tickles! Mostly hurts, but tickles!", "Somebody get me a bandage!", "Not the leg! I just drew that leg!", "Close one! Lucky I'm skinny!", "Charlie Mike! Continue mission!", "Embrace the suck!"], "poop": ["I'm so scared right now, I pooped my pants!"], "reinforce": ["Reinforcements!!", "Reinforcements incoming! Heads up!"], "intro": ["Paper Wars! Ten-hut!"], "bootcamp": ["Listen up, recruit! Tap your half of the paper to stamp five soldiers. Then your fort.", "Good. Your enemy can't see your army, and you can't see theirs. Today, you shoot first.", "Tap anywhere to place a dot, then hit Fire. It goes through the fold and lands on the enemy's half.", "Remember: the enemy's half faces away from you, so everything lands flipped left to right.", "See that faint soldier? Your ink spotted an enemy. Aim for the head or the body!", "Arms and legs are just a scratch. Aim for the middle, recruit!", "Now try the machine gun! Tap Machine gun, touch one of your soldiers, and drag where he should shoot. Everything in the line gets hit, unless a rock stops it.", "Incoming! The enemy fires back. That blot shows where they hit your half.", "Soldier down! Outstanding, recruit!", "One more thing. Hit Taunt to yell across the fold. Once per turn. Use it wisely.", "Boot camp complete! You're ready for real battle, soldier.", "You lost, recruit. Drop and give me twenty! Then try again."], "idle": ["It's time for battle, soldier!", "No time to be chicken, recruit!", "Are you going to stare at that folder all day?", "Tap that folder, private! That's an order!", "The enemy isn't going to draw itself!", "I don't hear any tapping, soldier!", "Chop chop! The ink is drying!", "Move it, move it, move it!", "My grandma reports for duty faster than you!", "Did you fall asleep on the pencil sharpener?"]};
+// Full Arsenal: the same soldier lines in 5 extra voices (filled in by build-sounds.py).
+const VOICE_ARSENAL = {/*VOICE_ARSENAL*/};
 const VOICE_DATA = {/*VOICE_DATA*/
   "Ready for battle!": "data:audio/mpeg;base64,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P3v6x7feq036qVRWpBhvYntXxsxXr1Qq2N9Vrj+msf+2tf5x9Z8bGawZrRuFf3/dw5qAgn4z+3kCC+EXAi82rk7/1v2U3ACH/yv5+w0gAC4R0FusShDBgMSGGv/zQMSJHoHyNK3PeAGnajtByQ7m2lCsx3+ImKLTNwEYgap5pKLxF7uppeEwqzMc/YqD0ZNElGo8yVGqqX6omU6QV5fafJRUQv50eV3d/bXc/YbO+Pnzd//xvTN47JZiMm5jRXfca82q//NCxGocgq4gAHjMGSk3eOwWECr7GUDaKJsr7fbppdTSbIyrtL3bErVgWCFJTAoAo4kGoVlRkFixBoooy40qz2M5zD3XzNVCMTPdwdb7tlMAR4FNLCCL1NwlQwq5QhexyImXbbxWvJIr//NAxFQVgeIsAGjM+EXpMobvFa/zWnyftDZGQiHZiTbUUMZigNzcZVOuMiwiM4eoIB840LU48soMf1TV21juKCPLKBoOsEQO589qbvz7N9yl3l0ff6III6uEwAulEfKWvIu/ZvDv/Xn/80LEWRGxpjQAeIYQjvssTImY0YiQu7RUIIpBCGjlhsERiANBoXcXnELDSwpY31Pt5P9deLf/VtQSLS0HLYw1Nv5NJ3Zmoc698SQg48CSD1Nd8vbJKS/w+KPEqNIky6wjko1LrQzT6bz/80DEbg/5NkVMSEYceO9GPKmCqgMFSpkmCZuLC6I3U5v2Ef0di//p/7kK0TKhNfIJ+9P2inZ2ktdGFFRjN7SeKkS5lnNinUnnncdJJVDzNhcXP3bZ9wPjkzfn/KcrTycJ5rFgaU09Zf/zQsSJErFeOABgzBymogda2TG8/ekUabgTAwvHe4OXmH1zmQXMpr0/vMyJclQkK20sqVEeV6ZhM0xSAoGAiF4cB0TPY54sLBQoNam5T89YitQot79yqaL/+RSe80pFtn4BAQ+//1Ygof/zQMSaEcHaQAh4TBQ/6ymLqFwqHhc0o/c2a9o2khASEAUYUz7iOWSJIcThSwxFHE3OCCMIVDNlmoMWFBitzNuWVTb+gxuzQnPoUlYPkJyrBBUTKaUIgkRjQAAH5w8SyYRvxcLUEbVd//NCxK4R2WJQrjBGHJrYWWn/QxWoX8wf+dL9mQy0qdYv/z0OkXM91Srn0GKpv/+aCMO4XOPGbawU7BVqt////LgUhPh6w8owvZuR8MXg1YnzFB////5B1tj0cbInIrPbSoywp3Ad1f0P//NAxMIT+c5sVUVIAD4PMU7iwNNFf/U5P/lVTEFNRVVMQU1FMy4xMDFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/80LEzR/h/nT9h3gAVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/80DEpAAAA0gBwAAAVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==",
   "Reporting for duty!": "data:audio/mpeg;base64,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",
@@ -1161,7 +1223,8 @@ function newMatch(preset) {
   opts.tent = opts.foe === "human" && !opts.bootcamp && tentWanted();
   if (opts.tent) opts.fireBy = "tap";
   H = opts.tent ? IH : pageHeight(); RP_H = H + RP_TOP + 12;
-  if (!MAPS[opts.map]) { const ids = Object.keys(MAPS).filter(k => k !== "plain"); opts.map = ids[Math.floor(Math.random() * ids.length)]; }
+  if (!fullArsenal() && !opts.bootcamp) { if (ARSENAL.maps.includes(opts.map)) opts.map = "random"; if (ARSENAL.levels.includes(opts.level)) opts.level = "sergeant"; opts.reinforce = 0; opts.fortWin = false; }
+  if (!MAPS[opts.map]) { const ids = fullArsenal() ? Object.keys(MAPS).filter(k => k !== "plain") : Object.keys(MAPS).filter(k => !ARSENAL.maps.includes(k)); opts.map = ids[Math.floor(Math.random() * ids.length)]; }
   coachSeen.clear(); coachQ.length = 0; $("coach").classList.add("hidden"); // shown with its first line
   players = [0, 1].map(i => ({name: i && opts.foe === "cpu" ? "Computer" : `Player ${i + 1}`, cpu: i === 1 && opts.foe === "cpu",
     soldiers: [], fort: null, shots: [], incoming: [], known: new Set(), fortKnown: false, flingsLeft: opts.flings, missStreak: 0, reinforce: 0}));
@@ -1927,6 +1990,14 @@ const TROPHIES = {
   "Cannonball!": ink => `
     <path d="M6 40 C10 30 12 22 14 28 C16 18 19 12 21 24 C23 10 27 10 28 24 C30 14 33 18 34 28 C36 22 38 30 42 40 Z" fill="${GOLD}"/>
     <path d="M4 42 H44"/><circle cx="24" cy="8" r="4.5" fill="${ink}"/><circle cx="12" cy="18" r="1.6" fill="none"/><circle cx="38" cy="16" r="1.8" fill="none"/>`,
+  "Full Arsenal": ink => `
+    <circle cx="24" cy="26" r="17" fill="${GOLD}"/><circle cx="24" cy="26" r="12" fill="none" stroke="${SHINE}" stroke-width="2"/>
+    <path d="M14 36 L34 12 M14 12 L34 36" stroke-width="3.4"/><path d="M14 36 L34 12 M14 12 L34 36" stroke="${SHINE}" stroke-width="1.4"/>
+    <path d="M24 3 l2 4 4.4 .6 -3.2 3 .8 4.4 -4 -2.1 -4 2.1 .8 -4.4 -3.2 -3 4.4 -.6Z" fill="${GOLD}" stroke-width="1.2"/>`,
+  "One-Man Army": ink => `
+    <path d="M17 41 L19 35 H29 L31 41 Z" fill="${GOLD}"/><rect x="13" y="41" width="22" height="5" rx="1" fill="${GOLD}"/>
+    <circle cx="24" cy="9" r="4.5" fill="${GOLD}"/><path d="M24 14 V26 M15 19 H33 M24 26 L18 34 M24 26 L30 34"/><path d="M33 19 L42 14" stroke-width="2.6"/>
+    <path d="M8 6 l1.4 2.8 3 .4 -2.2 2.1 .5 3 -2.7 -1.4 -2.7 1.4 .5 -3 -2.2 -2.1 3 -.4Z" fill="${GOLD}" stroke-width="1"/>`,
   "Rock Collector": ink => `
     <path d="M8 34 C5 26 10 16 18 13 C26 9 36 12 40 20 C44 28 41 38 32 40 C24 43 12 42 8 34 Z" fill="${GOLD}"/>
     <path d="M28 30 L22 36 M33 28 L27 34 M37 26 L32 31" stroke-width="1.4"/><path d="M14 22 C16 18 20 16 23 16" stroke="${SHINE}" stroke-width="2.2"/>`,
@@ -2108,29 +2179,166 @@ function pageTurn(el) { // flip a copy of el away like a notebook page; call it 
   shade.animate([{opacity: 0}, {opacity: .55}], {duration: 720, fill: "forwards"});
 }
 
+
+// ---------- career: rank, ribbons and skill badges (user, 2026-11-04; ships with Full Arsenal) ----------
+// Player 1's career builds over every match: service points promote them from Private to General of the Army, each
+// medal type adds a ribbon to their rack, and skill badges come in Basic / Senior / Master. All are our own pen-drawn
+// designs (generic chevrons, bars, leaves, eagle and stars; no official insignia or real ribbon patterns).
+const CAREER_RANKS = [
+  ["Private", 0, "e", 0, 0], ["Private First Class", 150, "e", 1, 1], ["Corporal", 400, "e", 2, 0], ["Sergeant", 800, "e", 3, 0],
+  ["Staff Sergeant", 1300, "e", 3, 1], ["Sergeant First Class", 2000, "e", 3, 2], ["Master Sergeant", 2900, "e", 3, 3],
+  ["Sergeant Major", 4000, "e", 3, 3, 1], ["Second Lieutenant", 5300, "bar", 1, "gold"], ["First Lieutenant", 6800, "bar", 1, "silver"],
+  ["Captain", 8500, "bar", 2, "silver"], ["Major", 10500, "leaf", "gold"], ["Lieutenant Colonel", 12800, "leaf", "silver"],
+  ["Colonel", 15500, "eagle"], ["Brigadier General", 18500, "stars", 1], ["Major General", 22000, "stars", 2],
+  ["Lieutenant General", 26000, "stars", 3], ["General", 30500, "stars", 4], ["General of the Army", 36000, "stars", 5],
+];
+const rankOf = pts => { let k = 0; CAREER_RANKS.forEach((r, i) => { if (pts >= r[1]) k = i; }); return k; };
+// Skill badges: [id, name, stat, tiers (counts for Basic/Senior/Master, or one count), what earns it, Full Arsenal only?]
+const BADGES = [
+  ["marksman", "Marksman", "hits", [25, 100, 300], "hits on the enemy", false],
+  ["infantry", "Infantry", "wins", [1, 10, 50], "battles won", false],
+  ["parachutist", "Parachutist", "drops", [5, 25, 75], "reinforcements dropped in for you", false],
+  ["gunner", "Machine Gunner", "mgKills", [5, 25, 75], "soldiers taken out with a burst", false],
+  ["demolition", "Demolitions", "forts", [1, 10, 30], "enemy forts turned to rubble", false],
+  ["medic", "Combat Medic", "scratches", [5, 25, 75], "soldiers who shook off a scratch", false],
+  ["drill", "Drill Sergeant", "bootcamp", [1], "Boot Camp finished", false],
+  ["pathfinder", "Pathfinder", "mapsWon", [5], "a win on every battlefield", true],
+  ["diver", "Diver", "wetWins", [1], "a win at the river or the lake", true],
+  ["ranger", "Ranger", "generalWins", [1], "the General beaten", true],
+  ["onemanarmy", "One-Man Army", "flawless", [1], "a win without losing a single soldier", true],
+];
+const TIER = ["Basic", "Senior", "Master"];
+const badgeTier = (b, st) => b[3].filter(n => (st[b[2]] | 0) >= n).length; // 0 = not yet
+const INK_PEN = "#24324f", GOLDC = "#d9a43b", SILVERC = "#b9c0c8", BRONZEC = "#c08a4e";
+function insigniaSvg(k, size = 56) {
+  const r = CAREER_RANKS[k], kind = r[2], g = [];
+  const chevron = (y, w = 30) => `<path d="M${28 - w / 2} ${y + 9} L28 ${y} L${28 + w / 2} ${y + 9}" fill="none" stroke="${INK_PEN}" stroke-width="4.2" stroke-linejoin="round"/><path d="M${28 - w / 2} ${y + 9} L28 ${y} L${28 + w / 2} ${y + 9}" fill="none" stroke="${GOLDC}" stroke-width="2"/>`;
+  const rocker = y => `<path d="M13 ${y} Q28 ${y + 9} 43 ${y}" fill="none" stroke="${INK_PEN}" stroke-width="4.2"/><path d="M13 ${y} Q28 ${y + 9} 43 ${y}" fill="none" stroke="${GOLDC}" stroke-width="2"/>`;
+  const star = (cx, cy, rr, fill) => { let d = ""; for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5 - Math.PI / 2, q = i % 2 ? rr * .42 : rr; d += (i ? "L" : "M") + (cx + Math.cos(a) * q).toFixed(1) + " " + (cy + Math.sin(a) * q).toFixed(1); } return `<path d="${d}Z" fill="${fill}" stroke="${INK_PEN}" stroke-width="1.3" stroke-linejoin="round"/>`; };
+  if (kind === "e") {
+    if (!r[3]) g.push(`<circle cx="28" cy="28" r="14" fill="none" stroke="${INK_PEN}" stroke-width="2" stroke-dasharray="3 3"/>`);
+    for (let i = 0; i < r[3]; i++) g.push(chevron(10 + i * 8));
+    for (let i = 0; i < (r[4] || 0); i++) g.push(rocker(36 + i * 6));
+    if (r[5]) g.push(star(28, 33, 5, GOLDC));
+  } else if (kind === "bar") {
+    for (let i = 0; i < r[3]; i++) g.push(`<rect x="${r[3] > 1 ? 14 + i * 16 : 22}" y="12" width="12" height="32" rx="2" fill="${r[4] === "gold" ? GOLDC : SILVERC}" stroke="${INK_PEN}" stroke-width="1.6"/>`);
+  } else if (kind === "leaf") {
+    g.push(`<path d="M28 8 C40 14 44 30 28 48 C12 30 16 14 28 8Z" fill="${r[3] === "gold" ? GOLDC : SILVERC}" stroke="${INK_PEN}" stroke-width="1.6"/><path d="M28 12 V46 M28 22 L20 18 M28 22 L36 18 M28 32 L19 28 M28 32 L37 28" stroke="${INK_PEN}" stroke-width="1.1" fill="none"/>`);
+  } else if (kind === "eagle") {
+    g.push(`<path d="M28 18 C22 12 10 12 4 18 C12 18 16 22 18 26 C14 26 10 30 9 34 C15 31 20 31 24 33 L22 44 L28 40 L34 44 L32 33 C36 31 41 31 47 34 C46 30 42 26 38 26 C40 22 44 18 52 18 C46 12 34 12 28 18Z" fill="${SILVERC}" stroke="${INK_PEN}" stroke-width="1.5" stroke-linejoin="round"/><circle cx="28" cy="16" r="3.2" fill="${SILVERC}" stroke="${INK_PEN}" stroke-width="1.3"/>`);
+  } else {
+    const n = r[3], rr = n > 3 ? 7 : 9, gap = n > 3 ? 10.5 : 14;
+    for (let i = 0; i < n; i++) g.push(star(28 + (i - (n - 1) / 2) * gap, 28 + (n === 5 ? (i % 2 ? 6 : -4) : 0), rr, SILVERC));
+  }
+  return `<svg width="${size}" height="${size}" viewBox="0 0 56 56" aria-hidden="true">${g.join("")}</svg>`;
+}
+function badgeSvg(id, tier, size = 54) {
+  const metal = [SILVERC, SILVERC, SILVERC, GOLDC][tier] || SILVERC, k = INK_PEN, sw = `stroke="${k}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"`;
+  const art = {
+    marksman: `<path d="M8 38 L48 18 M8 18 L48 38" ${sw} stroke-width="4.5"/><path d="M8 38 L48 18 M8 18 L48 38" stroke="${metal}" stroke-width="2.2"/><circle cx="28" cy="28" r="7" fill="${metal}" ${sw}/><circle cx="28" cy="28" r="2.4" fill="${k}"/>`,
+    infantry: `<rect x="6" y="22" width="44" height="12" rx="2" fill="#2f5aa8" ${sw}/><path d="M10 28 H46" stroke="${metal}" stroke-width="3"/><path d="M40 26 L48 28 L40 30" fill="${metal}" ${sw}/>`,
+    parachutist: `<path d="M16 20 C16 10 40 10 40 20 Z" fill="${metal}" ${sw}/><path d="M16 20 L28 34 L40 20 M24 20 L28 34 L32 20" fill="none" ${sw}/><path d="M28 34 C18 34 8 30 4 24 C10 36 20 40 28 38 C36 40 46 36 52 24 C48 30 38 34 28 34Z" fill="${metal}" ${sw}/>`,
+    gunner: `<rect x="8" y="22" width="26" height="8" rx="2" fill="${metal}" ${sw}/><path d="M34 26 H50 M14 30 L10 40 M26 30 L30 40" ${sw} stroke-width="2.6"/><path d="M18 22 V16 H26 V22" fill="${metal}" ${sw}/>`,
+    demolition: `<circle cx="28" cy="32" r="13" fill="${metal}" ${sw}/><path d="M28 19 C30 12 36 10 40 12" fill="none" ${sw}/><path d="M40 12 l3 -4 M42 14 l5 -1 M39 10 l0 -5" stroke="#d94a2b" stroke-width="2" stroke-linecap="round"/><path d="M21 28 C22 24 25 22 28 22" stroke="#fff" stroke-width="2" fill="none" opacity=".7"/>`,
+    medic: `<g transform="rotate(-35 28 28)"><rect x="6" y="20" width="44" height="16" rx="8" fill="${metal}" ${sw}/><rect x="20" y="22" width="16" height="12" rx="2" fill="#f4ece0" ${sw}/><circle cx="12" cy="26" r=".9" fill="${k}"/><circle cx="12" cy="30" r=".9" fill="${k}"/><circle cx="44" cy="26" r=".9" fill="${k}"/><circle cx="44" cy="30" r=".9" fill="${k}"/></g>`,
+    drill: `<ellipse cx="28" cy="36" rx="24" ry="7" fill="${metal}" ${sw}/><path d="M16 34 C16 18 20 12 28 12 C36 12 40 18 40 34 Z" fill="${metal}" ${sw}/><path d="M22 14 L28 22 L34 14" fill="none" ${sw}/><path d="M16 31 H40" stroke="#7a4b23" stroke-width="2.4"/>`,
+    pathfinder: `<circle cx="28" cy="28" r="18" fill="${metal}" ${sw}/><path d="M28 14 L32 28 L28 42 L24 28 Z" fill="#d94a2b" ${sw}/><path d="M28 28 L24 28 L28 42 Z" fill="${k}"/><circle cx="28" cy="28" r="2" fill="#fff"/>`,
+    diver: `<circle cx="28" cy="26" r="16" fill="${metal}" ${sw}/><circle cx="28" cy="26" r="8" fill="#9ccbe8" ${sw}/><circle cx="14" cy="26" r="3.5" fill="${metal}" ${sw}/><circle cx="42" cy="26" r="3.5" fill="${metal}" ${sw}/><path d="M14 44 Q20 40 26 44 T38 44 T50 44" fill="none" stroke="#4f8fd1" stroke-width="2"/>`,
+    ranger: `<path d="M6 30 C14 20 42 20 50 30 L46 38 C40 32 16 32 10 38 Z" fill="#2b2a27" ${sw}/><text x="28" y="33" font-size="8.5" text-anchor="middle" fill="${GOLDC}" font-family="Stardos Stencil, monospace" font-weight="700" transform="rotate(0)">RANGER</text>`,
+    onemanarmy: `<circle cx="28" cy="28" r="20" fill="${GOLDC}" ${sw}/><circle cx="28" cy="18" r="4" fill="none" ${sw}/><path d="M28 22 V34 M20 27 L36 27 M28 34 L22 43 M28 34 L34 43" fill="none" ${sw} stroke-width="2"/><path d="M36 27 L46 23" ${sw} stroke-width="2.4"/>`,
+  }[id] || "";
+  // Senior: a star above. Master: a star in a wreath (the real badges' idea, drawn our own way).
+  const extra = tier >= 2 ? `<path d="M28 1 l1.8 3.6 4 .6 -2.9 2.8 .7 4 -3.6 -1.9 -3.6 1.9 .7 -4 -2.9 -2.8 4 -.6Z" fill="${GOLDC}" stroke="${k}" stroke-width=".8"/>` : "";
+  const wreath = tier >= 3 ? `<path d="M10 46 C4 38 4 26 8 18 M46 46 C52 38 52 26 48 18" fill="none" stroke="#5d7a3a" stroke-width="2.4"/><path d="M8 40 l-4 -1 M7 32 l-4 -1 M8 24 l-4 -2 M48 40 l4 -1 M49 32 l4 -1 M48 24 l4 -2" stroke="#5d7a3a" stroke-width="2.2" stroke-linecap="round"/>` : "";
+  return `<svg width="${size}" height="${size}" viewBox="0 -2 56 60" aria-hidden="true">${wreath}${art}${extra}</svg>`;
+}
+// One ribbon per medal type, in our own colour stripes; repeats add a bronze star, five repeats a silver one.
+function ribbonSvg(title, n) {
+  let h = 0; for (const ch of title) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const pal = ["#b3261e", "#1f4fa8", "#e3b341", "#1e7a46", "#6a3fa0", "#fbf8ef", "#c25a12", "#127c87", "#2b2a27"];
+  const a = pal[h % 9], b = pal[(h >> 4) % 9 === h % 9 ? (h + 3) % 9 : (h >> 4) % 9], c = pal[(h >> 8) % 9];
+  const stripes = [a, b, c, b, a].map((col, i) => `<rect x="${[0, 7, 14, 30, 37][i]}" y="0" width="${[7, 7, 16, 7, 7][i]}" height="12" fill="${col}"/>`).join("");
+  const extra = n - 1, silver = Math.floor(extra / 5), bronze = extra % 5, stars = [];
+  for (let i = 0; i < silver + bronze && i < 4; i++) stars.push(`<path transform="translate(${22 + (i - (Math.min(4, silver + bronze) - 1) / 2) * 7} 6) scale(.55)" d="M0 -5 l1.5 3 3.3 .5 -2.4 2.3 .6 3.3 -3 -1.6 -3 1.6 .6 -3.3 -2.4 -2.3 3.3 -.5Z" fill="${i < silver ? SILVERC : BRONZEC}" stroke="#2b2a27" stroke-width=".8"/>`);
+  return `<svg width="44" height="12" viewBox="0 0 44 12" aria-hidden="true"><title>${title}${n > 1 ? " \u00d7" + n : ""}</title>${stripes}${stars.join("")}<rect x=".5" y=".5" width="43" height="11" fill="none" stroke="#2b2a27" stroke-width="1"/></svg>`;
+}
+// What a finished match adds to Player 1's career.
+function careerFromMatch(winner) {
+  const ev = replay.events, mine = ev.filter(e => e.shot && e.who === 0), theirs = ev.filter(e => e.shot && e.who === 1);
+  const c = {
+    hits: mine.filter(e => e.res.type === "soldier" || e.res.type === "fort").length,
+    mgKills: mine.filter(e => e.shot.fling).reduce((a, e) => a + (e.killed ? e.killed.length : 0), 0),
+    forts: mine.filter(e => e.fortHit && e.fortHp === 0).length,
+    scratches: theirs.filter(e => e.res.type === "scratch").length,
+    drops: ev.filter(e => e.reinforce && e.who === 0).length,
+  };
+  const won = winner === 0;
+  c.points = (won ? 120 : 30) + c.hits * 12 + c.forts * 60 + c.mgKills * 10 + (opts.level === "general" && vsCpu() ? 40 : 0);
+  return {c, won, flawless: won && players[0].soldiers.every(u => u.alive), map: opts.map, wet: won && (opts.map === "river" || opts.map === "lake"),
+    beatGeneral: won && vsCpu() && opts.level === "general", bootcamp: !!opts.bootcamp};
+}
+function careerStats(r) { const st = {...(r.stats || {})}; st.wins = r.wins | 0; st.mapsWon = Object.keys(r.mapsWon || {}).length; return st; }
+// Badge ids and tiers newly reached between two stat snapshots.
+function newBadges(before, after) {
+  return BADGES.filter(b => !b[5] || fullArsenal()).map(b => [b, badgeTier(b, before), badgeTier(b, after)]).filter(([, a, z]) => z > a);
+}
+
 // ---------- service record ----------
 // Player 1 is this phone's owner. Their wins and every medal they earn are kept under a paperWars key, which the
 // iPhone app mirrors to the player's own iCloud (user, 2026-11-03: "the winner gets their awards as part of their account").
 const RECORD_KEY = "paperWarsRecord";
 function loadRecord() {
-  try { const r = JSON.parse(localStorage.getItem(RECORD_KEY)); if (r && typeof r === "object") return {wins: r.wins | 0, losses: r.losses | 0, medals: r.medals && typeof r.medals === "object" ? r.medals : {}}; } catch (e) {}
-  return {wins: 0, losses: 0, medals: {}};
+  const obj = v => v && typeof v === "object" ? v : {};
+  try { const r = JSON.parse(localStorage.getItem(RECORD_KEY)); if (r && typeof r === "object") return {wins: r.wins | 0, losses: r.losses | 0, medals: obj(r.medals), stats: obj(r.stats), points: r.points | 0, mapsWon: obj(r.mapsWon)}; } catch (e) {}
+  return {wins: 0, losses: 0, medals: {}, stats: {}, points: 0, mapsWon: {}};
 }
 function saveRecord(r) { try { localStorage.setItem(RECORD_KEY, JSON.stringify(r)); } catch (e) {} }
 const medalTotal = r => Object.values(r.medals).reduce((a, b) => a + (b | 0), 0);
 function recordMatch(winner, medals) {
-  const r = loadRecord(), mine = medals.filter(m => m.who === 0);
+  const r = loadRecord(), mine = medals.filter(m => m.who === 0), before = careerStats(r), rankBefore = rankOf(r.points);
   if (winner === 0) r.wins++; else r.losses++;
   mine.forEach(m => r.medals[m.title] = (r.medals[m.title] | 0) + 1);
+  // career: stats, service points, maps won, special feats
+  const m = careerFromMatch(winner), st = r.stats;
+  ["hits", "mgKills", "forts", "scratches", "drops"].forEach(k => st[k] = (st[k] | 0) + m.c[k]);
+  if (m.won && MAPS[m.map]) r.mapsWon[m.map] = 1;
+  if (m.wet) st.wetWins = (st.wetWins | 0) + 1;
+  if (m.beatGeneral) st.generalWins = (st.generalWins | 0) + 1;
+  if (m.bootcamp) st.bootcamp = 1;
+  if (m.flawless && fullArsenal()) { st.flawless = (st.flawless | 0) + 1; r.medals["One-Man Army"] = (r.medals["One-Man Army"] | 0) + 1; }
+  const earned = newBadges(before, careerStats(r));
+  r.points += m.c.points + earned.reduce((a, [, x, z]) => a + (z - x) * 50, 0);
   saveRecord(r); updateCabCount();
+  showCareerNews(rankBefore, rankOf(r.points), earned, m.c.points);
   const you = vsCpu() ? "your" : `${players[0].name}'s`;
   const got = [winner === 0 ? "a victory" : "", mine.length ? `${mine.length} medal${mine.length > 1 ? "s" : ""}` : ""].filter(Boolean).join(" and ");
   $("recordNote").innerHTML = (got ? `<b>${got[0].toUpperCase() + got.slice(1)}</b> added to ${you} service record. ` : "") +
     `Record: ${r.wins} win${r.wins === 1 ? "" : "s"}, ${r.losses} loss${r.losses === 1 ? "" : "es"}, ${medalTotal(r)} medal${medalTotal(r) === 1 ? "" : "s"}.`;
 }
+function showCareerNews(r0, r1, earned, pts) {
+  const box = $("careerNews"); box.innerHTML = ""; box.classList.toggle("hidden", r1 === r0 && !earned.length);
+  if (r1 > r0) {
+    const d = document.createElement("div"); d.className = "promo";
+    d.innerHTML = `${insigniaSvg(r1, 64)}<div><small>PROMOTED</small><b>${CAREER_RANKS[r1][0]}</b></div>`; box.appendChild(d);
+    setTimeout(() => phase === "over" && sound("victory"), 2400);
+  }
+  earned.forEach(([b, , z], i) => {
+    const d = document.createElement("div"); d.className = "badgeNew"; d.style.animationDelay = `${2.6 + i * .5}s`;
+    d.innerHTML = `${badgeSvg(b[0], z, 46)}<span><small>${b[3].length > 1 ? TIER[z - 1] + " " : ""}SKILL BADGE</small><b>${b[1]}</b></span>`; box.appendChild(d);
+  });
+}
 function updateCabCount() { const n = medalTotal(loadRecord()); $("cabCount").textContent = n ? `(${n})` : ""; }
 function showCabinet() {
   const r = loadRecord(), grid = $("cabGrid"); grid.innerHTML = "";
+  const k = rankOf(r.points), next = CAREER_RANKS[k + 1], st = careerStats(r);
+  $("cabRank").innerHTML = `${insigniaSvg(k, 72)}<div><b>${CAREER_RANKS[k][0]}</b><small>${r.points} service points${next ? ` &middot; ${next[1] - r.points} to ${next[0]}` : " &middot; the top of the army"}</small>
+    ${next ? `<span class="bar"><i style="width:${Math.round((r.points - CAREER_RANKS[k][1]) / (next[1] - CAREER_RANKS[k][1]) * 100)}%"></i></span>` : ""}</div>`;
+  const rib = Object.entries(r.medals).filter(([, n]) => n > 0);
+  $("cabRibbons").innerHTML = rib.length ? rib.map(([t, n]) => ribbonSvg(t, n)).join("") : `<small class="empty">Win medals to earn ribbons.</small>`;
+  $("cabBadges").innerHTML = BADGES.map(b => {
+    const z = badgeTier(b, st), lockedPack = b[5] && !fullArsenal(), next = b[3][z];
+    return `<div class="cab${z ? "" : " locked"}">${badgeSvg(b[0], Math.max(1, z), 50)}<b>${b[1]}</b><small>${[z ? (b[3].length > 1 ? TIER[z - 1] : "Earned") : lockedPack ? "Full Arsenal" : "", next ? `${st[b[2]] | 0}/${next} ${b[4]}` : ""].filter(Boolean).join(" &middot; ")}</small></div>`;
+  }).join("");
   $("cabStats").textContent = `${r.wins} win${r.wins === 1 ? "" : "s"} · ${r.losses} loss${r.losses === 1 ? "" : "es"} · ${medalTotal(r)} medal${medalTotal(r) === 1 ? "" : "s"}`;
   Object.keys(TROPHIES).sort((a, b) => (r.medals[b] | 0 ? 1 : 0) - (r.medals[a] | 0 ? 1 : 0)).forEach(t => {
     const n = r.medals[t] | 0, d = document.createElement("div"); d.className = "cab" + (n ? "" : " locked");
@@ -2562,11 +2770,13 @@ const sfxOut = () => { if (!sfxBus) { sfxBus = ac.createGain(); sfxBus.connect(o
 //   "coach" (the Boot Camp sergeant) is never cut off and waits for a quiet moment.
 const RANK = {chatter: 0, event: 1, coach: 2};
 async function speak(text, delay = 0, kind = "event") {
-  if (!VOICE_DATA[text] || !$("optVoices").checked) return 0;
+  // With Full Arsenal, soldier lines play in their extra voice; everything else (and the free game) uses the drill instructor.
+  const url = (fullArsenal() && VOICE_ARSENAL[text]) || VOICE_DATA[text], key = (url === VOICE_DATA[text] ? "d|" : "a|") + text;
+  if (!url || !$("optVoices").checked) return 0;
   try {
     ac = ac || new (window.AudioContext || window.webkitAudioContext)();
-    if (!voiceBuffers[text]) {
-      const b = await ac.decodeAudioData(await (await fetch(VOICE_DATA[text])).arrayBuffer()), d = b.getChannelData(0);
+    if (!voiceBuffers[key]) {
+      const b = await ac.decodeAudioData(await (await fetch(url)).arrayBuffer()), d = b.getChannelData(0);
       let sum = 0, peak = 0; for (let i = 0; i < d.length; i++) { sum += d[i] * d[i]; peak = Math.max(peak, Math.abs(d[i])); }
       // The four sergeants come out at very different volumes, so level every line to the same loudness (without clipping).
       b.level = Math.min(.12 / (Math.sqrt(sum / d.length) || 1), .95 / (peak || 1), 8);
@@ -2575,7 +2785,7 @@ async function speak(text, delay = 0, kind = "event") {
       while (a < z && Math.abs(d[a]) < loud) a++;
       while (z > a && Math.abs(d[z]) < loud) z--;
       b.from = Math.max(0, a / b.sampleRate - .05); b.span = Math.min(b.duration - b.from, (z - a) / b.sampleRate + .15);
-      voiceBuffers[text] = b;
+      voiceBuffers[key] = b;
     }
     const play = (waited = 0) => {
       const busy = talking && ac.currentTime < talking.ends - .05;
@@ -2586,7 +2796,7 @@ async function speak(text, delay = 0, kind = "event") {
         return setTimeout(() => play(waited + wait), wait * 1000);
       }
       if (busy) try { talking.src.stop(); } catch (e) {}                     // an event cuts off chatter
-      const src = ac.createBufferSource(), g = ac.createGain(), vb = voiceBuffers[text];
+      const src = ac.createBufferSource(), g = ac.createGain(), vb = voiceBuffers[key];
       src.buffer = vb; g.gain.value = vb.level; src.connect(g); g.connect(out()); src.start(0, vb.from, vb.span);
       // duck the sound effects under the voice so every line can be heard
       const bus = sfxOut().gain, now = ac.currentTime;
@@ -2594,7 +2804,7 @@ async function speak(text, delay = 0, kind = "event") {
       talking = {src, kind, ends: now + vb.span};
     };
     setTimeout(play, delay);
-    return voiceBuffers[text].span;
+    return voiceBuffers[key].span;
   } catch (e) { return 0; /* voices are optional */ }
 }
 function sound(kind) {
@@ -2671,12 +2881,14 @@ function drawInkPickers() {
     const p = +box.dataset.p; box.innerHTML = "";
     PENS.forEach(([name, hex]) => {
       const b = document.createElement("button");
-      b.className = "sw" + (INK[p] === hex ? " on" : ""); b.style.background = hex; b.title = name; b.setAttribute("aria-label", `${name} ink`);
-      b.onclick = () => { INK[p] = hex; saveInk(); drawInkPickers(); };
+      const locked = !fullArsenal() && !ARSENAL.freePens.includes(hex);
+      b.className = "sw" + (INK[p] === hex ? " on" : "") + (locked ? " locked" : ""); b.style.background = hex; b.title = name; b.setAttribute("aria-label", `${name} ink${locked ? " (Full Arsenal)" : ""}`);
+      b.onclick = () => { if (locked) return openArsenal(`${name} ink`); INK[p] = hex; saveInk(); drawInkPickers(); };
       box.appendChild(b);
     });
     const custom = !PENS.some(x => x[1] === INK[p]);
-    const w = document.createElement("label"); w.className = "wheel" + (custom ? " on" : ""); w.title = "Any colour";
+    const w = document.createElement("label"); w.className = "wheel" + (custom ? " on" : "") + (fullArsenal() ? "" : " locked"); w.title = "Any colour";
+    if (!fullArsenal()) { w.onclick = e => { e.preventDefault(); openArsenal("The colour wheel"); }; box.appendChild(w); return; }
     if (custom) w.style.background = `radial-gradient(${INK[p]} 45%, transparent 47%), conic-gradient(red,yellow,lime,cyan,blue,magenta,red)`;
     const inp = document.createElement("input"); inp.type = "color"; inp.value = INK[p]; inp.setAttribute("aria-label", "Pick any ink colour");
     inp.onchange = () => { INK[p] = inp.value; saveInk(); drawInkPickers(); };
@@ -2685,6 +2897,50 @@ function drawInkPickers() {
   $("inkWarn").textContent = inkProblem();
   $("startBtn").disabled = !!inkProblem();
   drawMenuPics();
+}
+
+
+// ---------- Full Arsenal (user, 2026-11-04: one in-app purchase, $4.99, Family Sharing on) ----------
+// Unlocks the General, the Mountains / River / Lake maps, the Reinforcements and Fort must fall options, 5 more soldier
+// voices, every pen plus the colour wheel, the Full Arsenal medal and the One-Man Army badge. The iPhone app tells the page
+// whether it's owned (StoreKit) through paperWarsNative.setArsenal; the answer is also kept under a paperWars key so it
+// shows at once next launch. The web version can't sell it: there the sheet points to the iPhone app (?arsenal=1 previews it).
+const ARSENAL = {key: "paperWarsArsenal", owned: false, price: "$4.99",
+  maps: ["pass", "river", "lake"], levels: ["general"], freePens: ["#1f4fa8", "#2a2a2a", "#1e7a46", "#b3261e"]};
+try { ARSENAL.owned = localStorage.getItem(ARSENAL.key) === "1" || /[?&]arsenal=1/.test(location.search); } catch (e) {}
+const fullArsenal = () => ARSENAL.owned;
+const inApp = () => !!(window.webkit && webkit.messageHandlers && webkit.messageHandlers.paperWars);
+function setArsenal(owned, price) { // called by the iPhone app
+  const was = ARSENAL.owned; ARSENAL.owned = !!owned; if (price) ARSENAL.price = price;
+  try { owned ? localStorage.setItem(ARSENAL.key, "1") : localStorage.removeItem(ARSENAL.key); } catch (e) {}
+  applyArsenal();
+  if (owned && !was && typeof onArsenalUnlocked === "function") onArsenalUnlocked();
+}
+window.paperWarsArsenal = {set: setArsenal, failed: msg => { $("arsenalMsg").textContent = msg == null ? "The purchase didn't go through." : msg; $("arsenalBuy").disabled = false; }}; // "" = cancelled
+function askStore(what) { try { webkit.messageHandlers.paperWars.postMessage({store: what}); } catch (e) {} }
+// Lock badges on paid tiles, pens and options; free players are steered back to free choices.
+function applyArsenal() {
+  const own = fullArsenal();
+  document.querySelectorAll("#mapTiles .tile").forEach(t => t.classList.toggle("locked", !own && ARSENAL.maps.includes(t.dataset.map)));
+  document.querySelectorAll("input[name=level]").forEach(r => r.closest(".tile").classList.toggle("locked", !own && ARSENAL.levels.includes(r.value)));
+  ["optReinforce", "optFortWin"].forEach(id => { const el = $(id), row = el.closest(".row"); row.classList.toggle("locked", !own); el.disabled = !own; });
+  if (!own) {
+    if (ARSENAL.maps.includes($("optMap").value)) { $("optMap").value = "random"; markMap(); }
+    const lv = document.querySelector("input[name=level]:checked"); if (lv && ARSENAL.levels.includes(lv.value)) document.querySelector("input[name=level][value=sergeant]").checked = true;
+    $("optReinforce").value = 0; $("reinforceVal").textContent = "off"; $("optFortWin").checked = false;
+    let fixed = false; [0, 1].forEach(i => { if (!ARSENAL.freePens.includes(INK[i])) { INK[i] = ["#1f4fa8", "#1e7a46"][i]; fixed = true; } });
+    if (fixed && INK[0] === INK[1]) INK[1] = "#b3261e";
+  } else if ($("reinforceVal").textContent === "off") { $("optReinforce").value = 3; $("reinforceVal").textContent = 3; }
+  $("arsenalBtn").classList.toggle("hidden", own);
+  drawInkPickers();
+}
+function openArsenal(why) {
+  $("arsenalWhy").textContent = why ? `${why} is part of the Full Arsenal.` : "";
+  $("arsenalMsg").textContent = "";
+  const buy = $("arsenalBuy");
+  if (inApp()) { buy.disabled = false; buy.textContent = `Unlock for ${ARSENAL.price}`; $("arsenalRestore").classList.remove("hidden"); }
+  else { buy.disabled = true; buy.textContent = "Get it in the iPhone app"; $("arsenalRestore").classList.add("hidden"); }
+  $("arsenalSheet").classList.remove("hidden");
 }
 
 // ---------- menu pictures (user, 2026-11-03: "less text and more images") ----------
@@ -2773,7 +3029,14 @@ function drawMenuPics() {
   });
 }
 function markMap() { document.querySelectorAll("#mapTiles .tile").forEach(t => t.classList.toggle("on", t.dataset.map === $("optMap").value)); }
-document.querySelectorAll("#mapTiles .tile").forEach(t => t.onclick = () => { $("optMap").value = t.dataset.map; markMap(); });
+document.querySelectorAll("#mapTiles .tile").forEach(t => t.onclick = () => {
+  if (t.classList.contains("locked")) return openArsenal(`The ${t.querySelector("span").textContent} map`);
+  $("optMap").value = t.dataset.map; markMap();
+});
+document.querySelectorAll("input[name=level]").forEach(r => r.closest(".tile").addEventListener("click", e => {
+  if (r.closest(".tile").classList.contains("locked")) { e.preventDefault(); openArsenal("The General"); }
+}));
+["optReinforce", "optFortWin"].forEach(id => $(id).closest(".row").addEventListener("click", () => !fullArsenal() && openArsenal(id === "optReinforce" ? "Reinforcements" : "Fort must fall")));
 markMap();
 drawInkPickers();
 document.fonts.ready.then(drawMenuPics);
@@ -3103,6 +3366,14 @@ document.querySelectorAll("input[name=rvMode]").forEach(r => r.onchange = () => 
 $("rvBack").onclick = () => { replayRun++; if (talking) try { talking.src ? talking.src.stop() : talking.stop(); } catch (e) {} $("replayView").classList.add("hidden"); };
 window.addEventListener("resize", () => !$("replayView").classList.contains("hidden") && replayLayout());
 $("cabBtn").onclick = showCabinet;
+$("arsenalBtn").onclick = () => openArsenal();
+$("arsenalClose").onclick = () => $("arsenalSheet").classList.add("hidden");
+$("arsenalBuy").onclick = () => { if (!inApp()) return; $("arsenalBuy").disabled = true; $("arsenalMsg").textContent = "Opening the App Store..."; askStore("buy"); };
+$("arsenalRestore").onclick = () => { $("arsenalMsg").textContent = "Checking your purchases..."; askStore("restore"); };
+window.awardArsenalMedal = () => { const r = loadRecord(); if (!r.medals["Full Arsenal"]) { r.medals["Full Arsenal"] = 1; saveRecord(r); updateCabCount(); } };
+if (fullArsenal()) awardArsenalMedal();
+window.onArsenalUnlocked = () => { $("arsenalSheet").classList.add("hidden"); typeof awardArsenalMedal === "function" && awardArsenalMedal(); };
+applyArsenal(); askStore("status");
 // Go AWOL: abandon the match and head back to HQ. It isn't counted on the service record.
 function goAwol() {
   const pages = ["game", "tent"].some(id => !$(id).classList.contains("hidden")) ? snapPages() : [];

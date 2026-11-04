@@ -18,6 +18,26 @@ enum GameBridge {
         }
     }
 
+    /// A Full Arsenal request from the page: `{store: "buy" | "restore" | "status"}`.
+    enum StoreRequest: String, Equatable {
+        case buy, restore, status
+
+        init?(_ body: Any) {
+            guard let dict = body as? [String: Any], let raw = dict["store"] as? String else { return nil }
+            self.init(rawValue: raw)
+        }
+    }
+
+    /// Tells the page whether the Full Arsenal is owned, and its local price.
+    static func arsenalScript(owned: Bool, price: String?) -> String {
+        "window.paperWarsArsenal && window.paperWarsArsenal.set(\(owned), \(price.map { json($0) } ?? "null"));"
+    }
+
+    /// A purchase didn't go through; an empty message means the player cancelled.
+    static func arsenalFailedScript(_ message: String) -> String {
+        "window.paperWarsArsenal && window.paperWarsArsenal.failed(\(json(message)));"
+    }
+
     /// Runs before the page's own scripts: puts the saved values into localStorage, then wraps
     /// localStorage so every later save of a `paperWars…` key is also sent to the app. Also exposes
     /// `window.paperWarsNative` with the current posture.
