@@ -139,6 +139,14 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
 #intro.hidden{display:none}
 #introCv{display:block;border-radius:18px;box-shadow:0 14px 40px #0008;transform-origin:50% 50%;transition:transform .7s ease-in,opacity .7s ease-in}
 #intro.folding #introCv{transform:rotateX(88deg) scale(.9);opacity:0}
+/* the rip: the dark backdrop fades while the two torn halves shiver, then fall and spin away */
+#intro.ripping{background:#1b1b1b00;transition:background .5s .25s}
+.ripHalf{position:fixed;z-index:60;pointer-events:none;filter:drop-shadow(0 8px 14px #0007)}
+.ripHalf div{position:absolute;inset:0;background-size:100% 100%;border-radius:18px}
+.ripHalf.l{transform-origin:10% 100%}
+.ripHalf.r{transform-origin:90% 100%}
+#menu.arrive{animation:menuArrive .7s .35s both}
+@keyframes menuArrive{from{transform:scale(.94) translateY(18px);opacity:0}to{transform:none;opacity:1}}
 /* The start card (user, 2026-11-03: "make it cooler"): a manila top-secret file with a clipped photo of the two armies;
    it drops onto the desk, then the TAP TO BEGIN stamp slams down. */
 #introCard{position:absolute;width:min(88vw,350px);padding:30px 20px 24px;border-radius:6px 14px 12px 12px;text-align:center;cursor:pointer;color:#2b2a27;transform:rotate(-1.5deg);
@@ -2568,7 +2576,43 @@ function finishIntro() {
   introDrop.t0 = performance.now() - (INTRO_END - 4700); // the parachuted soldier has landed
   drawIntro(INTRO_END); $("introSkip").innerHTML = "To the menu &rsaquo;";
 }
-function foldAway() { introRun++; $("intro").classList.add("folding"); setTimeout(endIntro, 700); }
+// Leaving the intro (user, 2026-11-03: the old flip was "lame"): the page is ripped in two down a jagged line,
+// with a tearing sound, and the halves fall away to show the New mission page underneath.
+function ripSound() {
+  if (!ac) return; const t = ac.currentTime + .02;
+  for (let i = 0; i < 16; i++) noiseBurst(t + i * .026 + Math.random() * .012, .045, "bandpass", 1400 + i * 160 + Math.random() * 400, .3, 1.6);
+  noiseBurst(t, .46, "highpass", 2600, .12, .7);
+}
+function foldAway() {
+  introRun++;
+  const box = introCv.getBoundingClientRect(), img = introCv.toDataURL(), r = rand(Date.now() % 9973);
+  // the tear line: top to bottom, wandering a little around the middle
+  const line = []; for (let i = 0; i <= 30; i++) line.push([46 + (r() - .5) * 9 + Math.sin(i * 1.1) * 3, i / 30 * 100]);
+  const pct = ([x, y]) => `${x.toFixed(1)}% ${y.toFixed(1)}%`;
+  const left = `polygon(0 0, ${line.map(pct).join(", ")}, 0 100%)`;
+  const right = `polygon(100% 0, ${line.map(pct).join(", ")}, 100% 100%)`;
+  // under each half's edge, a ragged strip of bare white paper fibres sticks out past the print
+  const fibre = d => line.map(([x, y]) => [x + d * (.9 + r() * 1.3), y]);
+  const halves = [left, right].map((clip, side) => {
+    const wrap = document.createElement("div"); wrap.className = "ripHalf " + (side ? "r" : "l");
+    Object.assign(wrap.style, {left: box.left + "px", top: box.top + "px", width: box.width + "px", height: box.height + "px"});
+    const edge = document.createElement("div"); edge.style.background = "#fffef9";
+    edge.style.clipPath = side ? `polygon(100% 0, ${fibre(-1).map(pct).join(", ")}, 100% 100%)` : `polygon(0 0, ${fibre(1).map(pct).join(", ")}, 0 100%)`;
+    const page = document.createElement("div"); page.style.backgroundImage = `url(${img})`; page.style.clipPath = clip;
+    wrap.append(edge, page); document.body.appendChild(wrap); return wrap;
+  });
+  $("introBar").classList.add("hidden"); introCv.style.visibility = "hidden";
+  $("intro").classList.add("ripping"); $("menu").classList.add("arrive");
+  ripSound(); if (navigator.vibrate) try { navigator.vibrate([12, 30, 12, 30, 20]); } catch (e) {}
+  // shiver as the tear starts, open a crack, then fall and spin away
+  const fall = "cubic-bezier(.5,0,.85,.6)";
+  [[-1, "-70vw, 115vh", -42], [1, "70vw, 125vh", 34]].forEach(([d, to, spin], i) => halves[i].animate([
+    {transform: "none"}, {transform: `translate(${-2 * d}px, 1px)`, offset: .06}, {transform: `translate(${2 * d}px, -1px)`, offset: .12},
+    {transform: `translate(${-2 * d}px, 0)`, offset: .18}, {transform: `translate(${6 * d}px, 2px) rotate(${2 * d}deg)`, offset: .28, easing: fall},
+    {transform: `translate(${to}) rotate(${spin}deg)`}], {duration: 1100 + i * 60, fill: "forwards"}));
+  setTimeout(() => { halves.forEach(h => h.remove()); introCv.style.visibility = ""; $("intro").classList.remove("ripping"); endIntro(); }, 1200);
+  setTimeout(() => $("menu").classList.remove("arrive"), 1400);
+}
 function playIntro() { introDrop.ink = INK[1]; // the reinforcement joins the green army (user, 2026-11-03)
   introAtEnd = false; $("introSkip").innerHTML = "Skip &rsaquo;";
   const run = ++introRun; introCues = new Set(); introSparks.length = 0;
