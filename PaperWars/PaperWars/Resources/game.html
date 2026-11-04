@@ -687,6 +687,13 @@ function drawSoldier(c, u, ink, alpha = 1) {
   c.beginPath(); c.ellipse(p.head.x, p.head.y, p.head.r, p.head.r * (0.92 + r() * .16), r(), 0, 7); c.stroke();
   wobblyLine(c, ...p.torso, r); p.limbs.forEach(l => wobblyLine(c, ...l, r));
   drawWeapon(c, u, s);
+  if (u.wading) { // river water up to the waist: a pale band with a pen wave on top hides the legs
+    const wy = u.y + 31 * s, ww = 17 * s;
+    c.fillStyle = "#dbeaf8"; c.globalAlpha = .92; c.beginPath(); c.ellipse(u.x, wy + 7 * s, ww, 9 * s, 0, 0, 7); c.fill(); c.globalAlpha = 1;
+    c.strokeStyle = "#4f8fd1"; c.lineWidth = 1.4 * Math.max(.8, s); c.beginPath(); c.moveTo(u.x - ww, wy);
+    for (let i = 1; i <= 4; i++) c.quadraticCurveTo(u.x - ww + (i - .5) * ww / 2, wy + (i % 2 ? -3 : 3) * s, u.x - ww + i * ww / 2, wy);
+    c.stroke();
+  }
   c.restore();
   if (!u.alive) { splat(c, u.x, u.y + 18 * s, s, u.seed); scribble(c, u.x, u.y + 20 * s, 14 * s, u.seed); }
   if (u.name && alpha === 1) { c.save(); c.globalAlpha *= u.alive ? .75 : .45; label(c, u.name, u.x, u.y + 52 * s, 11 * Math.max(.85, s), ink); c.restore(); }
@@ -953,14 +960,14 @@ function unitAt(p, x, y) {
 function legalPos(x, y, isFort, p) {
   const s = sc(), at = (x, y) => isFort ? {x: clamp(x, 24 * s, W - 24 * s), y: clamp(y - 15 * s, 8, H - 50 * s)}
                                         : {x: clamp(x, 12 * s, W - 12 * s), y: clamp(y - 20 * s, 8, H - 46 * s)};
-  const pos = at(x, y);
-  if (!p || !p.terrain || clearOfTerrain(p.terrain, pos, isFort)) return pos;
-  // tapped on a rock or in water: step out to the nearest dry, open ground
+  const pos = at(x, y), done = c => isFort || !p || !p.terrain ? c : {...c, wading: wadingAt(p.terrain, c)};
+  if (!p || !p.terrain || clearOfTerrain(p.terrain, pos, isFort)) return done(pos);
+  // tapped on a rock, a mountain or a lake: step out to the nearest open ground (or river, for a soldier)
   for (let r = 8; r < 280; r += 8) for (let k = 0; k < 16; k++) {
     const c = at(x + Math.cos(k * .3927) * r, y + Math.sin(k * .3927) * r);
-    if (clearOfTerrain(p.terrain, c, isFort)) return c;
+    if (clearOfTerrain(p.terrain, c, isFort)) return done(c);
   }
-  return pos;
+  return done(pos);
 }
 // What a soldier says when you stamp them onto the page (our own lines).
 const READY_WORDS = LINES.ready;
@@ -2240,13 +2247,16 @@ function sightBlocked(T, x1, y1, x2, y2) {
   for (let k = 1; k < n; k++) { const f = terrainAt(T, x1 + (x2 - x1) * k / n, y1 + (y2 - y1) * k / n); if (solid(f) && f !== start) return true; }
   return false;
 }
-// Soldiers and forts can't stand on rocks, mountains or water.
+// Nothing stands on rocks or mountains or in a lake. Soldiers may wade into a river (user, 2026-11-04); forts may not.
+// (Next edition: boats for lakes and oceans, and tanks that fire over mountains and boulders.)
 function clearOfTerrain(T, pos, isFort) {
   const s = sc(), pts = isFort
     ? [[pos.x - 22 * s, pos.y], [pos.x + 22 * s, pos.y], [pos.x, pos.y + 15 * s], [pos.x - 22 * s, pos.y + 30 * s], [pos.x + 22 * s, pos.y + 30 * s]]
     : [[pos.x, pos.y + 6 * s], [pos.x, pos.y + 20 * s], [pos.x, pos.y + 40 * s], [pos.x - 8 * s, pos.y + 16 * s], [pos.x + 8 * s, pos.y + 16 * s]];
-  return pts.every(([x, y]) => !terrainAt(T, x, y));
+  return pts.every(([x, y]) => { const f = terrainAt(T, x, y); return !f || (!isFort && f.kind === "river"); });
 }
+// A soldier whose feet are in a river is drawn wading, waist-deep.
+const wadingAt = (T, pos) => { const s = sc(), f = terrainAt(T, pos.x, pos.y + 34 * s); return !!f && f.kind === "river"; };
 // Below a mountain: who a rockslide buries.
 const inSlide = (f, x, y) => Math.abs(x - f.x) < f.w / 2 && y > f.y - 6 && y < f.y + SLIDE;
 
