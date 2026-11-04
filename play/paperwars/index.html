@@ -654,7 +654,7 @@ function drawSoldier(c, u, ink, alpha = 1) {
 // Every soldier holds a pen-drawn WW2-era weapon (user, 2026-11-03), picked at random from its seed so it
 // stays the same all match. Just a drawing: it is never part of the hit area. Faces the middle of the page.
 const WEAPONS = ["rifle", "tommy", "bazooka", "grenade", "pistol", "mg", "rifle", "tommy"];
-const weaponOf = u => u.weapon || WEAPONS[Math.abs(u.seed * 7 + 3) % WEAPONS.length];
+const weaponOf = u => u.weapon || (u.name === "Sgt. Tamland" ? "grenade" : WEAPONS[Math.abs(u.seed * 7 + 3) % WEAPONS.length]);
 function drawWeapon(c, u, s) {
   const kind = weaponOf(u), face = u.face || (u.x <= W / 2 ? 1 : -1), r = rand(u.seed + 11);
   const ly = u.pose ? 14 : 21, ry = u.pose ? 12 : 21; // hand heights, as in soldierParts
@@ -1741,7 +1741,8 @@ const SOLDIER_NAMES = ["Pvt. Pickles", "Sgt. Snickerdoodle", "Cpl. Crayon", "Pvt
   "Cpl. Noodle", "Pvt. Biscuit", "Maj. Mayhem", "Pvt. Pudding", "Sgt. Scribbles", "Cpl. Crumbs", "Pvt. Waffles", "Lt. Lefty",
   "Pvt. Tater Tot", "Pvt. Penne", "Cpl. Kazoo", "Pvt. Gumdrop", "Sgt. Sprinkles", "Pvt. Bumble", "Cpl. Puddles", "Pvt. Zigzag",
   "Sgt. Meatball", "Pvt. Nugget", "Cpl. Custard", "Pvt. Hiccup", "Lt. Lollipop", "Pvt. Sneezy McGee", "Sgt. Spaghetti",
-  "Pvt. Butterfingers", "Cpl. Cupcake", "Pvt. Toast", "Maj. Muffin", "Pvt. Pebbles", "Sgt. Stinky"];
+  "Pvt. Butterfingers", "Cpl. Cupcake", "Pvt. Toast", "Maj. Muffin", "Pvt. Pebbles", "Sgt. Stinky",
+  "Sgt. Tamland"]; // a nod for the grown-ups (user, 2026-11-04); he always carries a grenade. Name only: no lines or look borrowed.
 function soldierName(p) {
   const taken = new Set([...players[0].soldiers, ...players[1].soldiers, ...p.soldiers].map(u => u.name)), free = SOLDIER_NAMES.filter(n => !taken.has(n));
   return free[Math.floor(Math.random() * free.length)] || "Pvt. Nobody";
