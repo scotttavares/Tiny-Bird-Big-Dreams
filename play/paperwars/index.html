@@ -52,24 +52,67 @@ button{font:inherit;font-size:19px;border:2px solid var(--blue);background:var(-
 button.primary{background:var(--blue);color:#fff}
 button.fire{background:var(--red);border-color:var(--red);color:#fff}
 button:disabled{opacity:.4;cursor:default}
-.menu{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px 18px;max-width:560px;width:100%}
-.menu h3{font-family:Caveat;font-size:28px;margin:0 0 6px}
-.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px dashed var(--border)}
+/* New match (user, 2026-11-03: "simple and fun"): a page of notebook paper with picture tiles; the fine print folds away under More orders. */
+.menu{--ink:#2b2a27;position:relative;color:var(--ink);max-width:560px;width:100%;border-radius:16px;padding:14px 16px 16px 46px;box-shadow:0 8px 24px #0004;
+  background:linear-gradient(90deg,#0000 33px,#e7a3a3 33px 34px,#0000 34px),repeating-linear-gradient(#fbf8ef 0 21px,#c9d8ea 21px 22px) #fbf8ef}
+.menu .mtitle{font:700 40px/1 Caveat,cursive;margin:0 0 4px;color:#1f4fa8}
+.menu h4{font:700 25px/1.1 Caveat,cursive;margin:12px 0 6px;color:var(--ink)}
+.tiles{display:grid;gap:10px}
+.tiles.two{grid-template-columns:1fr 1fr}
+.tiles.three{grid-template-columns:repeat(3,1fr)}
+.tiles.maps{grid-template-columns:repeat(3,1fr)}
+.tile{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 4px 7px;margin:0;font:inherit;font-size:17px;line-height:1.1;color:var(--ink);cursor:pointer;
+  background:#fffef9;border:2px solid #8b8576;border-radius:255px 14px 225px 16px/16px 225px 14px 255px;transition:transform .12s;-webkit-tap-highlight-color:transparent}
+.tile:nth-child(even){border-radius:16px 225px 14px 255px/255px 14px 225px 16px}
+.tile input{position:absolute;opacity:0;pointer-events:none}
+.tile small{display:block;color:#7d776a;font-size:13px}
+.tile.on,.tile:has(input:checked){border-color:#b3261e;border-width:3px;transform:rotate(-1.5deg) scale(1.03);box-shadow:3px 4px 0 #b3261e33}
+.tile.on::after,.tile:has(input:checked)::after{content:"\2713";position:absolute;top:-12px;right:-6px;font:700 30px/1 Caveat,cursive;color:#b3261e}
+.tile:active{transform:scale(.96)}
+.pic{width:100%;max-width:150px;aspect-ratio:3/2;display:block}
+.pic.small{max-width:84px}
+.pic.mini{width:44px;max-width:none;aspect-ratio:auto;height:60px;flex:none}
+.inkrow{display:flex;align-items:center;gap:8px;margin:2px 0}
+.inkpick{min-width:0;flex:1}
+.inkpick b{font-weight:400;font-size:17px}
+.inks{display:flex;gap:7px;overflow-x:auto;padding:4px 3px 6px;scrollbar-width:none}
+.inks::-webkit-scrollbar{display:none}
+.sw{flex:none;width:30px;height:30px;border-radius:50%;border:2px solid #fbf8ef;box-shadow:0 0 0 1px #0003;cursor:pointer;padding:0}
+.sw.on{box-shadow:0 0 0 3px var(--ink)}
+.wheel{flex:none;position:relative;width:30px;height:30px;border-radius:50%;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);box-shadow:0 0 0 1px #0003;overflow:hidden;cursor:pointer}
+.wheel.on{box-shadow:0 0 0 3px var(--ink)}
+.wheel input{position:absolute;inset:-8px;width:46px;height:46px;opacity:0;cursor:pointer}
+#inkWarn{margin:0;min-height:0;color:var(--red);font-size:15px}
+#inkWarn:empty{display:none}
+.go{display:flex;justify-content:center;margin:20px 0 6px}
+.stampbtn{font:700 34px/1 "Stardos Stencil","Special Elite",monospace;letter-spacing:.06em;color:#b3261e;background:transparent;border:5px double #b3261e;border-radius:6px;padding:10px 20px 8px;transform:rotate(-3deg);
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence baseFrequency='.55' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -2.2 1.7'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence baseFrequency='.55' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -2.2 1.7'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)'/%3E%3C/svg%3E");animation:stampIn .5s .2s both;transition:transform .1s}
+.stampbtn:active{transform:rotate(-3deg) scale(.92)}
+.stampbtn:disabled{opacity:.3}
+@keyframes stampIn{from{transform:rotate(-3deg) scale(1.8);opacity:0}70%{transform:rotate(-3deg) scale(.95);opacity:1}to{transform:rotate(-3deg) scale(1)}}
+.menu .bar.small button{background:#fffef9;color:var(--ink);border-color:#8b8576;font-size:17px}
+.menu .bar.small button small{color:#7d776a;font-size:13px}
+.more{margin-top:8px;border-top:2px dashed #c9bfa8;padding-top:6px}
+.more summary{font:700 24px Caveat,cursive;cursor:pointer;color:#1f4fa8;list-style:none}
+.more summary::-webkit-details-marker{display:none}
+.more summary::before{content:"\25B8\00a0";display:inline-block;transition:transform .2s}
+.more[open] summary::before{transform:rotate(90deg)}
+.row{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed #d6cfbc}
 .row:last-of-type{border-bottom:0}
-.row span small{display:block;color:var(--muted);font-size:14px}
+.row > span{min-width:0;line-height:1.15}
+.row span small{display:block;color:#7d776a;font-size:14px}
+.row input[type=range]{width:110px}
+.ico{width:34px;height:34px}
 .seg{display:flex;flex-shrink:0;border:2px solid var(--blue);border-radius:999px;overflow:hidden}
 .seg label{padding:3px 12px;cursor:pointer;color:var(--blue);white-space:nowrap}
 .seg input{display:none}
 .seg input:checked+span{background:var(--blue);color:#fff;border-radius:999px;padding:3px 12px;margin:-3px -12px}
-input[type=checkbox]{width:22px;height:22px;accent-color:var(--blue)}
+input[type=checkbox]{width:24px;height:24px;accent-color:var(--blue)}
 input[type=range]{accent-color:var(--blue)}
-.inks{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;max-width:300px}
-.sw{width:28px;height:28px;border-radius:50%;border:2px solid var(--card);box-shadow:0 0 0 1px var(--border);cursor:pointer;padding:0}
-.sw.on{box-shadow:0 0 0 3px var(--text)}
-.wheel{position:relative;width:28px;height:28px;border-radius:50%;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);box-shadow:0 0 0 1px var(--border);overflow:hidden;cursor:pointer}
-.wheel.on{box-shadow:0 0 0 3px var(--text)}
-.wheel input{position:absolute;inset:-8px;width:44px;height:44px;opacity:0;cursor:pointer}
-#inkWarn.bad{color:var(--red)}
+.menu .seg{border-color:#1f4fa8}
+.menu .seg label{color:#1f4fa8}
+.menu select{background:#fffef9;color:#1f4fa8;border-color:#1f4fa8}
+.tip{margin:10px 0 0;color:#7d776a;font-size:15px;text-align:center}
 .over{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
 .over figure{margin:0;text-align:center}
 .over figcaption{display:inline-block;margin-top:6px;background:#fbf8ef;border-radius:999px;padding:1px 12px}
@@ -96,11 +139,26 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
 #intro.hidden{display:none}
 #introCv{display:block;border-radius:18px;box-shadow:0 14px 40px #0008;transform-origin:50% 50%;transition:transform .7s ease-in,opacity .7s ease-in}
 #intro.folding #introCv{transform:rotateX(88deg) scale(.9);opacity:0}
-#introCard{position:absolute;width:min(86vw,340px);padding:22px 22px 26px;background:#fbf8ef;border-radius:14px;box-shadow:0 10px 30px #0008;text-align:center;cursor:pointer;color:#2b2a27;transform:rotate(-1.5deg)}
-#introCard .hq{font:19px "Patrick Hand",cursive;color:#b3261e;text-decoration:underline wavy #b3261e88;text-underline-offset:4px}
-#introCard .orders{font:22px/1.35 "Patrick Hand",cursive;margin:12px 0 18px}
-#introCard .tap{display:inline-block;font:700 34px Caveat,cursive;color:#b3261e;border:3px solid #b3261e;border-radius:255px 14px 225px 16px/16px 225px 14px 255px;padding:0 18px;transform:rotate(-5deg);animation:throb 1.4s ease-in-out infinite}
-@keyframes throb{50%{transform:rotate(-5deg) scale(1.06)}}
+/* The start card (user, 2026-11-03: "make it cooler"): a manila top-secret file with a clipped photo of the two armies;
+   it drops onto the desk, then the TAP TO BEGIN stamp slams down. */
+#introCard{position:absolute;width:min(88vw,350px);padding:30px 20px 24px;border-radius:6px 14px 12px 12px;text-align:center;cursor:pointer;color:#2b2a27;transform:rotate(-1.5deg);
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .24 0 0 0 0 .1 0 0 0 .34 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E"), linear-gradient(160deg,#dcbd8c,#cfa96f 60%,#c39b61);
+  box-shadow:0 14px 34px #000a,inset 0 0 40px #3b240c88;animation:cardDrop .55s cubic-bezier(.2,.9,.3,1.2) both}
+#introCard .ftab{position:absolute;top:-22px;left:22px;padding:4px 14px 6px;background:#d2ae74;border-radius:8px 8px 0 0;font:13px "Special Elite",monospace;letter-spacing:.06em}
+#introCard .ftitle{font:700 40px/1 "Stardos Stencil","Special Elite",monospace;letter-spacing:.08em;color:#2b2a27;opacity:.85}
+#introCard .photo{position:relative;margin:14px auto 12px;width:92%;background:#fbf8ef;padding:7px;box-shadow:0 3px 8px #0005;transform:rotate(2deg)}
+#introCard .photo canvas{display:block;width:100%;height:auto}
+#introCard .clip{position:absolute;top:-12px;left:22px;width:13px;height:38px;border:3px solid #8f959b;border-radius:8px;z-index:1}
+#introCard .orders{font:17px/1.35 "Special Elite",monospace;display:flex;flex-direction:column;align-items:center;gap:2px}
+#introCard .snd{display:inline-flex;align-items:center;gap:6px;color:#6b4d22;font-size:14px}
+#introCard .snd svg{width:18px;height:18px}
+#introCard .secretstamp{position:absolute;top:178px;right:-8px;font:700 18px/1 "Stardos Stencil",monospace;color:#b3261e;border:3px solid currentColor;padding:4px 8px;transform:rotate(14deg);mix-blend-mode:multiply;
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence baseFrequency='.55' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -2.2 1.7'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence baseFrequency='.55' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -2.2 1.7'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)'/%3E%3C/svg%3E");opacity:.85}
+#introCard .tap{display:inline-block;margin-top:14px;font:700 30px/1 "Stardos Stencil","Special Elite",monospace;letter-spacing:.06em;color:#b3261e;border:5px double #b3261e;border-radius:6px;padding:9px 16px 7px;
+  mix-blend-mode:multiply;-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence baseFrequency='.55' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -2.2 1.7'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence baseFrequency='.55' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -2.2 1.7'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)'/%3E%3C/svg%3E");animation:tapSlam .45s .75s both,throb 1.6s 1.4s ease-in-out infinite}
+@keyframes cardDrop{from{transform:translateY(-60vh) rotate(-12deg)}to{transform:rotate(-1.5deg)}}
+@keyframes tapSlam{from{transform:rotate(-5deg) scale(2.4);opacity:0}65%{transform:rotate(-5deg) scale(.92);opacity:1}to{transform:rotate(-5deg) scale(1)}}
+@keyframes throb{0%,100%{transform:rotate(-5deg) scale(1)}50%{transform:rotate(-5deg) scale(1.06)}}
 #introBar{position:absolute;right:16px;bottom:16px;display:flex;gap:8px}
 #introBar button{font-size:16px;padding:4px 14px;background:#fbf8ef;color:#2b2a27;border-color:#fbf8ef;box-shadow:0 2px 8px #0006}
 #rp{width:min(94vw,760px);height:auto;border-radius:16px;margin-top:10px;display:block}
@@ -116,37 +174,61 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
 </head>
 <body>
 <div id="intro"><canvas id="introCv"></canvas>
-  <div id="introCard"><div class="hq">Paper Wars HQ &middot; Orders</div><div class="orders">Report for duty, soldier.<br>Sound on.</div><div class="tap">Tap to begin!</div></div>
+  <div id="introCard"><div class="ftab">FILE No. PW-001</div>
+    <div class="ftitle">PAPER WARS</div>
+    <div class="photo"><div class="clip"></div><canvas id="introPic"></canvas></div>
+    <div class="orders">Report for duty, soldier.<span class="snd"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M16 8q3 4 0 8M19 5q5 7 0 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Sound on</span></div>
+    <div class="secretstamp">TOP SECRET</div>
+    <div class="tap">TAP TO BEGIN</div></div>
   <div id="introBar" class="hidden"><button id="introReplay">&#8634; Replay</button><button id="introSkip">Skip &rsaquo;</button></div></div>
 <div class="top"><h1>Paper Wars</h1><small><a href="/paperwars" style="color:inherit">About Paper Wars</a> · web version · pass-and-play or vs computer</small></div>
 
 <div id="coach" class="coach hidden"><b>Drill Sergeant</b><span id="coachText"></span></div>
 
 <section id="menu" class="menu">
-  <h3>New match</h3>
-  <div class="row"><span>Player 2<small>A friend on the other half, or the computer</small></span>
-    <div class="seg"><label><input type="radio" name="foe" value="human" checked><span>Friend</span></label><label><input type="radio" name="foe" value="cpu"><span>Computer</span></label></div></div>
-  <div class="row hidden" id="levelRow"><span>Computer rank<small>Recruit shoots wild. Sergeant aims at what its ink bleed spots. General hunts the gaps and saves flings for soldiers in a line</small></span>
-    <div class="seg"><label><input type="radio" name="level" value="recruit"><span>Recruit</span></label><label><input type="radio" name="level" value="sergeant" checked><span>Sergeant</span></label><label><input type="radio" name="level" value="general"><span>General</span></label></div></div>
-  <div class="row ink-row"><span>Player 1 ink<small>Pick a pen, or any colour from the wheel</small></span><div class="inks" data-p="0"></div></div>
-  <div class="row ink-row"><span><span id="p2InkLabel">Player 2 ink</span><small id="inkWarn"></small></span><div class="inks" data-p="1"></div></div>
-  <div class="row"><span>Map<small>Boulders block shots and hide soldiers behind them from ink bleed. Mountains start a rockslide that buries anyone just below. Water splashes onto the shore, and ink spreads further in it</small></span>
-    <select id="optMap"><option value="random">Surprise me</option><option value="plain">No Man's Land, WW1 (open ground)</option><option value="boulders">Monte Cassino, 1944 (boulders)</option><option value="pass">Kasserine Pass, 1943 (mountains)</option><option value="river">The Somme, 1916 (river)</option><option value="lake">Masurian Lakes, 1914 (lake)</option></select></div>
-  <div class="row"><span>Turn timer<small>Seconds to take each shot. When time runs out, a placed dot or lined-up burst fires by itself; otherwise the shot is wasted. The computer is never timed</small></span>
-    <select id="optTimer"><option value="0">Off</option><option value="10">10 s</option><option value="15">15 s</option><option value="20">20 s</option><option value="30">30 s</option><option value="60">60 s</option></select></div>
-  <div class="row"><span>How to fire<small>Tap: tap Fire on your own screen (default, no folding). Fold: close the phone to fire, the classic paper move</small></span>
-    <div class="seg"><label><input type="radio" name="fireBy" value="tap" checked><span>Tap to fire</span></label><label><input type="radio" name="fireBy" value="fold"><span>Fold to fire</span></label></div></div>
-  <div class="row"><span>Machine-gun bursts per player <b id="flingVal">2</b><small>Every turn is a dot, but a few times a game you can fire a machine gun instead: touch one of your soldiers and drag where he should shoot. The bullets fly to the edge of the paper and hit everything on the way, unless a rock stops them</small></span><input type="range" id="optFlings" min="0" max="5" value="2"></div>
-  <div class="row"><span>Fort<small>3 health, placed after your soldiers</small></span><input type="checkbox" id="optFort" checked></div>
-  <div class="row"><span>Reinforcements after <b id="reinforceVal">3</b> misses<small>Miss this many shots in a row and the enemy gets a new soldier, but only while their fort still stands (not rubble yet). Needs the fort. 0 = off</small></span><input type="range" id="optReinforce" min="0" max="6" value="3"></div>
-  <div class="row"><span>Fort must fall to win<small>Off: wiping out the 5 soldiers wins</small></span><input type="checkbox" id="optFortWin"></div>
-  <div class="row"><span>Ink bleed <b id="revealVal">80</b><small>Every shot shows you enemy soldiers this close to it as faint ghosts. 0 = off</small></span><input type="range" id="optReveal" min="0" max="120" step="5" value="80"></div>
-  <div class="row"><span>Soldier voices<small>Off: soldiers, taunts and the drill sergeant stay silent (speech bubbles still show). Sound effects stay on</small></span><input type="checkbox" id="optVoices" checked></div>
-  <div class="row"><span>Near-miss hint<small>"Whoosh, close!" when a miss is near something</small></span><input type="checkbox" id="optNear" checked></div>
-  <div class="row"><span>Soldier size <b id="sizeVal">46</b><small>Tuning: bigger soldiers = shorter matches</small></span><input type="range" id="optSize" min="28" max="72" value="46"></div>
-  <div class="bar"><button class="primary" id="startBtn">Start match</button><button id="bootBtn">Boot Camp</button><button id="introBtn">Watch intro</button></div>
-  <p class="stats" style="margin:0 0 6px">First time? Boot Camp is one guided match against the computer, with a drill sergeant who explains everything.</p>
-  <p class="stats" style="margin:0">On a real iPhone Duo the phone stands as a tent and each player sees only their half. Here, pass the device and look away during the other player's turn. Space bar or Enter = fire.</p>
+  <h3 class="mtitle">New mission</h3>
+  <h4>Who's the enemy?</h4>
+  <div class="tiles two">
+    <label class="tile"><input type="radio" name="foe" value="human" checked><canvas class="pic" data-pic="friend"></canvas><span>A friend</span></label>
+    <label class="tile"><input type="radio" name="foe" value="cpu"><canvas class="pic" data-pic="cpu"></canvas><span>The computer</span></label>
+  </div>
+  <div class="hidden" id="levelRow"><h4>Computer rank</h4>
+    <div class="tiles three">
+      <label class="tile"><input type="radio" name="level" value="recruit"><canvas class="pic small" data-pic="recruit"></canvas><span>Recruit</span><small>Shoots wild</small></label>
+      <label class="tile"><input type="radio" name="level" value="sergeant" checked><canvas class="pic small" data-pic="sergeant"></canvas><span>Sergeant</span><small>Aims well</small></label>
+      <label class="tile"><input type="radio" name="level" value="general"><canvas class="pic small" data-pic="general"></canvas><span>General</span><small>Ruthless</small></label>
+    </div></div>
+  <h4>Pick your pens</h4>
+  <div class="inkrow"><canvas class="pic mini" data-pic="ink0"></canvas><div class="inkpick"><b>Player 1</b><div class="inks" data-p="0"></div></div></div>
+  <div class="inkrow"><canvas class="pic mini" data-pic="ink1"></canvas><div class="inkpick"><b id="p2InkLabel">Player 2</b><div class="inks" data-p="1"></div></div></div>
+  <p id="inkWarn"></p>
+  <h4>Battlefield</h4>
+  <div class="tiles maps" id="mapTiles">
+    <button type="button" class="tile" data-map="random"><canvas class="pic" data-pic="map-random"></canvas><span>Surprise me</span></button>
+    <button type="button" class="tile" data-map="plain"><canvas class="pic" data-pic="map-plain"></canvas><span>Open field</span><small>No Man's Land</small></button>
+    <button type="button" class="tile" data-map="boulders"><canvas class="pic" data-pic="map-boulders"></canvas><span>Boulders</span><small>Monte Cassino</small></button>
+    <button type="button" class="tile" data-map="pass"><canvas class="pic" data-pic="map-pass"></canvas><span>Mountains</span><small>Kasserine Pass</small></button>
+    <button type="button" class="tile" data-map="river"><canvas class="pic" data-pic="map-river"></canvas><span>River</span><small>The Somme</small></button>
+    <button type="button" class="tile" data-map="lake"><canvas class="pic" data-pic="map-lake"></canvas><span>Lake</span><small>Masurian Lakes</small></button>
+  </div>
+  <select id="optMap" class="hidden" aria-label="Map"><option value="random">Surprise me</option><option value="plain">No Man's Land</option><option value="boulders">Monte Cassino</option><option value="pass">Kasserine Pass</option><option value="river">The Somme</option><option value="lake">Masurian Lakes</option></select>
+  <div class="go"><button class="stampbtn" id="startBtn">START MISSION</button></div>
+  <div class="bar small"><button id="bootBtn">&#9733; Boot Camp <small>first time?</small></button><button id="introBtn">&#9654; Intro</button></div>
+  <details class="more"><summary>More orders</summary>
+    <div class="row"><canvas class="ico" data-ico="timer"></canvas><span>Turn timer<small>Seconds per shot</small></span>
+      <select id="optTimer"><option value="0">Off</option><option value="10">10 s</option><option value="15">15 s</option><option value="20">20 s</option><option value="30">30 s</option><option value="60">60 s</option></select></div>
+    <div class="row"><canvas class="ico" data-ico="fire"></canvas><span>How to fire<small>Tap Fire, or close the phone</small></span>
+      <div class="seg"><label><input type="radio" name="fireBy" value="tap" checked><span>Tap</span></label><label><input type="radio" name="fireBy" value="fold"><span>Fold</span></label></div></div>
+    <div class="row"><canvas class="ico" data-ico="mg"></canvas><span>Machine guns: <b id="flingVal">2</b><small>Drag from a soldier to spray</small></span><input type="range" id="optFlings" min="0" max="5" value="2"></div>
+    <div class="row"><canvas class="ico" data-ico="fort"></canvas><span>Fort<small>3 hearts, placed after your soldiers</small></span><input type="checkbox" id="optFort" checked></div>
+    <div class="row"><canvas class="ico" data-ico="chute"></canvas><span>Reinforcements: <b id="reinforceVal">3</b><small>Misses in a row until help drops in</small></span><input type="range" id="optReinforce" min="0" max="6" value="3"></div>
+    <div class="row"><canvas class="ico" data-ico="flag"></canvas><span>Fort must fall<small>Or just wipe out the soldiers</small></span><input type="checkbox" id="optFortWin"></div>
+    <div class="row"><canvas class="ico" data-ico="bleed"></canvas><span>Ink bleed: <b id="revealVal">80</b><small>Shots reveal nearby enemies</small></span><input type="range" id="optReveal" min="0" max="120" step="5" value="80"></div>
+    <div class="row"><canvas class="ico" data-ico="voice"></canvas><span>Soldier voices<small>Sound effects stay on</small></span><input type="checkbox" id="optVoices" checked></div>
+    <div class="row"><canvas class="ico" data-ico="whoosh"></canvas><span>Near-miss hint<small>"Whoosh, close!"</small></span><input type="checkbox" id="optNear" checked></div>
+    <div class="row"><canvas class="ico" data-ico="size"></canvas><span>Soldier size: <b id="sizeVal">46</b><small>Bigger = shorter matches</small></span><input type="range" id="optSize" min="28" max="72" value="46"></div>
+  </details>
+  <p class="tip">Two players: stand your iPhone Duo up like a tent, or pass the phone.</p>
 </section>
 
 <section id="game" class="hidden" style="display:flex;flex-direction:column;align-items:center">
@@ -460,9 +542,48 @@ function drawSoldier(c, u, ink, alpha = 1) {
   c.save(); c.globalAlpha *= alpha; c.strokeStyle = ink; c.lineWidth = 2 * Math.max(.8, s); c.lineCap = "round"; // multiply, so ghosts stay faint
   c.beginPath(); c.ellipse(p.head.x, p.head.y, p.head.r, p.head.r * (0.92 + r() * .16), r(), 0, 7); c.stroke();
   wobblyLine(c, ...p.torso, r); p.limbs.forEach(l => wobblyLine(c, ...l, r));
+  drawWeapon(c, u, s);
   c.restore();
   if (!u.alive) { splat(c, u.x, u.y + 18 * s, s, u.seed); scribble(c, u.x, u.y + 20 * s, 14 * s, u.seed); }
   if (u.name && alpha === 1) { c.save(); c.globalAlpha *= u.alive ? .75 : .45; label(c, u.name, u.x, u.y + 52 * s, 11 * Math.max(.85, s), ink); c.restore(); }
+}
+// Every soldier holds a pen-drawn WW2-era weapon (user, 2026-11-03), picked at random from its seed so it
+// stays the same all match. Just a drawing: it is never part of the hit area. Faces the middle of the page.
+const WEAPONS = ["rifle", "tommy", "bazooka", "grenade", "pistol", "mg", "rifle", "tommy"];
+const weaponOf = u => u.weapon || WEAPONS[Math.abs(u.seed * 7 + 3) % WEAPONS.length];
+function drawWeapon(c, u, s) {
+  const kind = weaponOf(u), face = u.face || (u.x <= W / 2 ? 1 : -1), r = rand(u.seed + 11);
+  const ly = u.pose ? 14 : 21, ry = u.pose ? 12 : 21; // hand heights, as in soldierParts
+  const j = () => (r() - .5) * .6, L = pts => { c.beginPath(); pts.forEach(([x, y], i) => c[i ? "lineTo" : "moveTo"](x + j(), y + j())); c.stroke(); };
+  c.save(); c.translate(u.x, u.y); c.scale(s * face, s); c.lineWidth = 1.5; c.lineJoin = "round";
+  if (kind === "bazooka") { // a tube on the shoulder
+    c.save(); c.translate(-2, 9); c.rotate(-.12);
+    L([[-15, -2], [22, -2]]); L([[-15, 2], [22, 2]]); L([[-15, -2.6], [-15, 2.6]]); L([[22, -3], [22, 3]]);
+    L([[2, 2], [2, 6]]); L([[8, -2], [8, -5], [11, -5]]); c.restore();
+  } else if (kind === "grenade") { // a pineapple grenade in the throwing hand
+    const gx = 10, gy = ry - 5;
+    c.beginPath(); c.ellipse(gx, gy, 3.2, 4, 0, 0, 7); c.stroke();
+    L([[gx - 3, gy], [gx + 3, gy]]); L([[gx, gy - 4], [gx, gy + 4]]);
+    L([[gx - 1.5, gy - 4], [gx - 1.5, gy - 6], [gx + 1.5, gy - 6], [gx + 4, gy - 2]]);
+    c.beginPath(); c.arc(gx - 3, gy - 6.5, 1.4, 0, 7); c.stroke();
+  } else { // guns held at the hands, tilted a little up
+    c.save(); c.translate(9, ry); c.rotate(-.18 - (ly - ry) * .02);
+    if (kind === "rifle") { // bolt-action rifle with a bayonet
+      L([[-20, 1.5], [-14, -.5], [14, -.5]]); L([[-20, 1.5], [-20, 5], [-14, 2.5], [6, 1.2]]);
+      L([[14, -.5], [19, -.5]]); c.lineWidth = 1; L([[18, .6], [25, .2]]); L([[-3, 1.8], [-2, 4], [0, 1.6]]);
+    } else if (kind === "tommy") { // submachine gun with a drum magazine
+      L([[-14, 0], [-14, 4], [-7, 1.5]]); L([[-14, 0], [-7, -1]]);
+      L([[-7, -1.5], [7, -1.5], [7, 1.5], [-7, 1.5], [-7, -1.5]]); L([[7, -.5], [13, -.5]]);
+      c.beginPath(); c.arc(-1, 4.8, 3.2, 0, 7); c.stroke(); L([[4, 1.5], [4.5, 6]]);
+    } else if (kind === "mg") { // light machine gun on a bipod, box magazine on top
+      L([[-18, 1], [-12, -1], [16, -1]]); L([[-18, 1], [-18, 4.5], [-12, 2], [4, 1.5]]);
+      L([[-6, -1], [-6, -5], [-1, -5], [-1, -1]]); L([[13, -1], [10, 7]]); L([[13, -1], [17, 7]]);
+    } else { // pistol
+      L([[-1, -1.8], [8, -1.8], [8, .6], [-1, .6], [-1, -1.8]]); L([[0, .6], [-1.5, 5.5], [1.5, 5.5], [2.5, .6]]);
+    }
+    c.restore();
+  }
+  c.restore();
 }
 // Red-pen blood under a fallen soldier: a lumpy puddle, a few flicked drops and a drip.
 function splat(c, x, y, s, seed) {
@@ -2232,11 +2353,99 @@ function drawInkPickers() {
     inp.onchange = () => { INK[p] = inp.value; saveInk(); drawInkPickers(); };
     w.appendChild(inp); box.appendChild(w);
   });
-  const bad = inkProblem(), warn = $("inkWarn");
-  warn.textContent = bad || "Must look different from Player 1"; warn.className = bad ? "bad" : "";
-  $("startBtn").disabled = !!bad;
+  $("inkWarn").textContent = inkProblem();
+  $("startBtn").disabled = !!inkProblem();
+  drawMenuPics();
 }
+
+// ---------- menu pictures (user, 2026-11-03: "less text and more images") ----------
+// Everything is drawn with the game's own pen functions, at the standard soldier size.
+function picCtx(cv, w, h) {
+  const d = Math.min(3, devicePixelRatio || 1); cv.width = w * d; cv.height = h * d;
+  const c = cv.getContext("2d"); c.setTransform(d, 0, 0, d, 0, 0); return c;
+}
+function withStdSize(fn) { const o = opts; opts = {size: 46}; try { fn(); } finally { opts = o; } }
+function miniPaper(c, w, h) {
+  c.fillStyle = "#fbf8ef"; c.fillRect(0, 0, w, h); c.strokeStyle = "#dbe5f1"; c.lineWidth = 1;
+  for (let y = 14; y < h; y += 14) { c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
+}
+function robot(c, x, y, ink) { // the computer: a stick soldier with a box head and an antenna
+  const r = rand(5), L = pts => { c.beginPath(); pts.forEach(([a, b], i) => c[i ? "lineTo" : "moveTo"](a + (r() - .5) * .6, b + (r() - .5) * .6)); c.stroke(); };
+  c.save(); c.strokeStyle = ink; c.lineWidth = 2; c.lineCap = c.lineJoin = "round";
+  L([[x - 7, y], [x + 7, y], [x + 7, y + 12], [x - 7, y + 12], [x - 7, y]]); L([[x, y], [x, y - 5]]);
+  c.beginPath(); c.arc(x, y - 6.5, 1.6, 0, 7); c.stroke();
+  c.fillStyle = "#b3261e"; c.fillRect(x - 4, y + 4, 2.4, 2.4); c.fillRect(x + 1.6, y + 4, 2.4, 2.4);
+  L([[x, y + 12], [x, y + 28]]); L([[x - 9, y + 21], [x, y + 16], [x + 9, y + 21]]); L([[x - 7, y + 42], [x, y + 28], [x + 7, y + 42]]);
+  drawWeapon(c, {x, y, pose: 0, seed: 3, weapon: "bazooka", face: -1}, 1);
+  c.restore();
+}
+const MAP_PIECES = {
+  plain: [], boulders: [rock(28, 42, 14), rock(78, 28, 11), rock(118, 56, 16), rock(60, 72, 9)],
+  pass: [mountain(42, 76, 64, 50), mountain(104, 82, 58, 40)],
+  river: [{kind: "river", w: 18, pts: [[0, 50], [40, 38], [80, 56], [120, 42], [160, 52]]}],
+  lake: [{kind: "lake", x: 74, y: 48, rx: 46, ry: 24}],
+};
+function drawMap(c, id) {
+  miniPaper(c, 150, 100);
+  if (id === "random") {
+    c.save(); c.globalAlpha = .35; drawTerrain(c, [rock(30, 30, 10), rock(124, 70, 12), mountain(120, 40, 40, 28)]); c.restore();
+    label(c, "?", 75, 78, 74, "#b3261e", "Caveat"); return;
+  }
+  if (id === "plain") { // No Man's Land: grass tufts, a shell crater and barbed wire
+    c.save(); c.strokeStyle = "#5f5b52"; c.lineWidth = 1.4; c.lineCap = "round";
+    [[22, 30], [120, 24], [40, 82], [130, 80], [80, 20]].forEach(([x, y]) => { c.beginPath(); c.moveTo(x - 4, y); c.lineTo(x - 1, y - 6); c.moveTo(x, y); c.lineTo(x, y - 8); c.moveTo(x + 4, y); c.lineTo(x + 1, y - 6); c.stroke(); });
+    c.beginPath(); c.ellipse(70, 70, 16, 7, 0, 0, 7); c.stroke(); c.globalAlpha = .4; c.beginPath(); c.ellipse(70, 71, 9, 3.5, 0, 0, 7); c.stroke(); c.globalAlpha = 1;
+    c.beginPath(); for (let x = 6; x <= 146; x += 10) c.lineTo(x, 50 + (x / 10 % 2 ? -3 : 3)); c.stroke();
+    for (let x = 16; x < 146; x += 20) { c.beginPath(); c.moveTo(x - 3, 47); c.lineTo(x + 3, 53); c.moveTo(x + 3, 47); c.lineTo(x - 3, 53); c.stroke(); }
+    c.restore(); return;
+  }
+  drawTerrain(c, MAP_PIECES[id]);
+}
+function drawIcon(c, kind) {
+  const ink = "#2b2a27"; c.strokeStyle = ink; c.fillStyle = ink; c.lineWidth = 2; c.lineCap = c.lineJoin = "round";
+  const line = (...p) => { c.beginPath(); for (let i = 0; i < p.length; i += 2) c[i ? "lineTo" : "moveTo"](p[i], p[i + 1]); c.stroke(); };
+  if (kind === "timer") { c.beginPath(); c.arc(17, 19, 12, 0, 7); c.stroke(); line(17, 19, 17, 11); line(17, 19, 22, 22); line(14, 4, 20, 4); line(17, 4, 17, 7); }
+  else if (kind === "fire") { c.save(); c.translate(17, 18); c.rotate(-.5); c.strokeRect(-6, -2, 12, 14); c.restore(); c.strokeRect(9, 20, 18, 9); line(4, 9, 8, 13); line(6, 4, 10, 10); label(c, "!", 28, 14, 16, "#b3261e", "Caveat"); }
+  else if (kind === "mg") drawWeapon(c, {x: 6, y: -4, pose: 0, seed: 1, weapon: "mg", face: 1}, .95);
+  else if (kind === "fort") { c.save(); c.scale(.62, .62); drawFort(c, {x: 27, y: 4, hp: 3}, ink); c.restore(); }
+  else if (kind === "chute") { c.beginPath(); c.arc(17, 13, 12, Math.PI, 0); c.closePath(); c.stroke(); line(5, 13, 15, 24); line(29, 13, 19, 24); line(17, 13, 17, 23);
+    c.beginPath(); c.arc(17, 25, 2.2, 0, 7); c.stroke(); line(17, 27, 17, 31); }
+  else if (kind === "flag") { line(9, 31, 9, 4); c.fillStyle = "#b3261e"; c.beginPath(); c.moveTo(9, 5); c.lineTo(27, 10); c.lineTo(9, 16); c.closePath(); c.fill(); line(4, 31, 16, 31); }
+  else if (kind === "bleed") { c.save(); c.setLineDash([3, 3]); c.strokeStyle = "#b3261e"; c.beginPath(); c.arc(17, 17, 13, 0, 7); c.stroke(); c.restore(); blot(c, 17, 17, "#1f4fa8", 4); }
+  else if (kind === "voice") { c.beginPath(); c.ellipse(17, 14, 15, 10, 0, 0, 7); c.stroke(); line(10, 22, 8, 30, 16, 23); label(c, "Hut!", 17, 18, 12, "#b3261e"); }
+  else if (kind === "whoosh") { c.globalAlpha = .9; [8, 15, 22].forEach((y, i) => { c.beginPath(); c.moveTo(3 + i * 3, y); c.quadraticCurveTo(14, y - 5, 24, y); c.stroke(); }); blot(c, 29, 15, "#b3261e", 2); }
+  else if (kind === "size") { c.save(); c.translate(3, 8); c.scale(.42, .42); drawSoldier(c, {x: 10, y: 14, pose: 0, seed: 2, alive: true, name: "", weapon: "pistol"}, ink); c.restore();
+    c.save(); c.translate(10, -1); c.scale(.66, .66); drawSoldier(c, {x: 20, y: 6, pose: 0, seed: 4, alive: true, name: "", weapon: "pistol"}, ink); c.restore(); }
+}
+function drawMenuPics() {
+  withStdSize(() => {
+    document.querySelectorAll("#menu canvas.pic").forEach(cv => {
+      const k = cv.dataset.pic;
+      if (k.startsWith("map-")) { drawMap(picCtx(cv, 150, 100), k.slice(4)); return; }
+      if (k === "ink0" || k === "ink1") {
+        const i = +k[3], c = picCtx(cv, 44, 60);
+        drawSoldier(c, {x: 18, y: 6, pose: i, seed: 31 + i, alive: true, name: "", weapon: i ? "tommy" : "rifle", face: 1}, INK[i]); return;
+      }
+      if (k === "recruit" || k === "sergeant" || k === "general") {
+        const c = picCtx(cv, 84, 56); c.strokeStyle = INK[1]; c.fillStyle = INK[1]; c.lineWidth = 3.4; c.lineCap = c.lineJoin = "round";
+        if (k === "general") [[28, 28], [56, 28]].forEach(([x, y]) => { c.beginPath(); for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5 - Math.PI / 2, rr = i % 2 ? 6 : 14; c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } c.closePath(); c.fill(); });
+        else for (let i = 0; i < (k === "recruit" ? 1 : 3); i++) { const y = (k === "recruit" ? 22 : 12) + i * 11; c.beginPath(); c.moveTo(24, y + 10); c.lineTo(42, y); c.lineTo(60, y + 10); c.stroke(); }
+        return;
+      }
+      const c = picCtx(cv, 150, 100); miniPaper(c, 150, 100);
+      drawSoldier(c, {x: 38, y: 26, pose: 0, seed: 21, alive: true, name: "", weapon: "rifle", face: 1}, INK[0]);
+      if (k === "friend") drawSoldier(c, {x: 112, y: 26, pose: 1, seed: 22, alive: true, name: "", weapon: "tommy", face: -1}, INK[1]);
+      else robot(c, 112, 26, INK[1]);
+      c.save(); c.strokeStyle = "#b3261e"; c.setLineDash([3, 4]); c.lineWidth = 1.6; c.beginPath(); c.moveTo(62, 30); c.quadraticCurveTo(75, 6, 88, 30); c.stroke(); c.restore();
+    });
+    document.querySelectorAll("#menu canvas.ico").forEach(cv => drawIcon(picCtx(cv, 34, 34), cv.dataset.ico));
+  });
+}
+function markMap() { document.querySelectorAll("#mapTiles .tile").forEach(t => t.classList.toggle("on", t.dataset.map === $("optMap").value)); }
+document.querySelectorAll("#mapTiles .tile").forEach(t => t.onclick = () => { $("optMap").value = t.dataset.map; markMap(); });
+markMap();
 drawInkPickers();
+document.fonts.ready.then(drawMenuPics);
 
 // A box sketched in pen: two slightly different passes, corners overshooting, drawn stroke by stroke up to k (0..1).
 function penBox(c, x, y, w, h, color, seed, k = 1, lw = 2.6) {
@@ -2386,8 +2595,18 @@ function playIntro() { introDrop.ink = INK[1]; // the reinforcement joins the gr
 function endIntro() { introRun++; $("intro").classList.add("hidden"); $("intro").classList.remove("folding"); }
 function showIntroCard() {
   introRun++; $("intro").classList.remove("hidden", "folding"); $("introCard").classList.remove("hidden"); $("introBar").classList.add("hidden");
-  fitIntro(); ictx.clearRect(0, 0, W, H); paper(ictx);
+  fitIntro(); ictx.clearRect(0, 0, W, H); paper(ictx); drawIntroPic();
 }
+function drawIntroPic() {
+  const c = picCtx($("introPic"), 220, 92); miniPaper(c, 220, 92);
+  withStdSize(() => {
+    [[30, 0, "rifle"], [72, 1, "bazooka"]].forEach(([x, pose, weapon], i) => drawSoldier(c, {x, y: 22 + (i % 2) * 6, pose, seed: 61 + i, alive: true, name: "", weapon, face: 1}, INK[0]));
+    [[190, 1, "tommy"], [148, 0, "grenade"]].forEach(([x, pose, weapon], i) => drawSoldier(c, {x, y: 22 + (i % 2) * 6, pose, seed: 71 + i, alive: true, name: "", weapon, face: -1}, INK[1]));
+  });
+  c.save(); c.strokeStyle = "#b3261e"; c.setLineDash([4, 5]); c.lineWidth = 1.6; c.beginPath(); c.moveTo(94, 30); c.quadraticCurveTo(110, 2, 126, 30); c.stroke(); c.restore();
+  label(c, "vs", 110, 62, 26, "#b3261e", "Caveat");
+}
+document.fonts.ready.then(() => !$("introCard").classList.contains("hidden") && drawIntroPic());
 $("introCard").onclick = async () => {
   loadSfx(); ac.state !== "running" && ac.resume();
   await Promise.all([document.fonts.load('17px "Patrick Hand"'), document.fonts.load('700 30px Caveat'), document.fonts.load('700 30px "Stardos Stencil"')]).catch(() => {});
@@ -2414,7 +2633,7 @@ $("hlVideoBtn").onclick = () => saveReplayVideo(true);
 $("bootBtn").onclick = () => { rematchFirst = null; newMatch(BOOTCAMP); };
 document.querySelectorAll("input[name=foe]").forEach(r => r.onchange = () => {
   $("levelRow").classList.toggle("hidden", r.value !== "cpu" || !r.checked);
-  $("p2InkLabel").textContent = r.value === "cpu" && r.checked ? "Computer ink" : "Player 2 ink";
+  $("p2InkLabel").textContent = r.value === "cpu" && r.checked ? "Computer" : "Player 2";
 });
 $("menuBtn").onclick = () => { replayRun++; $("coach").classList.add("hidden"); $("over").classList.add("hidden"); $("menu").classList.remove("hidden"); };
 window.addEventListener("resize", fit);
