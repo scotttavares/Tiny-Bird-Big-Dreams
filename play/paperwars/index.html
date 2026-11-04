@@ -161,12 +161,24 @@ button.awol.sure{color:var(--red);font-weight:700}
 .row.locked{opacity:.55}
 .row.locked::after{content:"\1F512 Full Arsenal";grid-column:2;font-size:13px;color:#b3261e}
 #arsenalDepot.hidden{display:none}
-.crate{position:relative;display:block;width:100%;margin:2px 0 6px;padding:12px 14px 14px;text-align:left;cursor:pointer;color:#3d3f22;
+/* the crate: its front face is a lid that swings up to show the goods (user, 2026-11-04: "the ammo box opens") */
+.crate{position:relative;display:block;width:100%;margin:2px 0 6px;padding:0;border:0;text-align:left;cursor:pointer;color:#3d3f22;background:transparent;
+  perspective:700px;transform:rotate(-.6deg);animation:crateNudge 5s 2s infinite}
+.crateFace{position:relative;display:block;padding:12px 14px 14px;z-index:2;transform-origin:50% 0;transition:transform .6s cubic-bezier(.3,1.35,.5,1);
   background:repeating-linear-gradient(180deg,#cfc196 0 30px,#b9aa7c 30px 32px),#cfc196;border:3px solid #6b5f3a;border-radius:6px;
-  box-shadow:inset 0 0 0 6px #cfc19600,inset 0 0 18px #6b5f3a55,3px 4px 0 #0002;transform:rotate(-.6deg);animation:crateNudge 5s 2s infinite}
-.crate::before,.crate::after{content:"";position:absolute;top:6px;bottom:6px;width:10px;border-left:3px solid #6b5f3a;border-right:3px solid #6b5f3a;opacity:.55}
-.crate::before{left:6px}.crate::after{right:6px}
-.crate:active{transform:rotate(-.6deg) scale(.97)}
+  box-shadow:inset 0 0 18px #6b5f3a55,3px 4px 0 #0002;backface-visibility:hidden}
+.crateFace::before,.crateFace::after{content:"";position:absolute;top:6px;bottom:6px;width:10px;border-left:3px solid #6b5f3a;border-right:3px solid #6b5f3a;opacity:.55}
+.crateFace::before{left:6px}.crateFace::after{right:6px}
+.crateInside{position:absolute;inset:0;z-index:1;border:3px solid #6b5f3a;border-radius:6px;opacity:0;display:flex;align-items:center;justify-content:center;gap:14px;
+  background:radial-gradient(ellipse at 50% 65%,#fff6c8 0,#f2c955 28%,#8a6a22 62%,#2f2614 100%);color:#fffbe6;font-size:30px;text-shadow:0 0 12px #fff3b0}
+.crateInside i{font-style:normal;transform:scale(.2);opacity:0}
+.crate.opening{animation:none}
+.crate.opening .crateFace{transform:rotateX(-112deg)}
+.crate.opening .crateInside{opacity:1;transition:opacity .15s .12s}
+.crate.opening .crateInside i{animation:crateStar .7s .18s cubic-bezier(.2,1.5,.5,1) forwards}
+.crate.opening .crateInside i:nth-child(2){animation-delay:.26s}.crate.opening .crateInside i:nth-child(3){animation-delay:.34s}
+@keyframes crateStar{0%{transform:scale(.2) translateY(10px);opacity:0}60%{opacity:1}100%{transform:scale(1) translateY(-6px);opacity:1}}
+.crate:active .crateFace{filter:brightness(.96)}
 .crateTop{display:block;font:700 11px/1 "Stardos Stencil","Special Elite",monospace;letter-spacing:.14em;opacity:.7;margin-left:16px}
 .crateName{display:block;white-space:nowrap;font:700 min(28px, 7.2vw)/1.05 "Stardos Stencil","Special Elite",monospace;letter-spacing:.06em;margin:4px 0 2px 16px;color:#33361a}
 .crateList{display:block;font-size:16px;margin-left:16px;margin-right:84px;line-height:1.25}
@@ -323,10 +335,13 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
   <!-- Supply depot (user, 2026-11-04: "under upgrades or something military sounding ... was hard to notice") -->
   <div id="arsenalDepot"><h4>Supply depot</h4>
     <button type="button" id="arsenalBtn" class="crate" aria-label="Full Arsenal upgrade">
+      <span class="crateInside" aria-hidden="true"><i>&#9733;</i><i>&#9733;</i><i>&#9733;</i></span>
+      <span class="crateFace">
       <span class="crateTop">US &#9733; SUPPLY &middot; HANDLE WITH CARE</span>
       <span class="crateName">FULL ARSENAL</span>
       <span class="crateList">The General &middot; 3 battlefields &middot; 5 voices &middot; every pen</span>
       <span class="cratePrice" id="arsenalPrice">$4.99</span>
+      </span>
     </button></div>
   <details class="more"><summary>More orders</summary>
     <div class="row"><canvas class="ico" data-ico="timer"></canvas><span>Turn timer<small>Seconds per shot</small></span>
@@ -3387,7 +3402,13 @@ document.querySelectorAll("input[name=rvMode]").forEach(r => r.onchange = () => 
 $("rvBack").onclick = () => { replayRun++; if (talking) try { talking.src ? talking.src.stop() : talking.stop(); } catch (e) {} $("replayView").classList.add("hidden"); };
 window.addEventListener("resize", () => !$("replayView").classList.contains("hidden") && replayLayout());
 $("cabBtn").onclick = showCabinet;
-$("arsenalBtn").onclick = () => openArsenal();
+// The lid swings up, the goods glow, then the sheet opens.
+$("arsenalBtn").onclick = () => {
+  const c = $("arsenalBtn"); if (c.classList.contains("opening")) return;
+  c.classList.add("opening"); sound("click");
+  setTimeout(() => openArsenal(), 750);
+  setTimeout(() => c.classList.remove("opening"), 1600);
+};
 $("arsenalClose").onclick = () => $("arsenalSheet").classList.add("hidden");
 $("arsenalBuy").onclick = () => { if (!inApp()) return; $("arsenalBuy").disabled = true; $("arsenalMsg").textContent = "Opening the App Store..."; askStore("buy"); };
 $("arsenalRestore").onclick = () => { $("arsenalMsg").textContent = "Checking your purchases..."; askStore("restore"); };
