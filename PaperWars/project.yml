@@ -46,6 +46,8 @@ targets:
           UIColorName: PaperColor
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
+        # The share sheet's "Save Video" puts a battle replay in Photos (add only, nothing is read).
+        NSPhotoLibraryAddUsageDescription: Paper Wars saves your battle replay videos to Photos when you choose Save Video.
         UIStatusBarHidden: true
         UIViewControllerBasedStatusBarAppearance: false
         # Portrait both ways: in tent mode the far half is upside down for the other player.
