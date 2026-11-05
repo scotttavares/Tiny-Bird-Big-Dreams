@@ -2998,7 +2998,58 @@ function runBurst() { // draws the dashed line out from the soldier, then fires 
 // ---------- reinforcements: the airdrop ----------
 // (user, 2026-11-03) "Reinforcements!!", a folded paper plane swoops across the top of the page and drops the new soldier
 // on a paper-cutout parachute; he drifts down and lands somewhere random but safe. All pencil and paper cutouts.
-let airdrop = null;
+let airdrop = null, waterEgg = null;
+// The water easter egg, drawn in pen like everything else. All in a few seconds, then it's gone.
+function drawWaterEgg(c, e) {
+  const t = performance.now() - e.t0;
+  if (t > 3500 || e.id !== matchId) { if (t > 3500) waterEgg = null; return; }
+  const {x, y} = e, ink = "#24324f";
+  c.save(); c.lineCap = "round"; c.lineJoin = "round";
+  const ripple = (k) => { c.save(); c.strokeStyle = "#4f8fd1"; c.globalAlpha = Math.max(0, 1 - k); c.lineWidth = 1.4;
+    c.beginPath(); c.ellipse(x, y + 4, 10 + 22 * k, 3 + 6 * k, 0, 0, 7); c.stroke(); c.restore(); };
+  ripple((t % 1200) / 1200);
+  if (e.kind === "narwhal") { // a grumpy narwhal surfaces, complains, and sinks back down
+    const up = t < 500 ? t / 500 : t > 3000 ? Math.max(0, 1 - (t - 3000) / 500) : 1, by = y + 6 - 18 * up;
+    c.save(); c.translate(x, y + 6); c.scale(1.5, 1.5); c.translate(-x, -(y + 6)); // a good-sized narwhal
+    c.beginPath(); c.rect(x - 60, by - 40, 120, (y + 6) - (by - 40)); c.clip(); // only the part above the water shows
+    c.fillStyle = "#cfd8e6"; c.strokeStyle = ink; c.lineWidth = 1.8;
+    c.beginPath(); c.ellipse(x, by, 20, 11, -.12, 0, 7); c.fill(); c.stroke();
+    c.fillStyle = "#e4eaf3"; c.beginPath(); c.ellipse(x - 2, by + 4, 12, 5, -.12, 0, 7); c.fill(); // pale belly
+    c.lineWidth = 1.4; c.beginPath(); c.moveTo(x - 17, by - 4); c.lineTo(x - 40, by - 17); c.stroke(); // the tusk, with its twist
+    for (let i = 1; i < 5; i++) { const px = x - 17 - i * 4.6, py = by - 4 - i * 2.6; c.beginPath(); c.moveTo(px - 1.5, py + 2.2); c.lineTo(px + 1.5, py - 2.2); c.stroke(); }
+    c.fillStyle = ink; c.beginPath(); c.arc(x - 9, by - 3, 1.6, 0, 7); c.fill(); // a cross little eye
+    c.beginPath(); c.moveTo(x - 13, by - 7); c.lineTo(x - 6, by - 6); c.stroke(); // grumpy brow
+    c.beginPath(); c.moveTo(x + 4, by + 2); c.quadraticCurveTo(x + 10, by + 9, x + 2, by + 9); c.stroke(); // flipper
+    c.restore();
+    c.strokeStyle = "#4f8fd1"; c.lineWidth = 1.6; c.beginPath(); c.moveTo(x - 26, y + 6); // the waterline
+    for (let i = 1; i <= 6; i++) c.quadraticCurveTo(x - 26 + (i - .5) * 52 / 6, y + 6 + (i % 2 ? -2.5 : 2.5), x - 26 + i * 52 / 6, y + 6); c.stroke();
+    if (t > 450 && t < 3000) bubble(c, "Hey! Who did that? That's not nice!", x, y + 6 - (y + 6 - (by - 14)) * 1.5, ink);
+  } else if (e.kind === "jump") { // a fish leaps out in an arc and dives back in
+    const k = Math.min(1, t / 1300), fx = x - 30 + 60 * k, fy = y - Math.sin(k * Math.PI) * 60, ang = Math.cos(k * Math.PI) * -.9;
+    if (t < 1400) {
+      c.save(); c.translate(fx, fy); c.rotate(ang); c.scale(1.5, 1.5);
+      c.fillStyle = "#f2b45a"; c.strokeStyle = ink; c.lineWidth = 1.6;
+      c.beginPath(); c.ellipse(0, 0, 11, 5.5, 0, 0, 7); c.fill(); c.stroke();
+      c.beginPath(); c.moveTo(-10, 0); c.lineTo(-17, -6); c.lineTo(-17, 6); c.closePath(); c.fill(); c.stroke(); // tail
+      c.fillStyle = ink; c.beginPath(); c.arc(6, -1.5, 1.2, 0, 7); c.fill();
+      c.restore();
+    }
+    if (t > 1250 && t < 2200) { const d = (t - 1250) / 950; c.strokeStyle = "#4f8fd1"; c.globalAlpha = 1 - d; c.lineWidth = 1.3;
+      for (const sx of [-1, 1]) { c.beginPath(); c.arc(x + 24 + sx * (5 + d * 10), y - d * 10, 1.8, 0, 7); c.stroke(); } c.globalAlpha = 1; }
+    if (t > 600 && t < 2600) label(c, "splish!", x, y + 26, 18, "#4f8fd1", "Caveat");
+  } else { // a stunned fish floats up belly first, x'd out eye and all (it'll be fine; cartoon fish always are)
+    const up = Math.min(1, t / 700), bob = Math.sin(t / 260) * 1.5, fy = y + 2 + (1 - up) * 10 + bob, fade = t > 2900 ? Math.max(0, 1 - (t - 2900) / 600) : 1;
+    c.globalAlpha = fade; c.save(); c.translate(x, fy); c.scale(1.5, -1.5); // upside down
+    c.fillStyle = "#f6efe0"; c.strokeStyle = ink; c.lineWidth = 1.6;
+    c.beginPath(); c.ellipse(0, 0, 12, 6, 0, 0, 7); c.fill(); c.stroke();
+    c.beginPath(); c.moveTo(-11, 0); c.lineTo(-18, -6); c.lineTo(-18, 6); c.closePath(); c.fill(); c.stroke();
+    c.restore();
+    c.strokeStyle = ink; c.lineWidth = 1.8; const ex = x + 9, ey = fy - 1.5; // the X eye
+    c.beginPath(); c.moveTo(ex - 2.5, ey - 2.5); c.lineTo(ex + 2.5, ey + 2.5); c.moveTo(ex + 2.5, ey - 2.5); c.lineTo(ex - 2.5, ey + 2.5); c.stroke();
+    if (t > 900 && t < 3000) label(c, "blub...", x + 4, fy - 14, 17, "#4f8fd1", "Caveat");
+  }
+  c.restore();
+}
 function startAirdrop(p, done) {
   const pos = cpuSpot(p, false), now = performance.now(), fly = 1900;
   const tDrop = fly * (pos.x + 50) / (W + 100);
@@ -3123,7 +3174,7 @@ function defenderText(res, me) {
     case "fort": return p.fort && p.fort.hp > 0 ? `Your fort was hit! ${p.fort.hp} hit${p.fort.hp > 1 ? "s" : ""} left.` : "Your fort is rubble!";
     case "scratch": return "Just a scratch! Your soldier is still standing.";
     case "off": return res.timeout ? `${foe.name} ran out of time.` : `${foe.name}'s shot went off the paper.`;
-    case "rock": return "Ping! Your boulder took the hit.";
+    case "rock": return res.mountain ? "Thud! Your mountain took the hit." : "Ping! Your boulder took the hit.";
     case "slide": return "Rockslide! ...but nobody was standing below the mountain.";
     default: return res.fart ? `They missed... ${res.fart.poop ? `*squelch* ${who(res.i)} pooped their pants.` : `*pfffrt* ${who(res.i)} got nervous.`}` : "They missed!";
   }
@@ -3348,15 +3399,12 @@ function resolveShot() {
       res.fling = true;
       if (kills.size) res.i = [...kills][0];
     } else {
-      const f = terrainAt(def.terrain, t.x, t.y), s20 = 20 * sc();
-      if (f && f.kind === "rock") res = {type: "rock"};
-      else if (f && f.kind === "mountain") { // rockslide: buries everything just below the mountain
-        const slid = def.soldiers.map((u, i) => i).filter(i => def.soldiers[i].alive && inSlide(f, def.soldiers[i].x, def.soldiers[i].y + s20));
-        const fortHit = !!(def.fort && def.fort.hp > 0 && inSlide(f, def.fort.x, def.fort.y + 15 * sc()));
-        slid.forEach(i => def.soldiers[i].alive = false); if (fortHit) def.fort.hp--;
-        killed = slid; fortHitAny = fortHit;
-        res = slid.length ? {type: "soldier", kills: slid.length, i: slid[0], fortHit, slide: true} : fortHit ? {type: "fort", slide: true} : {type: "slide"};
-      } else {
+      const f = terrainAt(def.terrain, t.x, t.y);
+      // Boulders and mountains stop the shot, and whoever hides behind them is safe. (Mountains used to start a
+      // rockslide that buried soldiers below them; user, 2026-11-05: "the shrapnel killed 2 soldiers hiding behind it.
+      // that should not happen". Cover is cover.)
+      if (f && (f.kind === "rock" || f.kind === "mountain")) res = {type: "rock", mountain: f.kind === "mountain"};
+      else {
         res = hitTest(def, t.x, t.y);
         if (wet(f) && res.type !== "soldier" && res.type !== "fort") { // splash: soldiers on the shore get soaked
           const i = def.soldiers.findIndex(u => { if (!u.alive) return false; const q = soldierParts(u);
@@ -3385,7 +3433,9 @@ function resolveShot() {
       if (buddies.length) res.medic = {i: buddies[0].i, text: bagPick("medic")};
     }
     // A close call scares the nearest soldier into a nervous fart (most of the time).
-    if (res.type === "miss" && res.nearIdx != null && res.soldierNear < NEAR * 1.6 && Math.random() < .6) {
+    // the General's troops are disciplined: they never flinch, so no nervous fart gives them away
+    const steady = def.cpu && (RANKS[opts.level] || {}).smart;
+    if (!steady && res.type === "miss" && res.nearIdx != null && res.soldierNear < NEAR * 1.6 && Math.random() < .6) {
       const poop = res.soldierNear < NEAR * .8 && Math.random() < .4; // a really close call can be worse than a fart
       res.fart = {text: bagPick(poop ? "poop" : "fart"), poop}; res.i = res.nearIdx;
     }
@@ -3395,7 +3445,8 @@ function resolveShot() {
       path: s.fling ? s.path.map(([x, y]) => [W - x, y]) : null});
   }
   if (s.off) def.incoming.push({x: 0, y: 0, res: "off", timeout: !!s.timeout});
-  shooter.shots.push({x: s.x, y: s.y, res: res.type, path: s.path, fling: !!s.fling, wet: !!res.wet});
+  shooter.shots.push({x: s.x, y: s.y, res: res.type, path: s.path, fling: !!s.fling, wet: !!res.wet,
+    close: res.type === "miss" && (!!res.fart || (opts.near && res.near < NEAR))}); // "whoosh, close!" or a nervous fart: someone is near
   // Reinforcements: a run of misses earns the enemy a new soldier, while their fort still stands (user, 2026-11-03: until it's rubble).
   if (res.type === "soldier" || res.type === "fort") shooter.missStreak = 0;
   else if (++shooter.missStreak >= opts.reinforce && opts.reinforce && def.fort && def.fort.hp > 0
@@ -3408,6 +3459,14 @@ function resolveShot() {
   }
   replay.events.push(clone({who: cur, shot: {x: s.x, y: s.y, off: !!s.off, timeout: !!s.timeout, fling: !!s.fling, path: s.path || null}, res, killed, fortHit: fortHitAny, fortHp: def.fort ? def.fort.hp : null}));
   lastResult = res; pending = null;
+  // Water easter egg (user, 2026-11-05): a dot that splashes into a lake or river and hits nobody sometimes disturbs
+  // the locals: a grumpy narwhal, a leaping fish, or a stunned fish floating belly up. Shown where you can see it:
+  // on your own page when you fired, on your page where it landed when the computer fired.
+  if (res.wet && res.type === "miss" && !s.fling && Math.random() < .4) {
+    const mine = !shooter.cpu, at = mine ? {x: s.x, y: s.y} : mirror(s.x, s.y);
+    waterEgg = {page: mine ? cur : 1 - cur, x: at.x, y: at.y, kind: ["narwhal", "jump", "float"][Math.floor(Math.random() * 3)], t0: performance.now(), id: matchId};
+    animateFor(3600);
+  }
   terrainSound(res);
   if (opts.bootcamp) {
     if (shooter.cpu) coach("incoming", 600);
@@ -3448,7 +3507,7 @@ function shotText(res, who) {
     case "fort": return def.fort.hp > 0 ? `Fort cracked. ${def.fort.hp} hit${def.fort.hp > 1 ? "s" : ""} left.` : "Fort destroyed!";
     case "scratch": return "Just a scratch. Arms and legs don't count.";
     case "off": return res.timeout ? "Time's up, soldier! Shot wasted." : "Off the paper. Shot wasted.";
-    case "rock": return "Ping! That one hit a boulder.";
+    case "rock": return res.mountain ? "Thud! That one hit a mountain." : "Ping! That one hit a boulder.";
     case "slide": return "Rockslide! ...but nobody was standing below the mountain.";
     default: return res.fart ? (res.fart.poop ? "Miss... *squelch* Someone just pooped their pants!" : "Miss... *pfffrt* Did someone just fart?") : opts.near && res.near < NEAR ? "Miss... whoosh, close!" : "Miss.";
   }
@@ -3489,7 +3548,10 @@ const vsCpu = () => !!(players && players[1].cpu);
 const RANKS = {
   recruit:  {jitter: 24, ghosts: .5, hunt: false, fling: "random"},
   sergeant: {jitter: 10, ghosts: 1, hunt: true, fling: "pairs"},
-  general:  {jitter: 5, ghosts: 1, hunt: true, fling: "lines"},
+  // The General (user, 2026-11-05: "pretty hard, will take very precise strategy to win"). Still fair: it only knows
+  // what a person in its seat would. It aims tightly, follows up close calls and nervous farts, probes behind cover
+  // (ink can't bleed through stone), and hides its own army behind cover, spread so one burst can't line them up.
+  general:  {jitter: 2, ghosts: 1, hunt: true, fling: "lines", smart: true},
 };
 const wobble = () => (Math.random() + Math.random() + Math.random() - 1.5) * 1.15; // a rough bell curve, about -1.7 to 1.7
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -3507,18 +3569,58 @@ function cpuSpot(p, isFort) {
 const cpuSoldier = p => ({...cpuSpot(p, false), alive: true, pose: p.soldiers.length % 2, seed: Math.floor(Math.random() * 99999), name: soldierName(p)});
 function cpuSetup(p) {
   p.soldiers = []; p.fort = null;
+  if ((RANKS[opts.level] || {}).smart) return generalSetup(p);
   for (let i = 0; i < MAX_UNITS; i++) p.soldiers.push(cpuSoldier(p));
   if (opts.fort) p.fort = {...cpuSpot(p, true), hp: 3};
+}
+// The General hides like a veteran: behind stone where ink can't find them, far apart, never three in a line.
+function generalSetup(p) {
+  const T = p.terrain || [], s = sc();
+  const cover = c => { // how many directions stone shields this spot from ink (a few probes around it)
+    let n = 0; for (let k = 0; k < 8; k++) { const a = k * .785, x = c.x + Math.cos(a) * 55, y = c.y + 20 * s + Math.sin(a) * 55;
+      if (sightBlocked(T, x, y, c.x, c.y + 20 * s)) n++; } return n; };
+  const lined = (pts, c) => pts.some((a, i) => pts.some((b, j) => j > i && segDist(c.x, c.y, [a.x, a.y, b.x, b.y]) < 14 * s));
+  const place = (isFort, minGap) => {
+    let best = null, bestScore = -Infinity;
+    for (let k = 0; k < 120; k++) {
+      const c = legalPos(20 + Math.random() * (W - 40), 40 + Math.random() * (H - 70), isFort, p);
+      const others = [...p.soldiers, ...(p.fort ? [p.fort] : [])];
+      const gap = Math.min(Infinity, ...others.map(u => Math.hypot(u.x - c.x, u.y - c.y)));
+      if (gap < minGap) continue;
+      const edge = Math.min(c.x, W - c.x, c.y, H - c.y); // corners and edges are where search shots reach least
+      const score = cover(c) * 3 + Math.min(gap, 200) / 30 + (edge < 45 ? 2.5 : 0) - (lined(p.soldiers, c) ? 6 : 0) + Math.random();
+      if (score > bestScore) { best = c; bestScore = score; }
+    }
+    return best || cpuSpot(p, isFort);
+  };
+  for (let i = 0; i < MAX_UNITS; i++) p.soldiers.push({...place(false, 90 * s), alive: true, pose: i % 2, seed: Math.floor(Math.random() * 99999), name: soldierName(p)});
+  if (opts.fort) p.fort = {...place(true, 50 * s), hp: 3};
 }
 // Where to put a dot on its own half to hit the middle of an enemy soldier (shots land mirrored).
 const torsoAim = u => ({x: W - u.x, y: u.y + 20 * sc()});
 // Somewhere far from its earlier shots, so it sweeps the page instead of guessing.
-function huntSpot(me) {
+function huntSpot(me, smart = false) {
   let best, bestD = -1;
-  for (let k = 0; k < 30; k++) {
-    const c = {x: 15 + Math.random() * (W - 30), y: 20 + Math.random() * (H - 50)};
-    if (terrainAt(me.terrain, c.x, c.y)?.kind === "rock") continue;
-    const d = Math.min(Infinity, ...me.shots.filter(s => s.res !== "off").map(s => Math.hypot(s.x - c.x, s.y - c.y)));
+  const shots = me.shots.filter(s => s.res !== "off");
+  for (let k = 0; k < (smart ? 80 : 30); k++) {
+    const c = {x: 15 + Math.random() * (W - 30), y: 20 + Math.random() * (H - 50)}, f = terrainAt(me.terrain, c.x, c.y);
+    if (f?.kind === "rock" || (smart && (solid(f) || f?.kind === "lake"))) continue; // nobody stands on stone or in a lake
+    // a shot's ink can't reach past stone, so a spot behind cover counts as unexplored (the General looks there)
+    const d = Math.min(Infinity, ...shots.map(s => Math.hypot(s.x - c.x, s.y - c.y) * (smart && sightBlocked(me.terrain, s.x, s.y, c.x, c.y) ? 2.2 : 1)));
+    if (d > bestD) { best = c; bestD = d; }
+  }
+  return best;
+}
+// The General follows up a close call: a ring around the shot that heard "whoosh" or a fart, away from its other shots.
+function closeCallSpot(me) {
+  const shots = me.shots.filter(s => s.res !== "off"), recent = [...shots].reverse().slice(0, 6).find(s => s.close &&
+    shots.filter(o => o !== s && Math.hypot(o.x - s.x, o.y - s.y) < NEAR * 2.2).length < 3);
+  if (!recent) return null;
+  let best = null, bestD = -1;
+  for (let k = 0; k < 24; k++) {
+    const a = k / 24 * 6.283, r = NEAR * (.9 + Math.random() * .7), c = {x: clamp(recent.x + Math.cos(a) * r, 4, W - 4), y: clamp(recent.y + Math.sin(a) * r, 4, H - 4)};
+    if (solid(terrainAt(me.terrain, c.x, c.y))) continue;
+    const d = Math.min(Infinity, ...shots.map(o => Math.hypot(o.x - c.x, o.y - c.y)));
     if (d > bestD) { best = c; bestD = d; }
   }
   return best;
@@ -3548,21 +3650,36 @@ function cpuFling(me, targets, rank, foeLeft) {
   const [x, y] = plan.path[plan.path.length - 1];
   return {x, y, path: plan.path, fling: true};
 }
+// The General's search burst: when it knows nothing, it sweeps a machine-gun line through the widest stretch of the
+// page its shots haven't explored yet (a burst hits everything it crosses, seen or not).
+function sweepFling(me) {
+  const shots = me.shots.filter(s => s.res !== "off");
+  if (shots.length < 3) return null;
+  const bleed = opts.reveal || 60, launchers = me.soldiers.filter(u => u.alive).map(u => ({x: u.x, y: u.y + 20 * sc()}));
+  let best = null;
+  for (const S of launchers) for (let k = 0; k < 24; k++) {
+    const a = k / 24 * 6.283, path = gunPath(S.x, S.y, Math.cos(a) * 100, Math.sin(a) * 100, me.terrain);
+    let score = 0;
+    for (let i = 3; i < path.length; i += 3) { const [x, y] = path[i]; // unexplored length, ignoring the stretch next to its own soldier
+      const d = Math.min(Infinity, ...shots.map(o => Math.hypot(o.x - x, o.y - y))); if (d > bleed * .9) score += Math.min(d, bleed * 2); }
+    if (!best || score > best.score) best = {path, score};
+  }
+  if (!best || best.score < bleed * 8) return null; // not worth a burst
+  const [x, y] = best.path[best.path.length - 1];
+  return {x, y, path: best.path, fling: true};
+}
 function cpuAim(me, foe) {
   const rank = RANKS[opts.level] || RANKS.sergeant;
   const targets = [...me.known].map(i => foe.soldiers[i]).filter(u => u.alive).map(torsoAim);
   const fortT = me.fortKnown && foe.fort && foe.fort.hp > 0 ? {x: W - foe.fort.x, y: foe.fort.y + 15 * sc()} : null;
-  const fl = me.flingsLeft > 0 && !opts.bootcamp && cpuFling(me, targets, rank, foe.soldiers.filter(u => u.alive).length);
+  const fl = me.flingsLeft > 0 && !opts.bootcamp && (cpuFling(me, targets, rank, foe.soldiers.filter(u => u.alive).length)
+    || (rank.smart && !targets.length && sweepFling(me)));
   if (fl) return fl;
-  // A known soldier standing below a mountain? Shoot the mountain and bury them.
-  const slopes = (me.terrain || []).filter(f => f.kind === "mountain");
-  const slideT = rank.hunt && slopes.find(f => targets.some(o => inSlide(f, o.x, o.y)) && (rank.fling === "lines" || Math.random() < .5));
-  if (slideT) return {x: slideT.x, y: slideT.y - slideT.h / 3};
   let t = Math.random() < rank.ghosts && (targets[Math.floor(Math.random() * targets.length)] || fortT);
   if (t) t = {x: t.x + wobble() * rank.jitter, y: t.y + wobble() * rank.jitter};
-  else t = rank.hunt ? huntSpot(me) : {x: 20 + Math.random() * (W - 40), y: 20 + Math.random() * (H - 40)};
+  else t = (rank.smart && closeCallSpot(me)) || (rank.hunt ? huntSpot(me, rank.smart) : {x: 20 + Math.random() * (W - 40), y: 20 + Math.random() * (H - 40)});
   t = {x: clamp(t.x, 2, W - 2), y: clamp(t.y, 2, H - 2)};
-  if (terrainAt(me.terrain, t.x, t.y)?.kind === "rock" && rank.hunt) return huntSpot(me); // it can see the rock too
+  if (solid(terrainAt(me.terrain, t.x, t.y)) && rank.hunt) return huntSpot(me, rank.smart); // it can see the rocks and mountains too
   return t;
 }
 function cpuTurn() {
@@ -3584,7 +3701,7 @@ function cpuShotText(res) {
   const me = players[0], left = me.soldiers.filter(u => u.alive).length;
   let t;
   switch (res.type) {
-    case "rock": t = "The computer's shot pinged off a boulder."; break;
+    case "rock": t = res.mountain ? "The computer's shot thudded into a mountain." : "The computer's shot pinged off a boulder."; break;
     case "slide": t = "The computer started a rockslide, but nobody was below it."; break;
     case "soldier": t = res.slide ? `Rockslide! The computer buried ${res.kills > 1 ? res.kills + " of your soldiers" : me.soldiers[res.i].name}. ${left} left.`
       : res.splash ? `Splash! The computer soaked ${me.soldiers[res.i].name}. ${left} left.` : (res.fling ? `Rat-a-tat-tat! The computer's machine gun got ${res.kills > 1 ? res.kills + " of your soldiers" : me.soldiers[res.i].name} down.` : `The computer got ${me.soldiers[res.i].name}!`) + ` ${left} left.`; break;
@@ -3622,7 +3739,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 function replayText(ev, def, N) {
   const {res} = ev, a = N[ev.who], more = res.reinforced ? ` Too many misses: reinforcements for ${N[1 - ev.who]}!` : "";
   switch (res.type) {
-    case "rock": return "Ping! A boulder takes the hit.";
+    case "rock": return res.mountain ? "Thud! A mountain takes the hit." : "Ping! A boulder takes the hit.";
     case "slide": return `${a} starts a rockslide... nobody's home.`;
     case "soldier": return res.slide ? `${a} starts a rockslide: ${res.kills > 1 ? res.kills + " soldiers" : def.soldiers[res.i].name} buried!`
       : res.splash ? `Splash! ${a} soaks ${def.soldiers[res.i].name}!` : res.fling ? `${a}'s machine gun takes out ${res.kills > 1 ? res.kills + " soldiers" : def.soldiers[res.i].name}!` : `${a} hits ${def.soldiers[res.i].name}!`;
@@ -4001,25 +4118,25 @@ function awards() {
   const splashEv = ev.find(e => e.res.splash && e.killed.length);
   if (splashEv) A.push({title: "Cannonball!", who: splashEv.who, name: N[splashEv.who], why: `soaked ${armyName(1 - splashEv.who, splashEv.killed[0])}`});
   const pings = [0, 1].map(w => by(w).filter(e => e.res.type === "rock").length), pw = pings[0] >= pings[1] ? 0 : 1;
-  if (pings[pw] >= 3) A.push({title: "Rock Collector", who: pw, name: N[pw], why: `${pings[pw]} shots into boulders`});
-  const multi = ev.filter(e => e.res.kills > 1 && !e.res.slide).sort((a, b) => b.res.kills - a.res.kills)[0];
+  if (pings[pw] >= 4) A.push({title: "Rock Collector", who: pw, name: N[pw], why: `${pings[pw]} shots into rocks and mountains`});
+  const multi = ev.filter(e => e.res.kills > 2 && !e.res.slide).sort((a, b) => b.res.kills - a.res.kills)[0];
   if (multi) A.push({title: "Mowed 'Em Down", who: multi.who, name: N[multi.who], why: `${multi.res.kills} soldiers with one burst`});
   // Couldn't Hit a Barn: longest run of misses
   const streak = [0, 1].map(w => { let best = 0, run = 0; by(w).forEach(e => { run = e.res.type === "soldier" || e.res.type === "fort" ? 0 : run + 1; best = Math.max(best, run); }); return best; });
   const bw = streak[0] >= streak[1] ? 0 : 1;
-  if (streak[bw] >= 6) A.push({title: "Couldn't Hit a Barn", who: bw, name: N[bw], why: `${streak[bw]} misses in a row`});
+  if (streak[bw] >= 8) A.push({title: "Couldn't Hit a Barn", who: bw, name: N[bw], why: `${streak[bw]} misses in a row`});
   // Spray and Pray: a machine-gun burst that hit nothing at all
   const spray = ev.find(e => e.shot.fling && !e.killed.length && !e.fortHit);
   if (spray) A.push({title: "Spray and Pray", who: spray.who, name: N[spray.who], why: "a whole burst, not one hit"});
-  const close = ev.filter(e => e.res.type === "miss" && e.res.nearIdx != null && e.res.near < NEAR * .5).sort((a, b) => a.res.near - b.res.near)[0];
+  const close = ev.filter(e => e.res.type === "miss" && e.res.nearIdx != null && e.res.near < NEAR * .35).sort((a, b) => a.res.near - b.res.near)[0];
   if (close) A.push({title: "Closest Call", who: 1 - close.who, name: nameOf(1 - close.who, close.res.nearIdx), why: "a shot missed by a hair"});
   const wreck = ev.find(e => e.fortHit && e.fortHp === 0);
   if (wreck) A.push({title: "Fort Wrecker", who: wreck.who, name: N[wreck.who], why: "knocked the fort to rubble"});
   const acc = [0, 1].map(w => by(w).length ? hits(w) / by(w).length : 0), sw = acc[0] === acc[1] ? replay.winner : acc[0] > acc[1] ? 0 : 1;
-  if (hits(sw) >= 4 && acc[sw] >= .6) A.push({title: "Sharpshooter", who: sw, name: N[sw], why: `${Math.round(acc[sw] * 100)}% of shots hit`});
+  if (hits(sw) >= 5 && acc[sw] >= .8) A.push({title: "Sharpshooter", who: sw, name: N[sw], why: `${Math.round(acc[sw] * 100)}% of shots hit`});
   // (First Blood is retired: somebody always got it. User, 2026-11-04: medals should make sense and not come every game.)
   const scr = [0, 1].map(w => ev.filter(e => e.who !== w && e.res.type === "scratch").length), sk = scr[0] >= scr[1] ? 0 : 1;
-  if (scr[sk] >= 2) A.push({title: "Band-Aid Brigade", who: sk, name: N[sk], why: `${scr[sk]} scratches, still fighting`});
+  if (scr[sk] >= 3) A.push({title: "Band-Aid Brigade", who: sk, name: N[sk], why: `${scr[sk]} scratches, still fighting`});
   return A.slice(0, 3); // the rarest few, in the order above
 }
 // A hand-drawn gold trophy for each award (user, 2026-11-03: "nervous farter gets a golden butt"), outlined in the winner's ink.
@@ -4280,27 +4397,29 @@ function pageTurn(el) { // flip a copy of el away like a notebook page; call it 
 // designs (generic chevrons, bars, leaves, eagle and stars; no official insignia or real ribbon patterns).
 // Service points per rank (doubled 2026-11-04 so a first win doesn't always mean a promotion).
 const CAREER_RANKS = [
-  ["Private", 0, "e", 0, 0], ["Private First Class", 300, "e", 1, 1], ["Corporal", 800, "e", 2, 0], ["Sergeant", 1600, "e", 3, 0],
-  ["Staff Sergeant", 2600, "e", 3, 1], ["Sergeant First Class", 4000, "e", 3, 2], ["Master Sergeant", 5800, "e", 3, 3],
-  ["Sergeant Major", 8000, "e", 3, 3, 1], ["Second Lieutenant", 10600, "bar", 1, "gold"], ["First Lieutenant", 13600, "bar", 1, "silver"],
-  ["Captain", 17000, "bar", 2, "silver"], ["Major", 21000, "leaf", "gold"], ["Lieutenant Colonel", 25600, "leaf", "silver"],
-  ["Colonel", 31000, "eagle"], ["Brigadier General", 37000, "stars", 1], ["Major General", 44000, "stars", 2],
-  ["Lieutenant General", 52000, "stars", 3], ["General", 61000, "stars", 4], ["General of the Army", 72000, "stars", 5],
+  // (user, 2026-11-05: "service points and medals and skill badges get harder ... not all in like a week". A win is
+  // about 250 points, so General of the Army is about 1,000 wins; the first stripe still comes in a battle or two.)
+  ["Private", 0, "e", 0, 0], ["Private First Class", 300, "e", 1, 1], ["Corporal", 1000, "e", 2, 0], ["Sergeant", 2500, "e", 3, 0],
+  ["Staff Sergeant", 4500, "e", 3, 1], ["Sergeant First Class", 7500, "e", 3, 2], ["Master Sergeant", 11500, "e", 3, 3],
+  ["Sergeant Major", 16500, "e", 3, 3, 1], ["Second Lieutenant", 23000, "bar", 1, "gold"], ["First Lieutenant", 31000, "bar", 1, "silver"],
+  ["Captain", 41000, "bar", 2, "silver"], ["Major", 54000, "leaf", "gold"], ["Lieutenant Colonel", 70000, "leaf", "silver"],
+  ["Colonel", 90000, "eagle"], ["Brigadier General", 115000, "stars", 1], ["Major General", 145000, "stars", 2],
+  ["Lieutenant General", 180000, "stars", 3], ["General", 215000, "stars", 4], ["General of the Army", 250000, "stars", 5],
 ];
 const rankOf = pts => { let k = 0; CAREER_RANKS.forEach((r, i) => { if (pts >= r[1]) k = i; }); return k; };
 // Skill badges: [id, name, stat, tiers (counts for Basic/Senior/Master, or one count), what earns it, Full Arsenal only?]
 const BADGES = [
-  ["marksman", "Marksman", "hits", [25, 100, 300], "hits on the enemy", false],
-  ["infantry", "Infantry", "wins", [3, 25, 100], "battles won", false],
-  ["parachutist", "Parachutist", "drops", [5, 25, 75], "reinforcements dropped in for you", false],
-  ["gunner", "Machine Gunner", "mgKills", [5, 25, 75], "soldiers taken out with a burst", false],
-  ["demolition", "Demolitions", "forts", [3, 15, 50], "enemy forts turned to rubble", false],
-  ["medic", "Combat Medic", "scratches", [5, 25, 75], "soldiers who shook off a scratch", false],
+  ["marksman", "Marksman", "hits", [25, 250, 1000], "hits on the enemy", false],
+  ["infantry", "Infantry", "wins", [5, 50, 250], "battles won", false],
+  ["parachutist", "Parachutist", "drops", [5, 50, 200], "reinforcements dropped in for you", false],
+  ["gunner", "Machine Gunner", "mgKills", [10, 75, 300], "soldiers taken out with a burst", false],
+  ["demolition", "Demolitions", "forts", [5, 40, 150], "enemy forts turned to rubble", false],
+  ["medic", "Combat Medic", "scratches", [5, 40, 150], "soldiers who shook off a scratch", false],
   ["drill", "Drill Sergeant", "bootcamp", [1], "Boot Camp finished", false],
   ["pathfinder", "Pathfinder", "mapsWon", [5], "a win on every battlefield", true],
-  ["diver", "Diver", "wetWins", [1], "a win with a soldier wading in the river", true],
-  ["ranger", "Ranger", "generalWins", [1], "the General beaten", true],
-  ["onemanarmy", "One-Man Army", "flawless", [1], "a win without losing a single soldier", true],
+  ["diver", "Diver", "wetWins", [1, 10, 30], "wins with a soldier wading in the river", true],
+  ["ranger", "Ranger", "generalWins", [1, 10, 30], "wins against the General", true],
+  ["onemanarmy", "One-Man Army", "flawless", [1, 10, 30], "wins without losing a single soldier", true],
 ];
 const TIER = ["Basic", "Senior", "Master"];
 const badgeTier = (b, st) => b[3].filter(n => (st[b[2]] | 0) >= n).length; // 0 = not yet
@@ -4382,6 +4501,8 @@ function newBadges(before, after) {
 // Player 1 is this phone's owner. Their wins and every medal they earn are kept under a paperWars key, which the
 // iPhone app mirrors to the player's own iCloud (user, 2026-11-03: "the winner gets their awards as part of their account").
 const RECORD_KEY = "paperWarsRecord";
+// Medals that can't be won any more stay in the cabinet only for players who already earned them (rockslides were removed 2026-11-05).
+const RETIRED_MEDALS = ["Avalanche!"];
 function loadRecord() {
   const obj = v => v && typeof v === "object" ? v : {};
   try { const r = JSON.parse(localStorage.getItem(RECORD_KEY)); if (r && typeof r === "object") return {wins: r.wins | 0, losses: r.losses | 0, medals: obj(r.medals), stats: obj(r.stats), points: r.points | 0, mapsWon: obj(r.mapsWon)}; } catch (e) {}
@@ -4435,7 +4556,7 @@ function showCabinet() {
     return `<div class="cab${z ? "" : " locked"}">${badgeSvg(b[0], Math.max(1, z), 50)}<b>${b[1]}</b><small>${[z ? (b[3].length > 1 ? TIER[z - 1] : "Earned") : lockedPack ? "Full Arsenal" : "", next ? `${st[b[2]] | 0}/${next} ${b[4]}` : ""].filter(Boolean).join(" &middot; ")}</small></div>`;
   }).join("");
   $("cabStats").textContent = `${r.wins} win${r.wins === 1 ? "" : "s"} · ${r.losses} loss${r.losses === 1 ? "" : "es"} · ${medalTotal(r)} medal${medalTotal(r) === 1 ? "" : "s"}`;
-  Object.keys(TROPHIES).sort((a, b) => (r.medals[b] | 0 ? 1 : 0) - (r.medals[a] | 0 ? 1 : 0)).forEach(t => {
+  Object.keys(TROPHIES).filter(t => !RETIRED_MEDALS.includes(t) || r.medals[t] | 0).sort((a, b) => (r.medals[b] | 0 ? 1 : 0) - (r.medals[a] | 0 ? 1 : 0)).forEach(t => {
     const n = r.medals[t] | 0, d = document.createElement("div"); d.className = "cab" + (n ? "" : " locked");
     d.innerHTML = `${trophySvg(t, INK[0], 50)}<b>${n ? t : "???"}</b>${n > 1 ? `<span class="n">&times;${n}</span>` : ""}`;
     grid.appendChild(d);
@@ -4447,7 +4568,7 @@ function showCabinet() {
 // A map is drawn on Player 1's half; Player 2's half is its mirror image. So a rock you see on your own half
 // sits exactly where your shots land on theirs, and the terrain is fair for both sides.
 //   Boulders block a shot ("ping!") and hide soldiers behind them from ink bleed.
-//   Mountains start a rockslide that buries whatever stands just below them (away from the crease).
+//   Mountains block a shot like a boulder and hide soldiers behind them (no rockslides since 2026-11-05).
 //   Water splashes onto the shore, so a dot in water hits soldiers standing close to it, and its ink spreads further.
 const SLIDE = 64, SPLASH = 18, WET_BLEED = 1.5;
 const rock = (x, y, r) => ({kind: "rock", x, y, r});
@@ -4554,9 +4675,6 @@ function drawTerrain(c, T) {
       for (let i = 1; i <= 4; i++) c.lineTo(P[0] - half + i * half / 2, sy + (i % 2 ? 7 : 0));
       c.stroke(); c.lineWidth = 1; c.globalAlpha = .5;
       for (let i = 1; i < 5; i++) { const x = f.x + i * f.w / 12; c.beginPath(); c.moveTo(x, f.y - 3); c.lineTo(x + 6, f.y - f.h * (.55 - i * .1)); c.stroke(); }
-      // pebbles below show where a rockslide lands
-      c.globalAlpha = .55; c.fillStyle = pencil;
-      for (let i = 0; i < 6; i++) { c.beginPath(); c.arc(f.x + (r() - .5) * f.w * .8, f.y + 6 + r() * (SLIDE - 14), 1.2 + r() * 1.4, 0, 7); c.fill(); }
     }
     c.restore();
   }
@@ -4661,6 +4779,7 @@ function renderView(pi) {
       const u = p.soldiers[setupTalk.who]; bubble(ctx, setupTalk.text, u.x, u.y, INK[pi]);
     }
     if (airdrop && airdrop.p === p) drawAirdrop(ctx, airdrop);
+    if (waterEgg && waterEgg.page === pi) drawWaterEgg(ctx, waterEgg);
     if (flick) {
       if (flick.aiming) {
         if (Math.hypot(flick.dx, flick.dy) >= 12) strokePath(ctx, gunPath(flick.sx, flick.sy, flick.dx, flick.dy, p.terrain), RED, .55);
@@ -5025,6 +5144,7 @@ function applyArsenal() {
     let fixed = false; [0, 1].forEach(i => { if (!ARSENAL.freePens.includes(INK[i])) { INK[i] = ["#1f4fa8", "#1e7a46"][i]; fixed = true; } });
     if (fixed && INK[0] === INK[1]) INK[1] = "#b3261e";
   } else if ($("reinforceVal").textContent === "off") { $("optReinforce").value = 3; $("reinforceVal").textContent = 3; }
+  if (own && window.__settingsReady) applySettings(readSettings(), true);
   $("arsenalDepot").classList.toggle("hidden", own);
   $("arsenalPrice").textContent = ARSENAL.price;
   drawInkPickers();
@@ -5451,6 +5571,43 @@ $("optVoices").onchange = () => {
   if (!$("optVoices").checked && talking) try { talking.stop(); } catch (e) {}
   try { localStorage.setItem("paperWarsVoices", $("optVoices").checked ? "on" : "off"); } catch (e) {}
 };
+// The match settings (More orders, opponent, rank, battlefield) are remembered too (user, 2026-11-05: "I had unchecked
+// fort ... closed the app and went back in and it was on again"). The key starts with paperWars, so the app keeps it in
+// the player's iCloud like everything else. Full Arsenal choices are kept and come back once the purchase is confirmed.
+const SETTINGS_KEY = "paperWarsSettings";
+const readSettings = () => { try { const s = JSON.parse(localStorage.getItem(SETTINGS_KEY)); return s && typeof s === "object" ? s : {}; } catch (e) { return {}; } };
+function saveSettings() {
+  const radio = n => (document.querySelector(`input[name=${n}]:checked`) || {}).value;
+  const s = {fort: $("optFort").checked, fortWin: $("optFortWin").checked, near: $("optNear").checked, fireBy: radio("fireBy"),
+    flings: +$("optFlings").value, size: +$("optSize").value, reveal: +$("optReveal").value, timer: +$("optTimer").value,
+    foe: radio("foe"), level: radio("level"), map: $("optMap").value};
+  const prev = readSettings(); // Full Arsenal choices the free game can't show are kept as they were
+  if (fullArsenal()) s.reinforce = +$("optReinforce").value; else { if ("reinforce" in prev) s.reinforce = prev.reinforce; s.fortWin = prev.fortWin;
+    if (ARSENAL.maps.includes(prev.map) && s.map === "random") s.map = prev.map; if (ARSENAL.levels.includes(prev.level) && s.level === "sergeant") s.level = prev.level; }
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch (e) {}
+}
+function applySettings(s, arsenalOnly = false) {
+  const own = fullArsenal(), set = (id, v, label, show) => { if (v == null) return; $(id).value = v; if (label) $(label).textContent = show ? show(v) : v; };
+  const pick = (n, v) => { const r = v != null && document.querySelector(`input[name=${n}][value="${v}"]`); if (r) r.checked = true; };
+  if (!arsenalOnly) {
+    if (typeof s.fort === "boolean") $("optFort").checked = s.fort;
+    if (typeof s.near === "boolean") $("optNear").checked = s.near;
+    pick("fireBy", s.fireBy); pick("foe", s.foe);
+    set("optFlings", s.flings, "flingVal"); set("optSize", s.size, "sizeVal"); set("optReveal", s.reveal, "revealVal");
+    if (s.timer != null && [...$("optTimer").options].some(o => +o.value === +s.timer)) $("optTimer").value = s.timer;
+    if (!ARSENAL.levels.includes(s.level)) pick("level", s.level);
+    if (s.map && !ARSENAL.maps.includes(s.map) && [...$("optMap").options].some(o => o.value === s.map)) { $("optMap").value = s.map; markMap(); }
+  }
+  if (own) { // the Full Arsenal ones only when it's owned
+    if (typeof s.fortWin === "boolean") $("optFortWin").checked = s.fortWin;
+    if (s.reinforce != null) set("optReinforce", s.reinforce, "reinforceVal");
+    if (ARSENAL.levels.includes(s.level)) pick("level", s.level);
+    if (ARSENAL.maps.includes(s.map)) { $("optMap").value = s.map; markMap(); }
+  }
+}
+window.__settingsReady = true; applySettings(readSettings()); applyArsenal();
+document.addEventListener("change", e => e.target.closest && e.target.closest("#menu") && e.target.matches("input, select") && e.target.name !== "rvMode" && saveSettings());
+document.querySelectorAll("#mapTiles .tile").forEach(t => t.addEventListener("click", () => !t.classList.contains("locked") && saveSettings()));
 $("startBtn").onclick = () => { if (inkProblem()) return; rematchFirst = null; pageTurn($("menu")); newMatch(); };
 $("rematchBtn").onclick = () => pageTurn($("over")) || newMatch(opts.bootcamp ? {...opts, bootcamp: false} : null); // after Boot Camp, a rematch is a normal match
 const rvHighlights = () => document.querySelector("input[name=rvMode]:checked").value === "hl";
