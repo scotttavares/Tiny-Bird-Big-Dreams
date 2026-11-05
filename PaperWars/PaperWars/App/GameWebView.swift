@@ -86,6 +86,10 @@ struct GameWebView: UIViewRepresentable {
         }
 
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+            if let video = GameBridge.VideoShare(message.body) {
+                share(video)
+                return
+            }
             if let request = GameBridge.StoreRequest(message.body) {
                 let store = self.store
                 Task {
@@ -99,6 +103,29 @@ struct GameWebView: UIViewRepresentable {
             }
             guard let save = GameBridge.Save(message.body) else { return }
             saves.set(save.value, forKey: save.key)
+        }
+
+        /// Writes the replay video to a temporary file and opens the share sheet, where the player chooses
+        /// Save Video (Photos), Save to Files (any folder), Messages and so on.
+        func share(_ video: GameBridge.VideoShare) {
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent(video.name)
+            do { try video.data.write(to: url, options: .atomic) } catch {
+                run(GameBridge.videoSharedScript(saved: false))
+                return
+            }
+            guard let web = webView, let host = web.window?.rootViewController else { return }
+            var top = host
+            while let shown = top.presentedViewController { top = shown }
+            let sheet = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+            sheet.popoverPresentationController?.sourceView = web // iPad shows it as a popover
+            sheet.popoverPresentationController?.sourceRect = CGRect(x: web.bounds.midX, y: web.bounds.maxY - 80, width: 1, height: 1)
+            sheet.completionWithItemsHandler = { [weak self] _, completed, _, _ in
+                Task { @MainActor in
+                    try? FileManager.default.removeItem(at: url)
+                    self?.run(GameBridge.videoSharedScript(saved: completed))
+                }
+            }
+            top.present(sheet, animated: true)
         }
     }
 }

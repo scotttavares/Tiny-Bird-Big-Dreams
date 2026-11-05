@@ -28,6 +28,27 @@ enum GameBridge {
         }
     }
 
+    /// A finished replay video the page wants to save or share: `{video: "<base64 mp4>", name: "paper-wars-replay.mp4"}`.
+    struct VideoShare: Equatable {
+        let data: Data
+        let name: String
+
+        init?(_ body: Any) {
+            guard let dict = body as? [String: Any], let base64 = dict["video"] as? String,
+                  let data = Data(base64Encoded: base64), !data.isEmpty else { return nil }
+            let raw = (dict["name"] as? String) ?? "paper-wars-replay.mp4"
+            // Only a plain file name: no folders, and always an .mp4.
+            let safe = raw.components(separatedBy: CharacterSet(charactersIn: "/\\:")).joined(separator: "-")
+            self.data = data
+            self.name = safe.hasSuffix(".mp4") ? safe : safe + ".mp4"
+        }
+    }
+
+    /// The share sheet closed: `saved` is true when the player picked somewhere for the video.
+    static func videoSharedScript(saved: Bool) -> String {
+        "window.paperWarsVideo && window.paperWarsVideo.done(\(saved));"
+    }
+
     /// Tells the page whether the Full Arsenal is owned, and its local price.
     static func arsenalScript(owned: Bool, price: String?) -> String {
         "window.paperWarsArsenal && window.paperWarsArsenal.set(\(owned), \(price.map { json($0) } ?? "null"));"
