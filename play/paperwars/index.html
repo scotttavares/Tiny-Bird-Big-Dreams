@@ -2953,8 +2953,8 @@ function label(c, text, x, y, size, color, font = "Patrick Hand") {
 // Our own last words, parodying war-movie and comedy clichés (real film quotes are copyrighted).
 // Picks a line from a group without repeats until the whole group has been used.
 const bags = {};
-function bagPick(group) {
-  if (!bags[group] || !bags[group].length) bags[group] = [...LINES[group]].sort(() => Math.random() - .5);
+function bagPick(group, rand = Math.random) { // rand: a shot's own luck (see resolveIncoming); Math.random otherwise
+  if (!bags[group] || !bags[group].length) bags[group] = [...LINES[group]].sort(() => rand() - .5);
   return bags[group].pop();
 }
 const LAST_WORDS = LINES.death;
@@ -2962,14 +2962,14 @@ const GROUP_WORDS = LINES.group;
 const BUGLE_CAPTIONS = ["*sad bugle plays*", "*a lone bugle weeps*", "*bugle: wah wah waaah*"];
 const TAPS_CAPTIONS = ["*a lone bugle plays Taps*", "*Taps echoes across the notebook*", "*Day is done...*"];
 let wordBag = [];
-function deathMoment(kills) {
-  if (Math.random() < .35) { // the bugle: half the time the comic "wah wah", half the time Taps
-    const taps = Math.random() < .5, list = taps ? TAPS_CAPTIONS : BUGLE_CAPTIONS;
-    return {bugle: true, taps, text: list[Math.floor(Math.random() * list.length)]};
+function deathMoment(kills, rand = Math.random) {
+  if (rand() < .35) { // the bugle: half the time the comic "wah wah", half the time Taps
+    const taps = rand() < .5, list = taps ? TAPS_CAPTIONS : BUGLE_CAPTIONS;
+    return {bugle: true, taps, text: list[Math.floor(rand() * list.length)]};
   }
-  if (kills > 1) return {text: GROUP_WORDS[Math.floor(Math.random() * GROUP_WORDS.length)]};
-  const holiday = holidayLine("death"); if (holiday) return {text: holiday}; // Operation Drumstick last words
-  if (!wordBag.length) wordBag = [...LAST_WORDS].sort(() => Math.random() - .5); // no repeats until all are used
+  if (kills > 1) return {text: GROUP_WORDS[Math.floor(rand() * GROUP_WORDS.length)]};
+  const holiday = holidayLine("death", rand); if (holiday) return {text: holiday}; // Operation Drumstick last words
+  if (!wordBag.length) wordBag = [...LAST_WORDS].sort(() => rand() - .5); // no repeats until all are used
   return {text: wordBag.pop()};
 }
 // A hand-drawn speech bubble pointing at (x, y).
@@ -3100,16 +3100,16 @@ function legalPos(x, y, isFort, p) {
 // What a soldier says when you stamp them onto the page (our own lines).
 const READY_WORDS = LINES.ready;
 // Operation Drumstick (1.1): about half of what soldiers say is a Thanksgiving line (drumstickReady, drumstickFort, ...).
-function holidayLine(group) {
+function holidayLine(group, rand = Math.random) {
   const g = "drumstick" + group[0].toUpperCase() + group.slice(1);
-  return opts && opts.campaign === "drumstick" && (LINES[g] || []).length && Math.random() < .5 ? bagPick(g) : null;
+  return opts && opts.campaign === "drumstick" && (LINES[g] || []).length && rand() < .5 ? bagPick(g, rand) : null;
 }
-function soldierLine(kind) {
-  const h = holidayLine(kind); if (h) return h;
-  if (kind === "ready") { if (!readyBag.length) readyBag = [...READY_WORDS].sort(() => Math.random() - .5); return readyBag.pop(); }
-  if (kind === "fort") return FORT_WORDS[Math.floor(Math.random() * FORT_WORDS.length)];
-  if (kind === "taunt") { if (!tauntBag.length) tauntBag = [...LINES.taunt].sort(() => Math.random() - .5); return tauntBag.pop(); }
-  return bagPick(kind);
+function soldierLine(kind, rand = Math.random) {
+  const h = holidayLine(kind, rand); if (h) return h;
+  if (kind === "ready") { if (!readyBag.length) readyBag = [...READY_WORDS].sort(() => rand() - .5); return readyBag.pop(); }
+  if (kind === "fort") return FORT_WORDS[Math.floor(rand() * FORT_WORDS.length)];
+  if (kind === "taunt") { if (!tauntBag.length) tauntBag = [...LINES.taunt].sort(() => rand() - .5); return tauntBag.pop(); }
+  return bagPick(kind, rand);
 }
 const FORT_WORDS = LINES.fort;
 let readyBag = [], setupTalk = null;
@@ -3177,13 +3177,19 @@ let turkeys = [], turkeyTimer = null, nextTurkeyAt = 0;
 const TURKEY_R = 13, TURKEY_MAX = 2, TURKEY_PHASES = ["aim", "fold", "cpu", "result"]; // when turkeys are on the page
 const onPage = (pi, q) => pi === 1 ? {x: W - q.x, y: q.y} : q;
 function turkeyPos(tk, now = performance.now()) { return tk.cooked || {x: tk.x0 + tk.dir * tk.speed * (now - tk.t0) / 1000, y: tk.y}; }
-function turkeyAt(pi, x, y, now = performance.now()) {
-  return turkeys.find(tk => { if (tk.cooked) return false; const q = onPage(pi, turkeyPos(tk, now)); return Math.hypot(q.x - x, q.y - y) < TURKEY_R; }) || null;
+function turkeyAt(pi, x, y, now = performance.now(), list = turkeys) {
+  return list.find(tk => { if (tk.cooked) return false; const q = onPage(pi, turkeyPos(tk, now)); return Math.hypot(q.x - x, q.y - y) < TURKEY_R; }) || null;
 }
 // A dot that lands close to a turkey (but misses it) sends it running, gobbling all the way.
-function turkeyScare(pi, x, y, now = performance.now()) {
-  turkeys.forEach(tk => { if (tk.cooked || tk.speed >= 50) return; const q = onPage(pi, turkeyPos(tk, now));
-    if (Math.hypot(q.x - x, q.y - y) < 45) { const here = turkeyPos(tk, now); tk.x0 = here.x; tk.t0 = now; tk.speed = between(60, 80); tk.panic = true; sound("gobble"); } });
+// turkeyScares only works out which turkeys bolt and how fast (part of a shot's outcome); applyTurkeyScares makes them run.
+function turkeyScares(pi, x, y, now = performance.now(), rand = Math.random, list = turkeys) {
+  const out = [];
+  list.forEach((tk, i) => { if (tk.cooked || tk.speed >= 50) return; const q = onPage(pi, turkeyPos(tk, now));
+    if (Math.hypot(q.x - x, q.y - y) < 45) out.push({i, x0: turkeyPos(tk, now).x, t0: now, speed: 60 + rand() * (80 - 60)}); });
+  return out;
+}
+function applyTurkeyScares(scares, list = turkeys) {
+  (scares || []).forEach(c => { const tk = list[c.i]; if (!tk) return; tk.x0 = c.x0; tk.t0 = c.t0; tk.speed = c.speed; tk.panic = true; sound("gobble"); });
 }
 function clearTurkeys() { turkeys = []; nextTurkeyAt = 0; if (turkeyTimer) { clearInterval(turkeyTimer); turkeyTimer = null; } }
 function stopTurkeys() { if (turkeyTimer) { clearInterval(turkeyTimer); turkeyTimer = null; } turkeys = turkeys.filter(t => t.cooked); }
@@ -3641,17 +3647,26 @@ function fire() {
   const id = matchId; setTimeout(() => { fx.classList.add("hidden"); if (id === matchId) resolveShot(); }, 1100);
 }
 let matchId = 0;
-function resolveShot() {
-  if (!pending) return;
-  const shooter = players[cur], def = players[1 - cur], s = pending;
-  let res, killed = [], fortHitAny = false;
-  if (opts.bootcamp && !shooter.cpu && !shooter.shots.length && !s.fling && !s.off) bootcampSpot(def, mirror(s.x, s.y));
-  if (s.off) res = {type: "off", timeout: !!s.timeout};
+// ---------- a shot, in two halves ----------
+// Two-phone play (1.2): each phone holds only its own army, so the phone being shot at works out what the shot hit and
+// sends back only the outcome. resolveIncoming is that half: it reads the defender's army, the shot and ctx (never the
+// shooter's army), changes nothing, and takes all of its luck from ctx.rand, so its answer can be sent as it is.
+// applyOutcome is the other half: the shooter's view, the defender (when it's on this phone), the replay, and the show.
+// On one device resolveShot does both, back to back, with Math.random as the luck, exactly as before.
+// shot = {x, y, fling, path, off, timeout, at}; ctx = {terrain, campaign, turkeys, near, reveal, rand, page}
+// (terrain: the defender's; page: the defender's page index, for the turkeys; near is the hint option, used by the shooter's side).
+function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const shotRand = (matchSeed, shotIndex) => mulberry32(matchSeed + shotIndex); // a two-phone shot's luck: both phones agree on it
+function resolveIncoming(def, shot, ctx) {
+  const s = shot, rand = ctx.rand || Math.random, T = ctx.terrain, page = ctx.page != null ? ctx.page : players.indexOf(def);
+  let res, incoming, killed = [], fortHitAny = false, turkey = -1, scares = [];
+  const spotted = []; let spottedFort = false;
+  if (s.off) { res = {type: "off", timeout: !!s.timeout}; incoming = {x: 0, y: 0, res: "off", timeout: !!s.timeout}; }
   else {
     const t = mirror(s.x, s.y);
     if (s.fling) {
       // The whole skid line presses through the fold: everything it crosses is hit once.
-      shooter.flingsLeft--;
       const kills = new Set(); let fortHit = false;
       for (let i = 1; i < s.path.length; i++) {
         const [x1, y1] = s.path[i - 1], [x2, y2] = s.path[i], n = Math.ceil(Math.hypot(x2 - x1, y2 - y1) / 2);
@@ -3660,21 +3675,19 @@ function resolveShot() {
           if (r.type === "soldier") kills.add(r.i); else if (r.type === "fort") fortHit = true;
         }
       }
-      kills.forEach(i => def.soldiers[i].alive = false);
-      if (fortHit) def.fort.hp--;
       killed = [...kills]; fortHitAny = fortHit;
       res = kills.size ? {type: "soldier", kills: kills.size, fortHit} : fortHit ? {type: "fort"} : hitTest(def, t.x, t.y);
       if (res.type === "soldier" && !kills.size) res.type = "miss"; // the end dot can't hit what the line missed
       res.fling = true;
       if (kills.size) res.i = [...kills][0];
     } else {
-      const firedAt = s.at || performance.now(), tk = opts.campaign === "drumstick" && turkeyAt(1 - cur, t.x, t.y, firedAt);
-      const f = tk ? null : terrainAt(def.terrain, t.x, t.y);
+      const firedAt = s.at || performance.now(), drum = ctx.campaign === "drumstick", tk = drum && turkeyAt(page, t.x, t.y, firedAt, ctx.turkeys || []);
+      const f = tk ? null : terrainAt(T, t.x, t.y);
       // Boulders and mountains stop the shot, and whoever hides behind them is safe. (Mountains used to start a
       // rockslide that buried soldiers below them; user, 2026-11-05: "the shrapnel killed 2 soldiers hiding behind it.
       // that should not happen". Cover is cover.)
-      if (!tk && opts.campaign === "drumstick") turkeyScare(1 - cur, t.x, t.y); // a near miss sends a turkey running
-      if (tk) { tk.cooked = {...turkeyPos(tk, firedAt)}; res = {type: "turkey", turkey: {...tk.cooked}}; } // roasted! the shot is wasted
+      if (!tk && drum) scares = turkeyScares(page, t.x, t.y, performance.now(), rand, ctx.turkeys || []); // a near miss sends a turkey running
+      if (tk) { turkey = ctx.turkeys.indexOf(tk); res = {type: "turkey", turkey: {...turkeyPos(tk, firedAt)}}; } // roasted! the shot is wasted
       else if (solid(f)) res = crop(f) ? {type: "rock", crop: f.kind} : {type: "rock", mountain: f.kind === "mountain"};
       else {
         res = hitTest(def, t.x, t.y);
@@ -3685,55 +3698,71 @@ function resolveShot() {
           else if (def.fort && def.fort.hp > 0 && boxDist(t.x, t.y, fortBox(def.fort)) <= SPLASH) res = {type: "fort", splash: true};
         }
         if (wet(f)) res.wet = true;
-        if (res.type === "soldier") def.soldiers[res.i].alive = false, killed = [res.i];
-        if (res.type === "fort") def.fort.hp--, fortHitAny = true;
+        if (res.type === "soldier") killed = [res.i];
+        if (res.type === "fort") fortHitAny = true;
       }
     }
-    // Ink bleed: the blot shows the shooter anything close to it.
-    const before = shooter.known.size + shooter.fortKnown;
-    // Ink spreads further in water, but never through stone.
-    const bleed = opts.reveal * (res.wet ? WET_BLEED : 1);
+    // Ink bleed: the blot shows the shooter anything close to it. Ink spreads further in water, but never through stone.
+    const bleed = ctx.reveal * (res.wet ? WET_BLEED : 1);
     def.soldiers.forEach((u, i) => { const ty = u.y + 20 * sc();
-      if (Math.hypot(t.x - u.x, t.y - ty) < bleed && !sightBlocked(def.terrain, t.x, t.y, u.x, ty)) shooter.known.add(i); });
-    if (def.fort && boxDist(t.x, t.y, fortBox(def.fort)) < bleed && !sightBlocked(def.terrain, t.x, t.y, def.fort.x, def.fort.y + 15 * sc())) shooter.fortKnown = true;
-    res.spotted = shooter.known.size + shooter.fortKnown - before;
-    if (res.type === "soldier") res.death = deathMoment(res.kills || 1);
+      if (Math.hypot(t.x - u.x, t.y - ty) < bleed && !sightBlocked(T, t.x, t.y, u.x, ty)) spotted.push(i); });
+    if (def.fort && boxDist(t.x, t.y, fortBox(def.fort)) < bleed && !sightBlocked(T, t.x, t.y, def.fort.x, def.fort.y + 15 * sc())) spottedFort = true;
+    res.spotted = 0; // how many of these are new to the shooter: applyOutcome fills it in (only the shooter knows what it has seen)
+    if (res.type === "soldier") res.death = deathMoment(res.kills || 1, rand);
     // Sometimes the nearest buddy yells for a medic (user, 2026-11-03).
-    if (res.type === "soldier" && Math.random() < .45) {
-      const hit = def.soldiers[res.i], buddies = def.soldiers.map((u, i) => ({u, i})).filter(({u}) => u.alive)
+    if (res.type === "soldier" && rand() < .45) {
+      const hit = def.soldiers[res.i], buddies = def.soldiers.map((u, i) => ({u, i})).filter(({u, i}) => u.alive && !killed.includes(i))
         .sort((a, b) => Math.hypot(a.u.x - hit.x, a.u.y - hit.y) - Math.hypot(b.u.x - hit.x, b.u.y - hit.y));
-      if (buddies.length) res.medic = {i: buddies[0].i, text: bagPick("medic")};
+      if (buddies.length) res.medic = {i: buddies[0].i, text: bagPick("medic", rand)};
     }
     // A close call scares the nearest soldier into a nervous fart (most of the time).
     // the General's troops are disciplined: they never flinch, so no nervous fart gives them away
     const steady = def.cpu && (RANKS[opts.level] || {}).smart;
-    if (!steady && res.type === "miss" && res.nearIdx != null && res.soldierNear < NEAR * 1.6 && Math.random() < .6) {
-      const poop = res.soldierNear < NEAR * .8 && Math.random() < .4; // a really close call can be worse than a fart
-      res.fart = {text: poop ? bagPick("poop") : soldierLine("fart"), poop}; res.i = res.nearIdx;
+    if (!steady && res.type === "miss" && res.nearIdx != null && res.soldierNear < NEAR * 1.6 && rand() < .6) {
+      const poop = res.soldierNear < NEAR * .8 && rand() < .4; // a really close call can be worse than a fart
+      res.fart = {text: poop ? bagPick("poop", rand) : soldierLine("fart", rand), poop}; res.i = res.nearIdx;
     }
     // A scratched soldier complains about it.
-    if (res.type === "scratch" && res.i != null && Math.random() < .85) res.ouch = {text: bagPick("scratch")};
-    def.incoming.push({...t, res: res.type, crop: res.crop, spotted: res.spotted, kills: res.kills, death: res.death || res.fart || res.ouch, who: res.i, wet: !!res.wet, medic: res.medic ? {...res.medic, at: performance.now() + 2200} : null,
-      path: s.fling ? s.path.map(([x, y]) => [W - x, y]) : null});
+    if (res.type === "scratch" && res.i != null && rand() < .85) res.ouch = {text: bagPick("scratch", rand)};
+    incoming = {...t, res: res.type, crop: res.crop, spotted: res.spotted, kills: res.kills, death: res.death || res.fart || res.ouch, who: res.i, wet: !!res.wet, medic: res.medic ? {...res.medic, at: performance.now() + 2200} : null,
+      path: s.fling ? s.path.map(([x, y]) => [W - x, y]) : null};
   }
-  if (s.off) def.incoming.push({x: 0, y: 0, res: "off", timeout: !!s.timeout});
+  // What the defender reports about itself after the shot, so the shooter's phone can decide reinforcements and the end.
+  const fortHp = def.fort ? def.fort.hp - (fortHitAny ? 1 : 0) : null, alive = def.soldiers.filter((u, i) => u.alive && !killed.includes(i)).length;
+  return {shot: s, res, killed, fortHit: fortHitAny, spotted, spottedFort, incoming, turkey, scares, fortHp, alive,
+    room: !!(def.fort && fortHp > 0) && alive + def.reinforce < MAX_REINFORCED, // a reinforcement still fits
+    gone: !alive && (!opts.fortWin || !def.fort || fortHp <= 0)};
+}
+// The rest of a shot: def is null when the defender is on the other phone.
+function applyOutcome(shooter, def, o) {
+  const s = o.shot, res = o.res, killed = o.killed, fortHitAny = o.fortHit;
+  if (s.fling && !s.off) shooter.flingsLeft--;
+  if (def) { killed.forEach(i => def.soldiers[i].alive = false); if (fortHitAny) def.fort.hp--; }
+  if (o.turkey >= 0 && turkeys[o.turkey]) turkeys[o.turkey].cooked = {...res.turkey};
+  applyTurkeyScares(o.scares);
+  if (!s.off) {
+    const before = shooter.known.size + shooter.fortKnown;
+    o.spotted.forEach(i => shooter.known.add(i)); if (o.spottedFort) shooter.fortKnown = true;
+    res.spotted = o.incoming.spotted = shooter.known.size + shooter.fortKnown - before;
+  }
+  if (def) def.incoming.push(o.incoming);
   shooter.shots.push({x: s.x, y: s.y, res: res.type, path: s.path, fling: !!s.fling, wet: !!res.wet,
     close: res.type === "miss" && (!!res.fart || (opts.near && res.near < NEAR))}); // "whoosh, close!" or a nervous fart: someone is near
   // Reinforcements: a run of misses earns the enemy a new soldier, while their fort still stands (user, 2026-11-03: until it's rubble).
   if (res.type === "soldier" || res.type === "fort") shooter.missStreak = 0;
-  else if (++shooter.missStreak >= opts.reinforce && opts.reinforce && def.fort && def.fort.hp > 0
-           && def.soldiers.filter(u => u.alive).length + def.reinforce < MAX_REINFORCED) {
-    def.reinforce++; shooter.missStreak = 0; res.reinforced = true;
+  else if (++shooter.missStreak >= opts.reinforce && opts.reinforce && o.room) {
+    if (def) def.reinforce++; shooter.missStreak = 0; res.reinforced = true;
   }
-  if (fortHitAny && def.fort && def.fort.hp <= 0) { // the fort is rubble: scribble it out
+  if (fortHitAny && def && def.fort && def.fort.hp <= 0) { // the fort is rubble: scribble it out
     def.fort.scribbleAt = performance.now() + 250; if (shooter.cpu) def.fort.ownerSaw = true; // you watched the computer do it
     animateFor(1300); setTimeout(() => sound("pencil"), 250);
   }
-  replay.events.push(clone({who: cur, shot: {x: s.x, y: s.y, off: !!s.off, timeout: !!s.timeout, fling: !!s.fling, path: s.path || null}, res, killed, fortHit: fortHitAny, fortHp: def.fort ? def.fort.hp : null}));
+  replay.events.push(clone({who: cur, shot: {x: s.x, y: s.y, off: !!s.off, timeout: !!s.timeout, fling: !!s.fling, path: s.path || null}, res, killed, fortHit: fortHitAny, fortHp: o.fortHp}));
   lastResult = res; pending = null;
   // Water easter egg (user, 2026-11-05): a dot that splashes into a lake or river and hits nobody sometimes disturbs
   // the locals: a grumpy narwhal, a leaping fish, or a stunned fish floating belly up. Shown where you can see it:
-  // on your own page when you fired, on your page where it landed when the computer fired.
+  // on your own page when you fired, on your page where it landed when the computer fired. (Just for show: its luck
+  // stays Math.random.)
   if (res.wet && res.type === "miss" && !s.fling && Math.random() < .4) {
     const mine = !shooter.cpu, at = mine ? {x: s.x, y: s.y} : mirror(s.x, s.y);
     waterEgg = {page: mine ? cur : 1 - cur, x: at.x, y: at.y, kind: ["narwhal", "jump", "float"][Math.floor(Math.random() * 3)], t0: performance.now(), id: matchId};
@@ -3748,8 +3777,8 @@ function resolveShot() {
   }
   const k = sparkFor(res.type, res.wet);
   if (k) { // blood or shrapnel where it landed: on your own shot map, or on your army when the computer fired
-    const b = def.incoming[def.incoming.length - 1];
-    const v = res.fling && res.i != null && def.soldiers[res.i]; // a fling bleeds where it hit, not where the skid stopped
+    const b = o.incoming;
+    const v = res.fling && res.i != null && def && def.soldiers[res.i]; // a fling bleeds where it hit, not where the skid stopped
     const mine = v ? {x: W - v.x, y: v.y + 20 * sc()} : s, theirs = v ? {x: v.x, y: v.y + 20 * sc()} : b;
     setTimeout(() => shooter.cpu ? spark(k, theirs.x, theirs.y, INK[0]) : spark(k, mine.x, mine.y, INK[1 - cur]), 60);
   }
@@ -3762,9 +3791,16 @@ function resolveShot() {
   // Pass-and-play: cover this army by itself if nobody presses Pass.
   // Against the computer there's nothing to hide, so play just moves on once the result has been seen and heard
   // (user, 2026-11-03: no "Your turn" / "Computer's turn" buttons). A tap on the page skips ahead.
-  const id = matchId, shots = shooter.shots.length, talk = res.death || res.fart || res.ouch;
-  const wait = (res.medic && !armyGone(def) ? 1200 : 0) + (tentOn() ? (armyGone(def) ? 3200 : talk ? 4200 : 3000) : !vsCpu() ? 8000 : armyGone(def) ? 3200 : talk ? 3400 : 2000);
+  const id = matchId, shots = shooter.shots.length, talk = res.death || res.fart || res.ouch, gone = def ? armyGone(def) : o.gone;
+  const wait = (res.medic && !gone ? 1200 : 0) + (tentOn() ? (gone ? 3200 : talk ? 4200 : 3000) : !vsCpu() ? 8000 : gone ? 3200 : talk ? 3400 : 2000);
   setTimeout(() => { if (id === matchId && phase === "result" && players[cur] === shooter && shooter.shots.length === shots) next(); }, wait);
+}
+function resolveShot() {
+  if (!pending) return;
+  const shooter = players[cur], def = players[1 - cur], s = pending;
+  if (opts.bootcamp && !shooter.cpu && !shooter.shots.length && !s.fling && !s.off) bootcampSpot(def, mirror(s.x, s.y));
+  applyOutcome(shooter, def, resolveIncoming(def, s,
+    {terrain: def.terrain, campaign: opts.campaign, turkeys, near: opts.near, reveal: opts.reveal, rand: Math.random, page: 1 - cur}));
 }
 const armyGone = p => p.soldiers.every(u => !u.alive) && (!opts.fortWin || !p.fort || p.fort.hp <= 0);
 function shotText(res, who) {
