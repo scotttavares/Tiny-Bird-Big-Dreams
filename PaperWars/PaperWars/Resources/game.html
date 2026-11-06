@@ -437,6 +437,7 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
     <div class="row"><canvas class="ico" data-ico="fort"></canvas><span>Fort<small>3 hearts, placed after your soldiers</small></span><input type="checkbox" id="optFort" checked></div>
     <div class="row"><canvas class="ico" data-ico="chute"></canvas><span>Reinforcements: <b id="reinforceVal">3</b><small>Misses in a row until help drops in</small></span><input type="range" id="optReinforce" min="0" max="6" value="3"></div>
     <div class="row"><canvas class="ico" data-ico="flag"></canvas><span>Fort must fall<small>Or just wipe out the soldiers</small></span><input type="checkbox" id="optFortWin"></div>
+    <div class="row"><canvas class="ico" data-ico="flag"></canvas><span>Bonus turn for the brass<small>Fire again after taking out a namesake</small></span><input type="checkbox" id="optBrassBonus"></div>
     <div class="row"><canvas class="ico" data-ico="bleed"></canvas><span>Ink bleed: <b id="revealVal">80</b><small>Shots reveal nearby enemies</small></span><input type="range" id="optReveal" min="0" max="120" step="5" value="80"></div>
     <div class="row"><canvas class="ico" data-ico="voice"></canvas><span>Soldier voices<small>Sound effects stay on</small></span><input type="checkbox" id="optVoices" checked></div>
     <div class="row"><canvas class="ico" data-ico="whoosh"></canvas><span>Near-miss hint<small>"Whoosh, close!"</small></span><input type="checkbox" id="optNear" checked></div>
@@ -3061,8 +3062,17 @@ function splat(c, x, y, s, seed) {
 // Short-lived doodle effects: blood drops on a soldier hit, shrapnel when the fort is hit.
 // Each spark list is drawn on top of its canvas until the sparks fade.
 function burst(list, kind, x, y, ink, ox = 0, oy = 0, slow = 1) {
-  const n = kind === "blood" ? 12 : kind === "nick" ? 4 : 10, born = performance.now(), shard = kind === "shrapnel" || kind === "chips";
+  const n = kind === "blood" ? 12 : kind === "nick" ? 4 : kind === "confetti" ? 34 : 10, born = performance.now(), shard = kind === "shrapnel" || kind === "chips";
   if (kind === "chips") ink = "#6d6a62";
+  if (kind === "confetti") { // bits of coloured paper, tossed up and fanning out
+    const pal = ["#e3b341", "#b3261e", "#1f4fa8", "#1e7a46", "#f7dc8a", "#c25a12", "#6a3fa0"];
+    for (let i = 0; i < n; i++) {
+      const a = -Math.PI / 2 + (Math.random() - .5) * 2.4, sp = 2.4 + Math.random() * 3.2;
+      list.push({kind: "confetti", color: pal[i % pal.length], x: x + ox, y: y + oy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, rot: Math.random() * 6, vr: (Math.random() - .5) * .6,
+        size: 2.4 + Math.random() * 2.6, ink, born, slow, life: 1500 * slow});
+    }
+    return;
+  }
   for (let i = 0; i < n; i++) {
     const a = -Math.PI / 2 + (Math.random() - .5) * (shard ? 2.6 : 3.4), sp = (shard ? 2.6 : 1.8) + Math.random() * 2.2;
     list.push({kind: shard ? "shrapnel" : kind, color: kind === "splash" ? "#4f8fd1" : "#c0261b", x: x + ox, y: y + oy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, rot: Math.random() * 6, vr: (Math.random() - .5) * .5,
@@ -3073,11 +3083,13 @@ function drawSparks(c, list) {
   const now = performance.now();
   for (let i = list.length - 1; i >= 0; i--) if (now - list[i].born > list[i].life) list.splice(i, 1);
   for (const p of list) {
-    const t = (now - p.born) / 16.7 / p.slow, x = p.x + p.vx * t, y = p.y + p.vy * t + .06 * t * t, k = 1 - (now - p.born) / p.life;
+    const t = (now - p.born) / 16.7 / p.slow, x = p.x + p.vx * t, y = p.y + p.vy * t + (p.kind === "confetti" ? .035 : .06) * t * t, k = 1 - (now - p.born) / p.life;
     c.save(); c.globalAlpha = Math.min(1, k * 1.6); c.translate(x, y);
     if (p.kind === "shrapnel") { // a jagged little shard in pen
       c.rotate(p.rot + p.vr * t); c.strokeStyle = p.ink; c.lineWidth = 1.8; c.lineJoin = "round";
       c.beginPath(); c.moveTo(-p.size, 0); c.lineTo(0, -p.size * .6); c.lineTo(p.size, p.size * .2); c.lineTo(-p.size * .2, p.size * .5); c.closePath(); c.stroke();
+    } else if (p.kind === "confetti") { // a flat scrap of coloured paper, tumbling
+      c.rotate(p.rot + p.vr * t); c.fillStyle = p.color; c.globalAlpha = Math.min(1, k * 2); c.fillRect(-p.size, -p.size * .5, p.size * 2, p.size);
     } else { c.fillStyle = p.color; c.beginPath(); c.ellipse(0, 0, p.size, p.size * 1.3, Math.atan2(p.vy, p.vx), 0, 7); c.fill(); }
     c.restore();
   }
@@ -3670,7 +3682,7 @@ function defenderText(res, me) {
   if (!res) return "";
   const p = players[me], foe = players[1 - me], who = i => p.soldiers[i] ? p.soldiers[i].name : "A soldier";
   switch (res.type) {
-    case "soldier": return res.kills > 1 ? `Incoming! You lost ${res.kills} soldiers.` : `Incoming! ${who(res.i)} is down!`;
+    case "soldier": return res.namesake ? `Incoming! ${foe.name} took out ${res.namesakeName} himself!` : res.kills > 1 ? `Incoming! You lost ${res.kills} soldiers.` : `Incoming! ${who(res.i)} is down!`;
     case "fort": return p.fort && p.fort.hp > 0 ? `Your fort was hit! ${p.fort.hp} hit${p.fort.hp > 1 ? "s" : ""} left.` : "Your fort is rubble!";
     case "scratch": return "Just a scratch! Your soldier is still standing.";
     case "off": return res.timeout ? `${foe.name} ran out of time.` : `${foe.name}'s shot went off the paper.`;
@@ -3717,7 +3729,7 @@ function pageHeight() {
 function newMatch(preset) {
   opts = preset ? {...preset} : {
     fireBy: document.querySelector("input[name=fireBy]:checked").value, flings: +$("optFlings").value, fort: $("optFort").checked,
-    fortWin: $("optFortWin").checked && $("optFort").checked, near: $("optNear").checked, size: +$("optSize").value,
+    fortWin: $("optFortWin").checked && $("optFort").checked, brassBonus: $("optBrassBonus").checked, near: $("optNear").checked, size: +$("optSize").value,
     reveal: +$("optReveal").value, reinforce: +$("optReinforce").value, timer: +$("optTimer").value,
     foe: document.querySelector("input[name=foe]:checked").value, level: document.querySelector("input[name=level]:checked").value, bootcamp: false, map: $("optMap").value,
     campaign: currentCampaign(),
@@ -3949,6 +3961,9 @@ function resolveIncoming(def, shot, ctx) {
     if (def.fort && boxDist(t.x, t.y, fortBox(def.fort)) < bleed && !sightBlocked(T, t.x, t.y, def.fort.x, def.fort.y + 15 * sc())) spottedFort = true;
     res.spotted = 0; // how many of these are new to the shooter: applyOutcome fills it in (only the shooter knows what it has seen)
     if (res.type === "soldier") res.death = deathMoment(res.kills || 1, rand);
+    // A namesake falls: the shooter is told (only when one actually went down), with the call sign it earned.
+    const nsu = res.type === "soldier" && killed.map(i => def.soldiers[i]).find(u => u && u.namesake);
+    if (nsu) { res.namesake = true; res.namesakeName = nsu.name; }
     // Sometimes the nearest buddy yells for a medic (user, 2026-11-03).
     if (res.type === "soldier" && rand() < .45) {
       const hit = def.soldiers[res.i], buddies = def.soldiers.map((u, i) => ({u, i})).filter(({u, i}) => u.alive && !killed.includes(i))
@@ -3986,6 +4001,7 @@ function wireOutcome(o) {
   const r = o.res, res = {type: r.type};
   for (const k of ["timeout", "kills", "fortHit", "fling", "splash", "wet", "crop", "mountain", "turkey"]) if (r[k] !== undefined) res[k] = r[k];
   if (r.type === "soldier" && r.i != null) res.i = r.i; // the soldier who went down
+  if (r.namesake) { res.namesake = true; res.namesakeName = r.namesakeName; } // announced when hit, never before (set only for a kill)
   if (r.death) res.death = {...r.death};
   if (r.medic) res.medic = {text: r.medic.text};
   if (r.fart) res.fart = {text: r.fart.text, poop: !!r.fart.poop};
@@ -4044,6 +4060,7 @@ function applyOutcome(shooter, def, o) {
     const v = res.fling && res.i != null && def && def.soldiers[res.i]; // a fling bleeds where it hit, not where the skid stopped
     const mine = v ? {x: W - v.x, y: v.y + 20 * sc()} : s, theirs = v ? {x: v.x, y: v.y + 20 * sc()} : b;
     setTimeout(() => shooter.cpu ? spark(k, theirs.x, theirs.y, INK[0]) : spark(k, mine.x, mine.y, INK[1 - cur]), 60);
+    if (res.namesake && !shooter.cpu) setTimeout(() => spark("confetti", mine.x, mine.y), 140); // a namesake went down: confetti for the shooter
   }
   if (res.death && res.death.bugle) setTimeout(() => sound(res.death.taps ? "taps" : "lament"), 700);
   if (res.fart) { setTimeout(() => sound(res.fart.poop ? "squelch" : "fart"), 450); speak(res.fart.text, 1150); }
@@ -4071,6 +4088,7 @@ function shotText(res, who) {
   switch (res.type) {
     case "soldier": {
       const left = def.soldiers.filter(u => u.alive).length;
+      if (res.namesake) return `${vsCpu() ? "You" : players[who].name} took out ${res.namesakeName} himself${res.kills > 1 ? ` and ${res.kills - 1} more` : ""}! ${left} left.`;
       if (res.slide) return `Rockslide! ${res.kills > 1 ? res.kills + " soldiers" : def.soldiers[res.i].name} buried${res.fortHit ? " and the fort cracked" : ""}. ${left} left.`;
       if (res.splash) return `Splash! ${def.soldiers[res.i].name} got soaked and is out. ${left} left.`;
       if (res.fling) return `Rat-a-tat-tat! ${res.kills > 1 ? res.kills + " soldiers" : def.soldiers[res.i].name} down${res.fortHit ? " and the fort cracked" : ""}. ${left} left.`;
@@ -4085,8 +4103,11 @@ function shotText(res, who) {
     default: return res.fart ? (res.fart.poop ? "Miss... *squelch* Someone just pooped their pants!" : "Miss... *pfffrt* Did someone just fart?") : opts.near && res.near < NEAR ? "Miss... whoosh, close!" : "Miss.";
   }
 }
+// "Bonus turn for the brass" (More orders, off unless chosen): whoever takes out a namesake fires again.
+const brassBonusOn = () => !!(opts.brassBonus && lastResult && lastResult.namesake);
 function next() {
   if (armyGone(players[1 - cur])) return gameOver(cur);
+  if (brassBonusOn()) { lastResult = null; return players[cur].cpu ? cpuTurn() : go("aim"); } // same shooter again: no hand-off
   const prev = cur; cur = 1 - cur;
   if (tentOn()) return go("aim");
   if (vsCpu()) return players[cur].cpu ? cpuTurn() : go("aim");
@@ -4278,7 +4299,7 @@ function cpuShotText(res) {
     case "rock": t = res.crop === "hay" ? "The computer's shot thumped into a hay bale." : res.crop === "pumpkin" ? "The computer splattered a pumpkin." : res.mountain ? "The computer's shot thudded into a mountain." : "The computer's shot pinged off a boulder."; break;
     case "turkey": t = "The computer roasted a turkey. Dinner's served."; break;
     case "slide": t = "The computer started a rockslide, but nobody was below it."; break;
-    case "soldier": t = res.slide ? `Rockslide! The computer buried ${res.kills > 1 ? res.kills + " of your soldiers" : me.soldiers[res.i].name}. ${left} left.`
+    case "soldier": t = res.namesake ? `The computer took out ${res.namesakeName} himself${res.kills > 1 ? ` and ${res.kills - 1} more` : ""}! ${left} left.` : res.slide ? `Rockslide! The computer buried ${res.kills > 1 ? res.kills + " of your soldiers" : me.soldiers[res.i].name}. ${left} left.`
       : res.splash ? `Splash! The computer soaked ${me.soldiers[res.i].name}. ${left} left.` : (res.fling ? `Rat-a-tat-tat! The computer's machine gun got ${res.kills > 1 ? res.kills + " of your soldiers" : me.soldiers[res.i].name} down.` : `The computer got ${me.soldiers[res.i].name}!`) + ` ${left} left.`; break;
     case "fort": t = me.fort.hp > 0 ? `The computer cracked your fort. ${me.fort.hp} left.` : "The computer destroyed your fort!"; break;
     case "scratch": t = `The computer scratched ${res.i != null ? me.soldiers[res.i].name : "one of your soldiers"}. Arms and legs don't count.`; break;
@@ -4788,6 +4809,9 @@ function awards() {
   const armyName = (w, i) => (replay.armies[w].soldiers[i] || players[w].soldiers[i] || {}).name || "A soldier";
   const nameOf = (w, i) => i == null ? N[w] : (players[w].soldiers[i] || {}).name || armyName(w, i);
   const by = w => ev.filter(e => e.who === w), hits = w => by(w).filter(e => e.res.type === "soldier" || e.res.type === "fort").length;
+  // Took Out the Brass: a namesake went down to your shot (the first one in the war)
+  const brass = ev.find(e => e.res.namesake);
+  if (brass) A.push({title: "Took Out the Brass", who: brass.who, name: N[brass.who], why: `took out ${brass.res.namesakeName || "the enemy's namesake"} himself`});
   // Code Brown: a soldier so scared they pooped their pants (user, 2026-11-03)
   const poo = ev.find(e => e.res.fart && e.res.fart.poop);
   if (poo) A.push({title: "Code Brown", who: 1 - poo.who, name: nameOf(1 - poo.who, poo.res.i), why: "pooped their pants in battle"});
@@ -4833,6 +4857,13 @@ function awards() {
 // Each is drawn in a 48x48 box; the same SVG is used on the medal cards and, as an image, on the replay video's medal board.
 const GOLD = "#e3b341", SHINE = "#f7dc8a";
 const TROPHIES = {
+  "Took Out the Brass": ink => `
+    <rect x="10" y="40" width="28" height="5" rx="2.5" fill="${GOLD}"/>
+    <path d="M18 38 L22 28 M30 38 L26 28" stroke="#b3261e" stroke-width="5" stroke-linecap="butt"/>
+    <path d="M18 38 L22 28 M30 38 L26 28" stroke="${ink}" stroke-width="1.2"/>
+    <circle cx="24" cy="19" r="12.5" fill="${GOLD}"/>
+    <path d="M24 9 L27 16.4 L35 17 L28.9 22.2 L30.8 30 L24 25.8 L17.2 30 L19.1 22.2 L13 17 L21 16.4 Z" fill="${SHINE}" stroke-width="1.4"/>
+    <path d="M13 10 C15 7 18 6 20 6" stroke="${SHINE}" stroke-width="2"/>`,
   "Turkey Down": ink => `
     <rect x="10" y="38" width="28" height="6" rx="3" fill="${GOLD}"/>
     <path d="M22 37 L22 30" stroke="${ink}" stroke-width="2"/>
@@ -5123,6 +5154,7 @@ const BADGES = [
   ["diver", "Diver", "wetWins", [1, 10, 30], "wins with a soldier wading in the river", true],
   ["ranger", "Ranger", "generalWins", [1, 10, 30], "wins against the General", true],
   ["onemanarmy", "One-Man Army", "flawless", [1, 10, 30], "wins without losing a single soldier", true],
+  ["brass", "Brass Hunter", "brassKills", [5, 25, 100], "took out the enemy's namesake", false],
 ];
 const TIER = ["Basic", "Senior", "Master"];
 const badgeTier = (b, st) => b[3].filter(n => (st[b[2]] | 0) >= n).length; // 0 = not yet
@@ -5162,6 +5194,7 @@ function badgeSvg(id, tier, size = 54) {
     pathfinder: `<circle cx="28" cy="28" r="18" fill="${metal}" ${sw}/><path d="M28 14 L32 28 L28 42 L24 28 Z" fill="#d94a2b" ${sw}/><path d="M28 28 L24 28 L28 42 Z" fill="${k}"/><circle cx="28" cy="28" r="2" fill="#fff"/>`,
     diver: `<circle cx="28" cy="26" r="16" fill="${metal}" ${sw}/><circle cx="28" cy="26" r="8" fill="#9ccbe8" ${sw}/><circle cx="14" cy="26" r="3.5" fill="${metal}" ${sw}/><circle cx="42" cy="26" r="3.5" fill="${metal}" ${sw}/><path d="M14 44 Q20 40 26 44 T38 44 T50 44" fill="none" stroke="#4f8fd1" stroke-width="2"/>`,
     ranger: `<path d="M6 30 C14 20 42 20 50 30 L46 38 C40 32 16 32 10 38 Z" fill="#2b2a27" ${sw}/><text x="28" y="33" font-size="8.5" text-anchor="middle" fill="${GOLDC}" font-family="Stardos Stencil, monospace" font-weight="700" transform="rotate(0)">RANGER</text>`,
+    brass: `<path d="M8 36 C8 24 16 16 28 16 C40 16 48 24 48 36 Z" fill="${metal}" ${sw}/><rect x="6" y="34" width="44" height="7" rx="3.5" fill="#2b2a27" ${sw}/><path d="M12 30 H44" stroke="${GOLDC}" stroke-width="3"/><path d="M28 18 L29.8 22.6 L34.6 23 L30.9 26 L32 30.6 L28 28.2 L24 30.6 L25.1 26 L21.4 23 L26.2 22.6 Z" fill="${GOLDC}" ${sw} stroke-width="1"/>`,
     onemanarmy: `<circle cx="28" cy="28" r="20" fill="${GOLDC}" ${sw}/><circle cx="28" cy="18" r="4" fill="none" ${sw}/><path d="M28 22 V34 M20 27 L36 27 M28 34 L22 43 M28 34 L34 43" fill="none" ${sw} stroke-width="2"/><path d="M36 27 L46 23" ${sw} stroke-width="2.4"/>`,
   }[id] || "";
   // Senior: a star above. Master: a star in a wreath (the real badges' idea, drawn our own way).
@@ -5188,6 +5221,7 @@ function careerFromMatch(winner) {
     forts: mine.filter(e => e.fortHit && e.fortHp === 0).length,
     scratches: theirs.filter(e => e.res.type === "scratch").length,
     drops: ev.filter(e => e.reinforce && e.who === 0).length,
+    brassKills: vsCpu() || opts.online ? mine.filter(e => e.res.namesake).length : 0, // a friend sitting next to you doesn't count: only the computer or an online foe
   };
   const won = winner === 0;
   c.points = (won ? 120 : 30) + c.hits * 12 + c.forts * 60 + c.mgKills * 10 + (opts.level === "general" && vsCpu() ? 40 : 0);
@@ -5219,7 +5253,7 @@ function recordMatch(winner, medals) {
   mine.forEach(m => r.medals[m.title] = (r.medals[m.title] | 0) + 1);
   // career: stats, service points, maps won, special feats
   const m = careerFromMatch(winner), st = r.stats;
-  ["hits", "mgKills", "forts", "scratches", "drops"].forEach(k => st[k] = (st[k] | 0) + m.c[k]);
+  ["hits", "mgKills", "forts", "scratches", "drops", "brassKills"].forEach(k => st[k] = (st[k] | 0) + m.c[k]);
   if (m.won && MAPS[m.map] && !MAPS[m.map].campaign) r.mapsWon[m.map] = 1; // holiday maps don't count toward Pathfinder
   if (m.wet) st.wetWins = (st.wetWins | 0) + 1;
   if (m.beatGeneral) st.generalWins = (st.generalWins | 0) + 1;
@@ -5581,8 +5615,9 @@ function updateUI() {
     st.textContent = cpuShotText(lastResult);
   } else if (phase === "result") {
     st.textContent = shotText(lastResult, cur) + (lastResult.spotted ? ` Ink bleed spotted ${lastResult.spotted} new target${lastResult.spotted > 1 ? "s" : ""}!` : "")
-      + (lastResult.reinforced ? ` That's ${opts.reinforce} misses in a row: the enemy gets reinforcements!` : "");
-    if (!foe.cpu && !tent) btn(armyGone(foe) ? "See the battlefield" : `Pass to ${foe.name}`, "primary", next);
+      + (lastResult.reinforced ? ` That's ${opts.reinforce} misses in a row: the enemy gets reinforcements!` : "")
+      + (brassBonusOn() && !armyGone(foe) ? " Bonus turn for the brass: fire again!" : "");
+    if (!foe.cpu && !tent) btn(armyGone(foe) ? "See the battlefield" : brassBonusOn() ? "Fire again" : `Pass to ${foe.name}`, "primary", next);
   } else if (phase === "rps") {
     st.textContent = `${p.name}: Rock, Paper or Scissors?`;
   } else if (phase === "rpsReveal") {
@@ -6417,7 +6452,7 @@ const SETTINGS_KEY = "paperWarsSettings";
 const readSettings = () => { try { const s = JSON.parse(localStorage.getItem(SETTINGS_KEY)); return s && typeof s === "object" ? s : {}; } catch (e) { return {}; } };
 function saveSettings() {
   const radio = n => (document.querySelector(`input[name=${n}]:checked`) || {}).value;
-  const s = {fort: $("optFort").checked, fortWin: $("optFortWin").checked, near: $("optNear").checked, fireBy: radio("fireBy"),
+  const s = {fort: $("optFort").checked, fortWin: $("optFortWin").checked, brassBonus: $("optBrassBonus").checked, near: $("optNear").checked, fireBy: radio("fireBy"),
     flings: +$("optFlings").value, size: +$("optSize").value, reveal: +$("optReveal").value, timer: +$("optTimer").value,
     foe: radio("foe"), level: radio("level"), map: $("optMap").value, campaign: currentCampaign()};
   const prev = readSettings(); // Full Arsenal choices the free game can't show are kept as they were
@@ -6432,6 +6467,7 @@ function applySettings(s, arsenalOnly = false) {
   if (!arsenalOnly) {
     if (typeof s.fort === "boolean") $("optFort").checked = s.fort;
     if (typeof s.near === "boolean") $("optNear").checked = s.near;
+    if (typeof s.brassBonus === "boolean") $("optBrassBonus").checked = s.brassBonus;
     pick("fireBy", s.fireBy); pick("foe", s.foe);
     set("optFlings", s.flings, "flingVal"); set("optSize", s.size, "sizeVal"); set("optReveal", s.reveal, "revealVal");
     if (s.timer != null && [...$("optTimer").options].some(o => +o.value === +s.timer)) $("optTimer").value = s.timer;
