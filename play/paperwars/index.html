@@ -3112,7 +3112,7 @@ let airdrop = null, waterEgg = null;
 // page shows the mirror image, so the shooter sees them where a dot would land on them. A single dot that lands on one
 // roasts it (the shot is wasted); machine-gun bursts pass straight through. Roasts stay on the page until the match ends.
 let turkeys = [], turkeyTimer = null, nextTurkeyAt = 0;
-const TURKEY_R = 13, TURKEY_MAX = 2;
+const TURKEY_R = 13, TURKEY_MAX = 2, TURKEY_PHASES = ["aim", "fold", "cpu", "result"]; // when turkeys are on the page
 const onPage = (pi, q) => pi === 1 ? {x: W - q.x, y: q.y} : q;
 function turkeyPos(tk, now = performance.now()) { return tk.cooked || {x: tk.x0 + tk.dir * tk.speed * (now - tk.t0) / 1000, y: tk.y}; }
 function turkeyAt(pi, x, y, now = performance.now()) {
@@ -3128,7 +3128,7 @@ function stopTurkeys() { if (turkeyTimer) { clearInterval(turkeyTimer); turkeyTi
 function startTurkeys() {
   clearTurkeys();
   if (!opts || opts.campaign !== "drumstick") return;
-  turkeyTimer = setInterval(() => { tickTurkeys(); if (phase === "aim" && turkeys.some(t => !t.cooked)) animateFor(400); }, 200);
+  turkeyTimer = setInterval(() => { tickTurkeys(); if (TURKEY_PHASES.includes(phase) && turkeys.some(t => !t.cooked)) animateFor(400); }, 200);
 }
 function tickTurkeys(now = performance.now()) {
   if (!opts || opts.campaign !== "drumstick") return;
@@ -3182,7 +3182,7 @@ function drawRoast(c, x, y) {
 }
 // Walking turkeys go on the live page; roasts are drawn by drawHalf so they also show on the end-of-war pages.
 function drawTurkeys(c, pi) {
-  if (!opts || opts.campaign !== "drumstick" || !(phase === "aim" || phase === "result" || phase === "setup")) return;
+  if (!opts || opts.campaign !== "drumstick" || !TURKEY_PHASES.includes(phase)) return;
   const now = performance.now();
   turkeys.forEach(tk => { if (tk.cooked) return; const q = onPage(pi, turkeyPos(tk, now)); drawTurkey(c, q.x, q.y, pi === 1 ? -tk.dir : tk.dir, now); });
 }
@@ -3352,6 +3352,14 @@ TENT.forEach((h, who) => {
 });
 window.addEventListener("resize", fitTent);
 // What the player being shot at reads on their half.
+// What happened to your page on the enemy's last turn, in a few words (pass-and-play "Incoming: ...").
+function incomingText(inc, p) {
+  return inc.res === "soldier" ? (inc.kills > 1 ? `a machine-gun burst took out ${inc.kills} soldiers` : `you lost ${p.soldiers[inc.who] ? p.soldiers[inc.who].name : "a soldier"}`)
+    : inc.res === "fort" ? "your fort was hit" : inc.res === "scratch" ? "a scratch" : inc.res === "off" ? (inc.timeout ? "they ran out of time" : "their shot went off the paper")
+    : inc.res === "rock" ? (inc.crop === "hay" ? "it thumped into a hay bale" : inc.crop === "pumpkin" ? "it splattered a pumpkin" : "it pinged off a boulder")
+    : inc.res === "turkey" ? "they roasted a turkey" : inc.res === "slide" ? "a rockslide, but it missed everyone"
+    : inc.death ? (inc.death.poop ? "a close miss (one of yours pooped their pants)" : "a close miss (one of yours got nervous)") : "a miss";
+}
 function defenderText(res, me) {
   if (!res) return "";
   const p = players[me], foe = players[1 - me], who = i => p.soldiers[i] ? p.soldiers[i].name : "A soldier";
@@ -3360,7 +3368,7 @@ function defenderText(res, me) {
     case "fort": return p.fort && p.fort.hp > 0 ? `Your fort was hit! ${p.fort.hp} hit${p.fort.hp > 1 ? "s" : ""} left.` : "Your fort is rubble!";
     case "scratch": return "Just a scratch! Your soldier is still standing.";
     case "off": return res.timeout ? `${foe.name} ran out of time.` : `${foe.name}'s shot went off the paper.`;
-    case "rock": return res.mountain ? "Thud! Your mountain took the hit." : "Ping! Your boulder took the hit.";
+    case "rock": return res.crop === "hay" ? "Thwump! Your hay bale took the hit." : res.crop === "pumpkin" ? "Splat! Your pumpkin took the hit." : res.mountain ? "Thud! Your mountain took the hit." : "Ping! Your boulder took the hit.";
     case "slide": return "Rockslide! ...but nobody was standing below the mountain.";
     case "turkey": return "Gobble?! A turkey just got roasted on your page.";
     default: return res.fart ? `They missed... ${res.fart.poop ? `*squelch* ${who(res.i)} pooped their pants.` : `*pfffrt* ${who(res.i)} got nervous.`}` : "They missed!";
@@ -3554,6 +3562,7 @@ const rpsCardAt = (x, y) => x > 40 && x < W - 40 && y > 66 && y < 66 + 3 * 132 ?
 // Two ways to fire, set per match: touch the paper and let go (default, quick), or close the phone (the fold).
 function fire() {
   if (phase !== "aim" || !pending) return;
+  pending.at = pending.at || performance.now(); // turkeys are judged where they were when you fired
   phase = "fold"; updateUI(); // ignore a second fire while the shot is on its way
   if (opts.fireBy === "tap" || players[cur].cpu) {
     sound(pending.fling ? "gun" : "thump"); navigator.vibrate && navigator.vibrate(pending.fling ? [20, 30, 20, 30, 20] : 30);
@@ -3594,13 +3603,13 @@ function resolveShot() {
       res.fling = true;
       if (kills.size) res.i = [...kills][0];
     } else {
-      const tk = opts.campaign === "drumstick" && turkeyAt(1 - cur, t.x, t.y);
+      const firedAt = s.at || performance.now(), tk = opts.campaign === "drumstick" && turkeyAt(1 - cur, t.x, t.y, firedAt);
       const f = tk ? null : terrainAt(def.terrain, t.x, t.y);
       // Boulders and mountains stop the shot, and whoever hides behind them is safe. (Mountains used to start a
       // rockslide that buried soldiers below them; user, 2026-11-05: "the shrapnel killed 2 soldiers hiding behind it.
       // that should not happen". Cover is cover.)
       if (!tk && opts.campaign === "drumstick") turkeyScare(1 - cur, t.x, t.y); // a near miss sends a turkey running
-      if (tk) { tk.cooked = {...turkeyPos(tk)}; res = {type: "turkey", turkey: {...tk.cooked}}; } // roasted! the shot is wasted
+      if (tk) { tk.cooked = {...turkeyPos(tk, firedAt)}; res = {type: "turkey", turkey: {...tk.cooked}}; } // roasted! the shot is wasted
       else if (solid(f)) res = crop(f) ? {type: "rock", crop: f.kind} : {type: "rock", mountain: f.kind === "mountain"};
       else {
         res = hitTest(def, t.x, t.y);
@@ -3639,7 +3648,7 @@ function resolveShot() {
     }
     // A scratched soldier complains about it.
     if (res.type === "scratch" && res.i != null && Math.random() < .85) res.ouch = {text: bagPick("scratch")};
-    def.incoming.push({...t, res: res.type, spotted: res.spotted, kills: res.kills, death: res.death || res.fart || res.ouch, who: res.i, wet: !!res.wet, medic: res.medic ? {...res.medic, at: performance.now() + 2200} : null,
+    def.incoming.push({...t, res: res.type, crop: res.crop, spotted: res.spotted, kills: res.kills, death: res.death || res.fart || res.ouch, who: res.i, wet: !!res.wet, medic: res.medic ? {...res.medic, at: performance.now() + 2200} : null,
       path: s.fling ? s.path.map(([x, y]) => [W - x, y]) : null});
   }
   if (s.off) def.incoming.push({x: 0, y: 0, res: "off", timeout: !!s.timeout});
@@ -3902,7 +3911,8 @@ function cpuShotText(res) {
   const me = players[0], left = me.soldiers.filter(u => u.alive).length;
   let t;
   switch (res.type) {
-    case "rock": t = res.mountain ? "The computer's shot thudded into a mountain." : "The computer's shot pinged off a boulder."; break;
+    case "rock": t = res.crop === "hay" ? "The computer's shot thumped into a hay bale." : res.crop === "pumpkin" ? "The computer splattered a pumpkin." : res.mountain ? "The computer's shot thudded into a mountain." : "The computer's shot pinged off a boulder."; break;
+    case "turkey": t = "The computer roasted a turkey. Dinner's served."; break;
     case "slide": t = "The computer started a rockslide, but nobody was below it."; break;
     case "soldier": t = res.slide ? `Rockslide! The computer buried ${res.kills > 1 ? res.kills + " of your soldiers" : me.soldiers[res.i].name}. ${left} left.`
       : res.splash ? `Splash! The computer soaked ${me.soldiers[res.i].name}. ${left} left.` : (res.fling ? `Rat-a-tat-tat! The computer's machine gun got ${res.kills > 1 ? res.kills + " of your soldiers" : me.soldiers[res.i].name} down.` : `The computer got ${me.soldiers[res.i].name}!`) + ` ${left} left.`; break;
@@ -3940,7 +3950,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 function replayText(ev, def, N) {
   const {res} = ev, a = N[ev.who], more = res.reinforced ? ` Too many misses: reinforcements for ${N[1 - ev.who]}!` : "";
   switch (res.type) {
-    case "rock": return res.mountain ? "Thud! A mountain takes the hit." : "Ping! A boulder takes the hit.";
+    case "rock": return res.crop === "hay" ? "Thwump! A hay bale takes the hit." : res.crop === "pumpkin" ? "Splat! A pumpkin takes the hit." : res.mountain ? "Thud! A mountain takes the hit." : "Ping! A boulder takes the hit.";
+    case "turkey": return `Gobble?! ${a} roasts a turkey.${more}`;
     case "slide": return `${a} starts a rockslide... nobody's home.`;
     case "soldier": return res.slide ? `${a} starts a rockslide: ${res.kills > 1 ? res.kills + " soldiers" : def.soldiers[res.i].name} buried!`
       : res.splash ? `Splash! ${a} soaks ${def.soldiers[res.i].name}!` : res.fling ? `${a}'s machine gun takes out ${res.kills > 1 ? res.kills + " soldiers" : def.soldiers[res.i].name}!` : `${a} hits ${def.soldiers[res.i].name}!`;
@@ -4737,7 +4748,7 @@ function recordMatch(winner, medals) {
   // career: stats, service points, maps won, special feats
   const m = careerFromMatch(winner), st = r.stats;
   ["hits", "mgKills", "forts", "scratches", "drops"].forEach(k => st[k] = (st[k] | 0) + m.c[k]);
-  if (m.won && MAPS[m.map]) r.mapsWon[m.map] = 1;
+  if (m.won && MAPS[m.map] && !MAPS[m.map].campaign) r.mapsWon[m.map] = 1; // holiday maps don't count toward Pathfinder
   if (m.wet) st.wetWins = (st.wetWins | 0) + 1;
   if (m.beatGeneral) st.generalWins = (st.generalWins | 0) + 1;
   if (m.bootcamp) st.bootcamp = 1;
@@ -4987,7 +4998,7 @@ function renderView(pi) {
     }
   } else if (phase === "cpu" || (phase === "result" && p.cpu)) {
     // The computer's turn: you only ever see your own half, with its shot landing on it.
-    drawHalf(ctx, 0, {highlightLast: phase === "result"});
+    drawHalf(ctx, 0, {highlightLast: phase === "result"}); drawTurkeys(ctx, 0);
     const b = players[0].incoming[players[0].incoming.length - 1];
     if (phase === "result" && b && b.res !== "off") {
       const hit = b.res === "soldier" || b.res === "fort";
@@ -4995,7 +5006,7 @@ function renderView(pi) {
     }
   } else if (tentOn() && pi !== cur && (phase === "aim" || phase === "fold" || phase === "result")) {
     // Tent mode, the player being shot at: their own army, with the shot landing on it.
-    drawHalf(ctx, pi, {highlightLast: phase === "result"});
+    drawHalf(ctx, pi, {highlightLast: phase === "result"}); drawTurkeys(ctx, pi);
     const b = p.incoming[p.incoming.length - 1];
     if (phase === "result" && b && b.res !== "off") {
       const hit = b.res === "soldier" || b.res === "fort";
@@ -5081,7 +5092,7 @@ function updateUI() {
     btn("Ready", "primary", ready, !setupDone(p));
   } else if (phase === "aim") {
     const inc = p.incoming[p.incoming.length - 1];
-    const incText = inc ? `Incoming: ${inc.res === "soldier" ? (inc.kills > 1 ? `a machine-gun burst took out ${inc.kills} soldiers` : `you lost ${p.soldiers[inc.who] ? p.soldiers[inc.who].name : "a soldier"}`) : inc.res === "fort" ? "your fort was hit" : inc.res === "scratch" ? "a scratch" : inc.res === "off" ? (inc.timeout ? "they ran out of time" : "their shot went off the paper") : inc.res === "rock" ? "it pinged off a boulder" : inc.res === "slide" ? "a rockslide, but it missed everyone" : inc.death ? (inc.death.poop ? "a close miss (one of yours pooped their pants)" : "a close miss (one of yours got nervous)") : "a miss"}${inc.spotted ? ", and you were spotted" : ""}. ` : "";
+    const incText = inc ? `Incoming: ${incomingText(inc, p)}${inc.spotted ? ", and you were spotted" : ""}. ` : "";
     if (airdrop) { st.textContent = incText + "Reinforcements incoming! Look up, soldier!"; return; }
     const heard = foe.tauntOut ? `${foe.cpu ? "The computer" : foe.name} yelled "${foe.tauntOut}" ` : "";
     st.textContent = heard + incText + (pending ? (opts.fireBy === "tap" ? "Fire!" : "Close the phone to fire.") : shotType === "dot" ? (opts.fireBy === "tap" ? `${p.name}: touch where to shoot, let go to fire` : `${p.name}: tap to place your dot`) : `${p.name}: touch one of your soldiers, drag where he should shoot${opts.fireBy === "tap" ? ", let go to fire" : ""}`);
@@ -5606,7 +5617,11 @@ function fitIntro() {
   introCv.width = W * k * dpr; introCv.height = IH * k * dpr; ictx.setTransform(k * dpr, 0, 0, k * dpr, 0, 0);
 }
 function cue(name, at, t, fn) { if (t >= at && !introCues.has(name)) { introCues.add(name); fn(); } }
-function drawIntro(t) {
+function drawIntro(t) { // the intro is the same for every campaign: no pilgrim hats or log cabins
+  const o = opts; opts = o && {...o, campaign: "regular"};
+  try { return drawIntroPlain(t); } finally { opts = o; }
+}
+function drawIntroPlain(t) {
   const c = ictx; opts = opts || {size: 46, reveal: 80}; // the drawing helpers read the soldier size
   paper(c, IH);
   // 1. the studio credit, typed
