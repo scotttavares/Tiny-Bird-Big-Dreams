@@ -192,6 +192,22 @@ button.awol.sure{color:var(--red);font-weight:700}
 .record b{font-family:Caveat;font-size:24px;color:#e3b341}
 #cabinet,#callsign,#online,#lobby{position:fixed;inset:0;z-index:40;background:var(--bg);overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom))}
 #cabinet.hidden,#callsign.hidden,#online.hidden,#lobby.hidden{display:none}
+#spectate{position:fixed;inset:0;z-index:40;background:var(--bg);overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom))}
+#spectate.hidden,#bigReveal.hidden,#tauntWheel.hidden{display:none}
+#spectate .menu{max-width:760px}
+#specCv,#brCv{display:block;width:min(100%,740px);height:auto;margin:6px auto;border-radius:12px}
+.specCaption{font:700 25px/1.1 Caveat,cursive;text-align:center;min-height:28px;margin:8px auto 0;max-width:560px}
+#bigReveal{position:fixed;inset:0;z-index:50;background:#1b1b1bf2;color:#fbf8ef;overflow:auto;display:flex;flex-direction:column;align-items:center;padding:max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom))}
+.brStamp{font-family:"Stardos Stencil",monospace;font-size:32px;letter-spacing:3px;color:#f3d27a;border:4px double #f3d27a;padding:2px 14px;transform:rotate(-3deg);margin:8px 0 2px}
+#brTitle{font:700 26px/1.1 Caveat,cursive;text-align:center;margin:8px 0 0;max-width:560px}
+#tauntWheel{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:#0007}
+#tauntWheel.passive{background:none;pointer-events:none;align-items:flex-start;padding-top:max(56px, env(safe-area-inset-top))}
+#tauntWheel.passive .twCard{transform:scale(.72);transform-origin:top center}
+#tauntWheel.passive .bar,#tauntWheel.passive #twCool{display:none}
+.twCard{background:#fbf8ef;border:2px solid #1b1b1b;border-radius:14px 18px 12px 16px;box-shadow:3px 4px 0 #0003;padding:10px 14px 4px;text-align:center;max-width:330px}
+.twCard canvas{display:block;width:260px;height:260px;margin:0 auto;touch-action:none;cursor:pointer}
+#twSay{font:700 24px/1.1 Caveat,cursive;margin:4px 0;min-height:27px}
+#twCool{color:var(--muted)}
 /* The lobby: players are manila folders, spectators notebook slips, the host wears a crown. */
 .lbSpots{display:grid;grid-template-columns:1fr 1fr;gap:12px 10px}
 .lbSpot{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;min-height:116px;padding:14px 6px 8px;margin-top:9px;background:#efd9a0;border:1.5px solid #b89a5a;border-radius:3px 10px 6px 8px;box-shadow:2px 3px 0 #0002;text-align:center;font-size:16px;line-height:1.1}
@@ -526,6 +542,7 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
     </div></div>
   </div>
   <div class="bar" id="bar"></div>
+  <button type="button" class="awol hidden" id="wheelBtn">&#10227; Taunt wheel</button>
   <button class="awol" data-awol>&#9873; Go AWOL</button>
 </section>
 
@@ -645,6 +662,29 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
   <div class="go"><button class="stampbtn" id="lobbyStart">START BATTLE</button></div>
   <div class="bar"><button type="button" id="lobbyLeave">Leave the lobby</button></div>
 </div></section>
+
+<!-- Watching friends battle (spectators): both pages side by side, only what both players know. -->
+<section id="spectate" class="hidden"><div class="menu cabpage">
+  <h3 class="mtitle" id="specTitle">Watching</h3>
+  <p class="csHelp" id="specStatus"></p>
+  <canvas id="specCv"></canvas>
+  <p class="specCaption" id="specCaption"></p>
+  <div class="bar"><button type="button" class="primary" id="specWheel">&#10227; Spin the taunt wheel</button><button type="button" id="specNext">Next game</button></div>
+  <div class="bar"><button type="button" id="specLeave">Leave the battle</button></div>
+</div></section>
+
+<!-- The Big Reveal: both armies, for everyone, when a battle ends; then Revenge / Again / Next challenger. -->
+<section id="bigReveal" class="hidden">
+  <div class="brStamp">THE BIG REVEAL</div>
+  <p id="brTitle"></p>
+  <canvas id="brCv"></canvas>
+  <div class="bar"><button type="button" class="primary big" id="brRevenge">Revenge!</button><button type="button" class="primary big" id="brAgain">Again</button><button type="button" id="brNext">Next challenger</button></div>
+  <div class="bar"><button type="button" id="brClose">Medals</button></div>
+</section>
+
+<!-- The taunt wheel: flick it; the host's phone picks where it lands. -->
+<div id="tauntWheel" class="hidden"><div class="twCard"><canvas id="twCv"></canvas><p id="twSay"></p><small id="twCool"></small>
+  <div class="bar"><button type="button" id="twClose">Close</button></div></div></div>
 
 <div id="foldFx" class="hidden"><div class="duo"><div class="base"></div><div class="lid"></div><div class="thump">*thump*</div></div></div>
 
@@ -3867,6 +3907,7 @@ function go(ph) {
     if (me.shots.length >= 3) coach("taunt");
   }
   render(); updateUI();
+  if (ph === "aim" && onlineOn() && onl.queuedShot) setTimeout(onlineQueued, 0); // a shot that came while this phone was busy
 }
 function setShotType(t) { if (flick || (pending && pending.fling)) return; shotType = t; pending = null; render(); updateUI(); }
 function showCover(title, text, onTap) {
@@ -6670,7 +6711,10 @@ window.addEventListener("keydown", e => {
 // Only the two seated players' hidden / rps / shot / result / reinforce / over count (net.turnCheck adds whose turn it is),
 // and a pid, once it has said hello from one transport id, can't be claimed from another.
 const NET_V = 1, NET_UPDATE_TEXT = "Update Paper Wars to play together.";
-const NET_TYPES = ["hello", "lobby", "start", "hidden", "rps", "shot", "result", "reinforce", "taunt", "spin", "queue", "remove", "over", "reveal", "catchup"];
+const NET_TYPES = ["hello", "lobby", "start", "hidden", "rps", "shot", "result", "reinforce", "taunt", "spin", "queue", "remove", "over", "reveal", "catchup", "spinreq", "rematch"];
+// The catch-up log is bounded: the host's own spins and the seated players' taunts count only up to a few dozen each
+// (anyone may send a taunt or a queue request with pub: true, so neither can bloat or poison what a late spectator gets).
+const NET_LOG_MAX = 1500, NET_LOG_SPINS = 30, NET_LOG_TAUNTS = 60;
 const NET_HOST_ONLY = ["lobby", "start", "spin", "remove", "catchup"];
 const NET_SEATED = ["hidden", "rps", "shot", "result", "reinforce", "over", "reveal"]; // only the two seated players may send these
 const NET_LOGGED = ["start", "hidden", "rps", "shot", "result", "reinforce", "taunt", "spin", "queue", "over", "reveal"]; // what a late spectator is caught up on
@@ -6814,7 +6858,17 @@ const net = (() => {
     st.match = {matchId: String(d.matchId).slice(0, 40), seats: netPids(d.seats).slice(0, 2), settings: d.settings && typeof d.settings === "object" ? d.settings : {}, seed: d.seed | 0};
     st.seats = st.match.seats.slice(); st.over = false; st.next = 0; st.held.clear(); st.log = [];
   }
-  const loggable = d => st.match && d.pub === true && NET_LOGGED.includes(d.t) && !netArmyKey(d) && !netPrivate(d);
+  const logCount = t => st.log.reduce((n, e) => n + (e.t === t), 0);
+  const loggable = d => st.match && d.pub === true && NET_LOGGED.includes(d.t) && d.t !== "result" && d.t !== "queue" && !netArmyKey(d) && !netPrivate(d)
+    && st.log.length < NET_LOG_MAX && (d.t !== "spin" || (d.from === st.host && logCount("spin") < NET_LOG_SPINS))
+    && (d.t !== "taunt" || (st.match.seats.includes(d.from) && logCount("taunt") < NET_LOG_TAUNTS));
+  // Results go into the log only as spectators may see them (Task 8: no ink-bleed sightings), once per shot.
+  function logIt(d) {
+    if (loggable(d)) { st.log.push(d); return; }
+    if (d.t !== "result" || !st.match || d.m !== st.match.matchId || st.log.length >= NET_LOG_MAX || typeof api.publicResult !== "function") return;
+    if (st.log.some(e => e.t === "result" && e.n === d.n)) return;
+    const v = api.publicResult(d); if (v && !netArmyKey(v)) st.log.push(v);
+  }
   function flushHeld() {
     for (const p of [...st.held.keys()]) if (p < st.next) st.held.delete(p);
     while (st.held.has(st.next)) { const h = st.held.get(st.next); st.held.delete(st.next); st.next++; deliver(h); }
@@ -6824,7 +6878,7 @@ const net = (() => {
     if (d.t === "lobby") setRoles(d);
     if (d.t === "catchup") return gotCatchup(d);
     if (d.t === "remove" && d.pid === mine().pid) { emit("removed", d); api.leave(); return; }
-    if (loggable(d)) st.log.push(d);
+    logIt(d);
     emit(d.t, d); emit("message", d);
   }
   function route(d) {
@@ -6932,7 +6986,7 @@ const net = (() => {
       if (msg.t === "over") st.over = true; // this phone's own "over": now its army may be revealed
       const pos = netPos(env);
       if (pos != null && pos >= st.next) { st.next = pos + 1; flushHeld(); }
-      if (loggable(env)) st.log.push(env);
+      if (msg.t !== "result" || env.pub) logIt(env); // (a result to the opponent alone: its spectators' copy is the one logged)
       if (r.ids.length) T.send(r.ids, env);
       return env;
     },
@@ -6966,6 +7020,8 @@ const net = (() => {
     _resolve: resolve,
     // Task 7 sets this: (msg) => true if msg.from may send this shot/result now (whose turn it is). Seats are already checked.
     turnCheck: null,
+    // Task 8 sets this: a result as spectators may see it (for the catch-up log).
+    publicResult: null,
   };
   if (fakeNetRoom) T.connect(); // a fake room is joined on load (like accepting a Game Center invite)
   return api;
@@ -7133,7 +7189,8 @@ function openLobby() {
 function lobbyEnd(text, leave) {
   lobbyOpen = false; $("lobby").classList.add("hidden");
   lob.seats = []; lob.spectators = []; lob.queue = []; lob.settings = null; lob.removed.clear(); onlineStart = null; lob.note = null;
-  lob.wait.forEach(clearTimeout); lob.wait.clear(); lob.quit.clear();
+  lob.wait.forEach(clearTimeout); lob.wait.clear(); lob.quit.clear(); lob.lastMatch = null;
+  spectatorEnd(); bigRevealHide(); wheel.open = false; $("tauntWheel").classList.add("hidden");
   if (leave) net.leave();
   if (text) { onlineOpen = false; onlineStatus(text); $("online").classList.remove("hidden"); }
 }
@@ -7147,7 +7204,8 @@ function lobbyStartMsg(d) {
 function startOnlineMatch(start) {
   onlineStart = start; renderLobby();
   const seat = start.seats.indexOf(lobbyMe());
-  if (seat < 0 || start.seats.length !== 2 || (onl && onl.matchId === start.matchId)) return; // watching: spectators come later (Task 8)
+  if (start.seats.length !== 2 || (onl && onl.matchId === start.matchId) || (spec && spec.matchId === start.matchId)) return;
+  if (seat < 0) return spectatorBegin(start); // watching: both pages, only what both players know
   onlineBegin(start, seat);
 }
 // The battlefield for a start, one rule on every phone: a map this phone may play as it is, else one picked by the seed
@@ -7171,13 +7229,14 @@ $("lobbyLeave").onclick = () => {
   if (net.me().isHost) net.send({t: "remove", pid: lobbyMe()}, "all"); // a host leaving on purpose: hand over now, no waiting
   lobbyEnd(null, true);
 };
-$("lobbyStart").onclick = () => {
+$("lobbyStart").onclick = () => lobbyBeginMatch();
+function lobbyBeginMatch() { // (also a Revenge, an Again or the next challenger, from the Big Reveal)
   if (!net.me().isHost || lob.seats.length !== 2) return;
   const paid = lobbyPaid(lob.seats), settings = lobbyClean(lob.settings, paid), seed = Math.floor(Math.random() * 0x7fffffff);
   if (settings.map === "random") settings.map = matchMap("random", seed, paid); // picked here, so every phone fights on the same one
   const start = {t: "start", matchId: newPid().slice(0, 12), seats: lob.seats.slice(), settings, seed};
   sound("click"); net.send(start, "all"); startOnlineMatch(lobbyStartMsg(start));
-};
+}
 $("lobby").addEventListener("click", e => {
   if (!net.me().isHost) return;
   const b = e.target.closest("[data-act],[data-lcamp],[data-lmap]");
@@ -7216,6 +7275,7 @@ net.on("lobby", d => {
   lob.seats = netPids(d.seats).slice(0, 2); lob.spectators = netPids(d.spectators); lob.queue = netPids(d.queue);
   lob.settings = lobbyClean(d.settings, lobbyPaid(lob.seats));
   if (!lobbyOpen && !onlineStart) openLobby(); else renderLobby();
+  bigRevealButtons(); specRender(); // the line for the next game
 });
 net.on("start", d => startOnlineMatch(lobbyStartMsg(d)));
 net.on("people", () => { if (net.me().isHost) lobbySync(); else renderLobby(); });
@@ -7284,10 +7344,10 @@ const stubSoldier = () => ({x: -999, y: -999, alive: true, pose: 0, seed: 1, nam
 function onlineClear() {
   if (!onl) return;
   Object.values(onl.timers).forEach(t => { clearInterval(t); clearTimeout(t); });
-  $("onlineWait").classList.add("hidden"); $("lastStand").classList.add("hidden"); onl = null;
+  $("onlineWait").classList.add("hidden"); $("lastStand").classList.add("hidden"); $("wheelBtn").classList.add("hidden"); onl = null;
 }
 function onlineBegin(start, seat) {
-  onlineClear();
+  onlineClear(); spectatorEnd(); bigRevealHide();
   const s = start.settings, them = 1 - seat, paid = lobbyPaid(start.seats);
   const map = s.campaign === "drumstick" ? "harvest" : matchMap(s.map, start.seed | 0, paid); // (lobbyStartMsg already re-checked what this phone may play)
   const person = pid => lobbyPerson(pid);
@@ -7309,7 +7369,7 @@ function onlinePlayers() {
     fort: opts.fort ? {x: -999, y: -999, hp: 3, unseen: true} : null});
 }
 function onlineSetup() {
-  ["lobby", "online"].forEach(id => $(id).classList.add("hidden"));
+  ["lobby", "online"].forEach(id => $(id).classList.add("hidden")); $("wheelBtn").classList.remove("hidden");
   cur = onl.seat; onl.hideEnds = performance.now() + ONLINE_HIDE_MS;
   const m = onl;
   onl.timers.hide = setInterval(() => {
@@ -7423,19 +7483,35 @@ function onlineCatchUp() {
   if (phase === "rpsReveal" && rps && rpsResult() !== null) { openOrders(); onlineToBattle(rps.orders.first); }
   if (phase === "result") next();
 }
-net.on("shot", d => {
+net.on("shot", d => onlineShotIn(d));
+function onlineShotIn(d) {
   if (!onlineMine(d) || onl.over) return;
   onlineCatchUp();
-  if (phase !== "aim" || cur !== onl.them || onl.turn !== d.n || d.handoffs !== onl.handoffs) { console.warn("[paperwar] online: shot out of turn", d.n, onl.turn, phase); return; }
+  if (phase !== "aim" || cur !== onl.them || onl.turn !== d.n || d.handoffs !== onl.handoffs) {
+    // Not now (an overlay or a phase in between): the net layer has already counted this shot, so dropping it would stall
+    // the match. Hold it and take it as soon as this phone is aiming again (go("aim") and a watchdog both try).
+    if (Number.isInteger(d.n) && d.n >= onl.turn && (!onl.queuedShot || onl.queuedShot.n <= d.n)) {
+      onl.queuedShot = d; if (!onl.timers.queued) onl.timers.queued = setInterval(onlineQueued, 400);
+    } else console.warn("[paperwar] online: shot out of turn", d.n, onl.turn, phase);
+    return;
+  }
+  if (onl.queuedShot && onl.queuedShot.n <= d.n) onl.queuedShot = null;
   const me = players[onl.seat], shot = onlineCleanShot(d); if (!shot) return;
   shot.at += onl.turnStart; // its turkeys, as they were when it was fired
   const o = resolveIncoming(me, shot, {terrain: me.terrain, campaign: opts.campaign, turkeys, near: opts.near, reveal: opts.reveal, rand: shotRand(onl.seed, d.n), page: onl.seat, now: shot.at});
   const w = wireOutcome(o); // never o itself: what the shooter may learn, and nothing else
   if (w.shot.at != null) w.shot.at -= onl.turnStart; w.scares.forEach(c => { c.t0 -= onl.turnStart; }); // times from the start of the turn
-  onl.lastResult = {t: "result", n: d.n, handoffs: d.handoffs, outcome: w}; net.send(onl.lastResult, "all");
+  onl.lastResult = {t: "result", n: d.n, handoffs: d.handoffs, outcome: w}; onl.lastPublic = {t: "result", n: d.n, handoffs: d.handoffs, outcome: spectatorOutcome(w)};
+  net.send(onl.lastResult, "opponent"); net.send(onl.lastPublic, "spectators"); // spectators: only what both players know
   applyOutcome(players[onl.them], me, o);
   onlineAfterShot(o, onl.seat);
-});
+}
+function onlineQueued() {
+  if (!onl) return;
+  const d = onl.queuedShot;
+  if (!onlineOn() || onl.over || !d || d.n < onl.turn) { onl.queuedShot = null; clearInterval(onl.timers.queued); onl.timers.queued = 0; return; }
+  if (phase === "aim" && cur === onl.them && onl.turn === d.n) { onl.queuedShot = null; onlineShotIn(d); }
+}
 // What came over the wire, made safe: known values and our own lines only, the shot as this phone fired it.
 function onlineCleanOutcome(w, shot) {
   if (!w || typeof w !== "object" || !w.res || typeof w.res !== "object") return null;
@@ -7537,7 +7613,7 @@ function onlineResend() {
     if (onl.sentHidden) net.send({t: "hidden"}, "all");
     if (onl.myPick) net.send({t: "rps", ...onl.myPick}, "opponent");
   }
-  if (onl.lastResult) net.send(onl.lastResult, "all");
+  if (onl.lastResult) { net.send(onl.lastResult, "opponent"); if (onl.lastPublic) net.send(onl.lastPublic, "spectators"); }
   if (onl.awaiting && onl.lastShot) net.send(onl.lastShot, "all");
 }
 net.on("left", e => { if (onlineOn() && !onl.over && e.pid && e.pid === onl.seats[onl.them]) onlineWaitStart(); });
@@ -7621,16 +7697,407 @@ function onlineFinish() {
       replay.events.splice(k + 1, 0, {who: t, reinforce: dp.soldier}); });
   }
   gameOverTail(onl.over.winner, !onl.over.forfeit);
+  partyOver(onl.matchId, onl.seats, onl.over.winner);
+  if (r && !onl.over.forfeit) bigRevealOpen({matchId: onl.matchId, seats: onl.seats.slice(), winner: onl.over.winner, campaign: opts.campaign, terrain: players.map(p => p.terrain),
+    roasts: turkeys.filter(tk => tk.cooked).map(tk => ({...tk.cooked})), armies: players.map(p => clone({soldiers: p.soldiers, fort: p.fort})), incoming: players.map(p => clone(p.incoming))});
 }
 // "Back to the lobby": the same friends, ready for the next battle.
 function onlineBackToLobby() {
-  onlineClear(); onlineStart = null; replayRun++;
+  onlineClear(); bigRevealHide(); onlineStart = null; replayRun++;
   $("over").classList.add("hidden"); $("rematchBtn").textContent = "Rematch"; $("menuBtn").textContent = "Change settings";
   openLobby();
   const h = lobbyHost();
   if (h && h !== lobbyMe() && !net.peers().some(p => p.pid === h)) lobbyHandOff(h); // the host left during the battle
   if (lobbyOpen) { if (net.me().isHost) lobbySync(); else renderLobby(); }
 }
+
+// ---------- the party layer (1.2): spectators, the taunt wheel, the Big Reveal, Revenge ----------
+// Spectators see only what BOTH players already know: every shot, what it hit, the soldiers who fell (where they fell,
+// which both players learn), captions and last words. Never an ink-bleed sighting (only the shooter knows those) or an
+// unhit soldier. The defender's phone sends the full wire outcome to the opponent only and this stripped copy to the
+// spectators; the host's catch-up log keeps only stripped results (net.publicResult).
+const SPEC_RES_KEYS = ["timeout", "kills", "fortHit", "fling", "splash", "wet", "crop", "mountain"];
+const SPEC_TYPES = ["soldier", "miss", "scratch", "fort", "rock", "off", "turkey", "slide"];
+function spectatorOutcome(w) {
+  if (!w || typeof w !== "object" || !w.res || typeof w.res !== "object") return null;
+  const r = w.res, res = {type: String(r.type)};
+  SPEC_RES_KEYS.forEach(k => { if (r[k] !== undefined && (typeof r[k] !== "object" || r[k] === null)) res[k] = r[k]; });
+  const killed = (Array.isArray(w.killed) ? w.killed : []).filter(i => Number.isInteger(i)).slice(0, MAX_REINFORCED);
+  if (r.type === "soldier" && killed.includes(r.i)) res.i = r.i; // only a soldier who went down has an index
+  if (r.type === "soldier" && r.namesake === true) { res.namesake = true; res.namesakeName = String(r.namesakeName || "").slice(0, 60); }
+  if (r.type === "turkey" && r.turkey && typeof r.turkey === "object") res.turkey = {x: +r.turkey.x, y: +r.turkey.y};
+  const txt = o => o && typeof o === "object" && typeof o.text === "string" ? o.text.slice(0, 200) : null;
+  if (txt(r.death)) res.death = {text: txt(r.death), ...(r.death.bugle === true ? {bugle: true, taps: r.death.taps === true} : {})};
+  if (txt(r.medic)) res.medic = {text: txt(r.medic)};
+  if (txt(r.fart)) res.fart = {text: txt(r.fart), poop: r.fart.poop === true};
+  if (txt(r.ouch)) res.ouch = {text: txt(r.ouch)};
+  const s = w.shot && typeof w.shot === "object" ? w.shot : {};
+  const shot = {x: +s.x, y: +s.y, fling: s.fling === true, path: Array.isArray(s.path) ? s.path.slice(0, 800) : null, off: s.off === true, timeout: s.timeout === true};
+  const killedUnits = (Array.isArray(w.killedUnits) ? w.killedUnits : []).filter(u => u && typeof u === "object" && killed.includes(u.i)).slice(0, MAX_REINFORCED)
+    .map(u => ({i: u.i, x: +u.x, y: +u.y, pose: u.pose === 1 ? 1 : 0, seed: u.seed | 0, weapon: String(u.weapon || ""), name: String(u.name || ""), ...(u.namesake === true ? {namesake: true} : {})}));
+  return {shot, res, killed, killedUnits, fortHit: w.fortHit === true, fortHp: Number.isInteger(w.fortHp) ? w.fortHp : null,
+    alive: Number.isInteger(w.alive) ? w.alive : null, gone: w.gone === true, turkey: Number.isInteger(w.turkey) ? w.turkey : -1};
+}
+net.publicResult = d => { const o = spectatorOutcome(d.outcome); return o ? {...d, pub: true, outcome: o} : null; };
+
+// ---------- watching (spectators) ----------
+// Both pages side by side, like the replay: the battlefield (from the seed), every shot's blot, the fallen soldiers and
+// what they said; never an unhit soldier (no namesake star for anyone still standing either: only the fallen are drawn).
+let spec = null;
+const SPEC_GAP = 16, SPEC_TOP = 30;
+const partyName = pid => { const p = pid && lobbyPerson(pid); return p ? lobbyName(p) : "A friend"; };
+const specName = seat => partyName(spec && spec.seats[seat]);
+const specMine = d => !!spec && !!d && d.m === spec.matchId && spec.seats.includes(d.from);
+function withPartyOpts(campaign, fn) { const o = opts; opts = {size: 46, campaign: campaign || "regular"}; try { return fn(); } finally { opts = o; } }
+function spectatorBegin(start) {
+  onlineClear(); spectatorEnd(); bigRevealHide();
+  const s = start.settings || {}, seed = start.seed | 0, paid = lobbyPaid(start.seats), campaign = s.campaign === "drumstick" ? "drumstick" : "regular";
+  const map = campaign === "drumstick" ? "harvest" : matchMap(s.map, seed, paid);
+  H = IH; // the online page size, as on the players' phones
+  const T = withPartyOpts(campaign, () => seeded(mulberry32((seed ^ 0x2545f491) | 0), () => generateMap(map))); // the same battlefield as theirs
+  spec = {matchId: start.matchId, seats: start.seats.slice(), seed, map, campaign, terrain: [T, mirrorMap(T)], pages: [0, 1].map(() => ({dead: [], incoming: []})),
+    shots: {}, done: new Set(), n: 0, alive: [MAX_UNITS, MAX_UNITS], fortHp: [3, 3], roasts: [], caption: "", last: null, first: null, hidden: [false, false],
+    over: null, reveals: [null, null], revealed: false, asked: false};
+  ["game", "over", "tent", "replayView", "online", "lobby"].forEach(id => $(id).classList.add("hidden"));
+  $("spectate").classList.remove("hidden");
+  specRender();
+}
+function spectatorEnd() { if (!spec) return; spec = null; $("spectate").classList.add("hidden"); }
+function specRender() {
+  if (!spec) return;
+  $("specTitle").textContent = `${specName(0)} vs ${specName(1)}`;
+  $("specStatus").textContent = spec.over ? `${specName(spec.over.winner)} wins${spec.over.forfeit ? " by forfeit" : ""}!`
+    : spec.first == null ? (spec.hidden[0] && spec.hidden[1] ? "Both armies are hidden. Rock, Paper, Scissors for the first shot..." : "Both sides are hiding their armies...")
+    : `${spec.n} shot${spec.n === 1 ? "" : "s"} so far · soldiers standing: ${spec.alive[0]} vs ${spec.alive[1]}` + (spec.asked || lob.queue.includes(lobbyMe()) ? " · you're up next game" : "");
+  $("specCaption").textContent = spec.caption;
+  $("specNext").classList.toggle("hidden", spec.asked || lob.queue.includes(lobbyMe()) || !lobbyHost() || net.me().isHost);
+  specDraw();
+}
+function partyCanvas(cv) {
+  const SW = W * 2 + SPEC_GAP, SH = IH + SPEC_TOP + 6, d = Math.min(2, window.devicePixelRatio || 1);
+  if (cv.width !== SW * d || cv.height !== SH * d) { cv.width = SW * d; cv.height = SH * d; }
+  const c = cv.getContext("2d"); c.setTransform(d, 0, 0, d, 0, 0); c.fillStyle = "#1b1b1b"; c.fillRect(0, 0, SW, SH);
+  return c;
+}
+// One page of a two-page view: paper, battlefield, roasts, the given soldiers, the blots it took.
+function partyPage(c, i, terrain, roasts, fort, soldiers, incoming, title) {
+  const x0 = i * (W + SPEC_GAP);
+  label(c, title, x0 + W / 2, 21, 18, i ? "#f2a19b" : "#a9c1f0");
+  c.save(); c.translate(x0, SPEC_TOP); c.beginPath(); c.roundRect(0, 0, W, IH, 14); c.clip();
+  paper(c, IH); drawTerrain(c, terrain);
+  roasts.forEach(q => { const r = onPage(i, q); drawRoast(c, r.x, r.y); });
+  if (fort) drawFort(c, fort, INK[i]);
+  soldiers.forEach(u => u && drawSoldier(c, u, INK[i]));
+  incoming.forEach((b, k) => { if (!b || b.off || b.res === "off") return; if (b.path) strokePath(c, b.path, INK[1 - i], .85); blot(c, b.x, b.y, INK[1 - i], k * 31 + 5); });
+  return c; // (still translated and clipped: the caller restores)
+}
+function specDraw() {
+  const c = partyCanvas($("specCv"));
+  withPartyOpts(spec.campaign, () => [0, 1].forEach(i => {
+    const pg = spec.pages[i];
+    partyPage(c, i, spec.terrain[i], spec.roasts, null, pg.dead, pg.incoming, specName(i));
+    const L = spec.last;
+    if (L && L.def === i && !L.off) {
+      c.save(); c.strokeStyle = RED; c.setLineDash([4, 4]); c.lineWidth = 2; c.beginPath(); c.arc(L.x, L.y, 16, 0, 7); c.stroke(); c.restore();
+      if (L.say && L.at) bubble(c, L.say, L.at.x, L.at.y, INK[i]);
+    }
+    c.restore();
+  }));
+}
+function specShot(d, quiet) {
+  if (!specMine(d) || onlInt(d.n, 1, 1e5) == null || spec.shots[d.n]) return;
+  const x = onlNum(d.x, -50, W + 50), y = onlNum(d.y, -50, IH + 50); if (x == null || y == null) return;
+  const path = d.fling === true && Array.isArray(d.path) ? d.path.slice(0, 800).map(p => Array.isArray(p) ? [onlNum(p[0], -10, W + 10), onlNum(p[1], -10, IH + 10)] : [null, null])
+    .filter(p => p[0] != null && p[1] != null) : null;
+  spec.shots[d.n] = {who: spec.seats.indexOf(d.from), x, y, off: d.off === true, path: path && path.length >= 2 ? path : null};
+  if (!quiet) specRender();
+}
+function specText(who, res, fell, def) {
+  const a = specName(who), left = spec.alive[def];
+  switch (res.type) {
+    case "soldier": return res.namesake ? `${a} took out ${specName(def)} himself! ${left} left.` : res.kills > 1 ? `${a} takes out ${res.kills} soldiers! ${left} left.`
+      : `${a} hits ${fell ? fell.name : "a soldier"}! ${left} left.`;
+    case "fort": return `${a} ${spec.fortHp[def] > 0 ? "cracks" : "destroys"} the fort!`;
+    case "scratch": return "Just a scratch! Arms and legs don't count.";
+    case "off": return res.timeout ? `${a} ran out of time.` : `${a}'s shot went off the paper.`;
+    case "rock": return res.crop === "hay" ? "Thwump! A hay bale takes the hit." : res.crop === "pumpkin" ? "Splat! A pumpkin takes the hit." : res.mountain ? "Thud! A mountain takes the hit." : "Ping! A boulder takes the hit.";
+    case "turkey": return `Gobble?! ${a} roasts a turkey.`;
+    case "slide": return `${a} starts a rockslide... nobody's home.`;
+    default: return res.fart ? `Miss... ${res.fart.poop ? "*squelch*" : "*pfffrt*"} Somebody over there is nervous!` : "Miss.";
+  }
+}
+function specResult(d, quiet) {
+  if (!specMine(d) || onlInt(d.n, 1, 1e5) == null || spec.done.has(d.n)) return;
+  const sh = spec.shots[d.n]; if (!sh || sh.who < 0) return; // (each shot comes before its result)
+  const def = 1 - sh.who; if (d.from !== spec.seats[def]) return;
+  const o = spectatorOutcome(d.outcome); if (!o || !SPEC_TYPES.includes(o.res.type)) return;
+  spec.done.add(d.n); spec.n = spec.done.size;
+  const pg = spec.pages[def], res = o.res, line = t => onlineLineOk(t) ? t : null;
+  o.killedUnits.forEach(u => {
+    const i = onlInt(u.i, 0, MAX_REINFORCED - 1), x = onlNum(u.x, -50, W + 50), y = onlNum(u.y, -50, IH + 50); if (i == null || x == null || y == null) return;
+    pg.dead[i] = {x, y, alive: false, pose: u.pose, seed: onlInt(u.seed, 0, 99999) == null ? 1 : u.seed, ...(WEAPONS.includes(u.weapon) ? {weapon: u.weapon} : {}),
+      name: u.namesake === true ? specName(def) : SOLDIER_NAMES.includes(u.name) ? u.name : "A soldier"};
+  });
+  if (!sh.off) pg.incoming.push({x: W - sh.x, y: sh.y, path: sh.path ? sh.path.map(([x, y]) => [W - x, y]) : null});
+  if (o.alive != null) spec.alive[def] = Math.max(0, Math.min(MAX_REINFORCED, o.alive));
+  if (o.fortHp != null) spec.fortHp[def] = Math.max(0, Math.min(3, o.fortHp));
+  if (res.turkey && isFinite(res.turkey.x) && isFinite(res.turkey.y) && spec.roasts.length < 40) spec.roasts.push({x: res.turkey.x, y: res.turkey.y});
+  const fell = res.i != null ? pg.dead[res.i] : null, death = res.death && line(res.death.text);
+  spec.last = {def, x: W - sh.x, y: sh.y, off: sh.off, say: death && fell && !res.death.bugle ? death : null, at: fell ? {x: fell.x, y: fell.y} : null};
+  spec.caption = [specText(sh.who, res, fell, def), res.death && res.death.bugle ? death : null, res.medic && line(res.medic.text), res.fart && line(res.fart.text),
+    res.ouch && line(res.ouch.text)].filter(Boolean).join(" ");
+  if (quiet) return;
+  const k = res.type === "soldier" || res.type === "fort" ? "hit" : res.type === "off" ? null : "miss"; if (k) sound(k);
+  if (res.death && res.death.bugle) setTimeout(() => sound(res.death.taps ? "taps" : "lament"), 700);
+  if (res.fart) setTimeout(() => sound(res.fart.poop ? "squelch" : "fart"), 450);
+  if (death && !res.death.bugle) speak(death, 900);
+  specRender();
+}
+net.on("shot", d => specShot(d));
+net.on("result", d => specResult(d));
+net.on("hidden", d => { if (!specMine(d)) return; spec.hidden[spec.seats.indexOf(d.from)] = true; specRender(); });
+net.on("rps", d => { if (!specMine(d) || !d.outcome || ![0, 1].includes(d.outcome.first)) return; spec.first = d.outcome.first; spec.caption = `${specName(spec.first)} fires first!`; specRender(); });
+net.on("taunt", d => { if (!specMine(d) || !onlineLineOk(d.say) || spec.over) return; spec.caption = `${specName(spec.seats.indexOf(d.from))}: "${d.say}"`; specRender(); });
+net.on("over", d => {
+  if (!specMine(d) || spec.over || ![0, 1].includes(d.winner)) return;
+  spec.over = {winner: d.winner, forfeit: d.forfeit === true}; spec.caption = `${specName(d.winner)} wins${spec.over.forfeit ? " by forfeit" : ""}!`;
+  sound("victory"); partyOver(spec.matchId, spec.seats, d.winner); specReveal(); specRender();
+});
+net.on("reveal", d => {
+  if (!specMine(d)) return;
+  const seat = spec.seats.indexOf(d.from); if (spec.reveals[seat]) return;
+  const a = partyCleanArmy(d.army, d.from); if (!a) return;
+  spec.reveals[seat] = a; specReveal();
+});
+// A revealed army from a seated player's phone, made safe (as onlineCleanArmy, for a phone that isn't fighting).
+function partyCleanArmy(a, pid) {
+  if (!a || typeof a !== "object" || !Array.isArray(a.soldiers)) return null;
+  const p = lobbyPerson(pid), look = netCleanSoldier(p ? p.soldier : {});
+  const soldiers = a.soldiers.slice(0, MAX_REINFORCED).map(u => {
+    const x = onlNum(u && u.x, -50, W + 50), y = onlNum(u && u.y, -50, IH + 50); if (x == null || y == null) return null;
+    const o = {x, y, alive: u.alive !== false, pose: u.pose === 1 ? 1 : 0, seed: onlInt(u.seed, 0, 99999) == null ? 1 : u.seed,
+      name: SOLDIER_NAMES.includes(u.name) ? u.name : "A soldier", wading: u.wading === true};
+    if (u.namesake === true) Object.assign(o, {namesake: true, name: partyName(pid), weapon: look.weapon, pose: look.pose, hat: look.hat});
+    else if (WEAPONS.includes(u.weapon)) o.weapon = u.weapon;
+    return o;
+  }).filter(Boolean);
+  const f = a.fort && typeof a.fort === "object" ? {x: onlNum(a.fort.x, -50, W + 50), y: onlNum(a.fort.y, -50, IH + 50), hp: onlInt(a.fort.hp, 0, 3) || 0} : null;
+  return {soldiers, fort: f && f.x != null && f.y != null ? f : null};
+}
+function specReveal() {
+  if (!spec || !spec.over || spec.over.forfeit || spec.revealed || !spec.reveals[0] || !spec.reveals[1]) return;
+  spec.revealed = true;
+  bigRevealOpen({matchId: spec.matchId, seats: spec.seats.slice(), winner: spec.over.winner, campaign: spec.campaign, terrain: spec.terrain, roasts: spec.roasts,
+    armies: spec.reveals, incoming: spec.pages.map(p => p.incoming)});
+}
+// A spectator who joins mid-match: the host's catch-up (public messages only) rebuilds the view (Review Focus 3).
+net.on("catchup", e => {
+  const m = e && e.match; if (!m || !Array.isArray(m.seats) || m.seats.includes(lobbyMe())) return;
+  const start = lobbyStartMsg(m); if (start.seats.length !== 2) return;
+  onlineStart = start; spectatorBegin(start);
+  for (const d of Array.isArray(e.log) ? e.log : []) {
+    if (!d || typeof d !== "object") continue;
+    if (d.t === "shot") specShot(d, true);
+    else if (d.t === "result") specResult(d, true);
+    else if (d.t === "hidden" && specMine(d)) spec.hidden[spec.seats.indexOf(d.from)] = true;
+    else if (d.t === "rps" && specMine(d) && d.outcome && [0, 1].includes(d.outcome.first)) spec.first = d.outcome.first;
+  }
+  if (spec.n && spec.first == null) spec.first = 0;
+  specRender();
+});
+// The host: someone new says hello while a battle is on -> they watch, caught up on everything public so far.
+net.on("hello", p => {
+  if (!p || !net.me().isHost) return;
+  const seats = onlineOn() && !onl.over ? onl.seats : spec && !spec.over ? spec.seats : null;
+  if (!seats || seats.includes(p.pid)) return;
+  if (!lob.spectators.includes(p.pid) && !lob.removed.has(p.pid)) lob.spectators.push(p.pid);
+  if (!lob.removed.has(p.pid)) net.catchup(p.pid);
+});
+$("specWheel").onclick = () => { sound("click"); wheelOpen(); };
+$("specNext").onclick = () => { lobbyAsk(true); if (spec) { spec.asked = true; specRender(); } };
+$("specLeave").onclick = () => { sound("click"); spectatorEnd(); lobbyEnd(null, true); };
+
+// ---------- the Big Reveal and what comes after ----------
+// When a battle ends, everyone (both players and the spectators) sees both armies, from the reveals both phones sent.
+// Then: "Revenge!" (the loser) or "Again" (the winner) asks the host for the same seats again; "Next challenger" (the
+// winner or the host, when someone is queued) puts the first in line in the loser's seat; the loser goes to the back of
+// the line (winner stays on). Every one of these goes through the host, who starts the new battle like the lobby does.
+let bigRev = null;
+function partyOver(matchId, seats, winner) {
+  lob.lastMatch = {matchId, seats: seats.slice(), winner};
+  if (!net.me().isHost) return;
+  setTimeout(lobbySync, 0); // everyone hears the line for the next game
+  const p = lob.pendingRematch; lob.pendingRematch = null;
+  if (p && p.matchId === matchId) setTimeout(() => lobbyRematch(p.pid, p.want, p.matchId), 0);
+}
+function bigRevealOpen(b) {
+  bigRev = b; $("bigReveal").classList.remove("hidden"); $("bigReveal").scrollTop = 0;
+  $("brTitle").textContent = `${partyName(b.seats[b.winner])} wins! Here's where everyone was hiding.`;
+  bigRevealButtons(); bigRevealDraw(); setTimeout(() => sound("drum"), 200);
+}
+function bigRevealButtons() {
+  if (!bigRev) return;
+  const me = lobbyMe(), seat = bigRev.seats.indexOf(me), won = seat === bigRev.winner, here = p => p === me || net.peers().some(x => x.pid === p);
+  const q = lob.queue.filter(p => !bigRev.seats.includes(p) && here(p));
+  $("brRevenge").classList.toggle("hidden", seat < 0 || won);
+  $("brAgain").classList.toggle("hidden", seat < 0 || !won);
+  $("brNext").classList.toggle("hidden", !q.length || !(won || net.me().isHost));
+  $("brNext").textContent = q.length ? `Next challenger: ${partyName(q[0])}` : "Next challenger";
+  $("brClose").textContent = seat < 0 ? "Back to the lobby" : "Medals";
+}
+function bigRevealDraw() {
+  const b = bigRev, c = partyCanvas($("brCv"));
+  withPartyOpts(b.campaign, () => [0, 1].forEach(i => {
+    const a = b.armies[i] || {soldiers: [], fort: null};
+    partyPage(c, i, b.terrain[i], b.roasts || [], a.fort, a.soldiers, b.incoming[i] || [], partyName(b.seats[i]) + (i === b.winner ? "  ★" : ""));
+    c.restore();
+  }));
+}
+function bigRevealHide() { bigRev = null; $("bigReveal").classList.add("hidden"); }
+function rematchAsk(want) {
+  const h = lobbyHost(); if (!h || !bigRev) return;
+  sound("click"); $("brTitle").textContent = want === "next" ? "Calling up the next challenger..." : "Asking for a rematch...";
+  if (h === lobbyMe()) lobbyRematch(h, want, bigRev.matchId); else net.send({t: "rematch", want, match: bigRev.matchId}, [h]);
+}
+net.on("rematch", d => { if (net.me().isHost && typeof d.want === "string") lobbyRematch(d.from, d.want, d.match); });
+// The host: one answer per battle, and only from the right person (Revenge from the loser, Again / Next from the winner).
+function lobbyRematch(pid, want, matchId) {
+  const last = lob.lastMatch;
+  if (!net.me().isHost || !lobbyOpen) return;
+  if (!last || matchId !== last.matchId) { // asked before this phone finished the battle itself: answered once it has
+    if (matchId && matchId === (onlineOn() ? onl.matchId : spec ? spec.matchId : null)) lob.pendingRematch = {pid, want, matchId};
+    return;
+  }
+  if (lob.rematched === last.matchId) return;
+  if ((onlineOn() && !onl.over) || (spec && !spec.over)) return;
+  const win = last.winner, lose = 1 - win, seats = last.seats.slice(), here = p => p === lobbyMe() || net.peers().some(x => x.pid === p);
+  if (want === "revenge" ? pid !== seats[lose] : want === "again" ? pid !== seats[win] : want === "next" ? pid !== seats[win] && pid !== lobbyMe() : true) return;
+  if (want === "next") {
+    const q = lob.queue.filter(p => !seats.includes(p) && here(p) && !lob.removed.has(p)); if (!q.length) return;
+    const loser = seats[lose]; seats[lose] = q[0];
+    lob.queue = lob.queue.filter(p => p !== q[0] && p !== loser).concat(loser); // the loser goes to the back of the line
+    lob.spectators = lob.spectators.filter(p => p !== q[0] && p !== loser).concat(loser);
+  }
+  if (!seats.every(here)) return;
+  lob.rematched = last.matchId; lob.seats = seats;
+  lobbySync(); lobbyBeginMatch();
+}
+$("brRevenge").onclick = () => rematchAsk("revenge");
+$("brAgain").onclick = () => rematchAsk("again");
+$("brNext").onclick = () => rematchAsk("next");
+$("brClose").onclick = () => {
+  sound("click"); const watching = !!bigRev && bigRev.seats.indexOf(lobbyMe()) < 0; bigRevealHide();
+  if (watching) { spectatorEnd(); openLobby(); }
+};
+
+// ---------- the taunt wheel ----------
+// 12 pen-drawn slices. Anyone in the battle can flick it (spectators most of all); the HOST's phone picks where it lands
+// and says so (spin {pid, slice}: host-only on the wire), and every phone's wheel lands there after a 2.5 s spin. One
+// spin per spinner every 8 s, enforced by the host (the wheel just says when you can go again). Golden (about 1 in 15)
+// throws confetti; backfire (about 1 in 20) turns the crowd on the spinner. Task 10 attaches voices to the slices by id;
+// until then each slice plays one of the game's own sounds.
+const WHEEL_SLICES = [
+  {id: "noodle", short: "Wet noodle", text: "Is that a pencil or a wet noodle?", sound: "chicken", kind: "taunt"},
+  {id: "chicken", short: "Bawk!", text: "Bawk bawk! Somebody's a chicken!", sound: "chicken", kind: "taunt"},
+  {id: "nap", short: "Nap time", text: "Wake up, soldier! Nap time is over!", sound: "drum", kind: "taunt"},
+  {id: "goldfish", short: "Goldfish", text: "My goldfish aims better than that!", sound: "splash", kind: "taunt"},
+  {id: "pfffrt", short: "Pfffrt", text: "Pfffrt! Was that your cannon or your lunch?", sound: "fart", kind: "taunt"},
+  {id: "wahwah", short: "Wah wah", text: "Wah wah waaah!", sound: "lament", kind: "taunt"},
+  {id: "turkey", short: "Gobble", text: "Gobble gobble, you big turkey!", sound: "gobble", kind: "taunt"},
+  {id: "crayon", short: "Crayons", text: "Your army is drawn in crayon!", sound: "pencil", kind: "taunt"},
+  {id: "ping", short: "Ping!", text: "Ping! Missed by a country mile!", sound: "ping", kind: "taunt"},
+  {id: "backfire", short: "Backfire", text: "The crowd turns on YOU!", sound: "lament", kind: "backfire"},
+  {id: "goldenCheer", short: "GOLDEN", text: "GOLDEN TAUNT! The crowd goes wild!", sound: "victory", kind: "golden"},
+  {id: "goldenSalute", short: "GOLDEN", text: "GOLDEN TAUNT! A twenty-one kazoo salute!", sound: "victory", kind: "golden"},
+];
+const WHEEL_GOLDEN = [10, 11], WHEEL_BACKFIRE = 9, WHEEL_ODDS = {golden: 1 / 15, backfire: 1 / 20}, WHEEL_SPIN_MS = 2500, TAU = 2 * Math.PI;
+let WHEEL_COOLDOWN_MS = 8000;
+const wheel = {angle: 0, spinning: null, queue: [], shown: [], picked: [], hostLast: new Map(), asked: -1e12, open: false, sparks: [], seq: 0, hideT: 0, coolT: 0, flick: null};
+// The host's pick: golden slices share about 1 in 15, backfire about 1 in 20, the nine taunts share the rest.
+function wheelPick(rand = Math.random) {
+  const r = rand(), g = WHEEL_ODDS.golden, b = WHEEL_ODDS.backfire;
+  if (r < g) return WHEEL_GOLDEN[r < g / 2 ? 0 : 1];
+  if (r < g + b) return WHEEL_BACKFIRE;
+  return Math.min(8, Math.floor((r - g - b) / (1 - g - b) * 9));
+}
+const wheelSliceAt = () => Math.floor(((-wheel.angle % TAU + TAU) % TAU) / (TAU / 12)) % 12; // the slice under the pointer
+function wheelOpen() { wheel.open = true; $("tauntWheel").classList.remove("hidden", "passive"); wheelCool(); wheelDraw(); }
+function wheelClose() { wheel.open = false; $("tauntWheel").classList.add(wheel.spinning ? "passive" : "hidden"); }
+function wheelCool() { // true while this phone's last spin is still cooling down
+  const left = Math.ceil((wheel.asked + WHEEL_COOLDOWN_MS - performance.now()) / 1000);
+  $("twCool").textContent = left > 0 ? `Ready again in ${left} s` : "Flick or tap the wheel to spin it!";
+  return left > 0;
+}
+function wheelAsk() {
+  if (wheelCool() || wheel.spinning) return;
+  const h = lobbyHost(); if (!h) return;
+  wheel.asked = performance.now(); sound("click"); wheelCool();
+  if (h === lobbyMe()) hostSpin(h); else net.send({t: "spinreq"}, [h]);
+  clearInterval(wheel.coolT); wheel.coolT = setInterval(() => { if (!wheelCool()) clearInterval(wheel.coolT); }, 500);
+}
+function hostSpin(pid) {
+  if (!net.me().isHost || (pid !== lobbyMe() && !net.peers().some(p => p.pid === pid))) return;
+  const now = performance.now(), last = wheel.hostLast.get(pid);
+  if (last != null && now - last < WHEEL_COOLDOWN_MS) return; // one spin per spinner every 8 s
+  wheel.hostLast.set(pid, now);
+  const spin = {t: "spin", pid, slice: wheelPick(), id: ++wheel.seq};
+  wheel.picked.push({pid, slice: spin.slice});
+  net.send(spin, "all"); wheelPlay(spin);
+}
+net.on("spinreq", d => { if (net.me().isHost) hostSpin(d.from); });
+net.on("spin", d => { // net hands over the host's spins only
+  if (onlInt(d.slice, 0, WHEEL_SLICES.length - 1) == null || typeof d.pid !== "string" || !NET_PID.test(d.pid)) return;
+  wheelPlay({pid: d.pid, slice: d.slice});
+});
+function wheelPlay(s) {
+  if (wheel.spinning) { if (wheel.queue.length < 4) wheel.queue.push(s); return; }
+  const el = $("tauntWheel"); el.classList.remove("hidden"); el.classList.toggle("passive", !wheel.open); clearTimeout(wheel.hideT);
+  const from = wheel.angle, target = -(s.slice + .5) * TAU / 12, end = from + 4 * TAU + ((target - from) % TAU + TAU) % TAU, t0 = performance.now();
+  wheel.spinning = {...s, end};
+  $("twSay").textContent = `${partyName(s.pid)} spins the taunt wheel...`; sound("drum");
+  const loop = () => { if (!wheel.spinning || wheel.spinning.end !== end) return;
+    const k = Math.min(1, (performance.now() - t0) / WHEEL_SPIN_MS); wheel.angle = from + (end - from) * (1 - Math.pow(1 - k, 3)); wheelDraw();
+    if (k < 1) requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+  setTimeout(wheelLand, WHEEL_SPIN_MS); // lands on time even where animation frames are held back
+}
+function wheelLand() {
+  const s = wheel.spinning; if (!s) return;
+  wheel.spinning = null; wheel.angle = (s.end % TAU + TAU) % TAU;
+  const sl = WHEEL_SLICES[s.slice], who = partyName(s.pid);
+  wheel.shown.push({pid: s.pid, slice: s.slice});
+  $("twSay").textContent = sl.kind === "backfire" ? `${who} spun BACKFIRE! ${sl.text}` : `${who}: "${sl.text}"`;
+  sound(sl.sound);
+  if (sl.kind === "golden") { burst(wheel.sparks, "confetti", 150, 150, "#e3b341"); burst(wheel.sparks, "confetti", 110, 170, "#e3b341"); burst(wheel.sparks, "confetti", 190, 170, "#e3b341");
+    const loop = () => { wheelDraw(); if (wheel.sparks.length) requestAnimationFrame(loop); }; requestAnimationFrame(loop); }
+  wheelDraw(); wheelCool();
+  wheel.hideT = setTimeout(() => { if (wheel.queue.length) return wheelPlay(wheel.queue.shift()); if (!wheel.open) $("tauntWheel").classList.add("hidden"); }, 2600);
+}
+function wheelDraw() {
+  const cv = $("twCv"), S = 300, d = Math.min(2, window.devicePixelRatio || 1);
+  if (cv.width !== S * d) { cv.width = S * d; cv.height = S * d; }
+  const c = cv.getContext("2d"); c.setTransform(d, 0, 0, d, 0, 0); c.clearRect(0, 0, S, S);
+  const cx = 150, cy = 158, R = 130, w = TAU / 12, r = rand(41);
+  c.save(); c.translate(cx, cy); c.rotate(wheel.angle); c.lineJoin = c.lineCap = "round";
+  WHEEL_SLICES.forEach((sl, i) => {
+    const a0 = -Math.PI / 2 + i * w;
+    c.beginPath(); c.moveTo(0, 0); c.arc(0, 0, R, a0, a0 + w); c.closePath();
+    c.fillStyle = sl.kind === "golden" ? "#f3d27a" : sl.kind === "backfire" ? "#f2b8b2" : i % 2 ? "#fbf8ef" : "#e3ebf7"; c.fill();
+    c.strokeStyle = "#1b1b1b"; c.lineWidth = 1.6 + r() * .8; // a pen line, a little uneven
+    c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(a0) * (R + r() * 2 - 1), Math.sin(a0) * (R + r() * 2 - 1)); c.stroke();
+    c.save(); c.rotate(a0 + w / 2 + Math.PI / 2); c.fillStyle = sl.kind === "backfire" ? RED : sl.kind === "golden" ? "#8a6a1b" : "#1b1b1b";
+    c.font = '700 15px "Patrick Hand"'; c.textAlign = "center"; c.fillText(sl.short, 0, -R + 24); c.restore();
+  });
+  c.strokeStyle = "#1b1b1b"; c.lineWidth = 2.6; c.beginPath(); c.arc(0, 0, R, 0, TAU); c.stroke();
+  c.fillStyle = "#1b1b1b"; c.beginPath(); c.arc(0, 0, 12, 0, TAU); c.fill();
+  c.restore();
+  c.beginPath(); c.moveTo(cx - 13, 6); c.lineTo(cx + 13, 6); c.lineTo(cx, 34); c.closePath(); c.fillStyle = RED; c.fill(); c.strokeStyle = "#1b1b1b"; c.lineWidth = 2; c.stroke();
+  drawSparks(c, wheel.sparks);
+}
+$("twCv").addEventListener("pointerdown", e => { wheel.flick = {x: e.clientX, y: e.clientY}; });
+$("twCv").addEventListener("pointerup", () => { if (!wheel.flick) return; wheel.flick = null; wheelAsk(); });
+$("twClose").onclick = () => { sound("click"); wheelClose(); };
+$("wheelBtn").onclick = () => { sound("click"); wheelOpen(); };
 
 // test hook for automated play-testing
 window.paperWar = {get state() { return {phase, cur, players, opts, pending, lastResult, replay}; }, hitTest, mirror, W, H, cpuAim, playReplay, awards};
