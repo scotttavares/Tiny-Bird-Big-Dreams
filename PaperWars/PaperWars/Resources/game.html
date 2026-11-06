@@ -6559,9 +6559,12 @@ window.addEventListener("keydown", e => {
 // opponent's "over" can't trick it into revealing), and private content (a Rock-Paper-Scissors pick, or anything marked
 // private) only ever goes to the opponent. Shots and results carry n and are handed to the game exactly once, in turn
 // order (shot 1, result 1, shot 2, ...), however the network duplicates or reorders them.
+// Only the two seated players' hidden / rps / shot / result / reinforce / over count (net.turnCheck adds whose turn it is),
+// and a pid, once it has said hello from one transport id, can't be claimed from another.
 const NET_V = 1, NET_UPDATE_TEXT = "Update Paper Wars to play together.";
 const NET_TYPES = ["hello", "lobby", "start", "hidden", "rps", "shot", "result", "reinforce", "taunt", "spin", "queue", "remove", "over", "reveal", "catchup"];
 const NET_HOST_ONLY = ["lobby", "start", "spin", "remove", "catchup"];
+const NET_SEATED = ["hidden", "rps", "shot", "result", "reinforce", "over"]; // only the two seated players may send these
 const NET_LOGGED = ["start", "hidden", "rps", "shot", "result", "reinforce", "taunt", "spin", "queue", "over", "reveal"]; // what a late spectator is caught up on
 const NET_ARMY_KEYS = ["soldiers", "fort", "known", "army", "armies"];
 const NET_MAX = 60000, NET_CHUNK = 40000; // Game Center's reliable messages top out near 87 KB
@@ -6718,10 +6721,14 @@ const net = (() => {
       if (st.past.has(id) || (st.match && st.match.matchId === id)) return;
       beginMatch(d); deliver(d); flushEarly(); return;
     }
-    const pos = netPos(d);
-    if (pos == null) return deliver(d);
+    const pos = netPos(d), seated = NET_SEATED.includes(d.t);
+    if (pos == null && !seated) return deliver(d);
     if (!st.match || d.m !== st.match.matchId) { if (!st.past.has(d.m) && st.early.length < 200) st.early.push(d); return; }
+    if (!st.match.seats.includes(d.from)) return; // spectators and strangers don't play
+    if (typeof api.turnCheck === "function" && !api.turnCheck(d)) return; // Task 7: is it this seat's turn to shoot (or to answer)?
+    if (pos == null) return deliver(d);
     if (pos < st.next || st.held.has(pos)) return; // already had it
+    if (pos - st.next >= 50) return; // too far ahead to be real: don't let anyone grow the buffer
     if (pos > st.next) { st.held.set(pos, d); return; } // too early: wait for the ones before it
     st.next++; deliver(d); flushHeld();
   }
@@ -6729,7 +6736,7 @@ const net = (() => {
     const pid = d.pid;
     if (typeof pid !== "string" || !NET_PID.test(pid) || d.from !== pid || pid === mine().pid) return;
     const prev = peers.get(pid);
-    if (prev && prev.id !== id && present.has(prev.id)) return; // someone else already speaks as this pid
+    if (prev && prev.id !== id) return; // a pid stays bound to its first transport id (it survives reconnects), so nobody can take over a dropped player's seat
     const key = `${pid}:${d.s}:${d.k}`; if (st.seen.has(key)) return; st.seen.add(key);
     const owns = netCleanOwns(d.owns), host = d.host === true && owns.arsenal; // only an owner can host
     const old = idOf.get(id); if (old && old !== pid) peers.delete(old);
@@ -6794,7 +6801,7 @@ const net = (() => {
       const env = envelope(msg);
       env.pub = to === "all" || to === "spectators";
       if (msg.t === "start") { beginMatch(msg); env.m = st.match.matchId; }
-      else if (netPos(msg) != null && st.match) env.m = st.match.matchId;
+      else if ((netPos(msg) != null || NET_SEATED.includes(msg.t)) && st.match) env.m = st.match.matchId;
       if (msg.t === "lobby" && isHost) setRoles(msg);
       if (msg.t === "over") st.over = true; // this phone's own "over": now its army may be revealed
       const pos = netPos(env);
@@ -6820,6 +6827,8 @@ const net = (() => {
     get over() { return st.over; },
     get updateNeeded() { return st.updateNeeded; },
     _resolve: resolve,
+    // Task 7 sets this: (msg) => true if msg.from may send this shot/result now (whose turn it is). Seats are already checked.
+    turnCheck: null,
   };
   if (fakeNetRoom) T.connect(); // a fake room is joined on load (like accepting a Game Center invite)
   return api;
