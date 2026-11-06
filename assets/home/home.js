@@ -191,6 +191,7 @@
       { n: "orbit", kind: "phone", alt: "Orbit's orbit view of friends and family", line: "A hello that brings them closer.", cap: "12:40 pm · Orbit", sub: "A hello on the lunch break", ic: '<img src="/assets/home/icon-orbit.png" alt="" />' },
       { n: "fieldguide", kind: "duo", alt: "A Field Guide journal spread on iPhone Duo", line: "A page for every adventure.", cap: "6:30 pm · Field Guide", sub: "A butterfly, saved forever", ic: '<img src="/assets/home/icon-fieldguide.png" alt="" />' },
       { n: "paperwars", kind: "phone", alt: "A Paper Wars battlefield on notebook paper", line: "A laugh to end the night.", cap: "9:15 pm · Paper Wars", sub: "Face to face, one more round", ic: '<img src="/assets/home/icon-paperwars.png" alt="" />' },
+      { n: "lull-sleep", file: "lull-sleep", app: "lull", kind: "phone", alt: "Lull's Sleep screen", line: "A softer way to drift off.", cap: "10:45 pm · Lull", sub: "Sleep mode, lights out", ic: '<img src="/assets/home/icon-lull.png" alt="" />' },
     ];
     var root = $("#reel"), vids = [$("#vA"), $("#vB")], still = $(".reel .still"), capEl = $("#reelCap"), ticks = $$("#ticks i b"), pp = $("#reelPP");
     var RATE = 0.8; // play the clips a little slower than real time
@@ -199,7 +200,7 @@
     if (saveData) playing = false;
     function src(i) { return "/assets/home/reel/" + clips[i].n + ".mp4"; }
     var lineEl = $("#reelLine"), shot = $("#appshot"), shotImg = $("#appshotImg"), shotCap = $("#appshotCap");
-    var NAMES = { lull: "Lull", orbit: "Orbit", fieldguide: "Field Guide", paperwars: "Paper Wars" };
+    var NAMES = { lull: "Lull", "lull-sleep": "Lull Sleep", orbit: "Orbit", fieldguide: "Field Guide", paperwars: "Paper Wars" };
     clips.forEach(function (c) { var im = new Image(); im.src = "/assets/home/screens/" + c.n + ".jpg"; });
     function showShot(i) {
       var c = clips[i];
@@ -239,6 +240,7 @@
       else go();
     }
     vids.forEach(function (v) {
+      v.addEventListener("error", function () { if (v === vids[1 - front] && playing && visible) show((idx + 2) % clips.length); });
       v.addEventListener("ended", function () { if (v === vids[front] && playing && visible) show((idx + 1) % clips.length); });
     });
     function start() {
@@ -278,9 +280,10 @@
   (function () {
     var toy = $("#lullToy"), sp = $("#sphere"), tx = $("#breathTxt"), s = .8, hold = false, n = 0, peak = false, running = false;
     var vis = whenVisible(toy, function () { if (!running) { running = true; requestAnimationFrame(f); } });
-    var arc = $("#lullArc");
-    function down(e) { if (e) e.preventDefault(); hold = true; tx.textContent = "Breathe in"; noise(4, 300, 700, .1, "lowpass"); trackOnce("toy", "lull"); }
-    function up() { if (!hold) return; hold = false; if (peak) { n++; peak = false; } tx.textContent = "Breathe out"; setTimeout(function () { if (!hold) tx.textContent = n ? n + " breath" + (n > 1 ? "s" : "") : "Hold"; }, 2600); noise(4, 700, 250, .08, "lowpass"); }
+    var arc = $("#lullArc"), timeEl = $("#lullTime"), pill = $("#lullPill"), left = 180, ticking = null;
+    function tick() { left = Math.max(0, left - 1); timeEl.textContent = Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0"); }
+    function down(e) { if (e) e.preventDefault(); hold = true; tx.textContent = "Breathe in"; pill.textContent = "Pause"; if (!ticking) ticking = setInterval(tick, 1000); noise(4, 300, 700, .1, "lowpass"); trackOnce("toy", "lull"); }
+    function up() { if (!hold) return; hold = false; if (peak) { n++; peak = false; } tx.textContent = "Breathe out"; setTimeout(function () { if (!hold) tx.textContent = "Breathe in"; }, 3200); noise(4, 700, 250, .08, "lowpass"); }
     toy.addEventListener("pointerdown", down); addEventListener("pointerup", up); toy.addEventListener("pointerleave", up);
     toy.addEventListener("keydown", function (e) { if ((e.key === " " || e.key === "Enter") && !hold) down(e); });
     toy.addEventListener("keyup", function (e) { if (e.key === " " || e.key === "Enter") up(); });
@@ -288,7 +291,7 @@
       if (!vis()) { running = false; return; }
       s += ((hold ? 1.3 : .8) - s) * (hold ? .012 : .016); if (s > 1.2) peak = true;
       sp.style.transform = "scale(" + s + ")";
-      arc.setAttribute("stroke-dashoffset", String(289 - 289 * Math.min(1, Math.max(0, (s - .8) / .5))));
+      arc.setAttribute("stroke-dashoffset", String(298 - 298 * Math.min(1, Math.max(0, (s - .8) / .5))));
       sp.style.boxShadow = "0 0 " + (30 + (s - .8) * 180) + "px " + ((s - .8) * 40) + "px rgba(160,130,255," + (.35 + (s - .8) * .6) + ")";
       requestAnimationFrame(f);
     }
