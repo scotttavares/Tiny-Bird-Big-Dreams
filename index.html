@@ -3,597 +3,189 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Tiny Bird, Big Dreams — App Studio</title>
-<meta name="description" content="A one-person app studio building web and mobile apps with big ambitions. Just me, an idea, and Claude — shipping things that matter from scratch." />
+<title>Tiny Bird, Big Dreams: small apps for a great day</title>
+<meta name="description" content="Tiny Bird, Big Dreams is a small team making apps and games for the everyday moments that make a good day great: Lull, Orbit, Field Guide and Paper Wars." />
 <meta property="og:title" content="Tiny Bird, Big Dreams" />
-<meta property="og:description" content="A one-person app studio building web and mobile apps with big ambitions." />
+<meta property="og:description" content="Small moments. Big life. Apps and games for the everyday moments that make a good day great." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://www.tinybirdbigdreams.com/" />
 <meta property="og:image" content="https://www.tinybirdbigdreams.com/assets/og-image.png" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Tiny Bird, Big Dreams" />
-<meta name="twitter:description" content="A one-person app studio building web and mobile apps with big ambitions." />
+<meta name="twitter:description" content="Small moments. Big life. Apps and games for the everyday moments that make a good day great." />
 <meta name="twitter:image" content="https://www.tinybirdbigdreams.com/assets/og-image.png" />
+<meta name="theme-color" content="#f2c9a5" />
+<link rel="icon" href="/favicon.ico" />
+<link rel="manifest" href="/site.webmanifest" />
 <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
-<link rel="manifest" href="site.webmanifest" />
-<meta name="theme-color" content="#0E0A18" />
-<!--TBBD:VID-->
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,300;1,9..144,400&family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300;1,400&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="assets/site.css?v=2" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Inter+Tight:wght@400;500;600;700&amp;family=Caveat:wght@600;700&amp;display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/assets/home/home.css?v=1" />
 </head>
 <body>
+<canvas id="sky" aria-hidden="true"></canvas><canvas id="stars" aria-hidden="true"></canvas><div class="clouds" id="clouds" aria-hidden="true"></div>
 
-<!-- ══════════════════════════════════════ -->
-<!-- HERO                                  -->
-<!-- ══════════════════════════════════════ -->
-<section class="hero">
-  <div id="stars"></div>
-
-  <!-- NAV -->
-  <nav>
-    <div class="logo-mark">
-      <div class="logo-icon">
-        <svg viewBox="0 0 52 52" fill="none" width="100%" height="100%">
-          <rect width="52" height="52" fill="#2C1F3E"/>
-          <!-- body -->
-          <ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/>
-          <ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/>
-          <!-- left wing -->
-          <path d="M18 29 Q12 21 20 27" fill="#d08010"/>
-          <!-- right wing -->
-          <path d="M42 28 Q49 21 44 32" fill="#d08010"/>
-          <!-- tail -->
-          <path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="#c07010"/>
-          <path d="M41 35 Q47 38 44 44 Q39 39 41 35Z" fill="#d08010"/>
-          <!-- head -->
-          <circle cx="20" cy="22" r="9.5" fill="#E8A022"/>
-          <!-- beak -->
-          <path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/>
-          <!-- eye -->
-          <circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/>
-          <circle cx="17.5" cy="19" r="1" fill="white"/>
-          <!-- crest -->
-          <path d="M22 13 Q23.5 8.5 25 8 Q24.5 12 23 14.5Z" fill="#d08010"/>
-          <path d="M24.5 13.5 Q26 9 27.5 8.5 Q27 12.5 25.5 15Z" fill="#E8A022"/>
-          <path d="M27 14 Q28.5 9.5 30 9 Q29.5 13 28 15.5Z" fill="#d08010"/>
-          <!-- highlight spots -->
-          <circle cx="33" cy="30" r="2" fill="rgba(255,255,255,.13)"/>
-          <circle cx="37" cy="34" r="1.4" fill="rgba(255,255,255,.08)"/>
-        </svg>
-      </div>
-      <div class="logo-text-wrap">
-        <div class="logo-t1">Tiny Bird</div>
-        <div class="logo-rule"></div>
-        <div class="logo-t2">Big Dreams</div>
-        <div class="logo-rule"></div>
-        <div class="logo-t3">App Studio</div>
-      </div>
-    </div>
-
-    <ul class="nav-links">
-      <li><a href="apps.html">Apps</a></li>
-      <li><a href="#studio">Studio</a></li>
-      <li><a href="#brand">Brand</a></li>
-      <li><a href="#contact" class="nav-cta">Say Hello</a></li>
-    </ul>
-
-    <button class="hamburger" id="ham" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
-  </nav>
-
-  <!-- Mobile Menu -->
-  <div class="mobile-menu" id="mobileMenu">
-    <a href="apps.html" onclick="closeMob()">Apps</a>
-    <a href="#studio" onclick="closeMob()">Studio</a>
-    <a href="#brand" onclick="closeMob()">Brand</a>
-    <a href="#contact" class="m-cta" onclick="closeMob()">Say Hello</a>
+<header class="top">
+  <a class="brand" href="/" id="logo" aria-label="Tiny Bird, Big Dreams home">
+    <svg viewBox="0 0 52 52" aria-hidden="true"><ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/><circle cx="20" cy="22" r="9.5" fill="#E8A022"/><path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#b86d08"/><circle cx="18.5" cy="20" r="2.6" fill="#2C1F3E"/></svg>
+    Tiny Bird, Big Dreams
+  </a>
+  <nav class="pill" aria-label="Main"><a href="#reel">Life with us</a><a href="#day">A day with us</a><a href="#team">Studio</a><a class="navshop" href="#shop">Shop</a></nav>
+  <div class="tools">
+    <button class="iconbtn" id="snd" type="button" aria-pressed="false" aria-label="Sound on or off">🔇</button>
+    <button class="iconbtn menubtn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sheet" aria-label="Menu">☰</button>
   </div>
+</header>
+<div class="sheet" id="sheet"><nav aria-label="Mobile"><a href="#reel">Life with us</a><a href="#day">A day with us</a><a href="#team">Studio</a><a href="/apps">All apps</a><a class="navshop" href="#shop">Shop</a></nav></div>
 
-  <!-- HERO BODY -->
-  <div class="hero-body">
-    <div class="pill">
-      <span class="pill-dot"></span>
-      <!--TBBD:PILL-->One Founder. One AI. Real Apps.<!--/TBBD:PILL-->
-    </div>
-    <h1>Tiny Bird<br/><em>Big Dreams</em></h1>
-    <p class="hero-sub"><!--TBBD:HERO_SUB-->A one-person app studio building web and mobile apps with big ambitions. Just me, an idea, and Claude — shipping things that matter from scratch.<!--/TBBD:HERO_SUB--></p>
+<div id="clock" aria-hidden="true"><svg viewBox="0 0 34 20"><path d="M2 18 A15 15 0 0 1 32 18" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/><circle id="sunDot" cx="2" cy="18" r="3.4" fill="#E8A022"/></svg><div><b id="clockT">6:00 am</b><br/><span id="clockL">Dawn</span></div></div>
 
-    <div class="bird-stage">
-      <div class="sp" style="--sz:9px;--sc:#E8A022;--sd:2.5s;--sdl:0s;top:18%;left:6%;"></div>
-      <div class="sp" style="--sz:6px;--sc:#E85D3A;--sd:3s;--sdl:.7s;top:8%;right:14%;"></div>
-      <div class="sp" style="--sz:11px;--sc:#fff;--sd:2s;--sdl:1.2s;bottom:24%;left:12%;"></div>
-      <div class="sp" style="--sz:7px;--sc:#E8A022;--sd:3.5s;--sdl:.3s;bottom:28%;right:8%;"></div>
-      <div class="sp" style="--sz:5px;--sc:#fff;--sd:2.8s;--sdl:1.8s;top:38%;right:4%;"></div>
-      <svg class="bird-svg" viewBox="0 0 340 280" fill="none">
-        <circle cx="170" cy="140" r="100" fill="rgba(232,160,34,.07)" stroke="rgba(232,160,34,.13)" stroke-width="1"/>
-        <circle cx="170" cy="140" r="74" fill="rgba(232,160,34,.05)"/>
-        <ellipse cx="60" cy="200" rx="45" ry="18" fill="rgba(255,255,255,.04)"/>
-        <ellipse cx="280" cy="180" rx="38" ry="15" fill="rgba(255,255,255,.04)"/>
-        <ellipse cx="175" cy="155" rx="62" ry="42" fill="#E8A022"/>
-        <ellipse cx="165" cy="162" rx="36" ry="26" fill="#f0b030" fill-opacity=".45"/>
-        <path d="M120 148 Q78 98 112 140 Q88 122 118 150Z" fill="#d08010"/>
-        <path d="M230 140 Q282 88 248 148 Q267 106 235 143Z" fill="#d08010"/>
-        <path d="M228 165 Q262 170 252 185 Q242 175 228 165Z" fill="#c07010"/>
-        <path d="M226 168 Q257 180 243 194 Q236 182 226 168Z" fill="#d08010"/>
-        <path d="M222 172 Q249 191 233 203 Q228 191 222 172Z" fill="#c07010"/>
-        <circle cx="132" cy="120" r="42" fill="#E8A022"/>
-        <path d="M93 120 L110 115 L110 126Z" fill="#c07010"/>
-        <path d="M93 120 L110 120 L110 126Z" fill="#b06010"/>
-        <circle cx="125" cy="112" r="12" fill="#2C1F3E"/>
-        <circle cx="122" cy="109" r="4" fill="white"/>
-        <circle cx="124" cy="111" r="1.5" fill="white" fill-opacity=".6"/>
-        <path d="M142 80 Q148 60 152 55 Q153 70 148 82Z" fill="#d08010"/>
-        <path d="M148 82 Q156 62 162 58 Q161 73 156 84Z" fill="#E8A022"/>
-        <path d="M155 84 Q165 65 170 62 Q168 77 163 86Z" fill="#d08010"/>
-        <circle cx="160" cy="148" r="5" fill="rgba(255,255,255,.14)"/>
-        <circle cx="175" cy="158" r="4" fill="rgba(255,255,255,.09)"/>
-        <circle cx="190" cy="148" r="3.5" fill="rgba(255,255,255,.09)"/>
-        <line x1="155" y1="194" x2="148" y2="218" stroke="#c07010" stroke-width="3" stroke-linecap="round"/>
-        <line x1="148" y1="218" x2="138" y2="226" stroke="#c07010" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="148" y1="218" x2="148" y2="228" stroke="#c07010" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="148" y1="218" x2="158" y2="225" stroke="#c07010" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="170" y1="196" x2="168" y2="220" stroke="#c07010" stroke-width="3" stroke-linecap="round"/>
-        <line x1="168" y1="220" x2="158" y2="228" stroke="#c07010" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="168" y1="220" x2="168" y2="230" stroke="#c07010" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="168" y1="220" x2="178" y2="227" stroke="#c07010" stroke-width="2.5" stroke-linecap="round"/>
-      </svg>
-    </div>
+<button id="bird" type="button" aria-label="The Tiny Bird. Tap me.">
+  <svg viewBox="0 0 60 60"><g transform="translate(4 4)"><path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="#c07010"/><ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/><ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f6c45a" opacity=".5"/><path class="wing" d="M24 30 Q30 10 42 26 Z" fill="#d08010"/><circle cx="20" cy="22" r="9.5" fill="#E8A022"/><path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#b86d08"/><circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/><circle cx="17.5" cy="19" r="1" fill="#fff"/><path d="M22 13 Q23.5 8.5 25 8 Q24.5 12 23 14.5Z" fill="#d08010"/><path d="M24.5 13.5 Q26 9 27.5 8.5 Q27 12.5 25.5 15Z" fill="#E8A022"/></g></svg>
+</button>
+
+<main>
+<section class="hero" data-h="6" data-l="Dawn">
+  <div class="wrap">
+    <h1 class="serif"><span class="ln"><span>Small moments.</span></span><span class="ln"><span><em>Big life.</em></span></span></h1>
+    <p class="sub">Tiny Bird, Big Dreams is a small team making apps and games for the everyday moments that make a good day great.</p>
+    <div class="cta"><a class="btn dark" href="#shop">See our apps</a><a class="btn ghost" href="#reel">Watch a day ↓</a></div>
+    <div class="hint">✦ You're the bird. Move around, tap the sky to flap, and scroll through a day.</div>
   </div>
+</section>
 
-  <div class="hero-stats">
-    <div style="text-align:center;">
-      <div class="stat-num">1<span> founder</span></div>
-      <div class="stat-label">Solo &amp; Intentional</div>
+<section class="reel" id="reel" data-h="6.6" data-l="Sunrise" aria-label="Life with our apps">
+  <div class="frame">
+    <img class="still on" src="/assets/home/reel/lull-poster.jpg" alt="" />
+    <video id="vA" muted="" playsinline="" preload="none" poster="/assets/home/reel/lull-poster.jpg"></video>
+    <video id="vB" muted="" playsinline="" preload="none"></video>
+    <div class="shade"></div>
+    <div class="over">
+      <div><div class="eyebrow">Life with Tiny Bird</div><h2 class="serif">A breath. A hello.<br/>A page. A laugh.</h2></div>
+      <div><div class="cap" id="reelCap" aria-live="polite"><span class="li"><i></i></span><div><b>7:12 am · Lull</b><span>One breath before the emails</span></div></div><div class="ticks" id="ticks"><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i></div></div>
     </div>
-    <div style="text-align:center;">
-      <div class="stat-num">&#8734;<span></span></div>
-      <div class="stat-label">Ideas in the Queue</div>
+    <button class="iconbtn pp" id="reelPP" type="button" aria-label="Pause video">❚❚</button>
+  </div>
+</section>
+
+<section class="picker" data-h="7" data-l="Morning">
+  <h2 class="serif rv">What brings you here?</h2>
+  <p class="rv d1">Pick one, and we'll fly you to it.</p>
+  <div class="chips rv d2">
+    <a href="#lull" data-pick="calm"><span class="li"><i></i></span>I want to feel calmer</a>
+    <a href="#orbit" data-pick="people"><img src="/assets/home/icon-orbit.png" alt="" />I miss my people</a>
+    <a href="#fg" data-pick="remember"><img src="/assets/home/icon-fieldguide.png" alt="" />I want to remember more</a>
+    <a href="#pw" data-pick="fun"><img src="/assets/home/icon-paperwars.png" alt="" />I need something fun</a>
+  </div>
+</section>
+
+<div id="day"></div>
+<section class="moment day" id="lull" data-h="7.2" data-l="Morning">
+  <div class="wrap">
+    <div class="scene rv"><div class="ph"><img src="/assets/home/lull.jpg" alt="A woman taking a slow breath on the edge of her bed in morning light" loading="lazy" /></div><div class="time">7:12 am</div><div class="quote">"Before the emails, I take one breath."<small>Maya, 31 · placeholder story</small></div>
+      <div class="toy" id="lullToy" role="button" tabindex="0" aria-label="Press and hold to breathe in"><div id="breathTxt">Press &amp; hold</div><div id="sphere"></div><div class="tip">HOLD TO BREATHE IN</div></div></div>
+    <div class="copy"><div class="eyebrow rv"><span class="li"><i></i></span>Lull · App Store</div><h2 class="serif rv d1">Start the day<br/>with one breath.</h2><p class="rv d2">One glowing sphere grows as you breathe in and softens as you breathe out. A calm minute, whenever you need it. Fully offline.</p>
+      <div class="real rv d3"><b>In real life</b>A minute of slow breathing before a busy day. No account, no streaks to keep, nothing to read.</div>
+      <div class="btns rv d4"><a class="btn solid" href="https://apps.apple.com/app/id6783862542" target="_blank" rel="noopener">Download Lull</a></div></div>
+  </div>
+</section>
+
+<section class="moment flip day" id="orbit" data-h="12.66" data-l="Lunch">
+  <div class="wrap">
+    <div class="scene rv"><div class="ph"><img src="/assets/home/orbit.jpg" alt="A man smiling at a message on his phone on a park bench at lunch" loading="lazy" /></div><div class="time">12:40 pm</div><div class="quote">"Orbit nudged me. I texted my sister. She called back."<small>Dev, 44 · placeholder story</small></div>
+      <div class="toy" id="orbitToy" aria-label="Drag someone away from You and watch them come back"><svg class="tether" id="tether" aria-hidden="true"></svg><div class="you">You</div><div class="tip">DRAG SOMEONE AWAY</div></div></div>
+    <div class="copy"><div class="eyebrow rv"><img src="/assets/home/icon-orbit.png" alt="" />Orbit · App Store</div><h2 class="serif rv d1">Keep your<br/>people close.</h2><p class="rv d2">The people you love orbit around you, and drift when life gets busy. A small hello pulls them back.</p>
+      <div class="real rv d3"><b>In real life</b>A gentle nudge when someone's drifting. A two-second hello on your lunch break. Private and on-device, with no account.</div>
+      <div class="btns rv d4"><a class="btn solid" href="https://apps.apple.com/app/id6785966852" target="_blank" rel="noopener">Download Orbit</a><a class="btn ghost" href="/orbit">About Orbit</a></div></div>
+  </div>
+</section>
+
+<section class="moment" id="fg" data-h="18.5" data-l="Evening">
+  <div class="wrap">
+    <div class="scene rv"><div class="ph"><img src="/assets/home/fieldguide.jpg" alt="A parent and child drawing together in a journal app at the kitchen table" loading="lazy" /></div><div class="time">6:30 pm</div><div class="quote">"We draw one page every night. He's filled a whole book."<small>Kate &amp; Leo · placeholder story</small></div>
+      <div class="toy" id="fgToy" aria-label="Tap to add stickers"><div class="scrib">Tuesday ✿<br/>found a frog. named him Gus.</div><div class="tip">TAP TO ADD STICKERS</div></div></div>
+    <div class="copy"><div class="eyebrow rv"><img src="/assets/home/icon-fieldguide.png" alt="" />Field Guide · Beta</div><h2 class="serif rv d1">Keep the<br/>little things.</h2><p class="rv d2">A sketch journal made for the fold. Draw on two-page spreads, stick down photos and stickers, then replay your page like a tiny show.</p>
+      <div class="real rv d3"><b>In real life</b>Ten minutes at the kitchen table that turn into a book of your year.</div>
+      <div class="btns rv d4"><a class="btn solid" href="/fieldguide">Join the beta</a></div></div>
+  </div>
+</section>
+
+<section class="moment flip" id="pw" data-h="21.25" data-l="Night">
+  <div class="wrap">
+    <div class="scene rv"><div class="ph"><img src="/assets/home/paperwars.jpg" alt="Two friends laughing on the sofa while playing a game on one phone" loading="lazy" /></div><div class="time">9:15 pm</div><div class="quote">"One more round. Okay, ONE more."<small>Jo &amp; Alex · placeholder story</small></div>
+      <div class="toy" id="pwToy" aria-label="Draw a line from your soldier to the enemy"><svg id="pwSvg" viewBox="0 0 300 300" preserveAspectRatio="none" aria-hidden="true"></svg><div class="tip" id="pwTip">draw a line to the blue guy ✏️</div></div></div>
+    <div class="copy"><div class="eyebrow rv"><img src="/assets/home/icon-paperwars.png" alt="" />Paper Wars · Play free</div><h2 class="serif rv d1">End the day<br/>laughing.</h2><p class="rv d2">A pencil war on notebook paper. Hide your stick-figure army, fire in secret and scribble out the enemy.</p>
+      <div class="real rv d3"><b>In real life</b>A five-minute game with a friend on the couch. Just a good laugh before bed.</div>
+      <div class="btns rv d4"><a class="btn solid" href="/play/paperwars/">Play free now →</a><a class="btn ghost" href="/paperwars">About Paper Wars</a></div></div>
+  </div>
+</section>
+
+<section class="addup" data-h="22.5" data-l="Late">
+  <div class="wrap">
+    <h2 class="serif rv">It adds up to<br/><em>a great day.</em></h2>
+    <div class="eq"><div class="t"><span class="li" style="display:grid"><i></i></span>1 breath</div><span class="op">+</span><div class="t"><img src="/assets/home/icon-orbit.png" alt="" />1 hello</div><span class="op">+</span><div class="t"><img src="/assets/home/icon-fieldguide.png" alt="" />1 page</div><span class="op">+</span><div class="t"><img src="/assets/home/icon-paperwars.png" alt="" />1 game</div><span class="op">=</span><div class="t res">a big life</div></div>
+  </div>
+</section>
+
+<section class="team" id="team" data-h="23.5" data-l="Night">
+  <div class="wrap">
+    <div>
+      <svg id="nest" viewBox="0 0 150 60" aria-hidden="true"><path d="M10 22 Q75 70 140 22 Q130 52 75 56 Q20 52 10 22Z" fill="#7a4e22"/><path d="M14 24 Q75 62 136 24" stroke="#a8743a" stroke-width="3" fill="none"/><path d="M20 30 Q75 64 130 30" stroke="#5e3b18" stroke-width="2" fill="none"/></svg>
+      <h2 class="serif rv">Small team.<br/><em>Big dreams.</em></h2>
+      <p class="lede rv d1">We're an independent studio. We make a few things, and make them well, for the small moments in a normal day. More is hatching in the nest.</p>
+      <div class="vals">
+        <div class="rv d1"><b>Made for every day</b><span>If it isn't useful on a Tuesday, we don't ship it.</span></div>
+        <div class="rv d2"><b>Private by design</b><span>Your breaths, people and pages stay on your phone wherever we can manage it.</span></div>
+        <div class="rv d3"><b>Small on purpose</b><span>Apps that do one thing beautifully and get out of your way.</span></div>
+      </div>
     </div>
-    <div style="text-align:center;">
-      <div class="stat-num">Live<span></span></div>
-      <div class="stat-label">First App Shipped</div>
+    <div class="contact rv d2" id="contact">
+      <div class="nestnote" id="nestNote" hidden="">🐦 <strong>Your message has landed in the nest.</strong> We caught it mid-flight and we'll swoop back soon.</div>
+      <h3 class="serif">Say hello</h3>
+      <p>Questions, ideas, bugs, kind words. A real person on our team reads every message.</p>
+      <form id="contactForm" action="/email-webhook" method="POST">
+        <div class="field"><label for="cName">Name</label><input id="cName" name="name" autocomplete="name" required="" /></div>
+        <div class="field"><label for="cEmail">Email</label><input id="cEmail" name="email" type="email" autocomplete="email" required="" /></div>
+        <div class="field"><label for="cMsg">Message</label><textarea id="cMsg" name="message" required=""></textarea></div>
+        <input type="hidden" name="vid" value="" />
+        <button class="btn solid" type="submit">Send it →</button>
+        <p class="formmsg" id="contactMsg" role="status"></p>
+      </form>
     </div>
   </div>
 </section>
 
-<svg class="wave-svg" viewBox="0 0 1440 80" preserveAspectRatio="none">
-  <path d="M0,0 C360,80 1080,0 1440,60 L1440,0 L0,0Z" fill="#2C1F3E"/>
-</svg>
-
-<!-- ══════════ FEATURES ══════════ -->
-<div style="background:var(--cream);" id="apps">
-  <div class="section">
-    <div class="section-label reveal">The Philosophy</div>
-    <h2 class="section-title reveal">Small team.<br/><em>No excuses.</em></h2>
-    <div class="cards">
-      <div class="card reveal" style="--accent:#E8A022;">
-        <div class="card-icon" style="--ibg:#FEF3E2;">🩶</div>
-        <div class="card-title">Built Lean on Purpose</div>
-        <p class="card-desc">No bloated team, no slow committees. One person makes every call — design, code, product, copy. That speed and ownership shows up in the apps.</p>
-      </div>
-      <div class="card reveal" style="--accent:#E85D3A;">
-        <div class="card-icon" style="--ibg:#FEF0EC;">🤖</div>
-        <div class="card-title">AI as Co-Founder</div>
-        <p class="card-desc">Claude isn't just a tool here — it's a genuine collaborator. From architecture decisions to UI copy, AI accelerates what one person can ship.</p>
-      </div>
-      <div class="card reveal" style="--accent:#4A7C59;">
-        <div class="card-icon" style="--ibg:#EBF4EE;">🌱</div>
-        <div class="card-title">Apps We Actually Want</div>
-        <p class="card-desc">No client briefs, no compromises. Every app starts with a real itch to scratch — if it doesn't solve something genuinely annoying, it doesn't get built.</p>
-      </div>
+<section class="shop" id="shop" data-h="24" data-l="Shop">
+  <div class="wrap">
+    <div class="head"><h2 class="serif">The Shop</h2><p>Everything we make, in one place. Apps for your day, games for your nights, and whatever's hatching next.</p></div>
+    <div class="tabs" role="group" aria-label="Filter the shop"><button type="button" data-f="all" aria-pressed="true">All</button><button type="button" data-f="app" aria-pressed="false">Apps</button><button type="button" data-f="game" aria-pressed="false">Games</button></div>
+    <div class="grid" id="grid">
+      <article class="card" data-t="app"><div class="im"><img class="bg" src="/assets/home/lull.jpg" alt="" loading="lazy" /><span class="badge">On the App Store</span><span class="ic li" style="display:grid"><i></i></span></div><div class="bd"><h3>Lull</h3><div class="k">Calm breathing · iPhone</div><p>One breath, one glowing sphere, one calmer minute. Fully offline.</p><div class="row"><div class="price">Free<small>price TBC</small></div><a class="btn dark" data-shop="lull" href="https://apps.apple.com/app/id6783862542" target="_blank" rel="noopener">Get</a></div></div></article>
+      <article class="card" data-t="app"><div class="im"><img class="bg" src="/assets/home/orbit.jpg" alt="" loading="lazy" /><span class="badge">On the App Store</span><img class="ic" src="/assets/home/icon-orbit.png" alt="" /></div><div class="bd"><h3>Orbit</h3><div class="k">Friends &amp; family · iPhone</div><p>Gravity for the people who matter. A small hello pulls them back.</p><div class="row"><div class="price">Free<small>price TBC</small></div><a class="btn dark" data-shop="orbit" href="https://apps.apple.com/app/id6785966852" target="_blank" rel="noopener">Get</a></div></div></article>
+      <article class="card" data-t="app"><div class="im"><img class="bg" src="/assets/home/fieldguide.jpg" alt="" loading="lazy" /><span class="badge">Beta</span><img class="ic" src="/assets/home/icon-fieldguide.png" alt="" /></div><div class="bd"><h3>Field Guide</h3><div class="k">Sketch journal · foldables</div><p>Draw, stick down photos, and replay your page like a tiny show.</p><div class="row"><div class="price">Beta<small>via TestFlight</small></div><a class="btn dark" data-shop="fieldguide" href="/fieldguide">Join</a></div></div></article>
+      <article class="card" data-t="game"><div class="im"><img class="bg" src="/assets/home/paperwars.jpg" alt="" loading="lazy" /><span class="badge">Play free</span><img class="ic" src="/assets/home/icon-paperwars.png" alt="" /></div><div class="bd"><h3>Paper Wars</h3><div class="k">Strategy game · web &amp; iPhone</div><p>A pencil war on notebook paper. New: Operation Drumstick, the Thanksgiving campaign.</p><div class="row"><div class="price">Free<small>iPhone coming soon</small></div><a class="btn dark" data-shop="paperwars" href="/play/paperwars/">Play</a></div></div></article>
+      <article class="card" data-t="game"><div class="im"><div class="paper"><span>Full Arsenal 📦</span></div><span class="badge">In-game</span></div><div class="bd"><h3>Full Arsenal crate</h3><div class="k">Paper Wars · in-app unlock</div><p>Every weapon in the pencil case, unlocked. Supports the next update.</p><div class="row"><div class="price">In-app<small>price TBC</small></div><a class="btn dark" data-shop="arsenal" href="/paperwars">Details</a></div></div></article>
+      <article class="card" data-t="game"><div class="im"><div class="mys"><div class="egg"></div></div><span class="badge">Hatching</span></div><div class="bd"><h3>Something's hatching</h3><div class="k">Our next game</div><p>We can't say much yet. It's small, it's silly, and you'll play it with friends.</p><div class="row"><div class="price">Soon<small>be first to know</small></div><a class="btn dark" data-shop="hatching" href="#join">Notify me</a></div></div></article>
     </div>
+    <div class="join" id="join"><h3 class="serif">Get news when something hatches.</h3>
+      <form id="signupForm" action="/signup" method="POST"><label class="sr" for="sEmail">Email</label><input id="sEmail" type="email" name="email" placeholder="you@email.com" autocomplete="email" required="" /><button class="btn solid" type="submit">Join</button></form>
+      <p class="formmsg" id="signupMsg" role="status"></p>
+    </div>
+    <p class="disclose">Made with care by a small team. We use AI tools to help us design, write and build, and people review everything before it ships. The photos and video on this page are AI-generated illustrations of everyday moments.</p>
   </div>
+</section>
+</main>
+
+<footer><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/apps">All apps</a><a href="mailto:hello@tinybirdbigdreams.com">hello@tinybirdbigdreams.com</a><a href="#" data-cookie-settings="">Cookie settings</a><br/><br/>© 2026 Tiny Bird, Big Dreams</footer>
+
+<div class="egg-card" id="eggCard" role="dialog" aria-modal="false" aria-labelledby="eggTitle" aria-hidden="true">
+  <img src="/assets/home/hummingbird.jpg" alt="A ruby-throated hummingbird hovering over the sea at sunrise" loading="lazy" />
+  <div class="b"><div class="k">Cool bird fact</div><h3 class="serif" id="eggTitle">Tiny bird. Big trip.</h3><p>The ruby-throated hummingbird weighs about 3 grams, about as much as a penny, and every autumn it flies roughly 500 miles across the Gulf of Mexico without stopping. Tiny bird, big dreams.</p></div>
+  <button class="iconbtn x" id="eggClose" type="button" aria-label="Close">✕</button>
 </div>
 
-<!-- ══════════ SHOWCASE ══════════ -->
-<div class="showcase" id="studio">
-  <div class="showcase-inner">
-    <div>
-      <div class="section-label reveal">The Studio</div>
-      <h2 class="section-title reveal">1 founder. 1 AI.<br/><em>Real apps.</em></h2>
-      <p class="showcase-body reveal"><!--TBBD:STUDIO_BODY-->Each app in the Tiny Bird studio runs with its own AI webmaster — responding to emails automatically, monitoring uptime, onboarding new users, and keeping everything running 24/7 without manual babysitting. The founder's role? Set the vision, make the big calls, approve what matters. The AI handles everything else.<!--/TBBD:STUDIO_BODY--></p>
-      <div class="reveal">
-        <a href="#contact" class="btn btn-gold">Say Hello</a>
-        <a href="#brand" class="btn btn-outline">Our Brand</a>
-      </div>
-    </div>
-    <div class="reveal" style="display:flex;justify-content:center;align-items:center;">
-      <div class="ai-console">
-        <div class="aic-bar">
-          <div class="aic-dots"><span></span><span></span><span></span></div>
-          <span class="aic-title">tbbd_webmasters &middot; AI Ops</span>
-          <span class="aic-live">&#9679; LIVE</span>
-        </div>
-        <div class="aic-agents">
-          <div class="aic-agent">
-            <div class="aic-pulse green"></div>
-            <div class="aic-ainfo">
-              <div class="aic-aname">TBBD Email Agent</div>
-              <div class="aic-adesc">auto-replies &middot; inbox triage &middot; founder alerts</div>
-            </div>
-            <div class="aic-astat">&lt;1min</div>
-          </div>
-          <div class="aic-agent">
-            <div class="aic-pulse green"></div>
-            <div class="aic-ainfo">
-              <div class="aic-aname">Site Guardian</div>
-              <div class="aic-adesc">uptime &middot; error detection &middot; auto-deploys</div>
-            </div>
-            <div class="aic-astat">99.9%</div>
-          </div>
-          <div class="aic-agent">
-            <div class="aic-pulse amber"></div>
-            <div class="aic-ainfo">
-              <div class="aic-aname">TTBI Webmaster</div>
-              <div class="aic-adesc">user onboarding &middot; support &middot; analytics</div>
-            </div>
-            <div class="aic-astat">building</div>
-          </div>
-          <div class="aic-agent">
-            <div class="aic-pulse green"></div>
-            <div class="aic-ainfo">
-              <div class="aic-aname">Build Bot</div>
-              <div class="aic-adesc">ci/cd &middot; deploy checks &middot; auto-rollback</div>
-            </div>
-            <div class="aic-astat">active</div>
-          </div>
-        </div>
-        <div class="aic-sep"></div>
-        <div class="aic-log">
-          <div class="aic-log-hd">recent activity</div>
-          <div class="aic-row"><span class="aic-ts">04:12:33</span><span class="aic-ok">&#10003;</span><span>email reply sent &middot; TBBD contact form</span></div>
-          <div class="aic-row"><span class="aic-ts">02:55:07</span><span class="aic-ok">&#10003;</span><span>deploy health check passed &middot; all green</span></div>
-          <div class="aic-row"><span class="aic-ts">01:33:44</span><span class="aic-ok">&#10003;</span><span>new user onboarded &middot; TTBI</span></div>
-          <div class="aic-row aic-row--active"><span class="aic-ts">now</span><span class="aic-cur">_</span><span>monitoring all systems&hellip;</span></div>
-        </div>
-        <div class="aic-foot">
-          1 founder approves &middot; AI handles the rest &middot; always&nbsp;on
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════ WHAT'S BREWING ══════════ -->
-<div style="background:var(--cream);">
-  <div class="section">
-    <div class="section-label reveal">What's Brewing</div>
-    <h2 class="section-title reveal">Apps in the<br/><em>nest right now</em></h2>
-    <div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));">
-
-      <!-- Tiny Thoughts, Big Ideas -->
-      <div class="card reveal" style="--accent:#E8A022;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-          <div class="card-icon" style="--ibg:#FEF3E2; margin-bottom:0;">💡</div>
-          <span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:#EBF4EE;color:#4A7C59;padding:4px 10px;border-radius:100px;font-weight:600;">Live Now</span>
-        </div>
-        <div class="card-title">Tiny Thoughts, Big Ideas</div>
-        <p class="card-desc" style="margin-bottom:12px;">An AI research notebook. Drop in articles, links, and notes — then chat with your sources, run 16 AI-powered sparks, and turn scattered reading into real insight.</p>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px;">
-          <span style="font-size:10px;background:#FEF3E2;color:#c07010;padding:3px 9px;border-radius:100px;font-weight:500;">Chat your sources</span>
-          <span style="font-size:10px;background:#FEF3E2;color:#c07010;padding:3px 9px;border-radius:100px;font-weight:500;">16 AI sparks</span>
-          <span style="font-size:10px;background:#FEF3E2;color:#c07010;padding:3px 9px;border-radius:100px;font-weight:500;">Podcast mode</span>
-          <span style="font-size:10px;background:#FEF3E2;color:#c07010;padding:3px 9px;border-radius:100px;font-weight:500;">BYOAI</span>
-        </div>
-        <a href="https://tinythoughtsbigideas.com/" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#E8A022;text-decoration:none;letter-spacing:.01em;">
-          Open the app
-          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </a>
-      </div>
-
-      <!-- Tiny Superpowers -->
-      <div class="card reveal" style="--accent:#E85D3A; border-style:dashed;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-          <div class="card-icon" style="--ibg:#FEF0EC; margin-bottom:0;">⚡</div>
-          <span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:#FEF3E2;color:#E8A022;padding:4px 10px;border-radius:100px;font-weight:600;">In Development</span>
-        </div>
-        <div class="card-title">Tiny Superpowers</div>
-        <p class="card-desc">Next up in the nest. Details coming soon — this one's close to hatching.</p>
-      </div>
-
-      <!-- Skylark -->
-      <div class="card reveal" style="--accent:#6B5FD4; border-style:dashed;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-          <div class="card-icon" style="--ibg:#EEEDF9; margin-bottom:0;">🪶</div>
-          <span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:#EEEDF9;color:#6B5FD4;padding:4px 10px;border-radius:100px;font-weight:600;">Coming Soon</span>
-        </div>
-        <div class="card-title">Skylark</div>
-        <p class="card-desc">Taking flight soon. Details on the way — this one soars high.</p>
-      </div>
-
-    </div>
-
-    <div class="reveal" style="text-align:center;margin-top:40px;">
-      <a href="apps.html" class="btn btn-gold" style="font-size:14px;padding:14px 32px;">
-        See all our apps
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </a>
-    </div>
-
-    <!-- Founder note -->
-    <div class="reveal" style="margin-top:48px;background:#2C1F3E;border-radius:20px;padding:clamp(28px,4vw,40px) clamp(24px,4vw,40px);display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;">
-      <div style="font-size:32px;line-height:1;flex-shrink:0;">🐦</div>
-      <div>
-        <div style="font-family:'Playfair Display',serif;font-size:clamp(16px,2.5vw,20px);font-weight:700;color:var(--cream);margin-bottom:8px;letter-spacing:-.01em;">A note from the founder</div>
-        <p style="font-size:14px;line-height:1.75;color:rgba(251,247,242,.55);max-width:600px;"><!--TBBD:FOUNDER_NOTE-->One person, one AI, real apps — that's the whole deal. Tiny Thoughts, Big Ideas is live and growing. Tiny Superpowers is coming next. I build in public, ship fast, and iterate even faster. The best apps come from solving problems you actually have — and this studio exists to do exactly that.<!--/TBBD:FOUNDER_NOTE--></p>
-        <div style="margin-top:16px;font-size:12px;color:rgba(251,247,242,.3);letter-spacing:.05em;">— Tiny Bird, Big Dreams &middot; est. 2025</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!--TBBD:EMAIL_NOTE--><!--/TBBD:EMAIL_NOTE-->
-
-<!-- ══════════ CTA ══════════ -->
-<div class="cta-band">
-  <div class="cta-inner reveal">
-    <h2><!--TBBD:CTA_H2-->The dream is<br/><em>just taking off.</em><!--/TBBD:CTA_H2--></h2>
-    <p><!--TBBD:CTA_P-->Follow along as apps go from idea → build → launch. Drop a line if you want to say hi.<!--/TBBD:CTA_P--></p>
-    <a href="#contact" class="btn btn-dark" style="font-size:14px;padding:15px 36px;">
-      Say Hello
-      <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-        <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </a>
-  </div>
-</div>
-
-<!-- BRAND IDENTITY -->
-<div class="logo-page" id="brand">
-  <div class="logo-page-header reveal">
-    <div class="lp-label">Our Brand</div>
-    <h2 class="lp-title">Our <em>Logo</em></h2>
-    <p class="lp-sub">The official Tiny Bird, Big Dreams mark — shown across backgrounds and at scale.</p>
-  </div>
-
-  <div style="max-width:1100px;margin:0 auto 64px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;">
-    <div style="background:#2C1F3E;border-radius:24px;padding:clamp(36px,5vw,56px) clamp(24px,4vw,40px);display:flex;align-items:center;justify-content:center;min-height:200px;">
-      <div style="display:flex;align-items:center;gap:16px;">
-        <div style="width:60px;height:60px;border-radius:16px;background:#1a1228;overflow:hidden;flex-shrink:0;box-shadow:0 6px 20px rgba(0,0,0,.4);">
-          <svg viewBox="0 0 52 52" fill="none" width="100%" height="100%"><rect width="52" height="52" fill="#1a1228"/><ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/><ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/><path d="M18 29 Q12 21 20 27" fill="#d08010"/><path d="M42 28 Q49 21 44 32" fill="#d08010"/><path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="#c07010"/><circle cx="20" cy="22" r="9.5" fill="#E8A022"/><path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/><circle cx="18.5" cy="20" r="3" fill="#1a1228"/><circle cx="17.5" cy="19" r="1" fill="white"/><path d="M23 13 Q24.5 8.5 26 8 Q25.5 12 24 14.5Z" fill="#d08010"/><path d="M25.5 13.5 Q27 9 28.5 8.5 Q28 12.5 26.5 15Z" fill="#E8A022"/></svg>
-        </div>
-        <div>
-          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#fff;line-height:1;letter-spacing:-.01em;">Tiny Bird</div>
-          <div style="width:100%;height:1px;background:rgba(255,255,255,.15);margin:4px 0;"></div>
-          <div style="font-family:'Playfair Display',serif;font-size:19px;font-weight:700;font-style:italic;color:#E8A022;line-height:1;">Big Dreams</div>
-          <div style="width:100%;height:1px;background:rgba(255,255,255,.15);margin:4px 0;"></div>
-          <div style="font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.3);">App Studio</div>
-        </div>
-      </div>
-    </div>
-    <div style="background:#F7F4EF;border-radius:24px;padding:clamp(36px,5vw,56px) clamp(24px,4vw,40px);display:flex;align-items:center;justify-content:center;min-height:200px;border:1px solid rgba(44,31,62,.07);">
-      <div style="display:flex;align-items:center;gap:16px;">
-        <div style="width:60px;height:60px;border-radius:16px;overflow:hidden;flex-shrink:0;box-shadow:0 6px 20px rgba(44,31,62,.18);">
-          <svg viewBox="0 0 52 52" fill="none" width="100%" height="100%"><rect width="52" height="52" fill="#2C1F3E"/><ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/><ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/><path d="M18 29 Q12 21 20 27" fill="#d08010"/><path d="M42 28 Q49 21 44 32" fill="#d08010"/><path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="#c07010"/><circle cx="20" cy="22" r="9.5" fill="#E8A022"/><path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/><circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/><circle cx="17.5" cy="19" r="1" fill="white"/><path d="M23 13 Q24.5 8.5 26 8 Q25.5 12 24 14.5Z" fill="#d08010"/><path d="M25.5 13.5 Q27 9 28.5 8.5 Q28 12.5 26.5 15Z" fill="#E8A022"/></svg>
-        </div>
-        <div>
-          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#2C1F3E;line-height:1;letter-spacing:-.01em;">Tiny Bird</div>
-          <div style="width:100%;height:1px;background:rgba(44,31,62,.12);margin:4px 0;"></div>
-          <div style="font-family:'Playfair Display',serif;font-size:19px;font-weight:700;font-style:italic;color:#E8A022;line-height:1;">Big Dreams</div>
-          <div style="width:100%;height:1px;background:rgba(44,31,62,.12);margin:4px 0;"></div>
-          <div style="font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:rgba(44,31,62,.35);">App Studio</div>
-        </div>
-      </div>
-    </div>
-    <div style="background:linear-gradient(135deg,#E8A022,#c07010);border-radius:24px;padding:clamp(36px,5vw,56px) clamp(24px,4vw,40px);display:flex;align-items:center;justify-content:center;min-height:200px;">
-      <div style="display:flex;align-items:center;gap:16px;">
-        <div style="width:60px;height:60px;border-radius:16px;background:rgba(0,0,0,.2);overflow:hidden;flex-shrink:0;box-shadow:0 6px 20px rgba(0,0,0,.3);">
-          <svg viewBox="0 0 52 52" fill="none" width="100%" height="100%"><rect width="52" height="52" fill="rgba(0,0,0,.2)"/><ellipse cx="30" cy="32" rx="14" ry="9.5" fill="rgba(255,255,255,.9)"/><ellipse cx="26" cy="36" rx="8.5" ry="6" fill="rgba(255,255,255,.4)"/><path d="M18 29 Q12 21 20 27" fill="rgba(255,255,255,.6)"/><path d="M42 28 Q49 21 44 32" fill="rgba(255,255,255,.6)"/><path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="rgba(255,255,255,.5)"/><circle cx="20" cy="22" r="9.5" fill="rgba(255,255,255,.9)"/><path d="M10.5 22 L15 20.5 L15 23.5Z" fill="rgba(255,255,255,.6)"/><circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/><circle cx="17.5" cy="19" r="1" fill="white"/><path d="M23 13 Q24.5 8.5 26 8 Q25.5 12 24 14.5Z" fill="rgba(255,255,255,.7)"/><path d="M25.5 13.5 Q27 9 28.5 8.5 Q28 12.5 26.5 15Z" fill="rgba(255,255,255,.9)"/></svg>
-        </div>
-        <div>
-          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#fff;line-height:1;letter-spacing:-.01em;">Tiny Bird</div>
-          <div style="width:100%;height:1px;background:rgba(255,255,255,.3);margin:4px 0;"></div>
-          <div style="font-family:'Playfair Display',serif;font-size:19px;font-weight:700;font-style:italic;color:rgba(255,255,255,.85);line-height:1;">Big Dreams</div>
-          <div style="width:100%;height:1px;background:rgba(255,255,255,.3);margin:4px 0;"></div>
-          <div style="font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.5);">App Studio</div>
-        </div>
-      </div>
-    </div>
-    <div style="background:repeating-conic-gradient(#d8d8d8 0% 25%,#f4f4f4 0% 50%) 0 0/20px 20px;border-radius:24px;padding:clamp(36px,5vw,56px) clamp(24px,4vw,40px);display:flex;align-items:center;justify-content:center;min-height:200px;border:1px solid rgba(0,0,0,.06);">
-      <div style="display:flex;align-items:center;gap:16px;">
-        <div style="width:60px;height:60px;border-radius:16px;overflow:hidden;flex-shrink:0;box-shadow:0 6px 20px rgba(0,0,0,.12);background:repeating-conic-gradient(#d8d8d8 0% 25%,#f4f4f4 0% 50%) 0 0/12px 12px;">
-          <svg viewBox="0 0 52 52" fill="none" width="100%" height="100%"><ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/><ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/><path d="M18 29 Q12 21 20 27" fill="#d08010"/><path d="M42 28 Q49 21 44 32" fill="#d08010"/><path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="#c07010"/><circle cx="20" cy="22" r="9.5" fill="#E8A022"/><path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/><circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/><circle cx="17.5" cy="19" r="1" fill="white"/><path d="M23 13 Q24.5 8.5 26 8 Q25.5 12 24 14.5Z" fill="#d08010"/><path d="M25.5 13.5 Q27 9 28.5 8.5 Q28 12.5 26.5 15Z" fill="#E8A022"/></svg>
-        </div>
-        <div>
-          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#2C1F3E;line-height:1;letter-spacing:-.01em;">Tiny Bird</div>
-          <div style="width:100%;height:1px;background:rgba(44,31,62,.15);margin:4px 0;"></div>
-          <div style="font-family:'Playfair Display',serif;font-size:19px;font-weight:700;font-style:italic;color:#E8A022;line-height:1;">Big Dreams</div>
-          <div style="width:100%;height:1px;background:rgba(44,31,62,.15);margin:4px 0;"></div>
-          <div style="font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:rgba(44,31,62,.4);">App Studio</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div style="max-width:1100px;margin:0 auto;background:#fff;border-radius:24px;padding:clamp(36px,5vw,48px) clamp(24px,4vw,48px);border:1px solid rgba(44,31,62,.07);">
-    <div style="font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:rgba(44,31,62,.35);margin-bottom:28px;font-weight:500;">Icon at Scale</div>
-    <div style="display:flex;align-items:flex-end;gap:clamp(16px,4vw,32px);flex-wrap:wrap;">
-      <div style="text-align:center;"><div style="width:96px;height:96px;border-radius:24px;overflow:hidden;box-shadow:0 8px 28px rgba(44,31,62,.15);margin-bottom:10px;"><svg viewBox="0 0 52 52" fill="none" width="100%" height="100%"><rect width="52" height="52" fill="#2C1F3E"/><ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/><ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/><path d="M18 29 Q12 21 20 27" fill="#d08010"/><path d="M42 28 Q49 21 44 32" fill="#d08010"/><path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="#c07010"/><circle cx="20" cy="22" r="9.5" fill="#E8A022"/><path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/><circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/><circle cx="17.5" cy="19" r="1" fill="white"/><path d="M23 13 Q24.5 8.5 26 8 Q25.5 12 24 14.5Z" fill="#d08010"/><path d="M25.5 13.5 Q27 9 28.5 8.5 Q28 12.5 26.5 15Z" fill="#E8A022"/></svg></div><div style="font-size:10px;color:rgba(44,31,62,.4);">96px</div></div>
-      <div style="text-align:center;"><div style="width:64px;height:64px;border-radius:16px;overflow:hidden;box-shadow:0 6px 20px rgba(44,31,62,.12);margin-bottom:10px;"><svg viewBox="0 0 52 52" fill="none" width="100%" height="100%"><rect width="52" height="52" fill="#2C1F3E"/><ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/><ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/><path d="M18 29 Q12 21 20 27" fill="#d08010"/><path d="M42 28 Q49 21 44 32" fill="#d08010"/><path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="#c07010"/><circle cx="20" cy="22" r="9.5" fill="#E8A022"/><path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/><circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/><circle cx="17.5" cy="19" r="1" fill="white"/><path d="M23 13 Q24.5 8.5 26 8 Q25.5 12 24 14.5Z" fill="#d08010"/><path d="M25.5 13.5 Q27 9 28.5 8.5 Q28 12.5 26.5 15Z" fill="#E8A022"/></svg></div><div style="font-size:10px;color:rgba(44,31,62,.4);">64px</div></div>
-      <div style="text-align:center;"><div style="width:40px;height:40px;border-radius:11px;overflow:hidden;box-shadow:0 4px 14px rgba(44,31,62,.12);margin-bottom:10px;"><svg viewBox="0 0 52 52" fill="none" width="100%" height="100%"><rect width="52" height="52" fill="#2C1F3E"/><ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/><ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/><path d="M18 29 Q12 21 20 27" fill="#d08010"/><path d="M42 28 Q49 21 44 32" fill="#d08010"/><circle cx="20" cy="22" r="9.5" fill="#E8A022"/><path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/><circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/><circle cx="17.5" cy="19" r="1" fill="white"/><path d="M23 13 Q24.5 8.5 26 8 Q25.5 12 24 14.5Z" fill="#f0b030"/></svg></div><div style="font-size:10px;color:rgba(44,31,62,.4);">40px</div></div>
-      <div style="text-align:center;"><div style="width:24px;height:24px;border-radius:6px;overflow:hidden;box-shadow:0 2px 8px rgba(44,31,62,.12);margin-bottom:10px;"><svg viewBox="0 0 52 52" fill="none" width="100%" height="100%"><rect width="52" height="52" fill="#2C1F3E"/><ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/><circle cx="20" cy="22" r="9.5" fill="#E8A022"/><circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/></svg></div><div style="font-size:10px;color:rgba(44,31,62,.4);">24px</div></div>
-      <div style="margin-left:auto;display:flex;flex-direction:column;gap:10px;align-self:center;">
-        <div style="display:flex;align-items:center;gap:10px;"><div style="width:28px;height:28px;border-radius:8px;background:#2C1F3E;box-shadow:0 2px 8px rgba(0,0,0,.18);"></div><div><div style="font-size:11px;font-weight:600;color:#2C1F3E;">#2C1F3E</div><div style="font-size:10px;color:rgba(44,31,62,.4);">Midnight Dusk</div></div></div>
-        <div style="display:flex;align-items:center;gap:10px;"><div style="width:28px;height:28px;border-radius:8px;background:#E8A022;box-shadow:0 2px 8px rgba(232,160,34,.3);"></div><div><div style="font-size:11px;font-weight:600;color:#2C1F3E;">#E8A022</div><div style="font-size:10px;color:rgba(44,31,62,.4);">Golden Hour</div></div></div>
-        <div style="display:flex;align-items:center;gap:10px;"><div style="width:28px;height:28px;border-radius:8px;background:#E85D3A;box-shadow:0 2px 8px rgba(232,93,58,.2);"></div><div><div style="font-size:11px;font-weight:600;color:#2C1F3E;">#E85D3A</div><div style="font-size:10px;color:rgba(44,31,62,.4);">Ember Coral</div></div></div>
-      </div>
-    </div>
-  </div>
-
-</div><!-- /logo-page -->
-
-<!-- ══════════ CONTACT ══════════ -->
-<div class="contact-section" id="contact">
-  <div class="section">
-    <div class="section-label reveal" style="color:rgba(232,160,34,.7);">Ancient DM Technology</div>
-    <h2 class="section-title reveal" style="color:var(--cream);">Send a note.<br/><em style="color:var(--gold);">Pidge handles the rest.</em></h2>
-
-    <div class="reveal" style="display:flex;align-items:center;gap:32px;flex-wrap:wrap;margin-bottom:48px;">
-      <div style="flex-shrink:0;">
-        <svg viewBox="0 0 210 210" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:150px;height:150px;display:block;">
-          <ellipse cx="100" cy="200" rx="52" ry="7" fill="rgba(0,0,0,.25)"/>
-          <path d="M38 122 Q18 150 36 158 Q55 147 62 130Z" fill="#72758A"/>
-          <path d="M44 117 Q22 143 40 153 Q60 142 66 124Z" fill="#82859A"/>
-          <path d="M50 113 Q30 137 48 149 Q67 138 72 120Z" fill="#9295A8"/>
-          <ellipse cx="102" cy="120" rx="62" ry="50" fill="#9B9EA8"/>
-          <ellipse cx="94" cy="130" rx="42" ry="34" fill="#C8CBD8"/>
-          <path d="M50 110 Q44 124 52 136" stroke="#72758A" stroke-width="2" stroke-linecap="round" fill="none"/>
-          <path d="M56 107 Q49 122 58 133" stroke="#72758A" stroke-width="1.5" stroke-linecap="round" fill="none"/>
-          <path d="M63 104 Q56 119 65 130" stroke="#72758A" stroke-width="1" stroke-linecap="round" fill="none"/>
-          <circle cx="128" cy="74" r="32" fill="#9B9EA8"/>
-          <ellipse cx="114" cy="98" rx="20" ry="13" fill="#6B5FD4" fill-opacity=".45"/>
-          <ellipse cx="118" cy="95" rx="13" ry="9" fill="#3DC8C0" fill-opacity=".4"/>
-          <ellipse cx="121" cy="93" rx="8" ry="5" fill="#6BD44F" fill-opacity=".3"/>
-          <circle cx="137" cy="68" r="14" fill="#E8A022" fill-opacity=".75"/>
-          <circle cx="137" cy="68" r="10" fill="white"/>
-          <circle cx="139" cy="67" r="6" fill="#1a1228"/>
-          <circle cx="142" cy="63" r="2.2" fill="white"/>
-          <circle cx="141" cy="70" r="1" fill="rgba(255,255,255,.5)"/>
-          <path d="M153 71 L172 65 L170 77Z" fill="#d08010"/>
-          <line x1="153" y1="71" x2="170" y2="71" stroke="#b06010" stroke-width="1.5"/>
-          <ellipse cx="155" cy="67" rx="5.5" ry="4" fill="#e8c090"/>
-          <line x1="90" y1="168" x2="83" y2="187" stroke="#d08010" stroke-width="4.5" stroke-linecap="round"/>
-          <line x1="112" y1="168" x2="119" y2="187" stroke="#d08010" stroke-width="4.5" stroke-linecap="round"/>
-          <path d="M83 187 L69 193 M83 187 L81 196 M83 187 L92 193" stroke="#d08010" stroke-width="2.5" stroke-linecap="round"/>
-          <path d="M119 187 L133 193 M119 187 L121 196 M119 187 L110 193" stroke="#d08010" stroke-width="2.5" stroke-linecap="round"/>
-          <rect x="78" y="179" width="12" height="8" rx="3.5" fill="#E85D3A"/>
-          <rect x="170" y="60" width="30" height="22" rx="3" fill="#FBF7F2" stroke="rgba(44,31,62,.18)" stroke-width="1.5"/>
-          <path d="M170 65 L185 74 L200 65" stroke="rgba(232,160,34,.7)" stroke-width="1.5" fill="none"/>
-          <line x1="175" y1="69" x2="196" y2="69" stroke="rgba(44,31,62,.18)" stroke-width="1"/>
-          <line x1="175" y1="73" x2="196" y2="73" stroke="rgba(44,31,62,.18)" stroke-width="1"/>
-          <circle cx="185" cy="79" r="5" fill="#E8A022"/>
-          <text x="182.5" y="82" font-size="5" fill="#2C1F3E" font-weight="bold" font-family="sans-serif">TB</text>
-          <line x1="22" y1="88" x2="38" y2="88" stroke="rgba(251,247,242,.2)" stroke-width="2" stroke-linecap="round"/>
-          <line x1="16" y1="98" x2="35" y2="98" stroke="rgba(251,247,242,.15)" stroke-width="1.5" stroke-linecap="round"/>
-          <line x1="24" y1="108" x2="38" y2="108" stroke="rgba(251,247,242,.1)" stroke-width="1" stroke-linecap="round"/>
-        </svg>
-      </div>
-      <div>
-        <p style="color:rgba(251,247,242,.55);max-width:420px;font-size:15px;line-height:1.8;margin:0 0 12px;">Before email, before text, before the fax machine (RIP) — there was the carrier pigeon. We've modernized things slightly.</p>
-        <p style="color:rgba(251,247,242,.35);max-width:420px;font-size:13px;line-height:1.75;margin:0;">Fill in the form. Pidge takes it from there. Zero spam filters. Zero read receipts. One very determined bird.</p>
-      </div>
-    </div>
-
-    <div class="contact-form-wrap reveal">
-      <form id="contactForm" action="/email-webhook" method="POST">
-        <div class="form-row">
-          <div class="form-group"><label for="cName">Name</label><input type="text" id="cName" name="name" placeholder="Your name" required /></div>
-          <div class="form-group"><label for="cEmail">Email</label><input type="email" id="cEmail" name="email" placeholder="your@email.com" required /></div>
-        </div>
-        <div class="form-group"><label for="cMsg">Message</label><textarea id="cMsg" name="message" placeholder="What's on your mind?" rows="5" required></textarea></div>
-        <input type="hidden" name="vid" id="tbbdVid" value="" />
-        <button type="submit" class="btn btn-gold form-btn">
-          Release the pigeon
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-      </form>
-      <div id="formSuccess" style="display:none;text-align:center;padding:40px 20px;">
-        <svg viewBox="0 0 120 80" fill="none" width="120" height="80" style="display:block;margin:0 auto 20px;">
-          <!-- wind gusts trailing behind bird -->
-          <line class="gust"    x1="87" y1="37" x2="106" y2="37" stroke="rgba(251,247,242,.4)"  stroke-width="2"   stroke-linecap="round"/>
-          <line class="gust g2" x1="89" y1="45" x2="107" y2="45" stroke="rgba(251,247,242,.28)" stroke-width="1.5" stroke-linecap="round"/>
-          <line class="gust g3" x1="85" y1="52" x2="99"  y2="52" stroke="rgba(251,247,242,.18)" stroke-width="1"   stroke-linecap="round"/>
-          <g class="pidge-fly">
-            <!-- far wing — root at (40,42), swept right+up -->
-            <path class="wing-far" d="M40 42 Q52 27 74 30 Q62 36 40 42Z" fill="#c07010"/>
-            <!-- tail fan (drawn behind body) -->
-            <path d="M67 39 Q82 31 87 39 Q83 44 67 41Z" fill="#c07010" fill-opacity=".65"/>
-            <path d="M66 41 Q81 34 86 41 Q81 49 66 46Z" fill="#d08010"/>
-            <path d="M67 44 Q80 41 84 47 Q80 53 67 49Z" fill="#c07010" fill-opacity=".65"/>
-            <!-- body — elongated torpedo, nose-down flying tilt -->
-            <ellipse cx="50" cy="43" rx="23" ry="10" fill="#E8A022" transform="rotate(-8 50 43)"/>
-            <ellipse cx="46" cy="46" rx="13" ry="6"  fill="#f0b030" fill-opacity=".4" transform="rotate(-8 46 46)"/>
-            <!-- neck -->
-            <path d="M34 37 Q38 41 43 43 Q40 38 36 34Z" fill="#E8A022"/>
-            <!-- head — small pigeon head -->
-            <circle cx="28" cy="31" r="9" fill="#E8A022"/>
-            <!-- beak — short pigeon beak with centre ridge -->
-            <path d="M20 32 L13 34 L20 37Z" fill="#c07010"/>
-            <line x1="13" y1="34" x2="20" y2="34" stroke="#b06010" stroke-width="1" stroke-linecap="round"/>
-            <!-- eye -->
-            <circle cx="24" cy="29" r="3" fill="#2C1F3E"/>
-            <circle cx="23" cy="28" r="1" fill="white"/>
-            <!-- near wing (front) — root at (38,41) -->
-            <path class="wing-near"   d="M38 41 Q50 21 73 25 Q61 32 38 41Z" fill="#E8A022"/>
-            <path class="wing-near-2" d="M38 41 Q52 24 73 29 Q63 34 38 41Z" fill="#f0b030" fill-opacity=".5"/>
-          </g>
-        </svg>
-        <div style="font-family:'Fraunces',serif;font-size:26px;font-weight:700;color:var(--cream);margin-bottom:10px;">Pidge is airborne!</div>
-        <p style="color:rgba(251,247,242,.5);font-size:14px;line-height:1.7;">Your message is en route. Pidge has a perfect delivery record.<br/>ETA: soon-ish. (Subject to headwinds.)</p>
-      </div>
-      <div id="formError" style="display:none;margin-top:16px;padding:14px 18px;background:rgba(232,93,58,.12);border:1px solid rgba(232,93,58,.25);border-radius:12px;color:#E85D3A;font-size:14px;text-align:center;">
-        Pidge ran into turbulence. Please try again or email <a href="mailto:hello@tinybirdbigdreams.com" style="color:var(--gold);">hello@tinybirdbigdreams.com</a> directly.
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════ FOOTER ══════════ -->
-<footer>
-  <div class="logo-mark">
-    <div class="logo-icon" style="width:40px;height:40px;border-radius:11px;">
-      <svg viewBox="0 0 52 52" fill="none" width="100%" height="100%">
-        <rect width="52" height="52" fill="#2C1F3E"/>
-        <ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/>
-        <ellipse cx="26" cy="36" rx="8.5" ry="6" fill="#f0b030" fill-opacity=".4"/>
-        <path d="M18 29 Q12 21 20 27" fill="#d08010"/>
-        <path d="M42 28 Q49 21 44 32" fill="#d08010"/>
-        <path d="M43 33 Q49 35 47 41 Q42 36 43 33Z" fill="#c07010"/>
-        <circle cx="20" cy="22" r="9.5" fill="#E8A022"/>
-        <path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#d08010"/>
-        <circle cx="18.5" cy="20" r="3" fill="#2C1F3E"/>
-        <circle cx="17.5" cy="19" r="1" fill="white"/>
-        <path d="M23 13 Q24.5 8.5 26 8 Q25.5 12 24 14.5Z" fill="#d08010"/>
-        <path d="M25.5 13.5 Q27 9 28.5 8.5 Q28 12.5 26.5 15Z" fill="#E8A022"/>
-      </svg>
-    </div>
-    <div class="logo-text-wrap">
-      <div class="logo-t1" style="font-size:15px;">Tiny Bird</div>
-      <div class="logo-rule"></div>
-      <div class="logo-t2" style="font-size:13px;">Big Dreams</div>
-      <div class="logo-rule"></div>
-      <div class="logo-t3">App Studio</div>
-    </div>
-  </div>
-
-  <div class="footer-links">
-    <div class="footer-col">
-      <div class="footer-col-title">Explore</div>
-      <ul>
-        <li><a href="apps.html">Apps</a></li>
-        <li><a href="#studio">Studio</a></li>
-        <li><a href="#studio">Our Story</a></li>
-        <li><a href="#brand">Brand</a></li>
-      </ul>
-    </div>
-    <div class="footer-col">
-      <div class="footer-col-title">Connect</div>
-      <ul>
-        <li><a href="#contact">Say Hello</a></li>
-        <li><a href="mailto:hello@tinybirdbigdreams.com">Email Us</a></li>
-      </ul>
-    </div>
-    <div class="footer-col">
-      <div class="footer-col-title">Legal</div>
-      <ul>
-        <li><a href="privacy.html">Privacy Policy</a></li>
-        <li><a href="terms.html">Terms of Use</a></li>
-        <li><a href="privacy.html#ai">AI Disclosure</a></li>
-      </ul>
-    </div>
-  </div>
-
-  <div class="footer-bottom">
-    <p class="fc">&copy; 2026 Tiny Bird, Big Dreams. Built by one person and one AI. All rights reserved.</p>
-    <p class="fc" style="margin-top:6px;font-size:10px;">Made with Claude &middot; Shipped from scratch</p>
-  </div>
-</footer>
-
-<button id="backToTop" aria-label="Back to top">
-  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 14V4M4 9l5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-</button>
-<script src="assets/site.js?v=2"></script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b0b9b5a0ff9345038eb0ab5e85b9ac3d"}'></script>
+<script src="/assets/home/home.js?v=1" defer></script>
+<script src="/assets/consent.js" defer></script>
 </body>
 </html>

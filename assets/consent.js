@@ -17,7 +17,7 @@
     ],
     storage: { cookieName: "tb_consent", expiryDays: 365 },
     ui: {
-      layout: "box", position: "bottom-left", blocking: false, showBadge: true, badgePosition: "bottom-left",
+      layout: "box", position: "bottom-left", blocking: false, showBadge: false,
       theme: { surface: "#17130e", surfaceAlt: "rgba(255,255,255,.06)", text: "#f6f1e8", textMuted: "#cfc5b4", accent: "#E8A022" },
       text: {
         title: "A quick cookie question",
