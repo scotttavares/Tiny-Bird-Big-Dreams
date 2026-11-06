@@ -14,8 +14,8 @@ css
 js
 /FieldGuide
 /PaperWars
-test
-docs
-package.json
-.superpowers
-.claude
+/test
+/docs
+/package.json
+/.superpowers
+/.claude

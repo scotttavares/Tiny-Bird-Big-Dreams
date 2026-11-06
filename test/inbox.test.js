@@ -23,7 +23,12 @@ test("signups are validated, lowercased and idempotent", async () => {
   assert.equal(await saveSignup(kv, "a@b.co"), "ok");
   assert.equal(await saveSignup(kv, "nope"), "invalid");
   assert.equal(await saveSignup(kv, 42), "invalid");
+  await saveSignup(kv, "c@d.co");
+  await saveSignup(kv, "e@f.co");
+  const gets = kv.gets;
   const s = await listSignups(kv);
-  assert.equal(s.length, 1);
-  assert.equal(s[0].email, "a@b.co");
+  assert.equal(kv.gets, gets, "listing signups does no per-key reads");
+  assert.equal(s.length, 3);
+  assert.ok(s.every((x) => x.at));
+  assert.ok(s.some((x) => x.email === "a@b.co"));
 });

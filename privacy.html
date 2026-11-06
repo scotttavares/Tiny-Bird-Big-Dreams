@@ -27,6 +27,8 @@
     <li>We store your choice in a small essential cookie (<code>tb_consent</code>) so we don't ask again.</li>
     <li>We count banner answers (accepted, declined or custom) as an anonymous daily total, with no identifier attached.</li>
     <li>If your browser sends a Global Privacy Control signal, we treat it as a "no".</li>
+    <li>Like any website host, Cloudflare counts requests to our servers (for example, how many pages were served each day). We see these only as totals; they involve no cookies and nothing stored in your browser.</li>
+    <li>To stop spam, the contact form, signup and analytics endpoints keep a scrambled (hashed) form of your IP address for up to an hour to limit how often they can be used. We never store the IP address itself.</li>
   </ul>
   <h3>If you say yes to analytics</h3>
   <ul>
@@ -34,7 +36,11 @@
     <li>We record page views, the website you came from (its domain only), your device type (phone, tablet or desktop), how far you scroll, and clicks on our App Store, TestFlight and "Play" links and on the interactive parts of the home page.</li>
     <li>We store these as daily totals (for example "Orbit page: 40 views on Tuesday"), not as a history of what you did. The weekly visitor count keeps visitor IDs for up to 120 days; daily totals are kept for about 13 months.</li>
     <li>We also load Cloudflare Web Analytics, which measures page loads without cookies.</li>
+    <li>If you then send us a message, we note that in your browser's local storage (<code>tb_msg</code>) so the home page can show "Your message has landed in the nest".</li>
+    <li>If you later switch analytics off, we stop measuring straight away and delete <code>tb_vid</code> and <code>tb_msg</code> from your browser.</li>
   </ul>
+  <h3>Older visitor records</h3>
+  <p>Before November 2026 our home page kept a per-visitor record (a random ID in a cookie, visit counts and, if you contacted us, your name and email) to personalise the page. We no longer create these records. Existing ones expire automatically within a year of your last visit; email us to have yours deleted sooner.</p>
 
   <h2 class="serif">Messages and signups</h2>
   <p>If you use the contact form, we receive and store your name, email address and message so we can reply, for up to two years. A first reply may be drafted automatically (see below) and sent with Resend. If you join "Get news when something hatches", we store your email address to tell you about new apps and games; email us to be removed. We keep these whether or not you accepted analytics cookies, because you sent them to us on purpose.</p>

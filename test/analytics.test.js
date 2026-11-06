@@ -65,6 +65,20 @@ test("countUniques counts distinct consented visitors per week", async () => {
   assert.equal(await countUniques(kv, "2026-10-26"), 0);
 });
 
+test("recordBatch caps distinct keys and writes each weekly visitor once", async () => {
+  const kv = new FakeKV();
+  for (let i = 0; i < 7; i++) {
+    const events = Array.from({ length: 50 }, (_, j) => ({ t: "pv", p: `/junk-${i}-${j}` }));
+    await recordBatch(kv, { vid: VID, events }, { now: NOW });
+  }
+  const d = await kv.get("d:2026-11-06", { type: "json" });
+  assert.equal(Object.keys(d.pv).length, 301);
+  assert.equal(d.pv["(other)"], 50);
+  const before = kv.puts;
+  await recordBatch(kv, { vid: VID, events: [{ t: "pv", p: "/" }] }, { now: NOW });
+  assert.equal(kv.puts - before, 1, "only the day key is rewritten for a known visitor");
+});
+
 test("recordConsent tallies choices and ignores junk", async () => {
   const kv = new FakeKV();
   await recordConsent(kv, "accept", NOW);

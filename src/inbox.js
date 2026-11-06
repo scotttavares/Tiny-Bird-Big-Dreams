@@ -41,7 +41,10 @@ export async function saveSignup(kv, email, now = new Date()) {
   const e = email.trim().toLowerCase();
   if (e.length > 200 || !EMAIL_RE.test(e)) return "invalid";
   const key = `signup:${e}`;
-  if (!(await kv.get(key))) await kv.put(key, JSON.stringify({ at: now.toISOString() }));
+  if (!(await kv.get(key))) {
+    const rec = { at: now.toISOString() };
+    await kv.put(key, JSON.stringify(rec), { metadata: rec });
+  }
   return "ok";
 }
 
@@ -51,10 +54,17 @@ export async function listMessages(kv, limit = 50) {
   return recs.filter((r) => r.at);
 }
 
+// Reads signup dates from key metadata via list(), so /studio doesn't do one
+// KV read per signup (Workers cap KV operations per request).
 export async function listSignups(kv) {
-  const names = await listPrefix(kv, "signup:");
-  const recs = await Promise.all(names.map(async (k) => ({ email: k.slice(7), ...((await kv.get(k, { type: "json" })) || {}) })));
-  return recs.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  const out = [];
+  let cursor;
+  do {
+    const page = await kv.list({ prefix: "signup:", cursor });
+    for (const k of page.keys) out.push({ email: k.name.slice(7), at: k.metadata?.at || "" });
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+  return out.sort((a, b) => String(b.at).localeCompare(String(a.at)));
 }
 
 export function countSince(items, isoDate) {

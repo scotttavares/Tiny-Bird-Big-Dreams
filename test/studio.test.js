@@ -53,6 +53,9 @@ test("studioCsv starts with a header row", async () => {
   const s = await collectStudio({ VISITORS: await seeded() }, NOW);
   const first = studioCsv(s).split("\n")[0];
   assert.match(first, /^section,metric,/);
+  const csv = studioCsv(s);
+  assert.match(csv, /signup,fan@b\.co,2026-11-06/);
+  assert.match(csv, /message,2026-11-06,<script>x<\/script>,a@b\.co/);
 });
 
 test("loginHTML shows the error state", () => {

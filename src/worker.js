@@ -18,6 +18,7 @@
 import { handleGazette } from "./gazette.js";
 import { sanitizeBatch, recordBatch, recordConsent } from "./analytics.js";
 import { saveMessage, markReplied, saveSignup } from "./inbox.js";
+import { rateLimit, allowedOrigin, cleanName, isEmail } from "./guard.js";
 import { collectStudio, renderStudio, studioCsv, loginHTML } from "./studio.js";
 
 const SESSION_COOKIE = "tbbd_studio";
@@ -44,6 +45,8 @@ export default {
     if (p === "/gazette" || p === "/gazette/") return handleGazette(request);
 
     if (p === "/track" && post) {
+      if (!allowedOrigin(request) || Number(request.headers.get("content-length") || 0) > 16000) return new Response(null, { status: 204 });
+      if (!(await rateLimit(env.VISITORS, request, "track", 120, 3600))) return new Response(null, { status: 204 });
       const body = await readBody(request);
       const batch = sanitizeBatch(body);
       const referrer = typeof body?.ref === "string" ? body.ref : "";
@@ -54,6 +57,8 @@ export default {
     }
 
     if (p === "/consent" && post) {
+      if (!allowedOrigin(request)) return new Response(null, { status: 204 });
+      if (!(await rateLimit(env.VISITORS, request, "consent", 20, 3600))) return new Response(null, { status: 204 });
       const body = await readBody(request);
       const work = recordConsent(env.VISITORS, body?.choice).catch((e) => console.error("[consent]", e));
       if (ctx) ctx.waitUntil(work); else await work;
@@ -62,7 +67,10 @@ export default {
 
     if (p === "/signup" && post) {
       if (!env.VISITORS) return json({ ok: false }, 503);
+      if (!allowedOrigin(request)) return json({ ok: false }, 403);
       const body = await readBody(request);
+      if (body?.website) return json({ ok: true }); // honeypot
+      if (!(await rateLimit(env.VISITORS, request, "signup", 5, 3600))) return json({ ok: false }, 429);
       const r = await saveSignup(env.VISITORS, body?.email);
       return r === "ok" ? json({ ok: true }) : json({ ok: false }, 400);
     }
@@ -118,7 +126,10 @@ async function handleLogin(request, env) {
   } catch {
     /* ignore */
   }
-  if (!pw || attempt !== pw) {
+  if (!(await rateLimit(env.VISITORS, request, "login", 10, 900))) {
+    return html(loginHTML({ error: true, configured: !!pw }), 429);
+  }
+  if (!pw || !timingSafeEqual(String(attempt), pw)) {
     return html(loginHTML({ error: true, configured: !!pw }), 401);
   }
   const token = await makeToken(env);
@@ -224,29 +235,34 @@ async function handleEmailWebhook(request, env, ctx) {
 
   if (contentType.includes("application/json")) {
     // Formspree JSON webhook path (kept for legacy / future use)
+    // Only accepted when signed: without the secret this path would be an open relay.
+    if (!env.FORMSPREE_WEBHOOK_SECRET) return new Response("Unauthorized", { status: 401 });
     const rawBody = await request.text();
-    if (env.FORMSPREE_WEBHOOK_SECRET) {
-      const sig = request.headers.get("X-Formspree-Signature") || "";
-      const valid = await verifyHmacSha256(env.FORMSPREE_WEBHOOK_SECRET, rawBody, sig);
-      if (!valid) return new Response("Unauthorized", { status: 401 });
-    }
+    const sig = request.headers.get("X-Formspree-Signature") || "";
+    const valid = await verifyHmacSha256(env.FORMSPREE_WEBHOOK_SECRET, rawBody, sig);
+    if (!valid) return new Response("Unauthorized", { status: 401 });
     let body;
     try { body = JSON.parse(rawBody); } catch { return new Response("Bad Request", { status: 400 }); }
     fields = body.payload || body.data || body;
   } else {
-    // Direct form POST path (multipart/form-data or application/x-www-form-urlencoded)
+    // Direct form POST from our own contact form.
+    if (!allowedOrigin(request)) return new Response("Forbidden", { status: 403 });
+    if (Number(request.headers.get("content-length") || 0) > 20000) return new Response("Too large", { status: 413 });
     try {
       const fd = await request.formData();
       fields = Object.fromEntries(fd.entries());
     } catch { return new Response("Bad Request", { status: 400 }); }
+    // Honeypot: real people never fill the hidden "website" field. Pretend success.
+    if (fields.website) return new Response("OK", { status: 200 });
+    if (!(await rateLimit(env.VISITORS, request, "contact", 5, 3600))) return new Response("Too many messages, try again later", { status: 429 });
   }
 
-  const senderEmail = fields.email || fields._replyto || "";
-  const senderName  = fields.name  || "";
-  const message     = fields.message || fields.body || "";
+  const senderEmail = String(fields.email || fields._replyto || "").trim();
+  const senderName  = cleanName(fields.name);
+  const message     = String(fields.message || fields.body || "").slice(0, 2000);
 
-
-  if (!senderEmail || !message) {
+  if (senderEmail && !isEmail(senderEmail)) return new Response("Invalid email", { status: 400 });
+  if (!senderEmail || !message.trim()) {
     console.log(`[webhook] missing fields — email="${senderEmail}" message="${message?.slice(0,40)}"`);
     return new Response("Missing required fields", { status: 400 });
   }

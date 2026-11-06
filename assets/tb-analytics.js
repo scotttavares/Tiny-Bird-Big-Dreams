@@ -20,9 +20,10 @@
   var queue = [{ t: "pv", p: location.pathname }];
   var sentRef = false;
   var seen = {};
+  var stopped = false;
 
   function flush() {
-    if (!queue.length) return;
+    if (stopped || !queue.length) return;
     var body = { vid: vid, events: queue.splice(0, 50) };
     if (!sentRef) { body.ref = document.referrer || ""; sentRef = true; }
     var data = JSON.stringify(body);
@@ -34,7 +35,7 @@
   }
 
   function track(t, v, once) {
-    if (!t) return;
+    if (stopped || !t) return;
     if (once) { var key = t + ":" + v; if (seen[key]) return; seen[key] = 1; }
     queue.push({ t: t, v: String(v || "") });
     if (queue.length >= 20) flush();
@@ -66,6 +67,8 @@
   addEventListener("pagehide", flush);
   document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") flush(); });
 
-  window.tb = { _ready: true, track: track, flush: flush, vid: vid };
+  function stop() { stopped = true; queue.length = 0; vid = null; }
+
+  window.tb = { _ready: true, track: track, flush: flush, stop: stop, vid: vid };
   document.dispatchEvent(new CustomEvent("tb:ready"));
 })();

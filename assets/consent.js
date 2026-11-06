@@ -72,15 +72,32 @@
     });
   }
 
+  // Consent withdrawn: stop the tracker for the rest of this page and forget the visitor.
+  function stopAnalytics() {
+    if (window.tb && window.tb.stop) window.tb.stop();
+    try { localStorage.removeItem("tb_vid"); localStorage.removeItem("tb_msg"); } catch (e) { /* ignore */ }
+    var beacon = document.querySelector('script[src*="cloudflareinsights.com/beacon"]');
+    if (beacon) location.reload(); // the Cloudflare beacon can't be unloaded in place
+  }
+
   function start() {
     var cc = window.ClearConsent && window.ClearConsent.instance;
     if (!cc) return;
+    // Remember the answer already on file so re-opening settings and saving the same choice isn't recounted.
+    try {
+      if (cc.isPending && !cc.isPending()) lastChoice = choiceOf(cc.state || (cc.getState && cc.getState()));
+    } catch (e) { /* older library: count every answer */ }
     wireSettingsLinks(cc);
     document.addEventListener("clearConsent:change", function (e) {
-      var c = choiceOf(e.detail && e.detail.state);
-      var method = e.detail && e.detail.state && e.detail.state.method;
+      var d = e.detail || {};
+      var revoked = d.revoked || [];
+      if (revoked.indexOf("analytics") >= 0) stopAnalytics();
+      var method = d.state && d.state.method;
       if (method === "gpc" || method === "dnt") return; // automatic, not a banner answer
-      if (c !== lastChoice) { lastChoice = c; post("/consent", { choice: c }); }
+      // Count only real answers: the first decision on this browser, or a change of answer.
+      var c = choiceOf(d.state);
+      if (c !== lastChoice) post("/consent", { choice: c });
+      lastChoice = c;
     });
     cc.gate("analytics", function () {
       addScript("/assets/tb-analytics.js");

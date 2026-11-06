@@ -62,6 +62,12 @@ function emptyDay() {
   return Object.fromEntries(BUCKETS.map((b) => [b, {}]));
 }
 const bump = (obj, key, n = 1) => { obj[key] = (obj[key] || 0) + n; };
+// A day keeps at most this many distinct keys per bucket; extra keys fold into "(other)".
+export const MAX_KEYS = 300;
+const bumpCapped = (obj, key) => {
+  if (!(key in obj) && Object.keys(obj).length >= MAX_KEYS) key = "(other)";
+  bump(obj, key);
+};
 
 function deviceOf(ua = "") {
   if (/iPad|Tablet/i.test(ua)) return "tablet";
@@ -81,16 +87,19 @@ export async function recordBatch(kv, batch, { referrer, ua, now = new Date() } 
   const day = { ...emptyDay(), ...((await kv.get(key, { type: "json" })) || {}) };
   let sawPv = false;
   for (const e of batch.events) {
-    if (e.t === "pv") { bump(day.pv, e.p); sawPv = true; }
-    else bump(day[e.t], e.v);
+    if (e.t === "pv") { bumpCapped(day.pv, e.p); sawPv = true; }
+    else bumpCapped(day[e.t], e.v);
   }
   if (sawPv) {
     bump(day.dev, deviceOf(ua));
     const h = referrer ? refHost(referrer) : null;
-    if (h) bump(day.ref, h);
+    if (h) bumpCapped(day.ref, h);
   }
   await kv.put(key, JSON.stringify(day), { expirationTtl: DAY_TTL });
-  if (batch.vid) await kv.put(`uv:${weekStart(now)}:${batch.vid}`, "1", { expirationTtl: UV_TTL });
+  if (batch.vid) {
+    const uv = `uv:${weekStart(now)}:${batch.vid}`;
+    if (!(await kv.get(uv))) await kv.put(uv, "1", { expirationTtl: UV_TTL });
+  }
 }
 
 export async function recordConsent(kv, choice, now = new Date()) {

@@ -149,6 +149,7 @@
         <div class="field"><label for="cEmail">Email</label><input id="cEmail" name="email" type="email" autocomplete="email" required="" /></div>
         <div class="field"><label for="cMsg">Message</label><textarea id="cMsg" name="message" required=""></textarea></div>
         <input type="hidden" name="vid" value="" />
+        <div class="hp" aria-hidden="true"><label>Leave this empty<input name="website" tabindex="-1" autocomplete="off" /></label></div>
         <button class="btn solid" type="submit">Send it →</button>
         <p class="formmsg" id="contactMsg" role="status"></p>
       </form>
@@ -169,7 +170,7 @@
       <article class="card" data-t="game"><div class="im"><div class="mys"><div class="egg"></div></div><span class="badge">Hatching</span></div><div class="bd"><h3>Something's hatching</h3><div class="k">Our next game</div><p>We can't say much yet. It's small, it's silly, and you'll play it with friends.</p><div class="row"><div class="price">Soon<small>be first to know</small></div><a class="btn dark" data-shop="hatching" href="#join">Notify me</a></div></div></article>
     </div>
     <div class="join" id="join"><h3 class="serif">Get news when something hatches.</h3>
-      <form id="signupForm" action="/signup" method="POST"><label class="sr" for="sEmail">Email</label><input id="sEmail" type="email" name="email" placeholder="you@email.com" autocomplete="email" required="" /><button class="btn solid" type="submit">Join</button></form>
+      <form id="signupForm" action="/signup" method="POST"><div class="hp" aria-hidden="true"><label>Leave this empty<input name="website" tabindex="-1" autocomplete="off" /></label></div><label class="sr" for="sEmail">Email</label><input id="sEmail" type="email" name="email" placeholder="you@email.com" autocomplete="email" required="" /><button class="btn solid" type="submit">Join</button></form>
       <p class="formmsg" id="signupMsg" role="status"></p>
     </div>
     <p class="disclose">Made with care by a small team. We use AI tools to help us design, write and build, and people review everything before it ships. The photos and video on this page are AI-generated illustrations of everyday moments.</p>

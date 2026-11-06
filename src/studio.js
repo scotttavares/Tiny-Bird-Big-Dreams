@@ -187,6 +187,10 @@ export function studioCsv(s) {
   for (const w of s.weeks) rows.push(["week", w.start, w.pv, w.uniques]);
   for (const [k, v] of top(s.thisWeek.pv, 50)) rows.push(["page", k, v, s.lastWeek.pv[k] || 0]);
   for (const [k, v] of top(s.thisWeek.ref, 50)) rows.push(["referrer", k, v, s.lastWeek.ref[k] || 0]);
+  rows.push([], ["signups", "email", "joined", ""]);
+  for (const u of s.signups) rows.push(["signup", u.email, String(u.at).slice(0, 10), ""]);
+  rows.push([], ["messages", "date", "name", "email", "status", "message"]);
+  for (const m of s.messages) rows.push(["message", String(m.at).slice(0, 10), m.name, m.email, m.category === "flagged" ? "needs review" : m.replied ? "replied" : "not replied", m.message]);
   return rows.map((r) => r.map(csvCell).join(",")).join("\n") + "\n";
 }
 

@@ -8,6 +8,12 @@
   // analytics only exists after cookie consent; every call is optional
   var track = function (t, v) { if (window.tb && window.tb.track) window.tb.track(t, v); };
   var once = {};
+  // Run an element's animation only while it's on screen (saves battery on phones).
+  function whenVisible(el, cb) {
+    var on = false;
+    new IntersectionObserver(function (es) { on = es[0].isIntersecting; if (on) cb(); }, { rootMargin: "100px" }).observe(el);
+    return function () { return on && !document.hidden; };
+  }
   var trackOnce = function (t, v) { var k = t + v; if (once[k]) return; once[k] = 1; track(t, v); };
 
   /* ---------- sound (synthesised, off by default) ---------- */
@@ -166,9 +172,13 @@
         if (r.bottom > 0 && r.top < innerHeight) sceneImgs[j].style.setProperty("--py", ((r.top + r.height / 2 - innerHeight / 2) * -.05) + "px");
       }
     }
-    requestAnimationFrame(loop);
+    if (!RM && !document.hidden) requestAnimationFrame(loop); else looping = false;
   }
+  var looping = true;
   requestAnimationFrame(loop);
+  function kick() { if (!looping) { looping = true; tp = performance.now(); requestAnimationFrame(loop); } }
+  document.addEventListener("visibilitychange", function () { if (!document.hidden && !RM) kick(); });
+  if (RM) { addEventListener("scroll", kick, { passive: true }); addEventListener("resize", kick); }
 
   /* ---------- reveal on scroll ---------- */
   var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) e.target.classList.add("seen"); }); }, { threshold: .18 });
@@ -191,7 +201,7 @@
     function setTicks() {
       var v = vids[front];
       ticks.forEach(function (b, i) { b.style.width = i < idx ? "100%" : i > idx ? "0" : ((v.duration ? v.currentTime / v.duration : 0) * 100) + "%"; });
-      raf = requestAnimationFrame(setTicks);
+      raf = (playing && visible) ? requestAnimationFrame(setTicks) : 0;
     }
     function show(i) {
       var next = vids[1 - front], cur = vids[front];
@@ -203,7 +213,10 @@
         front = 1 - front; idx = i; caption(i);
       };
       var p = next.play();
-      if (p && p.then) p.then(go).catch(function () { still.src = next.poster; still.classList.add("on"); idx = i; caption(i); });
+      if (p && p.then) p.then(go).catch(function () {
+        still.src = next.poster; still.classList.add("on"); idx = i; caption(i);
+        playing = false; started = false; pp.textContent = "▶"; pp.setAttribute("aria-label", "Play video");
+      });
       else go();
     }
     vids.forEach(function (v) {
@@ -217,12 +230,12 @@
     pp.addEventListener("click", function () {
       playing = !playing;
       pp.textContent = playing ? "❚❚" : "▶"; pp.setAttribute("aria-label", playing ? "Pause video" : "Play video");
-      if (playing && visible) start(); else stop();
+      if (playing && visible) { start(); cancelAnimationFrame(raf); setTicks(); } else stop();
     });
     if (!playing) { pp.textContent = "▶"; pp.setAttribute("aria-label", "Play video"); }
     new IntersectionObserver(function (es) {
       visible = es[0].isIntersecting;
-      if (visible && playing) start(); else stop();
+      if (visible && playing) { start(); cancelAnimationFrame(raf); setTicks(); } else stop();
     }, { threshold: .25 }).observe(root);
   })();
 
@@ -244,18 +257,20 @@
   /* ---------- toys ---------- */
   // Lull: hold to breathe
   (function () {
-    var toy = $("#lullToy"), sp = $("#sphere"), tx = $("#breathTxt"), s = .8, hold = false, n = 0, peak = false;
+    var toy = $("#lullToy"), sp = $("#sphere"), tx = $("#breathTxt"), s = .8, hold = false, n = 0, peak = false, running = false;
+    var vis = whenVisible(toy, function () { if (!running) { running = true; requestAnimationFrame(f); } });
     function down(e) { if (e) e.preventDefault(); hold = true; tx.textContent = "breathe in…"; noise(4, 300, 700, .1, "lowpass"); trackOnce("toy", "lull"); }
     function up() { if (!hold) return; hold = false; if (peak) { n++; peak = false; } tx.textContent = n ? "…out. " + n + " breath" + (n > 1 ? "s" : "") : "…and out"; noise(4, 700, 250, .08, "lowpass"); }
     toy.addEventListener("pointerdown", down); addEventListener("pointerup", up); toy.addEventListener("pointerleave", up);
     toy.addEventListener("keydown", function (e) { if ((e.key === " " || e.key === "Enter") && !hold) down(e); });
     toy.addEventListener("keyup", function (e) { if (e.key === " " || e.key === "Enter") up(); });
-    (function f() {
+    function f() {
+      if (!vis()) { running = false; return; }
       s += ((hold ? 1.3 : .8) - s) * (hold ? .012 : .016); if (s > 1.2) peak = true;
       sp.style.transform = "scale(" + s + ")";
       sp.style.boxShadow = "0 0 " + (30 + (s - .8) * 180) + "px " + ((s - .8) * 40) + "px rgba(160,130,255," + (.35 + (s - .8) * .6) + ")";
       requestAnimationFrame(f);
-    })();
+    }
   })();
   // Orbit: drag a friend away, they spring back
   (function () {
@@ -268,8 +283,10 @@
       d.addEventListener("pointermove", function (e) { if (!p.drag) return; var r = toy.getBoundingClientRect(); p.x = e.clientX - r.left; p.y = e.clientY - r.top; });
       d.addEventListener("pointerup", function () { p.drag = false; tone(390, .25); });
     });
-    var t0 = performance.now();
-    (function f(t) {
+    var t0 = performance.now(), running = false;
+    var vis = whenVisible(toy, function () { if (!running) { running = true; t0 = performance.now(); requestAnimationFrame(f); } });
+    function f(t) {
+      if (!vis()) { running = false; return; }
       var dt = Math.min(50, t - t0); t0 = t;
       var S = toy.clientWidth, c = S / 2, L = "";
       ppl.forEach(function (p) {
@@ -281,8 +298,9 @@
         if (dd > 6) L += '<line x1="' + c + '" y1="' + c + '" x2="' + p.x + '" y2="' + p.y + '" stroke="rgba(255,255,255,' + Math.min(.8, dd / 120) + ')" stroke-width="1.5" stroke-dasharray="4 5"/>';
         p.el.style.transform = "translate(" + p.x + "px," + p.y + "px)";
       });
-      teth.innerHTML = L; requestAnimationFrame(f);
-    })(t0);
+      if (L !== teth._last) { teth.innerHTML = L; teth._last = L; }
+      requestAnimationFrame(f);
+    }
   })();
   // Paper Wars: draw a line of fire
   (function () {
@@ -347,14 +365,14 @@
         cf.reset(); msg(cm, "Thanks! It's on its way to the nest. We'll write back soon.", true); nestNote.hidden = false;
         try { if (localStorage.getItem("tb_vid")) localStorage.setItem("tb_msg", "1"); } catch (x) { /* ignore */ }
       })
-      .catch(function () { msg(cm, "Hmm, that didn't send. Please try again, or email hello@tinybirdbigdreams.com.", false); })
+      .catch(function (err) { msg(cm, String(err && err.message) === "429" ? "You've sent a few already. Please try again later, or email hello@tinybirdbigdreams.com." : "Hmm, that didn't send. Please try again, or email hello@tinybirdbigdreams.com.", false); })
       .then(function () { btn.disabled = false; btn.textContent = "Send it →"; });
   });
   var sf = $("#signupForm"), sm = $("#signupMsg");
   sf.addEventListener("submit", function (e) {
     e.preventDefault();
-    fetch(sf.action, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: sf.elements.email.value }) })
+    fetch(sf.action, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: sf.elements.email.value, website: sf.elements.website.value }) })
       .then(function (r) { if (!r.ok) throw new Error(r.status); sf.reset(); msg(sm, "You're on the list ✦ We'll tell you when something hatches.", true); track("shop", "signup"); })
-      .catch(function () { msg(sm, "That didn't work. Check the email address and try again.", false); });
+      .catch(function (err) { msg(sm, String(err && err.message) === "429" ? "Too many tries. Please try again in a bit." : "That didn't work. Check the email address and try again.", false); });
   });
 })();
