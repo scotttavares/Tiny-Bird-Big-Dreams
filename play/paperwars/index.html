@@ -6324,7 +6324,8 @@ window.addEventListener("keydown", e => {
 //   net.available(), net.me() -> {pid, isHost, id, tag, soldier}, net.host({owns}) -> {ok, why}, net.invite(),
 //   net.send(msg, to: "all" | "opponent" | "spectators" | [pid]), net.on(type, fn) -> off, net.leave(),
 //   net.peers(), net.roles() -> {host, seats, spectators, queue}, net.catchup(pid), net.hello().
-//   on(): any message type, "message" (every one), "people", "hello", "left", "back", "update", "auth", "removed", "catchup".
+//   on(): any message type, "message" (every one), "people", "hello", "left", "back", "update", "auth", "removed", "catchup",
+//   "matchmaker" ({ok: false, reason: "cancelled" | "failed" | "signed-out"}: the invite screen closed without a match).
 // Every message on the wire is {v: 1, t, from: pid, s: session, k: count, pub?, m?, ...}. Secrecy (sendGuard): army data
 // (soldiers / fort / known / army / armies) never leaves this phone before this phone has itself sent `over` (an
 // opponent's "over" can't trick it into revealing), and private content (a Rock-Paper-Scissors pick, or anything marked
@@ -6387,6 +6388,7 @@ function gameCenterNet() {
     else if (e.event === "people") fn({event: "people", people: (Array.isArray(e.players) ? e.players : Array.isArray(e.people) ? e.people : []).map(p => ({id: gid(p)})).filter(p => p.id && p.id !== T.id)});
     else if (e.event === "message" && e.from != null) fn({event: "message", from: String(e.from), data: e.data});
     else if ((e.event === "left" || e.event === "back") && gid(e)) fn({event: e.event, id: gid(e)});
+    else if (e.event === "matchmaker") fn({event: "matchmaker", ok: e.ok === true, reason: typeof e.reason === "string" ? e.reason : null});
   };
   return T;
 }
@@ -6553,6 +6555,7 @@ const net = (() => {
       sendHello(fresh); emit("people", list());
     } else if (e.event === "message") receive(e.from, e.data);
     else if (e.event === "left") { present.delete(e.id); helloSent.delete(e.id); emit("left", {pid: idOf.get(e.id) || null, id: e.id}); emit("people", list()); }
+    else if (e.event === "matchmaker") emit("matchmaker", {ok: e.ok === true, reason: e.reason || null}); // Apple's invite screen closed without a match
     else if (e.event === "back") { present.add(e.id); sendHello([e.id]); emit("back", {pid: idOf.get(e.id) || null, id: e.id}); emit("people", list()); }
   });
   const api = {
@@ -6566,7 +6569,8 @@ const net = (() => {
       isHost = true; st.host = mine().pid; T.connect(); T.host(); helloSent.clear(); sendHello([...present]);
       return {ok: true};
     },
-    invite: () => T.invite(),
+    // Only the host adds people to the match (inviting can't be a way round the Full Arsenal rule for hosting).
+    invite() { if (!isHost) return {ok: false, why: "Only the host can invite."}; T.invite(); return {ok: true}; },
     send(msg, to) {
       const r = sendGuard(msg, to);
       const env = envelope(msg);
@@ -6646,7 +6650,7 @@ $("onlineBtn").onclick = () => { sound("click"); showOnline(); };
 $("onlineBack").onclick = () => { onlineOpen = false; $("online").classList.add("hidden"); };
 
 // test hook for automated play-testing
-window.paperWar ={get state() { return {phase, cur, players, opts, pending, lastResult, replay}; }, hitTest, mirror, W, H, cpuAim, playReplay, awards};
+window.paperWar = {get state() { return {phase, cur, players, opts, pending, lastResult, replay}; }, hitTest, mirror, W, H, cpuAim, playReplay, awards};
 </script>
 </body>
 </html>

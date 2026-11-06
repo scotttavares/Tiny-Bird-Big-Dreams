@@ -88,6 +88,8 @@ enum GameBridge {
         case message(from: String, data: String)
         case left(String)
         case back(String)
+        /// Apple's invite screen closed without a match: reason "cancelled", "failed" or "signed-out".
+        case matchmaker(ok: Bool, reason: String?)
 
         var payload: [String: Any] {
             switch self {
@@ -104,6 +106,10 @@ enum GameBridge {
                 return ["event": "left", "id": id, "gamePlayerID": id]
             case .back(let id):
                 return ["event": "back", "id": id, "gamePlayerID": id]
+            case let .matchmaker(ok, reason):
+                var out: [String: Any] = ["event": "matchmaker", "ok": ok]
+                if let reason { out["reason"] = reason }
+                return out
             }
         }
     }

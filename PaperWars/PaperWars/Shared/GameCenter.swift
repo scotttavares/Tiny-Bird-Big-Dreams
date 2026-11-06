@@ -38,6 +38,23 @@ struct GameCenterRoster {
     }
 }
 
+/// What a host / invite request does, decided apart from GameKit so it can be unit tested.
+/// `host` starts a match (or adds people to the one running); `invite` only adds people to a running match, so it can
+/// never start one: hosting is checked (Full Arsenal) on the page's `host` path.
+enum GameCenterMatchmaking: Equatable {
+    case start(maxPlayers: Int)
+    case addPeople
+    case ignore
+
+    static func plan(for op: GameBridge.GameCenterOp, hasMatch: Bool) -> GameCenterMatchmaking {
+        switch op {
+        case .host(let maxPlayers): hasMatch ? .addPeople : .start(maxPlayers: maxPlayers)
+        case .invite: hasMatch ? .addPeople : .ignore
+        default: .ignore
+        }
+    }
+}
+
 /// Game Center for two-phone multiplayer: signs the player in, opens Apple's invite screen (friends only, no strangers),
 /// keeps the real-time `GKMatch`, sends the page's messages to the people it names (reliable mode) and hands
 /// everything that arrives back to the page as `gcEvent` scripts. No server of ours and nothing stored.
@@ -95,10 +112,8 @@ final class GameCenter {
             } else {
                 tellAuth()
             }
-        case .host(let maxPlayers):
-            openMatchmaker(op, maxPlayers: maxPlayers)
-        case .invite:
-            openMatchmaker(op, maxPlayers: GameBridge.GameCenterOp.playerRange.upperBound)
+        case .host, .invite:
+            openMatchmaker(op)
         case let .send(to, data):
             send(data, to: to)
         case .leave:
@@ -142,7 +157,7 @@ final class GameCenter {
         if pageAsked { tellAuth() }
         guard let op = queued else { return }
         queued = nil
-        if case .ready = status { handle(op) }
+        if case .ready = status { handle(op) } else { emit(.matchmaker(ok: false, reason: "signed-out")) }
     }
 
     private func tellAuth() {
@@ -158,9 +173,16 @@ final class GameCenter {
     }
 
     private func emit(_ event: GameBridge.GameCenterEvent) {
-        if case .auth = event {} else {
-            guard case .ready = status else { return } // nothing about a match before sign-in
+        switch (event, status) {
+        case (.auth, _):
+            break
+        case (.matchmaker, .failed):
+            // "signed-out" comes after the page has heard auth ok:false
+            if !pageAsked { pageAsked = true; tellAuth() }
+        case (_, .ready):
             if !pageKnowsAuth { tellAuth() } // e.g. a friend's invite accepted before the page asked
+        default:
+            return // nothing about a match before sign-in
         }
         onEvent?(GameBridge.gcEventScript(event))
     }
@@ -169,20 +191,28 @@ final class GameCenter {
 
     /// Apple's invite screen. With no match yet it starts one (host); with a match it adds people to it, which is also
     /// how someone who dropped out of a 3–4 person match is brought back.
-    private func openMatchmaker(_ op: GameBridge.GameCenterOp, maxPlayers: Int) {
+    private func openMatchmaker(_ op: GameBridge.GameCenterOp) {
+        let plan = GameCenterMatchmaking.plan(for: op, hasMatch: match != nil)
+        guard plan != .ignore else { return }
         guard case .ready = status else {
-            if case .failed = status { return }
-            queued = op
+            if case .failed = status { emit(.matchmaker(ok: false, reason: "signed-out")) } else { queued = op }
             return
         }
         guard matchmaker == nil else { return }
         let request = GKMatchRequest()
         request.minPlayers = GameBridge.GameCenterOp.playerRange.lowerBound
-        request.maxPlayers = maxPlayers
-        guard let controller = GKMatchmakerViewController(matchRequest: request) else { return }
+        if case .start(let maxPlayers) = plan {
+            request.maxPlayers = maxPlayers
+        } else {
+            request.maxPlayers = GameBridge.GameCenterOp.playerRange.upperBound
+        }
+        guard let controller = GKMatchmakerViewController(matchRequest: request) else {
+            emit(.matchmaker(ok: false, reason: "failed"))
+            return
+        }
         controller.matchmakingMode = .inviteOnly // friends only, never strangers
         controller.matchmakerDelegate = relay
-        if let match { controller.addPlayers(to: match) }
+        if plan == .addPeople, let match { controller.addPlayers(to: match) }
         matchmaker = controller
         show(controller)
     }
@@ -195,10 +225,13 @@ final class GameCenter {
         show(controller)
     }
 
-    fileprivate func matchmakerFinished(_ found: GKMatch?) {
+    fileprivate func matchmakerFinished(_ found: GKMatch?, reason: String = "cancelled") {
         matchmaker?.dismiss(animated: true)
         matchmaker = nil
-        guard let found else { return }
+        guard let found else {
+            emit(.matchmaker(ok: false, reason: reason))
+            return
+        }
         if let old = match, old !== found {
             old.delegate = nil
             old.disconnect()
@@ -289,7 +322,7 @@ nonisolated private final class GameCenterRelay: NSObject, GKMatchDelegate, GKMa
 
     func matchmakerViewController(_ viewController: GKMatchmakerViewController, didFailWithError error: any Error) {
         let owner = self.owner
-        Task { @MainActor in owner?.matchmakerFinished(nil) }
+        Task { @MainActor in owner?.matchmakerFinished(nil, reason: "failed") }
     }
 
     func matchmakerViewController(_ viewController: GKMatchmakerViewController, didFind match: GKMatch) {

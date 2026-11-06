@@ -82,6 +82,26 @@ struct GameCenterBridgeTests {
         #expect(roster.connected(b) == [.back("G:2"), .people([b])]) // the same player back in the match
     }
 
+    @Test func testInviteWithoutMatchDoesNothing() {
+        // invite only adds people to a running match: it can never start one (only host can, after the Full Arsenal check)
+        #expect(GameCenterMatchmaking.plan(for: .invite, hasMatch: false) == .ignore)
+        #expect(GameCenterMatchmaking.plan(for: .invite, hasMatch: true) == .addPeople)
+        #expect(GameCenterMatchmaking.plan(for: .host(maxPlayers: 4), hasMatch: false) == .start(maxPlayers: 4))
+        #expect(GameCenterMatchmaking.plan(for: .host(maxPlayers: 3), hasMatch: true) == .addPeople)
+        #expect(GameCenterMatchmaking.plan(for: .auth, hasMatch: false) == .ignore)
+        #expect(GameCenterMatchmaking.plan(for: .leave, hasMatch: true) == .ignore)
+    }
+
+    @Test func testMatchmakerEventScript() {
+        #expect(GameBridge.gcEventScript(.matchmaker(ok: false, reason: "cancelled"))
+            == "window.gcEvent && window.gcEvent({\"event\":\"matchmaker\",\"ok\":false,\"reason\":\"cancelled\"});")
+        #expect(GameBridge.gcEventScript(.matchmaker(ok: false, reason: nil))
+            == "window.gcEvent && window.gcEvent({\"event\":\"matchmaker\",\"ok\":false});")
+        let odd = GameBridge.gcEventScript(.matchmaker(ok: false, reason: "a\"b\u{2029}"))
+        #expect(odd.contains("\"reason\":\"a\\\"b\\u2029\""))
+        #expect(!odd.contains("\u{2029}"))
+    }
+
     @Test func testAuthFailureReasons() {
         #expect(GameCenter.reason(for: nil) == "notSignedIn")
         #expect(GameCenter.reason(for: GKError(.cancelled)) == "notSignedIn")
