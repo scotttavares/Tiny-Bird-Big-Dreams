@@ -60,6 +60,7 @@ button:disabled{opacity:.4;cursor:default}
 @media (min-width:700px){.menu{max-width:760px}.menu .pic{max-width:190px}}
 .camps{display:grid;gap:14px;grid-template-columns:1fr 1fr}
 .camps .camp:first-child{grid-column:1/-1}
+.camps .camp[data-campaign=editions]{grid-column:1/-1}
 .camps .camp span{font:700 22px/1.1 Caveat,cursive}
 .camps .camp.soon{opacity:.45;cursor:default}
 .campback{display:block;margin:0 0 6px;padding:2px 10px;font:700 18px/1.2 Caveat,cursive;color:#1f4fa8;background:transparent;border:1.5px solid #1f4fa855;border-radius:12px;cursor:pointer}
@@ -316,6 +317,7 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
   <div class="camps">
     <button type="button" class="tile camp" data-campaign="regular"><canvas class="pic" data-pic="camp-regular"></canvas><span>Regular War</span><small>The pencil war</small></button>
     <button type="button" class="tile camp" data-campaign="drumstick"><canvas class="pic" data-pic="camp-drumstick"></canvas><span>Operation Drumstick</span><small>Thanksgiving</small></button>
+    <button type="button" class="tile camp soon" data-campaign="mistletoe" disabled><canvas class="pic" data-pic="camp-mistletoe"></canvas><span>Operation Mistletoe</span><small>Coming at Christmas</small></button>
     <button type="button" class="tile camp soon" data-campaign="editions" disabled><canvas class="pic" data-pic="camp-editions"></canvas><span>Editions</span><small>Coming soon</small></button>
   </div>
 </section>
@@ -5443,9 +5445,16 @@ function drawCampPic(c, id) {
   } else if (id === "drumstick") {
     if (typeof drawTurkey === "function") drawTurkey(c, 56, 34, 1, 0); else drawPumpkin(c, 56, 40, 12);
     drawPumpkin(c, 104, 42, 13);
+  } else if (id === "mistletoe") { // a sprig of mistletoe and a crayon Christmas tree peeking out
+    c.save(); c.fillStyle = "#3f8f3f"; c.beginPath(); c.moveTo(104, 8); c.lineTo(120, 44); c.lineTo(88, 44); c.closePath(); c.fill();
+    c.fillStyle = "#e3b341"; c.beginPath(); c.arc(104, 9, 3, 0, 7); c.fill();
+    [[98, 30, "#c62828"], [110, 36, "#1f4fa8"], [104, 22, "#e3b341"]].forEach(([x, y, col]) => { c.fillStyle = col; c.beginPath(); c.arc(x, y, 2.2, 0, 7); c.fill(); });
+    c.fillStyle = "#4f7a2a"; [[-1], [1]].forEach(([s]) => { c.beginPath(); c.ellipse(52 + s * 6, 30, 7, 3.5, s * .5, 0, 7); c.fill(); });
+    c.fillStyle = "#f6f2e6"; c.strokeStyle = "#8a8a7a"; c.lineWidth = .8; [[49, 34], [55, 35]].forEach(([x, y]) => { c.beginPath(); c.arc(x, y, 2.3, 0, 7); c.fill(); c.stroke(); });
+    c.strokeStyle = "#b3261e"; c.lineWidth = 2; c.beginPath(); c.moveTo(52, 26); c.lineTo(52, 14); c.stroke(); c.restore();
   }
   c.fillStyle = "#e9cf94"; c.strokeStyle = "#8a6a32"; c.fillRect(10, 46, 130, 50); c.strokeRect(10, 46, 130, 50); // the front cover
-  const stamp = id === "regular" ? "PENCIL WAR" : id === "drumstick" ? "DRUMSTICK" : "CLASSIFIED";
+  const stamp = id === "regular" ? "PENCIL WAR" : id === "drumstick" ? "DRUMSTICK" : id === "mistletoe" ? "MISTLETOE" : "CLASSIFIED";
   c.translate(75, 72); c.rotate(-.05); c.font = '700 17px "Stardos Stencil", monospace'; c.textAlign = "center"; c.textBaseline = "middle";
   const w = c.measureText(stamp).width + 14; c.strokeStyle = "#b3261e"; c.lineWidth = 2.2; c.strokeRect(-w / 2, -13, w, 26);
   c.fillStyle = "#b3261e"; c.fillText(stamp, 0, 1);
