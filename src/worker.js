@@ -1,77 +1,107 @@
-// Tiny Bird Studio — private dashboard gated behind a password.
-// Everything except /studio is served straight from static assets.
-// On /studio it pulls LIVE metrics from Supabase + Stripe (server-side),
-// falling back to a snapshot when a source/secret isn't available.
+// Tiny Bird, Big Dreams: Cloudflare Worker.
+// Everything except the routes below is served straight from static assets.
 //
-// Secrets (set in Cloudflare → Worker → Settings → Variables and secrets):
-//   STUDIO_PASSWORD      – password for the login gate
-//   TTBI_SERVICE_KEY     – Supabase service_role key (Tiny Thoughts, Big Ideas)
-//   TS_SERVICE_KEY       – Supabase service_role key (tinysuperpowers)
-//   STRIPE_KEY           – Stripe restricted, read-only secret key
-//   CF_ANALYTICS_TOKEN   – Cloudflare API token (Account Analytics: Read)
-//   CF_ACCOUNT_ID        – Cloudflare account tag (for the beacon fallback)
-//   CF_TBBD_ZONE_TAG     – Cloudflare zone tag for tinybirdbigdreams.com
-//   CF_TTBI_ZONE_TAG     – Cloudflare zone tag for tinythoughtsbigideas.com
-//   CF_TS_ZONE_TAG       – Cloudflare zone tag for tinysuperpowers.com
-//   CF_TBBD_BEACON       – Web Analytics site tag for tinybirdbigdreams.com (fallback)
-//   CF_TTBI_BEACON       – Web Analytics site tag for tinythoughtsbigideas.com (fallback)
-//   CF_TS_BEACON         – Web Analytics site tag for tinysuperpowers.com (fallback)
+//   POST /track          consented analytics batches (aggregate-only, see analytics.js)
+//   POST /consent        anonymous tally of cookie-banner choices
+//   POST /signup         "notify me when something hatches" email list
+//   POST /email-webhook  contact form: classify, store, auto-reply, alert the team
+//   /studio[...]         password-gated dashboard (studio.js)
+//   /gazette             gazette.js
+//
+// Secrets (Cloudflare -> Worker -> Settings -> Variables and secrets):
+//   STUDIO_PASSWORD           password for /studio
+//   ANTHROPIC_API_KEY         contact-form classifier + auto-reply drafts
+//   RESEND_API_KEY            sending email
+//   FORMSPREE_WEBHOOK_SECRET  optional, legacy JSON webhook signature
+//   CF_ANALYTICS_TOKEN, CF_ACCOUNT_ID, CF_TBBD_ZONE_TAG, CF_TBBD_BEACON  Cloudflare traffic total on /studio
 
 import { handleGazette } from "./gazette.js";
+import { sanitizeBatch, recordBatch, recordConsent } from "./analytics.js";
+import { saveMessage, markReplied, saveSignup } from "./inbox.js";
+import { rateLimit, allowedOrigin, cleanName, isEmail } from "./guard.js";
+import { collectStudio, renderStudio, studioCsv, loginHTML } from "./studio.js";
 
 const SESSION_COOKIE = "tbbd_studio";
 const SESSION_TTL = 60 * 60 * 24 * 30; // 30 days, in seconds
 
-const SUPA = {
-  ttbi: { url: "https://eljbsalptkzmtavsbebb.supabase.co", keyEnv: "TTBI_SERVICE_KEY" },
-  ts: { url: "https://mzggnfnlyxpndbtgegwg.supabase.co", keyEnv: "TS_SERVICE_KEY" },
-};
+const json = (obj, status = 200) =>
+  new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json" } });
+
+async function readBody(request) {
+  const type = request.headers.get("content-type") || "";
+  try {
+    if (type.includes("application/json") || type.includes("text/plain")) return JSON.parse(await request.text());
+    const fd = await request.formData();
+    return Object.fromEntries(fd.entries());
+  } catch { return null; }
+}
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const p = url.pathname;
+    const post = request.method === "POST";
 
-    if (p === "/" || p === "") {
-      return serveHome(request, env, ctx);
+    if (p === "/gazette" || p === "/gazette/") return handleGazette(request);
+
+    if (p === "/track" && post) {
+      if (!allowedOrigin(request) || Number(request.headers.get("content-length") || 0) > 16000) return new Response(null, { status: 204 });
+      if (!(await rateLimit(env.VISITORS, request, "track", 120, 3600))) return new Response(null, { status: 204 });
+      const body = await readBody(request);
+      const batch = sanitizeBatch(body);
+      const referrer = typeof body?.ref === "string" ? body.ref : "";
+      const work = recordBatch(env.VISITORS, batch, { referrer, ua: request.headers.get("user-agent") || "" })
+        .catch((e) => console.error("[track]", e));
+      if (ctx) ctx.waitUntil(work); else await work;
+      return new Response(null, { status: 204 });
     }
-    if (p === "/gazette" || p === "/gazette/") {
-      return handleGazette(request);
+
+    if (p === "/consent" && post) {
+      if (!allowedOrigin(request)) return new Response(null, { status: 204 });
+      if (!(await rateLimit(env.VISITORS, request, "consent", 20, 3600))) return new Response(null, { status: 204 });
+      const body = await readBody(request);
+      const work = recordConsent(env.VISITORS, body?.choice).catch((e) => console.error("[consent]", e));
+      if (ctx) ctx.waitUntil(work); else await work;
+      return new Response(null, { status: 204 });
     }
-    if (p === "/track" && request.method === "POST") {
-      return handleTrack(request, env, ctx);
+
+    if (p === "/signup" && post) {
+      if (!env.VISITORS) return json({ ok: false }, 503);
+      if (!allowedOrigin(request)) return json({ ok: false }, 403);
+      const body = await readBody(request);
+      if (body?.website) return json({ ok: true }); // honeypot
+      if (!(await rateLimit(env.VISITORS, request, "signup", 5, 3600))) return json({ ok: false }, 429);
+      const r = await saveSignup(env.VISITORS, body?.email);
+      return r === "ok" ? json({ ok: true }) : json({ ok: false }, 400);
     }
-    if (p === "/studio/login" && request.method === "POST") {
-      return handleLogin(request, env);
-    }
-    if (p === "/studio/logout") {
-      return handleLogout();
-    }
+
+    if (p === "/studio/login" && post) return handleLogin(request, env);
+    if (p === "/studio/logout") return handleLogout();
     if (p === "/studio/export.csv") {
-      if (await isAuthed(request, env)) {
-        const metrics = await collectMetrics(env);
-        return csvExport(metrics);
-      }
+      if (await isAuthed(request, env)) return csvResponse(studioCsv(await collectStudio(env)));
       return new Response(null, { status: 303, headers: { location: "/studio" } });
     }
     if (p === "/studio" || p === "/studio/") {
-      if (await isAuthed(request, env)) {
-        const metrics = await collectMetrics(env);
-        return html(dashboardHTML(metrics));
-      }
+      if (await isAuthed(request, env)) return html(renderStudio(await collectStudio(env)));
       return html(loginHTML({ error: false, configured: !!env.STUDIO_PASSWORD }), 401);
     }
 
-    // Email webhook — called by Formspree when a contact form is submitted.
-    // Needs env secrets: ANTHROPIC_API_KEY, RESEND_API_KEY, FORMSPREE_WEBHOOK_SECRET (optional)
-    if (p === "/email-webhook" && request.method === "POST") {
-      return handleEmailWebhook(request, env, ctx);
-    }
+    if (p === "/email-webhook" && post) return handleEmailWebhook(request, env, ctx);
 
-    // Everything else → the public static site.
     return env.ASSETS.fetch(request);
   },
 };
+
+function csvResponse(text) {
+  const day = new Date().toISOString().slice(0, 10);
+  return new Response(text, {
+    headers: {
+      "content-type": "text/csv; charset=utf-8",
+      "content-disposition": `attachment; filename="tiny-bird-studio-${day}.csv"`,
+      "cache-control": "no-store",
+    },
+  });
+}
 
 /* ----------------------------- responses ----------------------------- */
 
@@ -96,7 +126,10 @@ async function handleLogin(request, env) {
   } catch {
     /* ignore */
   }
-  if (!pw || attempt !== pw) {
+  if (!(await rateLimit(env.VISITORS, request, "login", 10, 900))) {
+    return html(loginHTML({ error: true, configured: !!pw }), 429);
+  }
+  if (!pw || !timingSafeEqual(String(attempt), pw)) {
     return html(loginHTML({ error: true, configured: !!pw }), 401);
   }
   const token = await makeToken(env);
@@ -178,750 +211,11 @@ function ub64u(s) {
   return atob(s.replace(/-/g, "+").replace(/_/g, "/"));
 }
 
-/* --------------------------- live metrics ---------------------------- */
-
-// Last-known snapshot — used as a fallback when a live source is missing.
-const SNAPSHOT = {
-  ttbi: {
-    signups: 1,
-    waitlist: 3,
-    tiers: [
-      { tier: "byo", users: 1, waitlist: 1 },
-    ],
-    weekly_signups: [],
-  },
-  ts: {
-    signups: 1,
-    downloads_total: 2,
-    purchases: 2,
-    purchases_revenue_cents: 1500,
-    products: [
-      { title: "Brain Dump", price_cents: 1500, downloads: 1, revenue_cents: 1500 },
-      { title: "Content Blaster", price_cents: 0, downloads: 1, revenue_cents: 0 },
-      { title: "Data Analyzer", price_cents: 3900, downloads: 0, revenue_cents: 0 },
-      { title: "Presentation Pro", price_cents: 2900, downloads: 0, revenue_cents: 0 },
-      { title: "Meeting Memo", price_cents: 2400, downloads: 0, revenue_cents: 0 },
-      { title: "Project Planner", price_cents: 1900, downloads: 0, revenue_cents: 0 },
-      { title: "Focus Mode", price_cents: 1500, downloads: 0, revenue_cents: 0 },
-      { title: "Email Wizard", price_cents: 1200, downloads: 0, revenue_cents: 0 },
-    ],
-    weekly_signups: [],
-    weekly_revenue: [],
-  },
-};
-
-async function supaMetrics(cfg, env) {
-  const key = env[cfg.keyEnv];
-  if (!key) throw new Error("no key");
-  const r = await fetch(`${cfg.url}/rest/v1/rpc/studio_metrics`, {
-    method: "POST",
-    headers: {
-      apikey: key,
-      authorization: `Bearer ${key}`,
-      "content-type": "application/json",
-    },
-    body: "{}",
-  });
-  if (!r.ok) throw new Error("supabase " + r.status);
-  return r.json();
-}
-
-function getMondayStr(ms) {
-  const d = new Date(ms);
-  const day = d.getUTCDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setUTCDate(d.getUTCDate() + diff);
-  return d.toISOString().slice(0, 10);
-}
-
-async function stripeRevenue(env) {
-  const key = env.STRIPE_KEY;
-  if (!key) throw new Error("no key");
-  const r = await fetch("https://api.stripe.com/v1/charges?limit=100", {
-    headers: { authorization: `Bearer ${key}` },
-  });
-  if (!r.ok) throw new Error("stripe " + r.status);
-  const j = await r.json();
-  let cents = 0;
-  let count = 0;
-  let currency = "usd";
-  const weekly = {};
-  const cutoff = Date.now() - 12 * 7 * 24 * 3600 * 1000;
-  for (const c of j.data || []) {
-    if (c.paid && !c.refunded && c.status === "succeeded") {
-      const amount = (c.amount || 0) - (c.amount_refunded || 0);
-      cents += amount;
-      count += 1;
-      currency = c.currency || currency;
-      const ms = (c.created || 0) * 1000;
-      if (ms >= cutoff) {
-        const w = getMondayStr(ms);
-        weekly[w] = (weekly[w] || 0) + amount;
-      }
-    }
-  }
-  return { cents, count, currency, weekly, more: !!j.has_more };
-}
-
-/* -------------------- Cloudflare Web Analytics -------------------- */
-
-// Extract bare 32-char hex token from a raw value that may be the full <script> snippet
-function beaconToken(raw) {
-  if (!raw) return null;
-  const m = raw.match(/["']token["']\s*:\s*["']([a-f0-9]{32})["']/i);
-  return m ? m[1] : raw.trim();
-}
-
-function cfAuthHeader(env) {
-  return { Authorization: `Bearer ${(env.CF_ANALYTICS_TOKEN || "").replace(/\s/g, "")}` };
-}
-
-let _cfAccountId = null;
-
-async function cfGetAccountId(env) {
-  if (_cfAccountId) return _cfAccountId;
-  if (env.CF_ACCOUNT_ID) {
-    _cfAccountId = env.CF_ACCOUNT_ID.trim();
-    return _cfAccountId;
-  }
-  throw new Error("CF_ACCOUNT_ID secret not set");
-}
-
-// Shared aggregation logic for both zone-level and beacon traffic data
-function parseCfGroups(groups, extractor) {
-  const d7start = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-  const d1start = new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-  const totals = {
-    d30: { visitors: 0, pageviews: 0 },
-    d7: { visitors: 0, pageviews: 0 },
-    d1: { visitors: 0, pageviews: 0 },
-  };
-  const weekly = {};
-  for (const g of groups) {
-    const date = g.dimensions?.date || "";
-    const { v, pv } = extractor(g);
-    totals.d30.visitors += v;
-    totals.d30.pageviews += pv;
-    if (date >= d7start) { totals.d7.visitors += v; totals.d7.pageviews += pv; }
-    if (date >= d1start) { totals.d1.visitors += v; totals.d1.pageviews += pv; }
-    const w = getMondayStr(new Date(date + "T00:00:00Z").getTime());
-    if (!weekly[w]) weekly[w] = { visitors: 0, pageviews: 0 };
-    weekly[w].visitors += v;
-    weekly[w].pageviews += pv;
-  }
-  return { totals, weekly };
-}
-
-// Lookup zone tag — check explicit env secrets first, then auto-discover via REST API
-async function cfGetZoneTag(hostname, env) {
-  if (hostname === "tinybirdbigdreams.com" && env.CF_TBBD_ZONE_TAG) return env.CF_TBBD_ZONE_TAG.trim();
-  if (hostname === "tinythoughtsbigideas.com" && env.CF_TTBI_ZONE_TAG) return env.CF_TTBI_ZONE_TAG.trim();
-  if (hostname === "tinysuperpowers.com" && env.CF_TS_ZONE_TAG) return env.CF_TS_ZONE_TAG.trim();
-  const r = await fetch(
-    `https://api.cloudflare.com/client/v4/zones?name=${encodeURIComponent(hostname)}&per_page=1`,
-    { headers: cfAuthHeader(env) }
-  );
-  if (!r.ok) throw new Error("cf zones " + r.status);
-  const j = await r.json();
-  const id = j.result?.[0]?.id;
-  if (!id) throw new Error("zone not found: " + hostname);
-  return id;
-}
-
-// Zone-level CDN analytics — matches the numbers shown on the CF Domains dashboard
-async function cfTrafficZone(zoneId, env) {
-  const endDate = new Date().toISOString().slice(0, 10);
-  const startDate = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-  const r = await fetch("https://api.cloudflare.com/client/v4/graphql", {
-    method: "POST",
-    headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
-    body: JSON.stringify({
-      query:
-        `{viewer{zones(filter:{zoneTag:"${zoneId}"}){\n        httpRequests1dGroups(\n        filter:{AND:[{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},\n        limit:365,orderBy:[date_ASC]\n        ){dimensions{date}sum{requests}uniq{uniques}}}}}`,
-    }),
-  });
-  if (!r.ok) throw new Error("cf graphql zone " + r.status);
-  const j = await r.json();
-  if (j.errors?.length) throw new Error("cf gql zone: " + j.errors[0].message);
-  const groups = j.data?.viewer?.zones?.[0]?.httpRequests1dGroups || [];
-  return parseCfGroups(groups, (g) => ({ v: g.uniq?.uniques || 0, pv: g.sum?.requests || 0 }));
-}
-
-// Beacon-based Web Analytics — only tracks visits with the JS snippet installed
-async function cfTrafficBeacon(siteTag, env) {
-  const accountId = await cfGetAccountId(env);
-  const endDate = new Date().toISOString().slice(0, 10);
-  const startDate = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-  const r = await fetch("https://api.cloudflare.com/client/v4/graphql", {
-    method: "POST",
-    headers: { ...cfAuthHeader(env), "Content-Type": "application/json" },
-    body: JSON.stringify({
-      query:
-        `{viewer{accounts(filter:{accountTag:"${accountId}"}){\n        rumPageloadEventsAdaptiveGroups(\n        filter:{AND:[{siteTag:"${siteTag}"},{date_geq:"${startDate}"},{date_leq:"${endDate}"}]},\n        limit:10000,orderBy:[date_ASC]\n        ){count dimensions{date}sum{visits}}}}}`,
-    }),
-  });
-  if (!r.ok) throw new Error("cf graphql beacon " + r.status);
-  const j = await r.json();
-  if (j.errors?.length) throw new Error("cf gql beacon: " + j.errors[0].message);
-  const groups = j.data?.viewer?.accounts?.[0]?.rumPageloadEventsAdaptiveGroups || [];
-  return parseCfGroups(groups, (g) => ({ v: g.sum?.visits || 0, pv: g.count || 0 }));
-}
-
-// Try zone-level CDN analytics first (real traffic), fall back to JS beacon data
-async function cfTraffic(rawTag, hostname, env) {
-  if (!env.CF_ANALYTICS_TOKEN) throw new Error("no cf token");
-  try {
-    const zoneId = await cfGetZoneTag(hostname, env);
-    return await cfTrafficZone(zoneId, env);
-  } catch {
-    const siteTag = beaconToken(rawTag);
-    if (!siteTag) throw new Error("no cf config");
-    return await cfTrafficBeacon(siteTag, env);
-  }
-}
-
-async function collectMetrics(env) {
-  const [ttbi, ts, stripe, tbbdTraf, ttbiTraf, tsTraf] = await Promise.allSettled([
-    supaMetrics(SUPA.ttbi, env),
-    supaMetrics(SUPA.ts, env),
-    stripeRevenue(env),
-    cfTraffic(env.CF_TBBD_BEACON, "tinybirdbigdreams.com", env),
-    cfTraffic(env.CF_TTBI_BEACON, "tinythoughtsbigideas.com", env),
-    cfTraffic(env.CF_TS_BEACON, "tinysuperpowers.com", env),
-  ]);
-
-  const ttbiData = ttbi.status === "fulfilled" ? ttbi.value : SNAPSHOT.ttbi;
-  const tsData = ts.status === "fulfilled" ? ts.value : SNAPSHOT.ts;
-  const stripeData = stripe.status === "fulfilled" ? stripe.value : null;
-  const tbbdTrafData = tbbdTraf.status === "fulfilled" ? tbbdTraf.value : null;
-  const ttbiTrafData = ttbiTraf.status === "fulfilled" ? ttbiTraf.value : null;
-  const tsTrafData = tsTraf.status === "fulfilled" ? tsTraf.value : null;
-
-  return {
-    asOf: new Date().toLocaleString("en-US", {
-      timeZone: "UTC",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    }) + " UTC",
-    live: {
-      ttbi: ttbi.status === "fulfilled",
-      ts: ts.status === "fulfilled",
-      stripe: stripe.status === "fulfilled",
-      traffic:
-        tbbdTraf.status === "fulfilled" ||
-        ttbiTraf.status === "fulfilled" ||
-        tsTraf.status === "fulfilled",
-    },
-    ttbi: ttbiData,
-    ts: tsData,
-    stripe: stripeData,
-    traffic: { tbbd: tbbdTrafData, ttbi: ttbiTrafData, ts: tsTrafData },
-  };
-}
-
-/* ----------------------------- CSV export ---------------------------- */
-
-function csvRow(cells) {
-  return cells
-    .map((c) => {
-      const s = String(c ?? "");
-      if (s.includes(",") || s.includes('"') || s.includes("\n")) {
-        return '"' + s.replace(/"/g, '""') + '"';
-      }
-      return s;
-    })
-    .join(",");
-}
-
-function csvExport(m) {
-  const rows = [];
-  rows.push(["Tiny Bird Studio Export", m.asOf]);
-  rows.push([]);
-  rows.push(["OVERVIEW"]);
-  rows.push(["Revenue", ((m.stripe ? m.stripe.cents : 0) + (m.ts.purchases_revenue_cents || 0)) / 100]);
-  rows.push(["Total sign-ups", (m.ttbi.signups || 0) + (m.ts.signups || 0)]);
-  rows.push(["Total downloads", m.ts.downloads_total || 0]);
-  rows.push([]);
-  rows.push(["TINY THOUGHTS BIG IDEAS"]);
-  rows.push(["Sign-ups", m.ttbi.signups]);
-  rows.push(["Waitlist", m.ttbi.waitlist]);
-  rows.push(["Revenue", m.stripe ? (m.stripe.cents / 100).toFixed(2) : ""]);
-  rows.push(["Tier", "Active Users", "Waitlist"]);
-  for (const t of m.ttbi.tiers || []) {
-    rows.push([t.tier.toUpperCase(), t.users ?? 0, t.waitlist ?? 0]);
-  }
-  rows.push([]);
-  rows.push(["TINY SUPERPOWERS"]);
-  rows.push(["Sign-ups", m.ts.signups]);
-  rows.push(["Downloads", m.ts.downloads_total]);
-  rows.push([
-    "Revenue",
-    m.ts.purchases_revenue_cents ? (m.ts.purchases_revenue_cents / 100).toFixed(2) : 0,
-  ]);
-  rows.push([]);
-  rows.push(["Superpower", "Price", "Downloads", "Revenue"]);
-  for (const p of m.ts.products || []) {
-    rows.push([
-      p.title,
-      p.price_cents === 0 ? "Free" : (p.price_cents / 100).toFixed(2),
-      p.downloads,
-      p.revenue_cents > 0
-        ? (p.revenue_cents / 100).toFixed(2)
-        : p.downloads > 0
-        ? "0.00"
-        : "",
-    ]);
-  }
-  if (m.traffic?.tbbd?.totals || m.traffic?.ttbi?.totals || m.traffic?.ts?.totals) {
-    rows.push([]);
-    rows.push(["TRAFFIC (last 30 days)"]);
-    if (m.traffic?.tbbd?.totals) {
-      rows.push(["Tiny Bird Big Dreams Visits", m.traffic.tbbd.totals.d30.visitors]);
-      rows.push(["Tiny Bird Big Dreams Requests", m.traffic.tbbd.totals.d30.pageviews]);
-    }
-    if (m.traffic?.ttbi?.totals) {
-      rows.push(["TTBI Visits", m.traffic.ttbi.totals.d30.visitors]);
-      rows.push(["TTBI Requests", m.traffic.ttbi.totals.d30.pageviews]);
-    }
-    if (m.traffic?.ts?.totals) {
-      rows.push(["Tiny Superpowers Visits", m.traffic.ts.totals.d30.visitors]);
-      rows.push(["Tiny Superpowers Requests", m.traffic.ts.totals.d30.pageviews]);
-    }
-  }
-  const today = new Date().toISOString().slice(0, 10);
-  const csv = rows.map(csvRow).join("\n");
-  return new Response(csv, {
-    headers: {
-      "content-type": "text/csv;charset=UTF-8",
-      "content-disposition": `attachment; filename="tiny-bird-studio-${today}.csv"`,
-      "cache-control": "no-store",
-    },
-  });
-}
-
-/* ----------------------------- chart data ---------------------------- */
-
-function lastNWeeks(n) {
-  const weeks = [];
-  const now = new Date();
-  const day = now.getUTCDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  const monday = new Date(now);
-  monday.setUTCDate(monday.getUTCDate() + diff);
-  monday.setUTCHours(0, 0, 0, 0);
-  for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(monday);
-    d.setUTCDate(d.getUTCDate() - i * 7);
-    weeks.push(d.toISOString().slice(0, 10));
-  }
-  return weeks;
-}
-
-function buildChartData(m) {
-  const weeks = lastNWeeks(12);
-  const labels = weeks.map((w) => {
-    const d = new Date(w + "T00:00:00Z");
-    return (d.getUTCMonth() + 1) + "/" + d.getUTCDate();
-  });
-
-  const ttbiSignupMap = {};
-  for (const pt of m.ttbi.weekly_signups || []) {
-    ttbiSignupMap[pt.week.slice(0, 10)] = Number(pt.count);
-  }
-  const tsSignupMap = {};
-  for (const pt of m.ts.weekly_signups || []) {
-    tsSignupMap[pt.week.slice(0, 10)] = Number(pt.count);
-  }
-  const tsRevMap = {};
-  for (const pt of m.ts.weekly_revenue || []) {
-    tsRevMap[pt.week.slice(0, 10)] = Number(pt.revenue_cents);
-  }
-  const stripeWeekly = m.stripe ? (m.stripe.weekly || {}) : {};
-
-  const tbbdTrafW = m.traffic?.tbbd?.weekly || {};
-  const ttbiTrafW = m.traffic?.ttbi?.weekly || {};
-  const tsTrafW = m.traffic?.ts?.weekly || {};
-
-  return {
-    labels,
-    signups: {
-      ttbi: weeks.map((w) => ttbiSignupMap[w] || 0),
-      ts: weeks.map((w) => tsSignupMap[w] || 0),
-    },
-    revenue: {
-      stripe: weeks.map((w) => +((stripeWeekly[w] || 0) / 100).toFixed(2)),
-      ts: weeks.map((w) => +((tsRevMap[w] || 0) / 100).toFixed(2)),
-    },
-    traffic: {
-      tbbd: weeks.map((w) => (tbbdTrafW[w] ? tbbdTrafW[w].visitors : 0)),
-      ttbi: weeks.map((w) => (ttbiTrafW[w] ? ttbiTrafW[w].visitors : 0)),
-      ts: weeks.map((w) => (tsTrafW[w] ? tsTrafW[w].visitors : 0)),
-    },
-  };
-}
-
-/* ------------------------------- views ------------------------------- */
-
-const BASE_CSS = `
-  *{box-sizing:border-box;margin:0;padding:0}
-  :root{--gold:#E8A022;--cream:#FBF7F2;--bg:#0E0A18;--panel:#1A1326;--panel2:#241a33;--muted:rgba(251,247,242,.45)}
-  body{font-family:'DM Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:radial-gradient(1200px 600px at 50% -10%,#241a33 0%,var(--bg) 60%);color:var(--cream);min-height:100vh;-webkit-font-smoothing:antialiased}
-  .serif{font-family:'Fraunces',Georgia,serif}
-`;
-
-function loginHTML({ error, configured }) {
-  return `<!DOCTYPE html><html lang="en"><head>
-<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<meta name="robots" content="noindex,nofollow"/>
-<title>Tiny Bird Studio — Sign in</title>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-<style>${BASE_CSS}
-  .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
-  .card{width:100%;max-width:380px;background:var(--panel);border:1px solid rgba(251,247,242,.08);border-radius:22px;padding:38px 32px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
-  .logo{width:46px;height:46px;border-radius:13px;background:linear-gradient(150deg,#F0B83A,#E8A022);display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:22px}
-  h1{font-size:24px;font-weight:700;letter-spacing:-.02em;margin-bottom:6px}
-  .sub{font-size:14px;color:var(--muted);margin-bottom:26px}
-  label{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
-  input{width:100%;background:#0f0a1a;border:1px solid rgba(251,247,242,.12);border-radius:12px;padding:14px 16px;color:var(--cream);font-size:15px;outline:none;transition:border-color .2s}
-  input:focus{border-color:var(--gold)}
-  button{width:100%;margin-top:18px;background:var(--gold);color:#2C1F3E;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer;transition:background .2s,transform .15s}
-  button:hover{background:#f0b030;transform:translateY(-1px)}
-  .err{background:rgba(214,77,77,.12);border:1px solid rgba(214,77,77,.4);color:#f0a3a3;font-size:13px;padding:11px 14px;border-radius:10px;margin-bottom:18px}
-  .note{font-size:12px;color:var(--muted);margin-top:18px;line-height:1.6}
-</style></head>
-<body><div class="wrap"><form class="card" method="POST" action="/studio/login">
-  <div class="logo">🐤</div>
-  <h1 class="serif">Tiny Bird Studio</h1>
-  <p class="sub">Private dashboard. Members only.</p>
-  ${error ? `<div class="err">Wrong password. Try again.</div>` : ``}
-  <label for="pw">Password</label>
-  <input id="pw" name="password" type="password" autocomplete="current-password" autofocus required/>
-  <button type="submit">Enter the studio →</button>
-  ${configured ? `` : `<p class="note">⚠️ The studio password hasn't been set yet. Add the <code>STUDIO_PASSWORD</code> secret, then redeploy.</p>`}
-</form></div></body></html>`;
-}
-
-function money(cents) {
-  if (cents == null) return "—";
-  return "$" + (cents / 100).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-}
-function num(v) {
-  return v == null ? "—" : v;
-}
-function metric(value, label) {
-  return `<div class="stat"><div class="n">${value}</div><div class="k">${label}</div></div>`;
-}
-function dot(on) {
-  return `<span class="dot ${on ? "on" : "off"}" title="${on ? "Live" : "Snapshot"}"></span>`;
-}
-
-function dashboardHTML(m) {
-  const ttbi = m.ttbi;
-  const ts = m.ts;
-  const chartData = buildChartData(m);
-  const trafficStats = {
-    tbbd: m.traffic?.tbbd?.totals || null,
-    ttbi: m.traffic?.ttbi?.totals || null,
-    ts: m.traffic?.ts?.totals || null,
-  };
-
-  const ttbiRevCents = m.stripe ? m.stripe.cents : 0;
-  const tsRevCents = ts.purchases_revenue_cents || 0;
-  const totalRevCents = ttbiRevCents + tsRevCents;
-  const totalRevStr = (m.stripe || tsRevCents) ? money(totalRevCents) + (m.stripe?.more ? "+" : "") : "—";
-  const ttbiRevStr = m.stripe ? money(m.stripe.cents) + (m.stripe.more ? "+" : "") : "—";
-
-  const tierRows = (ttbi.tiers || []).map((t) => {
-    const subRows = (t.waitlist_users || []).map((u) => `<tr style="background:rgba(251,247,242,.03)">
-        <td style="padding-left:20px;font-size:13px;color:var(--muted)">↳ ${u.name || "—"}<span style="font-size:11px;margin-left:8px;opacity:.6">${u.email || ""}</span></td>
-        <td colspan="2" style="text-align:right;font-size:11px;color:var(--muted)">${u.status || "pending"}</td>
-        <td></td>
-      </tr>`).join("");
-    const rev = t.tier === "byo" ? ttbiRevStr : "—";
-    return `<tr>
-        <td>${t.tier.toUpperCase()}</td>
-        <td style="text-align:right;color:var(--gold)">${t.users ?? 0}</td>
-        <td style="text-align:right;color:var(--muted)">${t.waitlist ?? 0}</td>
-        <td style="text-align:right;color:var(--gold)">${rev}</td>
-      </tr>${subRows}`;
-  }).join("");
-
-  const spRows = (ts.products || [])
-    .map(
-      (s) => `<tr>
-        <td>${s.title}</td>
-        <td style="text-align:right;color:var(--muted)">${s.price_cents === 0 ? "Free" : money(s.price_cents)}</td>
-        <td style="text-align:right;color:var(--gold)">${s.downloads}</td>
-        <td style="text-align:right;color:var(--gold)">${s.revenue_cents > 0 ? money(s.revenue_cents) : (s.downloads > 0 ? "$0" : "—")}</td>
-      </tr>`
-    )
-    .join("");
-
-  return `<!DOCTYPE html><html lang="en"><head>
-<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<meta name="robots" content="noindex,nofollow"/>
-<title>Tiny Bird Studio</title>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-<style>${BASE_CSS}
-  .top{max-width:1080px;margin:0 auto;padding:26px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
-  .brand{display:flex;align-items:center;gap:12px}
-  .brand .ic{width:38px;height:38px;border-radius:11px;background:linear-gradient(150deg,#F0B83A,#E8A022);display:flex;align-items:center;justify-content:center;font-size:20px}
-  .brand h1{font-size:20px;font-weight:700;letter-spacing:-.02em}
-  .brand .meta{font-size:12px;color:var(--muted);margin-top:2px}
-  .out{font-size:13px;color:var(--muted);text-decoration:none;border:1px solid rgba(251,247,242,.14);padding:8px 14px;border-radius:10px;transition:color .2s,border-color .2s}
-  .out:hover{color:var(--cream);border-color:rgba(251,247,242,.3)}
-  .wrap{max-width:1080px;margin:0 auto;padding:6px 24px 60px;display:flex;flex-direction:column;gap:18px}
-  .panel{background:var(--panel);border:1px solid rgba(251,247,242,.07);border-radius:20px;padding:26px}
-  .banner{display:flex;gap:34px;flex-wrap:wrap;align-items:flex-end}
-  .phead{display:flex;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap}
-  .phead .pic{width:34px;height:34px;border-radius:10px;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:18px}
-  .phead h2{font-family:'Fraunces',serif;font-size:21px;font-weight:700}
-  .pill{font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:20px;background:rgba(232,160,34,.14);color:var(--gold)}
-  .pill.live{background:rgba(111,191,139,.16);color:#8fd6a8}
-  .statrow{display:flex;gap:34px;flex-wrap:wrap}
-  .stat .n{font-family:'Fraunces',serif;font-size:30px;font-weight:700;color:var(--gold);line-height:1}
-  .stat .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:6px}
-  .sub{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:24px 0 10px}
-  table{width:100%;border-collapse:collapse;font-size:14px}
-  th{text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500;padding:0 0 10px}
-  th.r{text-align:right}
-  td{padding:10px 0;border-top:1px solid rgba(251,247,242,.06)}
-  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:8px;vertical-align:middle}
-  .dot.on{background:#6FBF8B;box-shadow:0 0 0 3px rgba(111,191,139,.18)}
-  .dot.off{background:rgba(251,247,242,.25)}
-  .foot{max-width:1080px;margin:0 auto;padding:0 24px 50px;font-size:12px;color:var(--muted);line-height:1.7}
-  .filter-stack{margin-left:auto;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
-  .filters{display:flex;gap:8px}
-  .fbtn{background:var(--panel2);border:1px solid rgba(251,247,242,.1);color:var(--muted);border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;transition:all .2s}
-  .fbtn.active{background:rgba(232,160,34,.18);border-color:var(--gold);color:var(--gold)}
-  .fbtn:hover:not(.active){border-color:rgba(251,247,242,.3);color:var(--cream)}
-  .wbtn{background:var(--panel2);border:1px solid rgba(251,247,242,.08);color:var(--muted);border-radius:7px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all .2s}
-  .wbtn.active{background:rgba(232,160,34,.1);border-color:rgba(232,160,34,.4);color:rgba(232,160,34,.9)}
-  .wbtn:hover:not(.active){border-color:rgba(251,247,242,.25);color:var(--cream)}
-  .traffic-note{color:var(--muted);font-size:13px;padding:30px 0;text-align:center}
-</style></head>
-<body>
-  <header class="top">
-    <div class="brand">
-      <div class="ic">🐤</div>
-      <div><h1 class="serif">Tiny Bird Studio</h1><div class="meta">2 active projects · updated ${m.asOf}</div></div>
-    </div>
-    <a class="out" href="/studio/logout">Sign out</a>
-  </header>
-  <main class="wrap">
-
-    <section class="panel">
-      <div class="banner">
-        ${metric(totalRevStr, "Revenue")}
-        ${metric(num(ttbi.signups == null ? null : (ttbi.signups + (ts.signups || 0))), "Total sign-ups")}
-        ${metric(num(ts.downloads_total), "Total downloads")}
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="phead">
-        <div class="pic">📈</div>
-        <h2>Trends</h2>
-        <div class="filter-stack">
-          <div class="filters">
-            <button class="fbtn active" data-filter="signups" onclick="setFilter('signups')">Sign-ups</button>
-            <button class="fbtn" data-filter="revenue" onclick="setFilter('revenue')">Revenue</button>
-            <button class="fbtn" data-filter="traffic" onclick="setFilter('traffic')">Traffic</button>
-          </div>
-          <div class="filters">
-            <button class="wbtn active" data-window="30" onclick="setWindow(30)">30 days</button>
-            <button class="wbtn" data-window="7" onclick="setWindow(7)">7 days</button>
-            <button class="wbtn" data-window="1" onclick="setWindow(1)">24 hours</button>
-          </div>
-        </div>
-      </div>
-      <canvas id="trend-chart" height="80"></canvas>
-      <div id="traffic-note" class="traffic-note" style="display:none">Traffic not connected yet — add <code>CF_ANALYTICS_TOKEN</code> and the zone-tag secrets.</div>
-    </section>
-
-    <section class="panel">
-      <div class="phead">
-        <div class="pic">🐤</div>
-        <h2>Tiny Bird Big Dreams</h2>
-        <span class="pill live">Landing site</span>${dot(!!m.traffic?.tbbd)}
-      </div>
-      <div class="statrow">
-        <div class="stat"><div class="n" id="tbbd-visits">—</div><div class="k">Visits (<span class="wl">30d</span>)</div></div>
-        <div class="stat"><div class="n" id="tbbd-pv">—</div><div class="k">Requests (<span class="wl">30d</span>)</div></div>
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="phead">
-        <div class="pic">💡</div>
-        <h2>Tiny Thoughts, Big Ideas</h2>
-        <span class="pill live">Live</span>${dot(m.live.ttbi)}
-      </div>
-      <div class="statrow">
-        ${metric(num(ttbi.signups), "Sign-ups")}
-        ${metric(num(ttbi.waitlist), "Waitlist")}
-        ${metric(ttbiRevStr, "Revenue")}
-        <div class="stat"><div class="n" id="ttbi-visits">—</div><div class="k">Visits (<span class="wl">30d</span>)</div></div>
-        <div class="stat"><div class="n" id="ttbi-pv">—</div><div class="k">Requests (<span class="wl">30d</span>)</div></div>
-      </div>
-      <div class="sub">Sign-ups by tier</div>
-      <table>
-        <thead><tr><th>Tier</th><th class="r">Active users</th><th class="r">Waitlist</th><th class="r">Revenue</th></tr></thead>
-        <tbody>${tierRows}</tbody>
-      </table>
-    </section>
-
-    <section class="panel">
-      <div class="phead">
-        <div class="pic">⚡</div>
-        <h2>Tiny Superpowers</h2>
-        <span class="pill">In development</span>${dot(m.live.ts)}
-      </div>
-      <div class="statrow">
-        ${metric(num(ts.signups), "Sign-ups")}
-        ${metric(num(ts.downloads_total), "Downloads")}
-        ${metric(money(ts.purchases_revenue_cents), "Revenue")}
-        <div class="stat"><div class="n" id="ts-visits">—</div><div class="k">Visits (<span class="wl">30d</span>)</div></div>
-        <div class="stat"><div class="n" id="ts-pv">—</div><div class="k">Requests (<span class="wl">30d</span>)</div></div>
-      </div>
-      <div class="sub">Downloads by superpower</div>
-      <table>
-        <thead><tr><th>Superpower</th><th class="r">Price</th><th class="r">Downloads</th><th class="r">Revenue</th></tr></thead>
-        <tbody>${spRows}</tbody>
-      </table>
-    </section>
-
-  </main>
-  <div style="max-width:1080px;margin:0 auto;padding:0 24px 24px;display:flex;justify-content:flex-end">
-    <a href="/studio/export.csv" style="background:var(--panel);border:1px solid rgba(251,247,242,.14);color:var(--cream);border-radius:10px;padding:10px 18px;font-size:13px;display:flex;align-items:center;gap:8px;text-decoration:none">
-      ↓ Download spreadsheet
-    </a>
-  </div>
-  <div class="foot">
-    ${dot(m.live.stripe)} Stripe &nbsp; ${dot(m.live.ttbi)} Tiny Thoughts DB &nbsp; ${dot(m.live.ts)} Tiny Superpowers DB &nbsp; ${dot(m.live.traffic)} Traffic
-    &nbsp;— filled dot = live data; hollow dot = snapshot or not connected yet.
-  </div>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"><\/script>
-<script>
-var CD = ${JSON.stringify(chartData)};
-var TS = ${JSON.stringify(trafficStats)};
-var currentFilter = 'signups';
-var currentWindow = 30;
-var chart = null;
-
-function fmt(n) {
-  if (n == null || n === '') return '—';
-  n = Number(n);
-  if (n >= 10000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
-  return n.toLocaleString('en-US');
-}
-
-function weeksFor(w) {
-  return w === 1 ? 1 : w === 7 ? 2 : 12;
-}
-
-function getDatasets(filter) {
-  var n = weeksFor(currentWindow);
-  var g = {tension:0.4, fill:true, pointRadius:3};
-  var green = Object.assign({}, g, {borderColor:'#6FBF8B', backgroundColor:'rgba(111,191,139,0.08)'});
-  var gold  = Object.assign({}, g, {borderColor:'#E8A022',  backgroundColor:'rgba(232,160,34,0.08)'});
-  var blue  = Object.assign({}, g, {borderColor:'#8B9DF0', backgroundColor:'rgba(139,157,240,0.08)'});
-  if (filter === 'signups') return [
-    Object.assign({label:'TTBI', data:CD.signups.ttbi.slice(-n)}, green),
-    Object.assign({label:'Tiny Superpowers', data:CD.signups.ts.slice(-n)}, gold)
-  ];
-  if (filter === 'revenue') return [
-    Object.assign({label:'Stripe (all apps)', data:CD.revenue.stripe.slice(-n)}, green),
-    Object.assign({label:'Tiny Superpowers', data:CD.revenue.ts.slice(-n)}, gold)
-  ];
-  if (filter === 'traffic') return [
-    Object.assign({label:'Tiny Bird Big Dreams visitors', data:CD.traffic.tbbd.slice(-n)}, blue),
-    Object.assign({label:'TTBI visitors', data:CD.traffic.ttbi.slice(-n)}, green),
-    Object.assign({label:'Tiny Superpowers visitors', data:CD.traffic.ts.slice(-n)}, gold)
-  ];
-  return [];
-}
-
-function hasTraffic() {
-  return TS && (TS.tbbd || TS.ttbi || TS.ts);
-}
-
-function updateChart() {
-  var n = weeksFor(currentWindow);
-  var canvas = document.getElementById('trend-chart');
-  var note = document.getElementById('traffic-note');
-  var showNote = (currentFilter === 'traffic' && !hasTraffic());
-  canvas.style.display = showNote ? 'none' : '';
-  note.style.display = showNote ? '' : 'none';
-  if (!showNote && chart) {
-    chart.data.labels = CD.labels.slice(-n);
-    chart.data.datasets = getDatasets(currentFilter);
-    chart.update();
-  }
-}
-
-function updateTrafficStats() {
-  var key = currentWindow === 1 ? 'd1' : currentWindow === 7 ? 'd7' : 'd30';
-  var wlabel = currentWindow === 1 ? '24h' : currentWindow === 7 ? '7d' : '30d';
-  var tbbdT = TS.tbbd ? TS.tbbd[key] : null;
-  var ttbiT = TS.ttbi ? TS.ttbi[key] : null;
-  var tsT = TS.ts ? TS.ts[key] : null;
-  function upd(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; }
-  upd('tbbd-visits', tbbdT ? fmt(tbbdT.visitors) : '—');
-  upd('tbbd-pv',     tbbdT ? fmt(tbbdT.pageviews) : '—');
-  upd('ttbi-visits', ttbiT ? fmt(ttbiT.visitors) : '—');
-  upd('ttbi-pv',     ttbiT ? fmt(ttbiT.pageviews) : '—');
-  upd('ts-visits',   tsT ? fmt(tsT.visitors) : '—');
-  upd('ts-pv',       tsT ? fmt(tsT.pageviews) : '—');
-  document.querySelectorAll('.wl').forEach(function(el) { el.textContent = wlabel; });
-}
-
-function setFilter(filter) {
-  currentFilter = filter;
-  document.querySelectorAll('.fbtn').forEach(function(b) {
-    b.classList.toggle('active', b.dataset.filter === filter);
-  });
-  updateChart();
-}
-
-function setWindow(w) {
-  currentWindow = w;
-  document.querySelectorAll('.wbtn').forEach(function(b) {
-    b.classList.toggle('active', +b.dataset.window === w);
-  });
-  updateTrafficStats();
-  updateChart();
-}
-
-(function() {
-  updateTrafficStats();
-  var ctx = document.getElementById('trend-chart').getContext('2d');
-  chart = new Chart(ctx, {
-    type: 'line',
-    data: {labels: CD.labels.slice(-12), datasets: getDatasets('signups')},
-    options: {
-      responsive: true,
-      plugins: {
-        legend: {labels: {color: 'rgba(251,247,242,0.7)', font: {size: 12}}}
-      },
-      scales: {
-        x: {ticks: {color: 'rgba(251,247,242,0.5)', font: {size: 11}}, grid: {color: 'rgba(251,247,242,0.05)'}},
-        y: {ticks: {color: 'rgba(251,247,242,0.5)', font: {size: 11}}, grid: {color: 'rgba(251,247,242,0.05)'}, beginAtZero: true}
-      }
-    }
-  });
-})();
-<\/script>
-</body></html>`;
-}
 
 /* ═══════════════════════════════════════════════════════════════
    EMAIL WEBHOOK — AI Auto-Responder
 
-   Triggered by Formspree webhook on contact form submission.
+   Triggered by the site's contact form (direct POST) or a legacy Formspree webhook.
 
    Required Cloudflare Worker secrets:
      ANTHROPIC_API_KEY       — Anthropic API key (claude-haiku-4-5-20251001)
@@ -941,39 +235,42 @@ async function handleEmailWebhook(request, env, ctx) {
 
   if (contentType.includes("application/json")) {
     // Formspree JSON webhook path (kept for legacy / future use)
+    // Only accepted when signed: without the secret this path would be an open relay.
+    if (!env.FORMSPREE_WEBHOOK_SECRET) return new Response("Unauthorized", { status: 401 });
     const rawBody = await request.text();
-    if (env.FORMSPREE_WEBHOOK_SECRET) {
-      const sig = request.headers.get("X-Formspree-Signature") || "";
-      const valid = await verifyHmacSha256(env.FORMSPREE_WEBHOOK_SECRET, rawBody, sig);
-      if (!valid) return new Response("Unauthorized", { status: 401 });
-    }
+    const sig = request.headers.get("X-Formspree-Signature") || "";
+    const valid = await verifyHmacSha256(env.FORMSPREE_WEBHOOK_SECRET, rawBody, sig);
+    if (!valid) return new Response("Unauthorized", { status: 401 });
     let body;
     try { body = JSON.parse(rawBody); } catch { return new Response("Bad Request", { status: 400 }); }
     fields = body.payload || body.data || body;
   } else {
-    // Direct form POST path (multipart/form-data or application/x-www-form-urlencoded)
+    // Direct form POST from our own contact form.
+    if (!allowedOrigin(request)) return new Response("Forbidden", { status: 403 });
+    if (Number(request.headers.get("content-length") || 0) > 20000) return new Response("Too large", { status: 413 });
     try {
       const fd = await request.formData();
       fields = Object.fromEntries(fd.entries());
     } catch { return new Response("Bad Request", { status: 400 }); }
+    // Honeypot: real people never fill the hidden "website" field. Pretend success.
+    if (fields.website) return new Response("OK", { status: 200 });
+    if (!(await rateLimit(env.VISITORS, request, "contact", 5, 3600))) return new Response("Too many messages, try again later", { status: 429 });
   }
 
-  const senderEmail = fields.email || fields._replyto || "";
-  const senderName  = fields.name  || "";
-  const message     = fields.message || fields.body || "";
-  const visitorId   = isValidVid(fields.vid) ? fields.vid : null;
+  const senderEmail = String(fields.email || fields._replyto || "").trim();
+  const senderName  = cleanName(fields.name);
+  const message     = String(fields.message || fields.body || "").slice(0, 2000);
 
-  console.log(`[webhook] email=${senderEmail} vid=${visitorId || "none"} fields=${Object.keys(fields).join(",")}`);
-
-  if (!senderEmail || !message) {
+  if (senderEmail && !isEmail(senderEmail)) return new Response("Invalid email", { status: 400 });
+  if (!senderEmail || !message.trim()) {
     console.log(`[webhook] missing fields — email="${senderEmail}" message="${message?.slice(0,40)}"`);
     return new Response("Missing required fields", { status: 400 });
   }
 
   // Classify the message before doing anything else.
-  // spam   → drop silently (no reply, no founder alert)
-  // flagged → alert founder only, NO auto-reply (legal, media, abuse, etc.)
-  // safe   → proceed with AI auto-reply + founder notification
+  // spam   → drop silently (no reply, no team alert)
+  // flagged → alert the team only, NO auto-reply (legal, media, abuse, etc.)
+  // safe   → proceed with AI auto-reply + team notification
   let classification = { category: "safe", reason: "" };
   try {
     classification = await classifyMessage({ name: senderName, email: senderEmail, message }, env);
@@ -988,31 +285,21 @@ async function handleEmailWebhook(request, env, ctx) {
     return new Response("OK", { status: 200 });
   }
 
-  // Stage 1 (sync): record that email was received for all non-spam messages.
-  // Runs before flagged check so even flagged senders see the acknowledgment banner.
-  if (visitorId && env.VISITORS) {
+  // Store every non-spam message (a direct request, not analytics: kept with or without cookie consent).
+  let msgKey = null;
+  if (env.VISITORS) {
     try {
-      const s = await env.VISITORS.get(`v:${visitorId}`, { type: "json" });
-      console.log(`[webhook] KV profile for ${visitorId}: ${s ? "found" : "not found"}`);
-      if (s) {
-        if (!s.email) s.email = senderEmail;
-        if (senderName && !s.name) s.name = senderName;
-        s.generatedContent = null;
-        await env.VISITORS.put(`v:${visitorId}`, JSON.stringify(s), { expirationTtl: 365 * 24 * 3600 });
-        console.log(`[webhook] Stage 1 complete — email written to KV for ${visitorId}`);
-      }
-    } catch (err) { console.error(`[webhook] Stage 1 KV error:`, err); }
-  } else {
-    console.log(`[webhook] Stage 1 skipped — visitorId=${visitorId} VISITORS=${!!env.VISITORS}`);
+      msgKey = await saveMessage(env.VISITORS, { name: senderName, email: senderEmail, message, category: classification.category });
+    } catch (err) { console.error("[webhook] saveMessage failed:", err); }
   }
 
   if (classification.category === "flagged") {
     try {
       await sendEmail({
         to: "hello@tinybirdbigdreams.com",
-        toName: "Scott",
+        toName: "Tiny Bird team",
         subject: `[⚠️ NEEDS REVIEW] Message from ${senderName || senderEmail}`,
-        html: founderFlaggedAlertHTML({ senderName, senderEmail, message, reason: classification.reason }),
+        html: teamFlaggedAlertHTML({ senderName, senderEmail, message, reason: classification.reason }),
       }, env);
     } catch (err) {
       console.error("Flagged alert failed:", err);
@@ -1023,12 +310,12 @@ async function handleEmailWebhook(request, env, ctx) {
   // Stage 2 (background): generate AI reply, send emails, then flip emailReplied → true.
   // Running in background means the 200 OK reaches Formspree immediately after Stage 1,
   // giving the visitor a visible window to see the "in progress" banner.
-  if (ctx) ctx.waitUntil(sendEmailReply({ senderName, senderEmail, message, visitorId }, env));
+  if (ctx) ctx.waitUntil(sendEmailReply({ senderName, senderEmail, message, msgKey }, env));
 
   return new Response("OK", { status: 200 });
 }
 
-async function sendEmailReply({ senderName, senderEmail, message, visitorId }, env) {
+async function sendEmailReply({ senderName, senderEmail, message, msgKey }, env) {
   let aiResult;
   try {
     aiResult = await generateAIReply({ name: senderName || "there", email: senderEmail, message }, env);
@@ -1046,6 +333,7 @@ async function sendEmailReply({ senderName, senderEmail, message, visitorId }, e
       html: aiResult.html,
     }, env);
     replySent = true;
+    if (msgKey && env.VISITORS) await markReplied(env.VISITORS, msgKey);
   } catch (err) {
     console.error("Auto-reply send failed:", err);
   }
@@ -1053,12 +341,12 @@ async function sendEmailReply({ senderName, senderEmail, message, visitorId }, e
   try {
     await sendEmail({
       to: "hello@tinybirdbigdreams.com",
-      toName: "Scott",
+      toName: "Tiny Bird team",
       subject: `[AI Replied] Message from ${senderName || senderEmail}`,
-      html: founderAlertHTML({ senderName, senderEmail, message, aiReply: aiResult.text }),
+      html: teamAlertHTML({ senderName, senderEmail, message, aiReply: aiResult.text }),
     }, env);
   } catch (err) {
-    console.error("Founder alert failed:", err);
+    console.error("Team alert failed:", err);
   }
 }
 
@@ -1102,33 +390,34 @@ Categories:
 async function generateAIReply({ name, email, message }, env) {
   if (!env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
 
-  const system = `You are the AI assistant for Tiny Bird, Big Dreams — a one-person indie app studio run by Scott.
-Your job is to reply to contact form messages warmly and helpfully on Scott's behalf.
+  const system = `You draft replies to contact-form messages for Tiny Bird, Big Dreams, a small independent studio that makes apps and games for everyday moments.
+Write warmly and helpfully, as the Tiny Bird team.
 
 About the studio:
-- Solo founder + AI collaboration model
-- Live app: Tiny Thoughts, Big Ideas (tinythoughtsbigideas.com) — an AI research notebook
-- Coming soon: Tiny Superpowers
-- Building in public, ships fast, iterates faster
+- Lull: calm breathing app for iPhone (on the App Store)
+- Orbit: stay close to friends and family (on the App Store)
+- Paper Wars: a pencil war on notebook paper, free to play at tinybirdbigdreams.com/play/paperwars (iPhone version coming)
+- Field Guide: a sketch journal made for foldable phones (in beta)
 - Contact: hello@tinybirdbigdreams.com
 
 Reply guidelines:
-- 3–5 sentences, warm and genuine, no hollow filler phrases
+- 3-5 sentences, warm and genuine, no hollow filler phrases
 - Be specific to what they asked if possible
-- Sign off as "Scott & the Tiny Bird team"
-- End with one line noting this initial reply was handled by the studio AI and Scott reviews everything
-- Plain prose only — no bullet points, no markdown
+- Sign off as "The Tiny Bird team"
+- End with one line saying this first reply was drafted with the help of AI tools and that a person on the team reads every message
+- Plain prose only: no bullet points, no markdown
 
-STRICT PROHIBITIONS — never do any of the following:
+STRICT PROHIBITIONS - never do any of the following:
 - Promise pricing, discounts, refunds, free access, or special deals
 - Commit to timelines, launch dates, or feature delivery
-- Agree to custom work, integrations, or contracts on Scott's behalf
+- Agree to custom work, integrations, or contracts on the team's behalf
 - Claim to be a human or deny being an AI if asked directly
+- Name any AI company or AI model
 - Share internal technical details, API keys, credentials, or business metrics
-- Make scheduling commitments ("Scott will call you Tuesday")
-- Respond to legal notices, formal complaints, or threats — say Scott will personally review
+- Make scheduling commitments
+- Respond to legal notices, formal complaints, or threats: say the team will personally review
 - Apologise in ways that imply fault or liability
-- If uncertain about anything, say Scott will follow up personally rather than guessing`;
+- If uncertain about anything, say the team will follow up personally rather than guessing`;
 
   const userPrompt = `Contact form message received:
 Name: ${name}
@@ -1210,14 +499,14 @@ a{color:#E8A022;}
   </div>
   <div class="bd">${body}</div>
   <div class="ft">
-    This initial reply was handled by the studio&rsquo;s AI agent. Scott reviews every conversation and will follow up personally if needed.<br>
+    This first reply was drafted with the help of AI tools. A person on our team reads every message and will follow up personally if needed.<br>
     <a href="https://tinybirdbigdreams.com">tinybirdbigdreams.com</a> &middot; <a href="mailto:hello@tinybirdbigdreams.com">hello@tinybirdbigdreams.com</a>
   </div>
 </div>
 </body></html>`;
 }
 
-function founderFlaggedAlertHTML({ senderName, senderEmail, message, reason }) {
+function teamFlaggedAlertHTML({ senderName, senderEmail, message, reason }) {
   const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><style>
 body{margin:0;padding:20px;background:#0e0a18;font-family:'DM Mono','Courier New',monospace;font-size:13px;color:#e0dcea;}
@@ -1247,7 +536,7 @@ a{color:#E8A022;}
 </body></html>`;
 }
 
-function founderAlertHTML({ senderName, senderEmail, message, aiReply }) {
+function teamAlertHTML({ senderName, senderEmail, message, aiReply }) {
   const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><style>
 body{margin:0;padding:20px;background:#0e0a18;font-family:'DM Mono','Courier New',monospace;font-size:13px;color:#e0dcea;}
@@ -1288,234 +577,3 @@ async function verifyHmacSha256(secret, payload, signature) {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   AI VISITOR PERSONALIZATION
-   ═══════════════════════════════════════════════════════════════ */
-
-function isValidVid(v) {
-  return typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(v);
-}
-
-function getOrSetVid(request) {
-  const cookie = request.headers.get("cookie") || "";
-  const m = cookie.match(/(?:^|;\s*)tbbd_vid=([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/);
-  if (m) return { vid: m[1], isNew: false, cookieHeader: null };
-  const vid = crypto.randomUUID();
-  return {
-    vid,
-    isNew: true,
-    cookieHeader: `tbbd_vid=${vid}; Path=/; Max-Age=31536000; SameSite=Lax; Secure; HttpOnly`,
-  };
-}
-
-async function serveHome(request, env, ctx) {
-  const { vid, cookieHeader } = getOrSetVid(request);
-
-  let profile = { vid, visits: 0, firstSeen: Date.now(), lastSeen: Date.now(), maxScrollDepth: 0, interests: [], email: null, generatedContent: null };
-  try {
-    if (env.VISITORS) {
-      const stored = await env.VISITORS.get(`v:${vid}`, { type: "json" });
-      if (stored) profile = { ...profile, ...stored };
-    }
-  } catch { /* serve default on KV error */ }
-
-  // Returning visitor with no cached content: generate NOW so this response is personalized.
-  // (Visit 1 → default. Visit 2+ with no cache → generate synchronously. Visit 3+ with cache → instant.)
-  if (profile.visits >= 1 && !profile.generatedContent) {
-    try {
-      const content = await generatePersonalizedContent(profile, env);
-      if (content) profile.generatedContent = { ...content, generatedAt: Date.now() };
-    } catch { /* fall through to default */ }
-  }
-
-  let assetRes;
-  try {
-    assetRes = await env.ASSETS.fetch(new Request(new URL("/index.html", request.url).href, { headers: request.headers }));
-  } catch {
-    return env.ASSETS.fetch(request);
-  }
-  let html = await assetRes.text();
-
-  html = html.replace("<!--TBBD:VID-->", `<meta name="tbbd-vid" content="${vid}">`);
-
-  if (profile.email) {
-    const emailNote = `<div style="background:rgba(232,160,34,.1);border:1px solid rgba(232,160,34,.25);border-radius:16px;padding:20px 28px;margin:32px auto 0;max-width:760px;text-align:center;font-size:14px;color:rgba(251,247,242,.75);line-height:1.75;">🐦&ensp;<strong style="color:#E8A022;">Your message has landed in the nest.</strong>&ensp;We caught it mid-flight and we'll swoop back soon.</div>`;
-    html = html.replace(
-      /<!--TBBD:EMAIL_NOTE-->[\s\S]*?<!--\/TBBD:EMAIL_NOTE-->/,
-      `<!--TBBD:EMAIL_NOTE-->${emailNote}<!--/TBBD:EMAIL_NOTE-->`
-    );
-  }
-
-  if (profile.generatedContent) {
-    html = injectContent(html, profile.generatedContent);
-  }
-
-  const headers = new Headers();
-  headers.set("content-type", "text/html;charset=UTF-8");
-  headers.set("cache-control", "private, no-store");
-  if (cookieHeader) headers.set("set-cookie", cookieHeader);
-
-  if (ctx) ctx.waitUntil(updateVisitor(vid, profile, env));
-
-  return new Response(html, { status: 200, headers });
-}
-
-async function updateVisitor(vid, profile, env) {
-  if (!env.VISITORS) return;
-  const now = Date.now();
-
-  // Compute what we own: visit increment and optional content regen.
-  // Do all async work first, then read-merge-write at the end so we never
-  // overwrite fields written concurrently by the webhook (email, name, etc.)
-  const newVisits = (profile.visits || 0) + 1;
-  let generatedContent = profile.generatedContent;
-
-  const contentAge = generatedContent?.generatedAt
-    ? now - generatedContent.generatedAt
-    : Infinity;
-  // Skip regen if content was just generated synchronously this request (<5 min old)
-  if (newVisits >= 2 && contentAge > 7 * 24 * 3600 * 1000 && contentAge > 5 * 60 * 1000) {
-    try {
-      const content = await generatePersonalizedContent({ ...profile, visits: newVisits }, env);
-      if (content) generatedContent = { ...content, generatedAt: now };
-    } catch { /* ignore */ }
-  }
-
-  // Fresh KV read immediately before writing — picks up any concurrent writes
-  // (e.g., webhook Stage 1 wrote email during our AI generation above).
-  try {
-    const fresh = await env.VISITORS.get(`v:${vid}`, { type: "json" }) || profile;
-    const updated = {
-      ...fresh,
-      visits: (fresh.visits || 0) + 1,
-      lastSeen: now,
-      firstSeen: fresh.firstSeen || now,
-      generatedContent,
-    };
-    await env.VISITORS.put(`v:${vid}`, JSON.stringify(updated), { expirationTtl: 365 * 24 * 3600 });
-  } catch { /* ignore */ }
-}
-
-async function handleTrack(request, env, ctx) {
-  let data;
-  try { data = await request.json(); } catch { return new Response(null, { status: 204 }); }
-  if (!isValidVid(data?.vid)) return new Response(null, { status: 204 });
-  if (ctx) ctx.waitUntil(applyBehavior(data.vid, data, env));
-  return new Response(null, { status: 204 });
-}
-
-async function applyBehavior(vid, data, env) {
-  if (!env.VISITORS) return;
-  try {
-    const stored = await env.VISITORS.get(`v:${vid}`, { type: "json" });
-    if (!stored) return;
-
-    const scrollDepth = typeof data.scrollDepth === "number" ? Math.min(1, Math.max(0, data.scrollDepth)) : 0;
-    const clicks = Array.isArray(data.clicks) ? data.clicks.slice(0, 30).map(String) : [];
-
-    stored.maxScrollDepth = Math.max(stored.maxScrollDepth || 0, scrollDepth);
-
-    const interests = new Set(stored.interests || []);
-    const prevSize = interests.size;
-    for (const href of clicks) {
-      if (/apps|tinythoughts|tinysuperpowers/i.test(href)) interests.add("apps");
-      if (/#studio/i.test(href)) interests.add("studio");
-      if (/#brand/i.test(href)) interests.add("brand");
-      if (/#contact/i.test(href)) interests.add("contact");
-    }
-    stored.interests = [...interests];
-
-    if (interests.size > prevSize && stored.visits >= 2) {
-      stored.generatedContent = null;
-    }
-
-    await env.VISITORS.put(`v:${vid}`, JSON.stringify(stored), { expirationTtl: 365 * 24 * 3600 });
-  } catch { /* ignore */ }
-}
-
-async function generatePersonalizedContent(profile, env) {
-  if (!env.ANTHROPIC_API_KEY) return null;
-
-  const visits = profile.visits || 1;
-  const scroll = profile.maxScrollDepth || 0;
-  const scrollDesc = scroll > 0.8 ? "read most of the page"
-    : scroll > 0.5 ? "scrolled well past the fold"
-    : scroll > 0.2 ? "skimmed the top"
-    : "just glanced";
-  const interests = (profile.interests || []).join(", ") || "general browsing";
-  const emailLine = profile.email
-    ? `They've reached out via the contact form — treat them warmly as a known contact.`
-    : `Still anonymous.`;
-  const visitTone = visits === 1 ? "This is their FIRST return visit — make the copy feel like a warm, genuine welcome back."
-    : visits <= 3 ? "They're an early regular — be warm and a bit more familiar."
-    : "They keep coming back — treat them like someone who really gets it.";
-
-  const prompt = `You are the AI content engine for Tiny Bird, Big Dreams, a one-person indie app studio by Scott who uses Claude as his AI co-founder.
-
-Visitor context:
-- Visit number: ${visits + 1} (returning visitor)
-- Previous visit scroll depth: ${scrollDesc}
-- Sections they engaged: ${interests}
-- ${emailLine}
-- Tone guidance: ${visitTone}
-
-Remix the homepage copy to feel slightly fresh and relevant for this returning visitor. Output ONLY valid JSON with exactly these keys:
-
-{
-  "pill": "Short tagline ~5 words. Variant of 'One Founder. One AI. Real Apps.'",
-  "heroSub": "1-2 sentences. Variant of the hero description. Punchy.",
-  "studioBody": "2-3 sentences about the AI-run studio. Slightly different emphasis based on their interests.",
-  "ctaH2": "CTA headline ~5 words. Must include <br/> and wrap last 2-3 words in <em>...</em>.",
-  "ctaP": "1 sentence. Warm and inviting call to action.",
-  "founderNote": "2-3 sentences in founder's voice. Warmer and more familiar for repeat visitors."
-}
-
-Rules:
-- Brand voice: ambitious but lean, warm, direct, slightly poetic
-- Keep lengths similar to the originals
-- Only <br/> and <em> HTML tags are allowed
-- Never mention tracking, personalization, cookies, or visits
-- If they engaged with apps: lean into the apps angle
-- If they engaged with studio: lean into the AI-runs-everything angle
-- For 3+ visits: be warmer, more like talking to someone who gets it`;
-
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 700,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const raw = data.content?.[0]?.text?.trim();
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    const required = ["pill", "heroSub", "studioBody", "ctaH2", "ctaP", "founderNote"];
-    if (required.every(k => typeof parsed[k] === "string" && parsed[k].length > 0)) return parsed;
-  } catch { /* ignore */ }
-  return null;
-}
-
-function injectContent(html, content) {
-  const map = {
-    PILL: "pill", HERO_SUB: "heroSub", STUDIO_BODY: "studioBody",
-    CTA_H2: "ctaH2", CTA_P: "ctaP", FOUNDER_NOTE: "founderNote",
-  };
-  for (const [sec, key] of Object.entries(map)) {
-    const val = content[key];
-    if (!val) continue;
-    html = html.replace(
-      new RegExp(`<!--TBBD:${sec}-->[\\s\\S]*?<!--\\/TBBD:${sec}-->`, "g"),
-      `<!--TBBD:${sec}-->${val}<!--/TBBD:${sec}-->`
-    );
-  }
-  return html;
-}
