@@ -5386,7 +5386,7 @@ function drawInkPickers() {
 // shows at once next launch. The web version can't sell it: there the sheet points to the iPhone app (?arsenal=1 previews it).
 const ARSENAL = {key: "paperWarsArsenal", owned: false, price: "$4.99",
   maps: ["pass", "river", "lake"], levels: ["general"], freePens: ["#1f4fa8", "#2a2a2a", "#1e7a46", "#b3261e"]};
-ARSENAL.owned = true; // website stays unlocked until the app launches
+try { ARSENAL.owned = localStorage.getItem(ARSENAL.key) === "1" || /[?&]arsenal=1/.test(location.search); } catch (e) {}
 const fullArsenal = () => ARSENAL.owned;
 const inApp = () => !!(window.webkit && webkit.messageHandlers && webkit.messageHandlers.paperWars);
 function setArsenal(owned, price) { // called by the iPhone app
@@ -5415,12 +5415,13 @@ function applyArsenal() {
   $("arsenalPrice").textContent = ARSENAL.price;
   drawInkPickers();
 }
+const APP_STORE_URL = "https://apps.apple.com/app/id6830389783";
 function openArsenal(why) {
   $("arsenalWhy").textContent = why ? `${why} is part of the Full Arsenal.` : "";
   $("arsenalMsg").textContent = "";
   const buy = $("arsenalBuy");
   if (inApp()) { buy.disabled = false; buy.textContent = `Unlock for ${ARSENAL.price}`; $("arsenalRestore").classList.remove("hidden"); }
-  else { buy.disabled = true; buy.textContent = "Get it in the iPhone app"; $("arsenalRestore").classList.add("hidden"); }
+  else { buy.disabled = false; buy.textContent = "Get it on the App Store"; buy.onclick = () => window.open(APP_STORE_URL, "_blank", "noopener"); $("arsenalRestore").classList.add("hidden"); }
   $("arsenalSheet").classList.remove("hidden");
 }
 
