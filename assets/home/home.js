@@ -16,14 +16,8 @@
   }
   var trackOnce = function (t, v) { var k = t + v; if (once[k]) return; once[k] = 1; track(t, v); };
 
-  /* ---------- sound (synthesised, off by default) ---------- */
-  var AC = null, soundOn = false, snd = $("#snd");
-  snd.addEventListener("click", function () {
-    soundOn = !soundOn;
-    snd.querySelector(".lbl").textContent = soundOn ? "Sounds on" : "Sounds off"; snd.classList.toggle("on", soundOn);
-    snd.setAttribute("aria-pressed", String(soundOn));
-    if (soundOn && !AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { soundOn = false; } }
-  });
+  /* ---------- sound: removed from the page; noise() and tone() stay silent ---------- */
+  var AC = null, soundOn = false;
   function noise(d, f1, f2, v, type) {
     if (!soundOn || !AC) return;
     var n = Math.floor(AC.sampleRate * d), b = AC.createBuffer(1, n, AC.sampleRate), x = b.getChannelData(0);
