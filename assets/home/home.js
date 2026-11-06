@@ -83,11 +83,11 @@
     h = Math.min(h, 23.99); var hh = Math.floor(h), mm = Math.floor((h - hh) * 60), ap = hh >= 12 ? "pm" : "am";
     hh = hh % 12 || 12; return hh + ":" + String(mm).padStart(2, "0") + " " + ap;
   }
-  var clockT = $("#clockT"), clockL = $("#clockL"), sunDot = $("#sunDot"), clockEl = $("#clock"), picker = $("section.picker"), dayEnd = $("#team");
+  var clockT = $("#clockT"), clockL = $("#clockL"), sunDot = $("#sunDot"), clockEl = $("#clock"), picker = $("#lull"), dayEnd = $("#team");
   function paintSky(t) {
     var now = hourNow(), h = now.h;
     clockT.textContent = fmt(h); clockL.textContent = now.l;
-    // the clock joins once the day starts (the picker) and leaves once the day is done
+    // the clock joins once the day starts (the first moment) and leaves once the day is done
     var mid = scrollY + innerHeight * .5; clockEl.classList.toggle("on", !!picker && mid > picker.offsetTop && (!dayEnd || mid < dayEnd.offsetTop));
     var ang = Math.PI * (1 - Math.min(1, Math.max(0, (h - 6) / 14)));
     sunDot.setAttribute("cx", (17 + 15 * Math.cos(ang)).toFixed(1)); sunDot.setAttribute("cy", (18 - 15 * Math.sin(ang)).toFixed(1));
