@@ -97,6 +97,7 @@ button:disabled{opacity:.4;cursor:default}
   background:linear-gradient(90deg,#0000 33px,#e7a3a3 33px 34px,#0000 34px),repeating-linear-gradient(#fbf8ef 0 21px,#c9d8ea 21px 22px) #fbf8ef}
 .menu .mtitle{font:700 40px/1 Caveat,cursive;margin:0 0 4px;color:#1f4fa8}
 .menu .mtitle small{display:block;font-size:24px;color:#b3261e}
+@media (min-width:700px){.menu{max-width:760px}.menu .pic{max-width:190px}}
 .camps{display:grid;gap:14px;grid-template-columns:1fr 1fr}
 .camps .camp:first-child{grid-column:1/-1}
 .camps .camp span{font:700 22px/1.1 Caveat,cursive}
@@ -3126,7 +3127,7 @@ function drawHalf(c, pi, {map = true, highlightLast = false} = {}) {
 // ---------- canvas sizing & input ----------
 function fit() {
   const top = document.querySelector(".top"), header = top && getComputedStyle(top).display !== "none" ? top.offsetHeight : 0;
-  const maxW = Math.min(window.innerWidth - 50, 420), maxH = window.innerHeight - header - 230 - safeExtra();
+  const maxW = pageMaxW(), maxH = window.innerHeight - header - 230 - safeExtra();
   const w = Math.max(220, Math.min(maxW, maxH * W / H)), dpr = window.devicePixelRatio || 1;
   cv.style.width = w + "px"; cv.style.height = w * H / W + "px";
   cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
@@ -3544,9 +3545,11 @@ function startTurnTimer() {
 // multiple of the width, never shorter than 3:4 and never taller than 2:1. The same for both players all match.
 // Extra room the notch / Dynamic Island and home bar take beyond the normal 12px page margins.
 function safeExtra() { const b = getComputedStyle(document.body); return Math.max(0, parseFloat(b.paddingTop) - 12) + Math.max(0, parseFloat(b.paddingBottom) - 12); }
+// How wide the battle page may be: phones keep the 1.0 size; iPads and other wide screens get a much bigger page (1.1).
+const pageMaxW = () => innerWidth >= 700 ? Math.min(innerWidth - 80, 820) : Math.min(innerWidth - 50, 420);
 function pageHeight() {
   const top = document.querySelector(".top"), header = top && getComputedStyle(top).display !== "none" ? top.offsetHeight : 0;
-  const room = innerHeight - header - 230 - safeExtra(), w = Math.max(220, Math.min(innerWidth - 50, 420));
+  const room = innerHeight - header - 230 - safeExtra(), w = Math.max(220, pageMaxW());
   return Math.round(Math.max(IH, Math.min(W * 2, W * room / w)));
 }
 function newMatch(preset) {
