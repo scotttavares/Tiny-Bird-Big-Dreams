@@ -291,6 +291,20 @@
       setTimeout(function () { b.remove(); }, 1600);
     }
   })();
+  // Lull Sleep: tap Begin, the screen dims to a slow orb and the 8 hr timer counts down; tap again to wake
+  (function () {
+    var toy = $("#sleepToy"); if (!toy) return;
+    var left = $("#sleepLeft"), secs = 8 * 3600, timer = null;
+    function fmtL(x) { var h = Math.floor(x / 3600), m = Math.floor(x % 3600 / 60), s = x % 60; return h + ":" + String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0"); }
+    function toggle() {
+      var on = !toy.classList.contains("on"); toy.classList.toggle("on", on);
+      toy.setAttribute("aria-label", on ? "Sleep mode on. Tap to wake" : "Lull's Sleep screen. Tap to begin Sleep mode");
+      clearInterval(timer); secs = 8 * 3600; left.textContent = fmtL(secs);
+      if (on) { timer = setInterval(function () { secs--; left.textContent = fmtL(secs); }, 1000); noise(4, 200, 900, .06, "lowpass"); trackOnce("toy", "lull-sleep"); }
+    }
+    toy.addEventListener("click", toggle);
+    toy.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+  })();
   // Field Guide: stickers
   (function () {
     var toy = $("#fgToy"), st = ["🌼", "🦋", "🐸", "⛺", "⭐", "🍂"], i = 0;
