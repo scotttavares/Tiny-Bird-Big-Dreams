@@ -185,6 +185,9 @@ button.big{font-size:23px;padding:9px 26px}
 /* Go AWOL: quit the match (user, 2026-11-03). A quiet link; the first tap asks, the second one leaves. */
 button.awol{background:none;border:0;color:var(--muted);font-size:16px;padding:2px 10px;margin-top:-4px}
 button.awol.sure{color:var(--red);font-weight:700}
+.onlineWait{background:#fff4d6;border:2px dashed var(--red);color:var(--red);font-family:"Patrick Hand";font-size:17px;padding:4px 10px;margin:2px 8px;border-radius:6px;text-align:center}
+.lastStand{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%) rotate(-8deg);border:5px double var(--red);color:var(--red);background:#fbf8efe8;padding:6px 18px;text-align:center;pointer-events:none;z-index:5}
+.lastStand b{display:block;font-family:"Stardos Stencil",monospace;font-size:40px;letter-spacing:3px}.lastStand small{display:block;font-family:"Patrick Hand";font-size:16px;max-width:240px}
 .record{max-width:560px;text-align:center;margin:4px 0;font-size:19px;color:var(--text)}
 .record b{font-family:Caveat;font-size:24px;color:#e3b341}
 #cabinet,#callsign,#online,#lobby{position:fixed;inset:0;z-index:40;background:var(--bg);overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom))}
@@ -477,7 +480,9 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
 
 <section id="game" class="hidden" style="display:flex;flex-direction:column;align-items:center">
   <div id="status"></div>
+  <div id="onlineWait" class="onlineWait hidden"></div>
   <div class="phone"><div class="hinge"></div><canvas id="cv"></canvas>
+    <div id="lastStand" class="lastStand hidden"><b>LAST STAND</b><small></small></div>
     <div id="cover" class="cover hidden"><div class="dossier">
       <div class="tab">FILE No. <span id="fileNo">PW-0417</span></div>
       <div class="slip"><div class="clip"></div>
@@ -3353,16 +3358,16 @@ const inPaper = (x, y) => x >= 0 && x <= W && y >= 0 && y <= H;
 
 let tapsIgnoredUntil = 0; // set when a file flips open, so a double-tap can't pick a card underneath
 const drags = {}; // pointerId -> the unit being dragged during setup (two players can drag at once in tent mode)
-cv.addEventListener("pointerdown", e => !tentOn() && pointerDown(e, cv, cur, pt(e)));
-cv.addEventListener("pointermove", e => !tentOn() && pointerMove(e, cur, pt(e)));
-cv.addEventListener("pointerup", e => !tentOn() && pointerUp(e, cur));
+cv.addEventListener("pointerdown", e => !tentOn() && pointerDown(e, cv, viewSeat(), pt(e)));
+cv.addEventListener("pointermove", e => !tentOn() && pointerMove(e, viewSeat(), pt(e)));
+cv.addEventListener("pointerup", e => !tentOn() && pointerUp(e, viewSeat()));
 function pointerDown(e, el, who, {x, y}) {
   if (performance.now() < tapsIgnoredUntil) return;
-  if (phase === "result" && vsCpu()) return next(); // against the computer, a tap skips ahead
+  if (phase === "result" && (vsCpu() || onlineOn())) return next(); // against the computer, a tap skips ahead
   const p = players && players[who];
   if (phase === "rps") { const i = rpsCardAt(x, y); if (i !== -1) rpsPick(i, who); return; }
   if (phase === "setup") {
-    if (tentOn() && p.setupReady) return;
+    if (twoAtOnce() && p.setupReady) return;
     const idx = unitAt(p, x, y);
     if (idx === -1) placeUnit(p, x, y); else drags[e.pointerId] = {p, idx};
     try { el.setPointerCapture(e.pointerId); } catch (err) {}
@@ -3519,7 +3524,7 @@ function startTurkeys() {
   turkeyTimer = setInterval(() => { tickTurkeys(); if (TURKEY_PHASES.includes(phase) && turkeys.some(t => !t.cooked)) animateFor(400); }, 200);
 }
 function tickTurkeys(now = performance.now()) {
-  if (!opts || opts.campaign !== "drumstick") return;
+  if (!opts || opts.campaign !== "drumstick" || opts.online) return; // online: planned per turn from the seed (onlineTurkeys)
   turkeys = turkeys.filter(tk => { if (tk.cooked) return true; const q = turkeyPos(tk, now); return q.x > -40 && q.x < W + 40; });
   if (phase !== "aim") return;
   if (!nextTurkeyAt) nextTurkeyAt = now + between(3000, 7000);
@@ -3718,6 +3723,15 @@ function drawAirdrop(c, a) {
 const TENT = [0, 1].map(i => ({cv: $("tcv" + i), ctx: $("tcv" + i).getContext("2d"), st: $("tstatus" + i), bar: $("tbar" + i), half: $("half" + i)}));
 const tentWanted = () => !!(window.paperWarsNative && window.paperWarsNative.posture === "tent") || /[?&]tent\b/.test(location.search);
 const tentOn = () => !!(opts && opts.tent && players);
+// Two-phone play (1.2): `onl` holds the online match on this phone (see "the online match" near the end).
+let onl = null, MATCH_RECONNECT_MS = 60000, ONLINE_HIDE_MS = 45000, ONLINE_REVEAL_WAIT_MS = 8000;
+function onlineOn() { return !!(onl && opts && opts.online && players); }
+function viewSeat() { return onlineOn() ? onl.seat : cur; } // whose page this screen shows
+function twoAtOnce() { return tentOn() || onlineOn(); } // both players hide and pick at once, each on their own page
+// This phone owner's seat (player 0 on one device; the online seat in a two-phone match).
+function meIdx() { return opts && opts.online && Number.isInteger(opts.online.seat) ? opts.online.seat : 0; }
+// Soldiers still standing. The other phone's army (online) is only known by the count its phone reports.
+function soldiersLeft(p) { return p.remote ? p.aliveCount : p.soldiers.filter(u => u.alive).length; }
 function fitTent() {
   if (!tentOn()) return;
   const dpr = window.devicePixelRatio || 1;
@@ -3769,7 +3783,7 @@ function defenderText(res, me) {
 let turnTimer = null, turnEnds = 0, lastTick = 0;
 function startTurnTimer() {
   clearInterval(turnTimer); turnEnds = 0;
-  if (!opts.timer || players[cur].cpu) return;
+  if (!opts.timer || players[cur].cpu || (onlineOn() && cur !== onl.seat)) return; // online: only the shooter's phone keeps the clock
   const id = matchId, who = cur, shots = players[cur].shots.length;
   turnEnds = performance.now() + opts.timer * 1000; lastTick = 0;
   turnTimer = setInterval(() => {
@@ -3806,10 +3820,11 @@ function newMatch(preset) {
   };
   if (!CAMPAIGNS[opts.campaign] || opts.bootcamp) opts.campaign = "regular"; // a preset without one (Boot Camp, old tests) is the regular war
   // Tent mode: two people, phone standing as a tent. Both set up and pick at once; no hand-off screens.
-  opts.tent = opts.foe === "human" && !opts.bootcamp && tentWanted();
+  opts.tent = opts.foe === "human" && !opts.bootcamp && !opts.online && tentWanted();
+  if (!opts.online) onlineClear(); // a match on this phone ends any online one
   if (opts.tent) opts.fireBy = "tap";
-  H = opts.tent ? IH : pageHeight(); RP_H = H + RP_TOP + 12;
-  if (!fullArsenal() && !opts.bootcamp) { if (ARSENAL.maps.includes(opts.map)) opts.map = "random"; if (ARSENAL.levels.includes(opts.level)) opts.level = "sergeant"; opts.reinforce = 0; opts.fortWin = false; }
+  H = opts.tent || opts.online ? IH : pageHeight(); RP_H = H + RP_TOP + 12; // online: one page size on every phone
+  if (!fullArsenal() && !opts.bootcamp && !opts.online) { if (ARSENAL.maps.includes(opts.map)) opts.map = "random"; if (ARSENAL.levels.includes(opts.level)) opts.level = "sergeant"; opts.reinforce = 0; opts.fortWin = false; }
   if (opts.campaign === "drumstick") opts.map = "harvest"; // Drumstick has its own battlefield
   else if (MAPS[opts.map] && MAPS[opts.map].campaign) opts.map = "random";
   if (!MAPS[opts.map]) { const ids = (fullArsenal() ? Object.keys(MAPS).filter(k => k !== "plain") : Object.keys(MAPS).filter(k => !ARSENAL.maps.includes(k))).filter(k => !MAPS[k].campaign); opts.map = ids[Math.floor(Math.random() * ids.length)]; }
@@ -3820,7 +3835,9 @@ function newMatch(preset) {
   players[0].namesake = {name: callsignText(cs), ...cs.soldier};
   players[1].namesake = {name: opts.foe === "cpu" ? pickOf(ROBOT_CALLSIGNS) : guestCallsignText()};
   pending = flick = dotAim = lastResult = null; startedAt = Date.now(); replayRun++; matchId++;
-  players[0].terrain = generateMap(opts.map); players[1].terrain = mirrorMap(players[0].terrain);
+  if (opts.online) onlinePlayers(); // call signs, namesakes, and the other phone's army as a stand-in
+  players[0].terrain = opts.online ? seeded(mulberry32((onl.seed ^ 0x2545f491) | 0), () => generateMap(opts.map)) : generateMap(opts.map);
+  players[1].terrain = mirrorMap(players[0].terrain);
   videoReady = null; // a new battle needs a new video
   startTurkeys(); // Operation Drumstick only
   if (opts.campaign === "drumstick") { const id = matchId; setTimeout(() => id === matchId && speak(bagPick("drumstickStart"), 0, "coach"), 1400); }
@@ -3829,7 +3846,7 @@ function newMatch(preset) {
   cur = 0;
   $("tent").classList.toggle("hidden", !opts.tent);
   if (opts.tent) $("game").classList.add("hidden");
-  if (vsCpu()) { go("setup"); coach("setup", 400); } else if (opts.tent) go("setup"); else showCover("Player 1", "Hide your army. Player 2: divert your eyes, soldier!", () => go("setup"));
+  if (vsCpu()) { go("setup"); coach("setup", 400); } else if (opts.online) onlineSetup(); else if (opts.tent) go("setup"); else showCover("Player 1", "Hide your army. Player 2: divert your eyes, soldier!", () => go("setup"));
   fit(); if (opts.tent) requestAnimationFrame(fitTent);
 }
 function go(ph) {
@@ -3838,9 +3855,9 @@ function go(ph) {
     if (players[cur].reinforce > 0 && !players[cur].cpu) startAirdrop(players[cur], startTurnTimer); // the clock starts once he lands
     else startTurnTimer();
     const own = players[cur].fort;
-    if (own && own.hp <= 0 && !own.ownerSaw && !players[cur].cpu) { own.ownerSaw = true; own.scribbleAt = performance.now() + 400; animateFor(1500); setTimeout(() => sound("pencil"), 400); }
+    if (own && own.hp <= 0 && !own.ownerSaw && !players[cur].cpu && !players[cur].remote) { own.ownerSaw = true; own.scribbleAt = performance.now() + 400; animateFor(1500); setTimeout(() => sound("pencil"), 400); }
     shotType = "dot"; players[cur].taunted = false; players[cur].tauntOut = null;
-    const b = players[cur].incoming[players[cur].incoming.length - 1], k = b && sparkFor(b.res, b.wet);
+    const b = players[cur].incoming[players[cur].incoming.length - 1], k = b && !players[cur].remote && sparkFor(b.res, b.wet);
     if (k) setTimeout(() => spark(k, b.x, b.y, INK[cur]), 250); // replay the hit you took
     const me = players[cur], seen = [...me.known].some(i => players[1 - cur].soldiers[i].alive);
     if (me.shots.length === 0) coach("aim");
@@ -3903,6 +3920,7 @@ function startRps() {
   showCover("Player 1", "Rock, Paper, Scissors for the first shot. Pick in secret. Player 2: divert your eyes, soldier!", () => go("rps"));
 }
 function rpsPick(i, who = cur) {
+  if (onlineOn()) return onlineRpsPick(i);
   if (tentOn()) { // both pick at once on their own half
     if (rps.picks[who] != null) return;
     rps.picks[who] = i; sound("click");
@@ -3919,7 +3937,9 @@ function rpsPick(i, who = cur) {
 // After the winner is known, HQ sends random orders, so winning doesn't promise the first shot.
 const ORDERS = [["Winner goes first!", true], ["Winner goes last!", false], ["Loser goes first!", false]];
 function openOrders() {
-  const w = rpsResult(), [text, winnerFirst] = ORDERS[Math.floor(Math.random() * ORDERS.length)];
+  if (onlineOn() && rps.orders) return;
+  const luck = onlineOn() ? mulberry32(onl.seed + 7919 * rps.round)() : Math.random(); // online: the same orders on both phones
+  const w = rpsResult(), [text, winnerFirst] = ORDERS[Math.floor(luck * ORDERS.length)];
   rps.orders = {text, first: winnerFirst ? w : 1 - w}; sound("drum"); render(); updateUI();
 }
 function rpsResult() {
@@ -4008,7 +4028,7 @@ function resolveIncoming(def, shot, ctx) {
       // Boulders and mountains stop the shot, and whoever hides behind them is safe. (Mountains used to start a
       // rockslide that buried soldiers below them; user, 2026-11-05: "the shrapnel killed 2 soldiers hiding behind it.
       // that should not happen". Cover is cover.)
-      if (!tk && drum) scares = turkeyScares(page, t.x, t.y, performance.now(), rand, ctx.turkeys || []); // a near miss sends a turkey running
+      if (!tk && drum) scares = turkeyScares(page, t.x, t.y, ctx.now != null ? ctx.now : performance.now(), rand, ctx.turkeys || []); // a near miss sends a turkey running
       if (tk) { turkey = ctx.turkeys.indexOf(tk); res = {type: "turkey", turkey: {...turkeyPos(tk, firedAt)}}; } // roasted! the shot is wasted
       else if (solid(f)) res = crop(f) ? {type: "rock", crop: f.kind} : {type: "rock", mountain: f.kind === "mountain"};
       else {
@@ -4060,7 +4080,10 @@ function resolveIncoming(def, shot, ctx) {
   const spottedUnits = spotted.map(i => { const u = def.soldiers[i];
     return {i, x: u.x, y: u.y, pose: u.pose, seed: u.seed, weapon: weaponOf(u), wading: !!u.wading}; });
   const spottedFortAt = spottedFort ? {x: def.fort.x, y: def.fort.y} : null;
-  return {shot: s, res, killed, fortHit: fortHitAny, spotted, spottedFort, spottedUnits, spottedFortAt, incoming, turkey, scares, fortHp, alive, close,
+  // The soldiers this shot took out: the shooter draws each where he fell (and learns his name, as on one phone).
+  const killedUnits = killed.map(i => { const u = def.soldiers[i];
+    return {i, x: u.x, y: u.y, pose: u.pose, seed: u.seed, weapon: weaponOf(u), name: u.name, ...(u.namesake ? {namesake: true} : {})}; });
+  return {shot: s, res, killed, fortHit: fortHitAny, spotted, spottedFort, spottedUnits, killedUnits, spottedFortAt, incoming, turkey, scares, fortHp, alive, close,
     room: !!(def.fort && fortHp > 0) && alive + def.reinforce < MAX_REINFORCED, // a reinforcement still fits
     gone: !alive && (!opts.fortWin || !def.fort || fortHp <= 0)};
 }
@@ -4079,7 +4102,7 @@ function wireOutcome(o) {
   const s = o.shot, shot = {x: s.x, y: s.y, fling: !!s.fling, path: s.path || null, off: !!s.off, timeout: !!s.timeout};
   if (s.at != null) shot.at = s.at;
   return {shot, res, killed: [...o.killed], fortHit: !!o.fortHit, spotted: [...o.spotted], spottedFort: !!o.spottedFort,
-    spottedUnits: o.spottedUnits.map(u => ({...u})), spottedFortAt: o.spottedFortAt && {...o.spottedFortAt},
+    spottedUnits: o.spottedUnits.map(u => ({...u})), killedUnits: (o.killedUnits || []).map(u => ({...u})), spottedFortAt: o.spottedFortAt && {...o.spottedFortAt},
     turkey: o.turkey, scares: o.scares.map(c => ({...c})), fortHp: o.fortHp, alive: o.alive, room: !!o.room, gone: !!o.gone, close: !!o.close};
 }
 // The rest of a shot: def is null when the defender is on the other phone.
@@ -4092,15 +4115,16 @@ function applyOutcome(shooter, def, o) {
   if (!s.off) {
     const before = shooter.known.size + shooter.fortKnown;
     o.spotted.forEach(i => shooter.known.add(i)); if (o.spottedFort) shooter.fortKnown = true;
-    res.spotted = o.incoming.spotted = shooter.known.size + shooter.fortKnown - before;
+    res.spotted = shooter.known.size + shooter.fortKnown - before; if (o.incoming) o.incoming.spotted = res.spotted;
   }
   if (def) def.incoming.push(o.incoming);
   shooter.shots.push({x: s.x, y: s.y, res: res.type, path: s.path, fling: !!s.fling, wet: !!res.wet,
     close: o.close}); // "whoosh, close!" or a nervous fart: someone is near
   // Reinforcements: a run of misses earns the enemy a new soldier, while their fort still stands (user, 2026-11-03: until it's rubble).
   if (res.type === "soldier" || res.type === "fort") shooter.missStreak = 0;
-  else if (++shooter.missStreak >= opts.reinforce && opts.reinforce && o.room) {
+  else if (++shooter.missStreak >= opts.reinforce && opts.reinforce && o.room && !(opts.reinforceMax && (shooter.gave | 0) >= opts.reinforceMax)) {
     if (def) def.reinforce++; shooter.missStreak = 0; res.reinforced = true;
+    if (opts.reinforceMax) shooter.gave = (shooter.gave | 0) + 1; // online: at most one reinforcement per player
   }
   if (fortHitAny && def && def.fort && def.fort.hp <= 0) { // the fort is rubble: scribble it out
     def.fort.scribbleAt = performance.now() + 250; if (shooter.cpu) def.fort.ownerSaw = true; // you watched the computer do it
@@ -4113,7 +4137,7 @@ function applyOutcome(shooter, def, o) {
   // on your own page when you fired, on your page where it landed when the computer fired. (Just for show: its luck
   // stays Math.random.)
   if (res.wet && res.type === "miss" && !s.fling && Math.random() < .4) {
-    const mine = !shooter.cpu, at = mine ? {x: s.x, y: s.y} : mirror(s.x, s.y);
+    const mine = !shooter.cpu && !shooter.remote, at = mine ? {x: s.x, y: s.y} : mirror(s.x, s.y);
     waterEgg = {page: mine ? cur : 1 - cur, x: at.x, y: at.y, kind: ["narwhal", "jump", "float"][Math.floor(Math.random() * 3)], t0: performance.now(), id: matchId};
     animateFor(3600);
   }
@@ -4129,8 +4153,8 @@ function applyOutcome(shooter, def, o) {
     const b = o.incoming;
     const v = res.fling && res.i != null && def && def.soldiers[res.i]; // a fling bleeds where it hit, not where the skid stopped
     const mine = v ? {x: W - v.x, y: v.y + 20 * sc()} : s, theirs = v ? {x: v.x, y: v.y + 20 * sc()} : b;
-    setTimeout(() => shooter.cpu ? spark(k, theirs.x, theirs.y, INK[0]) : spark(k, mine.x, mine.y, INK[1 - cur]), 60);
-    if (res.namesake && !shooter.cpu) setTimeout(() => spark("confetti", mine.x, mine.y), 140); // a namesake went down: confetti for the shooter
+    setTimeout(() => shooter.cpu || shooter.remote ? spark(k, theirs.x, theirs.y, INK[0]) : spark(k, mine.x, mine.y, INK[1 - cur]), 60);
+    if (res.namesake && !shooter.cpu && !shooter.remote) setTimeout(() => spark("confetti", mine.x, mine.y), 140); // a namesake went down: confetti for the shooter
   }
   if (res.death && res.death.bugle) setTimeout(() => sound(res.death.taps ? "taps" : "lament"), 700);
   if (res.fart) { setTimeout(() => sound(res.fart.poop ? "squelch" : "fart"), 450); speak(res.fart.text, 1150); }
@@ -4142,22 +4166,23 @@ function applyOutcome(shooter, def, o) {
   // Against the computer there's nothing to hide, so play just moves on once the result has been seen and heard
   // (user, 2026-11-03: no "Your turn" / "Computer's turn" buttons). A tap on the page skips ahead.
   const id = matchId, shots = shooter.shots.length, talk = res.death || res.fart || res.ouch, gone = def ? armyGone(def) : o.gone;
-  const wait = (res.medic && !gone ? 1200 : 0) + (tentOn() ? (gone ? 3200 : talk ? 4200 : 3000) : !vsCpu() ? 8000 : gone ? 3200 : talk ? 3400 : 2000);
+  const wait = (res.medic && !gone ? 1200 : 0) + (twoAtOnce() ? (gone ? 3200 : talk ? 4200 : 3000) : !vsCpu() ? 8000 : gone ? 3200 : talk ? 3400 : 2000);
   setTimeout(() => { if (id === matchId && phase === "result" && players[cur] === shooter && shooter.shots.length === shots) next(); }, wait);
 }
 function resolveShot() {
   if (!pending) return;
+  if (onlineOn()) { if (cur === onl.seat) onlineShoot(); return; } // the other phone works it out
   const shooter = players[cur], def = players[1 - cur], s = pending;
   if (opts.bootcamp && !shooter.cpu && !shooter.shots.length && !s.fling && !s.off) bootcampSpot(def, mirror(s.x, s.y));
   applyOutcome(shooter, def, resolveIncoming(def, s,
     {terrain: def.terrain, campaign: opts.campaign, turkeys, near: opts.near, reveal: opts.reveal, rand: Math.random, page: 1 - cur}));
 }
-const armyGone = p => p.soldiers.every(u => !u.alive) && (!opts.fortWin || !p.fort || p.fort.hp <= 0);
+const armyGone = p => p.remote ? !!p.gone : p.soldiers.every(u => !u.alive) && (!opts.fortWin || !p.fort || p.fort.hp <= 0);
 function shotText(res, who) {
   const def = players[1 - who];
   switch (res.type) {
     case "soldier": {
-      const left = def.soldiers.filter(u => u.alive).length;
+      const left = soldiersLeft(def);
       if (res.namesake) return `${vsCpu() ? "You" : players[who].name} took out ${res.namesakeName} himself${res.kills > 1 ? ` and ${res.kills - 1} more` : ""}! ${left} left.`;
       if (res.slide) return `Rockslide! ${res.kills > 1 ? res.kills + " soldiers" : def.soldiers[res.i].name} buried${res.fortHit ? " and the fort cracked" : ""}. ${left} left.`;
       if (res.splash) return `Splash! ${def.soldiers[res.i].name} got soaked and is out. ${left} left.`;
@@ -4170,29 +4195,39 @@ function shotText(res, who) {
     case "rock": return res.crop === "hay" ? "Thwump! Right into a hay bale." : res.crop === "pumpkin" ? "Splat! Pumpkin's done for." : res.mountain ? "Thud! That one hit a mountain." : "Ping! That one hit a boulder.";
     case "slide": return "Rockslide! ...but nobody was standing below the mountain.";
     case "turkey": return players[who].cpu ? "The computer roasted a turkey. Dinner's served." : vsCpu() ? "Gobble?! You roasted a turkey. Shot wasted." : `Gobble?! ${players[who].name} roasted a turkey. Shot wasted.`;
-    default: return res.fart ? (res.fart.poop ? "Miss... *squelch* Someone just pooped their pants!" : "Miss... *pfffrt* Did someone just fart?") : opts.near && res.near < NEAR ? "Miss... whoosh, close!" : "Miss.";
+    default: return res.fart ? (res.fart.poop ? "Miss... *squelch* Someone just pooped their pants!" : "Miss... *pfffrt* Did someone just fart?") : (opts.near && res.near < NEAR) || res.whoosh ? "Miss... whoosh, close!" : "Miss.";
   }
 }
 // "Bonus turn for the brass" (More orders, off unless chosen): whoever takes out a namesake fires again.
 const brassBonusOn = () => !!(opts.brassBonus && lastResult && lastResult.namesake);
 function next() {
   if (armyGone(players[1 - cur])) return gameOver(cur);
-  if (brassBonusOn()) { lastResult = null; return players[cur].cpu ? cpuTurn() : go("aim"); } // same shooter again: no hand-off
+  if (brassBonusOn()) { lastResult = null; return onlineOn() ? onlineBeginTurn() : players[cur].cpu ? cpuTurn() : go("aim"); } // same shooter again: no hand-off
   const prev = cur; cur = 1 - cur;
+  if (onlineOn()) { onl.handoffs++; return onlineBeginTurn(); }
   if (tentOn()) return go("aim");
   if (vsCpu()) return players[cur].cpu ? cpuTurn() : go("aim");
   showCover(players[cur].name, `Your turn. ${players[prev].name}: divert your eyes, soldier!`, () => go("aim"));
 }
-function gameOver(winner) {
+function gameOver(winner, forfeit = false) {
   const pages = snapPages(); setTimeout(() => crumpleAway(pages), 0);
   phase = "over"; rematchFirst = 1 - winner; replay.winner = winner; stopTurkeys();
   if (opts.campaign === "drumstick" && !players[winner].cpu) speak(bagPick("drumstickWin"), 2600);
   coachQ.length = 0; coach(winner === 0 ? "win" : "lose", 1600); // drop tips still waiting
   $("game").classList.add("hidden"); $("tent").classList.add("hidden"); $("over").classList.remove("hidden");
-  $("overTitle").textContent = vsCpu() ? (winner ? "The computer wins!" : "You win!") : `${players[winner].name} wins!`; setTimeout(() => sound("victory"), 900);
+  $("overTitle").textContent = onlineOn() ? (winner === onl.seat ? "You win" : `${players[winner].name} wins`) + (forfeit ? " by forfeit!" : "!")
+    : vsCpu() ? (winner ? "The computer wins!" : "You win!") : `${players[winner].name} wins!`; setTimeout(() => sound("victory"), 900);
   [0, 1].forEach(i => { const c = $("cap" + i); c.textContent = `${players[i].name} (${inkName(INK[i])})`; c.style.color = INK[i]; });
   $("replayView").classList.add("hidden"); $("videoNote").classList.add("hidden"); replayButtons(false);
-  showMedals(); recordMatch(winner, awards());
+  $("rematchBtn").textContent = onlineOn() ? "Back to the lobby" : "Rematch"; $("menuBtn").textContent = onlineOn() ? "Leave the battle" : "Change settings";
+  if (onlineOn()) return onlineOver(winner, forfeit); // medals, the record and the Big Reveal wait for the other phone's army
+  gameOverTail(winner);
+}
+// The rest of the end: medals, the service record (not for a forfeit), both pages and the numbers.
+function gameOverTail(winner, record = true) {
+  showMedals();
+  if (record) recordMatch(winner, awards());
+  else { $("recordNote").textContent = "A battle won or lost by forfeit doesn't go on the service record."; $("careerNews").classList.add("hidden"); }
   [0, 1].forEach(i => {
     const c = $("ov" + i), dpr = window.devicePixelRatio || 1;
     c.width = W * dpr; c.height = H * dpr; const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -4814,6 +4849,7 @@ function taunt(p, quiet = false) {
   if (p.taunted || !alive.length) return;
   const text = soldierLine("taunt"), idx = alive[Math.floor(Math.random() * alive.length)];
   p.taunted = true; p.tauntOut = text;
+  if (onlineOn() && p === players[onl.seat]) net.send({t: "taunt", say: text}, "all"); // heard on the other phone
   replay.events.push({who: players.indexOf(p), taunt: text, idx});
   if (quiet) { speak(text, 200); return; } // the computer: you hear it, but its soldiers stay hidden
   say(idx, text, "event"); render(); updateUI();
@@ -5284,18 +5320,18 @@ function ribbonSvg(title, n) {
 }
 // What a finished match adds to Player 1's career.
 function careerFromMatch(winner) {
-  const ev = replay.events, mine = ev.filter(e => e.shot && e.who === 0), theirs = ev.filter(e => e.shot && e.who === 1);
+  const me = meIdx(), ev = replay.events, mine = ev.filter(e => e.shot && e.who === me), theirs = ev.filter(e => e.shot && e.who === 1 - me);
   const c = {
     hits: mine.filter(e => e.res.type === "soldier" || e.res.type === "fort").length,
     mgKills: mine.filter(e => e.shot.fling).reduce((a, e) => a + (e.killed ? e.killed.length : 0), 0),
     forts: mine.filter(e => e.fortHit && e.fortHp === 0).length,
     scratches: theirs.filter(e => e.res.type === "scratch").length,
-    drops: ev.filter(e => e.reinforce && e.who === 0).length,
+    drops: ev.filter(e => e.reinforce && e.who === me).length,
     brassKills: vsCpu() || opts.online ? mine.filter(e => e.res.namesake).length : 0, // a friend sitting next to you doesn't count: only the computer or an online foe
   };
-  const won = winner === 0;
+  const won = winner === me;
   c.points = (won ? 120 : 30) + c.hits * 12 + c.forts * 60 + c.mgKills * 10 + (opts.level === "general" && vsCpu() ? 40 : 0);
-  return {c, won, flawless: won && players[0].soldiers.every(u => u.alive), map: opts.map, wet: won && players[0].soldiers.some(u => u.alive && u.wading), // Diver: one of yours held the river (no one can stand in a lake)
+  return {c, won, flawless: won && players[me].soldiers.every(u => u.alive), map: opts.map, wet: won && players[me].soldiers.some(u => u.alive && u.wading), // Diver: one of yours held the river (no one can stand in a lake)
     beatGeneral: won && vsCpu() && opts.level === "general", bootcamp: !!opts.bootcamp};
 }
 function careerStats(r) { const st = {...(r.stats || {})}; st.wins = r.wins | 0; st.mapsWon = Object.keys(r.mapsWon || {}).length; return st; }
@@ -5318,8 +5354,8 @@ function loadRecord() {
 function saveRecord(r) { try { localStorage.setItem(RECORD_KEY, JSON.stringify(r)); } catch (e) {} }
 const medalTotal = r => Object.values(r.medals).reduce((a, b) => a + (b | 0), 0);
 function recordMatch(winner, medals) {
-  const r = loadRecord(), mine = medals.filter(m => m.who === 0), before = careerStats(r), rankBefore = rankOf(r.points);
-  if (winner === 0) r.wins++; else r.losses++;
+  const me = meIdx(), r = loadRecord(), mine = medals.filter(m => m.who === me), before = careerStats(r), rankBefore = rankOf(r.points);
+  if (winner === me) r.wins++; else r.losses++;
   mine.forEach(m => r.medals[m.title] = (r.medals[m.title] | 0) + 1);
   // career: stats, service points, maps won, special feats
   const m = careerFromMatch(winner), st = r.stats;
@@ -5333,8 +5369,8 @@ function recordMatch(winner, medals) {
   r.points += m.c.points + earned.reduce((a, [, x, z]) => a + (z - x) * 50, 0);
   saveRecord(r); updateCabCount();
   showCareerNews(rankBefore, rankOf(r.points), earned, m.c.points);
-  const you = vsCpu() ? "your" : `${players[0].name}'s`;
-  const got = [winner === 0 ? "a victory" : "", mine.length ? `${mine.length} medal${mine.length > 1 ? "s" : ""}` : ""].filter(Boolean).join(" and ");
+  const you = vsCpu() || onlineOn() ? "your" : `${players[0].name}'s`;
+  const got = [winner === me ? "a victory" : "", mine.length ? `${mine.length} medal${mine.length > 1 ? "s" : ""}` : ""].filter(Boolean).join(" and ");
   $("recordNote").innerHTML = (got ? `<b>${got[0].toUpperCase() + got.slice(1)}</b> added to ${you} service record. ` : "") +
     `Record: ${r.wins} win${r.wins === 1 ? "" : "s"}, ${r.losses} loss${r.losses === 1 ? "" : "es"}, ${medalTotal(r)} medal${medalTotal(r) === 1 ? "" : "s"}.`;
 }
@@ -5517,12 +5553,12 @@ function terrainSound(res) {
 function render() {
   if (!players) return;
   if (tentOn()) { [0, 1].forEach(i => { ctx = TENT[i].ctx; renderView(i); }); ctx = mainCtx; return; }
-  renderView(cur);
+  renderView(viewSeat());
 }
 // Draws what player pi sees. Without tent mode that's always the player whose turn it is.
 function renderView(pi) {
   const p = players[pi];
-  if (phase === "rps" && tentOn() && rps.picks[pi] != null) { // picked; the other side is still choosing
+  if (phase === "rps" && twoAtOnce() && rps.picks[pi] != null) { // picked; the other side is still choosing
     paper(ctx); label(ctx, "Picked!", W / 2, 120, 40, INK[pi], "Caveat");
     drawRps(ctx, rps.picks[pi], W / 2, 240, 42, INK[pi]); label(ctx, "Waiting for the other side...", W / 2, 360, 22, "#6d6a62");
   } else if (phase === "rps") {
@@ -5564,7 +5600,7 @@ function renderView(pi) {
     ctx.save(); ctx.font = '18px "Patrick Hand"'; const mw = ctx.measureText(msg).width + 20; ctx.restore();
     ctx.fillStyle = "#fbf8efdd"; ctx.fillRect(W / 2 - mw / 2, H - 32, mw, 26); // keep the hint readable over units
     label(ctx, msg, W / 2, H - 14, 18, "#6d6a62");
-    if (tentOn() && p.setupReady) {
+    if (twoAtOnce() && p.setupReady) {
       ctx.fillStyle = "#fbf8efcc"; ctx.fillRect(0, H / 2 - 40, W, 80);
       label(ctx, "Ready! Waiting for the other side...", W / 2, H / 2 + 8, 28, INK[pi], "Caveat");
     }
@@ -5580,7 +5616,7 @@ function renderView(pi) {
       const hit = b.res === "soldier" || b.res === "fort";
       label(ctx, resLabel(b.res), clamp(b.x, 50, W - 50), clamp(b.y + 40, 40, H - 10), hit ? 40 : 30, hit ? RED : "#6d6a62", "Caveat");
     }
-  } else if (tentOn() && pi !== cur && (phase === "aim" || phase === "fold" || phase === "result")) {
+  } else if (twoAtOnce() && pi !== cur && (phase === "aim" || phase === "fold" || phase === "result")) {
     // Tent mode, the player being shot at: their own army, with the shot landing on it.
     drawHalf(ctx, pi, {highlightLast: phase === "result"}); drawTurkeys(ctx, pi);
     const b = p.incoming[p.incoming.length - 1];
@@ -5645,23 +5681,23 @@ function updateUI() {
     try { [0, 1].forEach(i => { uiWho = i; updateUI(); }); } finally { uiTentPass = false; }
     return;
   }
-  const tent = tentOn(), me = tent ? uiWho : cur;
+  const tent = tentOn(), on = onlineOn(), two = tent || on, me = tent ? uiWho : on ? onl.seat : cur;
   const bar = tent ? TENT[me].bar : $("bar"), st = tent ? TENT[me].st : $("status"); bar.innerHTML = "";
   const btn = (t, cls, fn, dis) => { const b = document.createElement("button"); b.textContent = t; b.className = cls || ""; b.onclick = fn; b.disabled = !!dis; bar.appendChild(b); };
   const p = players && players[cur], foe = players && players[1 - cur];
-  if (tent && phase === "setup") {
+  if (two && phase === "setup") {
     const q = players[me];
     if (q.setupReady) { st.textContent = "Ready! Waiting for the other side..."; return; }
-    st.textContent = `${q.name}: hide your army at ${MAPS[opts.map].name}`;
+    st.textContent = `${q.name}: hide your army at ${MAPS[opts.map].name}` + (on ? ` (${Math.max(0, Math.ceil((onl.hideEnds - performance.now()) / 1000))}s)` : "");
     btn("Clear", "", () => { q.soldiers = []; q.fort = null; render(); updateUI(); });
-    btn("Ready", "primary", () => ready(me), !setupDone(q));
+    btn("Ready", "primary", () => on ? onlineReady() : ready(me), !setupDone(q));
     return;
   }
-  if (tent && phase === "rps") { st.textContent = rps.picks[me] == null ? `${players[me].name}: Rock, Paper or Scissors? Pick in secret.` : "Picked! Waiting for the other side..."; return; }
-  if (tent && me !== cur && (phase === "aim" || phase === "fold")) {
+  if (two && phase === "rps") { st.textContent = rps.picks[me] == null ? `${players[me].name}: Rock, Paper or Scissors? Pick in secret.` : "Picked! Waiting for the other side..."; return; }
+  if (two && me !== cur && (phase === "aim" || phase === "fold")) {
     st.textContent = (p.tauntOut ? `${p.name} yells "${p.tauntOut}" ` : "") + `Incoming! ${p.name} is aiming at you...`; return;
   }
-  if (tent && me !== cur && phase === "result") { st.textContent = defenderText(lastResult, me); return; }
+  if (two && me !== cur && phase === "result") { st.textContent = defenderText(lastResult, me); return; }
   if (phase === "setup") {
     st.textContent = `${p.name}: hide your army at ${MAPS[opts.map].name}`;
     btn("Clear", "", () => { p.soldiers = []; p.fort = null; render(); updateUI(); });
@@ -5687,23 +5723,23 @@ function updateUI() {
     st.textContent = shotText(lastResult, cur) + (lastResult.spotted ? ` Ink bleed spotted ${lastResult.spotted} new target${lastResult.spotted > 1 ? "s" : ""}!` : "")
       + (lastResult.reinforced ? ` That's ${opts.reinforce} misses in a row: the enemy gets reinforcements!` : "")
       + (brassBonusOn() && !armyGone(foe) ? " Bonus turn for the brass: fire again!" : "");
-    if (!foe.cpu && !tent) btn(armyGone(foe) ? "See the battlefield" : brassBonusOn() ? "Fire again" : `Pass to ${foe.name}`, "primary", next);
+    if (!foe.cpu && !two) btn(armyGone(foe) ? "See the battlefield" : brassBonusOn() ? "Fire again" : `Pass to ${foe.name}`, "primary", next);
   } else if (phase === "rps") {
     st.textContent = `${p.name}: Rock, Paper or Scissors?`;
   } else if (phase === "rpsReveal") {
     const w = rpsResult(), [a, b] = rps.picks;
-    if (w === null) { st.textContent = `Both picked ${RPS[a]}. Go again!`; btn("Go again", "primary", startRps); }
+    if (w === null) { st.textContent = `Both picked ${RPS[a]}. Go again!`; btn("Go again", "primary", () => on ? onlineRps(rps.round + 1) : startRps()); }
     else {
       const won = `${RPS[w ? b : a]} beats ${RPS[w ? a : b]}. ${players[w].name} wins`;
       if (!rps.orders) { st.textContent = `${won}... but what does HQ say?`; btn("Open orders", "primary", openOrders); }
       else {
         const f = rps.orders.first;
         st.textContent = `${rps.orders.text} ${players[f].name} shoots first.`;
-        btn("To battle", "primary", () => { first = cur = f; if (vsCpu() || tentOn()) return startBattle(); showCover(`${players[f].name} shoots first`, rps.orders.text + " Pass the phone.", () => go("aim")); });
+        btn("To battle", "primary", () => { if (on) return onlineToBattle(f); first = cur = f; if (vsCpu() || tentOn()) return startBattle(); showCover(`${players[f].name} shoots first`, rps.orders.text + " Pass the phone.", () => go("aim")); });
       }
     }
   } else if (phase === "cover" || phase === "fold") {
-    st.textContent = "";
+    st.textContent = on && phase === "fold" ? "Shot away! Waiting to hear what it hit..." : "";
   }
 }
 
@@ -6556,7 +6592,7 @@ setCampaign(readSettings().campaign || "regular"); // shown on the New mission p
 document.addEventListener("change", e => e.target.closest && e.target.closest("#menu") && e.target.matches("input, select") && e.target.name !== "rvMode" && saveSettings());
 document.querySelectorAll("#mapTiles .tile").forEach(t => t.addEventListener("click", () => !t.classList.contains("locked") && saveSettings()));
 $("startBtn").onclick = () => { if (inkProblem()) return; rematchFirst = null; pageTurn($("menu")); newMatch(); };
-$("rematchBtn").onclick = () => pageTurn($("over")) || newMatch(opts.bootcamp ? {...opts, bootcamp: false} : null); // after Boot Camp, a rematch is a normal match
+$("rematchBtn").onclick = () => opts && opts.online ? onlineBackToLobby() : pageTurn($("over")) || newMatch(opts.bootcamp ? {...opts, bootcamp: false} : null); // after Boot Camp, a rematch is a normal match
 const rvHighlights = () => document.querySelector("input[name=rvMode]:checked").value === "hl";
 $("watchBtn").onclick = () => { $("replayView").classList.remove("hidden"); $("videoNote").classList.add("hidden"); playReplay(rvHighlights()); };
 $("rvPlay").onclick = () => playReplay(rvHighlights());
@@ -6581,6 +6617,7 @@ window.onArsenalUnlocked = () => { $("arsenalSheet").classList.add("hidden"); ty
 applyArsenal(); askStore("status");
 // Go AWOL: abandon the match and head back to HQ. It isn't counted on the service record.
 function goAwol() {
+  if (onlineOn()) onlineAwol(); // the other phone wins by forfeit
   const pages = ["game", "tent"].some(id => !$(id).classList.contains("hidden")) ? snapPages() : [];
   setTimeout(() => crumpleAway(pages), 0);
   matchId++; replayRun++; clearInterval(turnTimer); turnEnds = 0; phase = "menu"; pending = flick = dotAim = null; clearTurkeys();
@@ -6604,7 +6641,7 @@ document.querySelectorAll("input[name=foe]").forEach(r => r.onchange = () => {
   $("levelRow").classList.toggle("hidden", r.value !== "cpu" || !r.checked);
   $("p2InkLabel").textContent = r.value === "cpu" && r.checked ? "Computer" : "Player 2";
 });
-$("menuBtn").onclick = () => { pageTurn($("over")); replayRun++; $("coach").classList.add("hidden"); $("over").classList.add("hidden"); $("menu").classList.remove("hidden"); };
+$("menuBtn").onclick = () => { if (opts && opts.online) { onlineLeave(); $("rematchBtn").textContent = "Rematch"; $("menuBtn").textContent = "Change settings"; } pageTurn($("over")); replayRun++; $("coach").classList.add("hidden"); $("over").classList.add("hidden"); $("menu").classList.remove("hidden"); };
 window.addEventListener("resize", fit);
 // Canvas text only uses web fonts once they have loaded.
 Promise.all([document.fonts.load('700 30px Caveat'), document.fonts.load('20px "Patrick Hand"')]).then(() => players && render()).catch(() => {});
@@ -6635,7 +6672,7 @@ window.addEventListener("keydown", e => {
 const NET_V = 1, NET_UPDATE_TEXT = "Update Paper Wars to play together.";
 const NET_TYPES = ["hello", "lobby", "start", "hidden", "rps", "shot", "result", "reinforce", "taunt", "spin", "queue", "remove", "over", "reveal", "catchup"];
 const NET_HOST_ONLY = ["lobby", "start", "spin", "remove", "catchup"];
-const NET_SEATED = ["hidden", "rps", "shot", "result", "reinforce", "over"]; // only the two seated players may send these
+const NET_SEATED = ["hidden", "rps", "shot", "result", "reinforce", "over", "reveal"]; // only the two seated players may send these
 const NET_LOGGED = ["start", "hidden", "rps", "shot", "result", "reinforce", "taunt", "spin", "queue", "over", "reveal"]; // what a late spectator is caught up on
 const NET_ARMY_KEYS = ["soldiers", "fort", "known", "army", "armies"];
 const NET_MAX = 60000, NET_CHUNK = 40000; // Game Center's reliable messages top out near 87 KB
@@ -6769,7 +6806,8 @@ const net = (() => {
   }
   function setRoles(d) {
     if (typeof d.host === "string" && NET_PID.test(d.host)) st.host = d.host;
-    st.seats = netPids(d.seats).slice(0, 2); st.spectators = netPids(d.spectators); st.queue = netPids(d.queue);
+    if (!(st.match && !st.over)) st.seats = netPids(d.seats).slice(0, 2); // a lobby can't change who is fighting mid-battle
+    st.spectators = netPids(d.spectators); st.queue = netPids(d.queue);
   }
   function beginMatch(d) {
     if (st.match) st.past.add(st.match.matchId);
@@ -6797,7 +6835,8 @@ const net = (() => {
     }
     const pos = netPos(d), seated = NET_SEATED.includes(d.t);
     if (pos == null && !seated) return deliver(d);
-    if (!st.match || d.m !== st.match.matchId) { if (!st.past.has(d.m) && st.early.length < 200) st.early.push(d); return; }
+    if (!st.match || d.m !== st.match.matchId) { // early (before its start): kept only from the last lobby's seats
+      if (!st.past.has(d.m) && st.early.length < 200 && (!seated || st.seats.includes(d.from))) st.early.push(d); return; }
     if (!st.match.seats.includes(d.from)) return; // spectators and strangers don't play
     if (typeof api.turnCheck === "function" && !api.turnCheck(d)) return; // Task 7: is it this seat's turn to shoot (or to answer)?
     if (pos == null) return deliver(d);
@@ -7008,6 +7047,7 @@ function lobbyClean(s, paid) {
 // The host: fit everyone here into seats and spectator spots, tidy the orders, tell the room.
 function lobbySync() {
   if (!lobbyOpen) return; // only while the lobby screen is in use
+  if (onlineOn() && !onl.over) { renderLobby(); return; } // mid-battle: a dropped player keeps their seat
   if (!net.me().isHost) { renderLobby(); return; }
   const me = lobbyMe(), here = [me, ...net.peers().map(p => p.pid)].filter(p => !lob.removed.has(p));
   const keep = a => a.filter((p, i) => here.includes(p) && a.indexOf(p) === i);
@@ -7104,7 +7144,20 @@ function lobbyStartMsg(d) {
   return {t: "start", matchId: String(d.matchId).slice(0, 40), seats, settings: lobbyClean(d.settings, lobbyPaid(seats)), seed: d.seed | 0};
 }
 // Task 7 plays the match from here.
-function startOnlineMatch(start) { onlineStart = start; renderLobby(); }
+function startOnlineMatch(start) {
+  onlineStart = start; renderLobby();
+  const seat = start.seats.indexOf(lobbyMe());
+  if (seat < 0 || start.seats.length !== 2 || (onl && onl.matchId === start.matchId)) return; // watching: spectators come later (Task 8)
+  onlineBegin(start, seat);
+}
+// The battlefield for a start, one rule on every phone: a map this phone may play as it is, else one picked by the seed
+// from the maps everyone seated owns (a start whose paid map this phone had to drop still lands every phone on the same
+// free map as long as their phones agree on who owns what).
+function matchMap(map, seed, paid) {
+  if (map !== "random" && MAPS[map] && !MAPS[map].campaign && (paid || !ARSENAL.maps.includes(map))) return map;
+  const ids = Object.keys(MAPS).filter(k => !MAPS[k].campaign && (paid || !ARSENAL.maps.includes(k)));
+  return ids[Math.floor(mulberry32(seed)() * ids.length)];
+}
 
 $("lobbyInvite").onclick = () => {
   sound("click"); lob.note = null;
@@ -7121,10 +7174,7 @@ $("lobbyLeave").onclick = () => {
 $("lobbyStart").onclick = () => {
   if (!net.me().isHost || lob.seats.length !== 2) return;
   const paid = lobbyPaid(lob.seats), settings = lobbyClean(lob.settings, paid), seed = Math.floor(Math.random() * 0x7fffffff);
-  if (settings.map === "random") { // picked here, so every phone fights on the same one
-    const ids = Object.keys(MAPS).filter(k => !MAPS[k].campaign && (paid || !ARSENAL.maps.includes(k)));
-    settings.map = ids[Math.floor(mulberry32(seed)() * ids.length)];
-  }
+  if (settings.map === "random") settings.map = matchMap("random", seed, paid); // picked here, so every phone fights on the same one
   const start = {t: "start", matchId: newPid().slice(0, 12), seats: lob.seats.slice(), settings, seed};
   sound("click"); net.send(start, "all"); startOnlineMatch(lobbyStartMsg(start));
 };
@@ -7184,6 +7234,7 @@ function lobbyHandOff(pid) {
   } else renderLobby();
 }
 net.on("left", e => {
+  if (onlineOn() && !onl.over) return; // in a battle the match's own 60 s wait applies (the lobby catches up afterwards)
   if (!lobbyOpen || !e.pid || e.pid !== lobbyHost() || lob.wait.has(e.pid)) return;
   if (lob.quit.has(e.pid)) { lobbyHandOff(e.pid); return; }
   lob.wait.set(e.pid, setTimeout(() => lobbyHandOff(e.pid), LOBBY_HOST_GRACE_MS));
@@ -7202,6 +7253,384 @@ net.on("matchmaker", e => {
   lobbyEnd(null, true);
   onlineHelp(e.reason === "failed" ? "offline" : "notSignedIn"); $("online").classList.remove("hidden");
 });
+
+// ---------- the online match (two phones, 1.2) ----------
+// Each phone holds only its own army. players[i] is seat i on every phone, so turn order, turkeys and the replay line up;
+// the other seat is a stand-in ("remote") that only knows what the wire has said: the soldiers this phone spotted or took
+// out, how many are left, its fort's hits. Both players hide at once (ONLINE_HIDE_MS, a soft timer: what isn't placed by
+// then is placed for you); `hidden` carries no positions. Rock, Paper, Scissors picks go to the opponent only, and HQ's
+// orders come from the seed, so both phones agree on who shoots first. A turn: the shooter sends `shot` n, the defender's
+// phone works it out (resolveIncoming with shotRand(seed, n)) and sends `result` n (wireOutcome), and each phone applies
+// it. The terrain comes from the seed; turkeys are planned per turn from the seed with times counted from the start of the
+// turn (the shot says how long after its turn began it was fired). A dropped opponent gets MATCH_RECONNECT_MS to come back
+// (each phone re-sends what the other may have missed), then the match is won by forfeit (not on the service record). At
+// the end each phone sends its own `over`, then `reveal`: its army, the near-miss distances of the shots it took and its
+// reinforcements, so both phones can show the Big Reveal and work out the same medals.
+const LAST_STAND_LINES = {
+  mine: ["Last man standing! Make every shot count, soldier!", "It's all on you now, private. Hold that line!", "One left. Dig in and give 'em everything!"],
+  theirs: ["They're down to their last soldier. Finish the job!", "One left over there! Don't let him get away!", "Last one standing on their side. Steady aim, soldier!"],
+};
+function seeded(rng, fn) { const r = Math.random; Math.random = rng; try { return fn(); } finally { Math.random = r; } } // the same "random" on every phone
+const onlNum = (v, lo, hi) => typeof v === "number" && isFinite(v) ? Math.max(lo, Math.min(hi, v)) : null;
+const onlInt = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi ? v : null;
+// Only lines from our own lists can come in from the other phone (no typed text, even from a modified app).
+let onlineLines = null;
+function onlineLineOk(t) {
+  if (!onlineLines) { onlineLines = new Set([...BUGLE_CAPTIONS, ...TAPS_CAPTIONS]); Object.values(LINES).forEach(g => Array.isArray(g) && g.forEach(s => typeof s === "string" && onlineLines.add(s))); }
+  return typeof t === "string" && onlineLines.has(t);
+}
+const onlineMine = d => onlineOn() && d && d.m === onl.matchId && d.from === onl.seats[onl.them]; // from this match's opponent
+const stubSoldier = () => ({x: -999, y: -999, alive: true, pose: 0, seed: 1, name: "", unseen: true});
+function onlineClear() {
+  if (!onl) return;
+  Object.values(onl.timers).forEach(t => { clearInterval(t); clearTimeout(t); });
+  $("onlineWait").classList.add("hidden"); $("lastStand").classList.add("hidden"); onl = null;
+}
+function onlineBegin(start, seat) {
+  onlineClear();
+  const s = start.settings, them = 1 - seat, paid = lobbyPaid(start.seats);
+  const map = s.campaign === "drumstick" ? "harvest" : matchMap(s.map, start.seed | 0, paid); // (lobbyStartMsg already re-checked what this phone may play)
+  const person = pid => lobbyPerson(pid);
+  onl = {matchId: start.matchId, seats: start.seats.slice(), seat, them, seed: start.seed | 0, first: null, handoffs: 0, bonusMax: s.brassBonus ? 2 : 0,
+    names: start.seats.map(pid => { const p = person(pid); return p ? lobbyName(p) : "A friend"; }), oppSoldier: (person(start.seats[them]) || {}).soldier || {},
+    hidden: [false, false], sentHidden: false, picks: {}, myPick: null, lastShot: null, lastResult: null, awaiting: 0, turn: 0, turnStart: 0, hideEnds: 0,
+    lastStand: new Set(), lastStandAt: null, over: null, overSent: false, overMsg: null, revealMsg: null, theirReveal: null, finished: false, waitEnds: 0, timers: {}};
+  newMatch({fireBy: (document.querySelector("input[name=fireBy]:checked") || {value: "tap"}).value, flings: s.flings, fort: !!s.fortOn, fortWin: !!s.fortWin,
+    brassBonus: !!s.brassBonus, near: true, size: 46, reveal: s.reveal, reinforce: s.reinforce ? 3 : 0, reinforceMax: 1, timer: s.timer, foe: "human",
+    level: "sergeant", bootcamp: false, map, campaign: s.campaign, online: {seat, matchId: start.matchId}});
+}
+// Called from newMatch: call signs on both seats, my namesake, and the other army as a stand-in.
+function onlinePlayers() {
+  const {seat, them} = onl, foe = players[them], me = net.me();
+  players.forEach((p, i) => { p.name = onl.names[i]; p.cpu = false; });
+  players[seat].namesake = {name: onl.names[seat], ...me.soldier};
+  foe.namesake = {name: onl.names[them]};
+  Object.assign(foe, {remote: true, aliveCount: MAX_UNITS, gone: false, soldiers: Array.from({length: MAX_REINFORCED}, stubSoldier),
+    fort: opts.fort ? {x: -999, y: -999, hp: 3, unseen: true} : null});
+}
+function onlineSetup() {
+  ["lobby", "online"].forEach(id => $(id).classList.add("hidden"));
+  cur = onl.seat; onl.hideEnds = performance.now() + ONLINE_HIDE_MS;
+  const m = onl;
+  onl.timers.hide = setInterval(() => {
+    if (onl !== m || phase !== "setup") return clearInterval(m.timers.hide);
+    if (performance.now() >= onl.hideEnds && !players[onl.seat].setupReady) onlineAutoHide(); else updateUI();
+  }, 500);
+  go("setup");
+}
+// Time's up: whatever isn't placed yet is placed for you.
+function onlineAutoHide() {
+  const p = players[onl.seat];
+  while (p.soldiers.length < MAX_UNITS) p.soldiers.push(cpuSoldier(p));
+  if (opts.fort && !p.fort) p.fort = {...cpuSpot(p, true), hp: 3};
+  onlineReady();
+}
+function onlineReady() {
+  if (!onlineOn()) return;
+  const p = players[onl.seat];
+  if (phase !== "setup" || p.setupReady || !setupDone(p)) return;
+  setupTalk = null; p.setupReady = true; onl.hidden[onl.seat] = true; sound("click");
+  net.send({t: "hidden"}, "all"); onl.sentHidden = true; // that I'm ready: never where
+  onlineMaybeRps();
+}
+function onlineMaybeRps() {
+  if (!onl.hidden[0] || !onl.hidden[1] || phase !== "setup") { render(); updateUI(); return; }
+  clearInterval(onl.timers.hide);
+  replay.armies = players.map(p => clone({soldiers: p.soldiers, fort: p.fort})); // the other one is filled in by its reveal
+  onlineRps(1);
+}
+function onlineRps(round) {
+  if (!onlineOn() || (rps && rps.round >= round && phase === "rps")) return;
+  rps = {picks: [null, null], round}; cur = onl.seat;
+  go("rps");
+  if (onl.picks[round] != null && rps.picks[onl.seat] != null) onlineRpsCheck();
+}
+function onlineRpsPick(i) {
+  if (phase !== "rps" || rps.picks[onl.seat] != null || ![0, 1, 2].includes(i)) return;
+  rps.picks[onl.seat] = i; sound("click"); onl.myPick = {round: rps.round, pick: i};
+  net.send({t: "rps", round: rps.round, pick: i}, "opponent"); // private: never to a spectator
+  onlineRpsCheck();
+}
+function onlineRpsCheck() {
+  const theirs = onl.picks[rps.round];
+  if (rps.picks[onl.seat] == null || theirs == null) { render(); updateUI(); return; }
+  rps.picks[onl.them] = theirs; phase = "rpsReveal"; sound("drum"); render(); updateUI();
+  const m = onl, round = rps.round, w = rpsResult();
+  onl.timers.rps = setTimeout(() => {
+    if (onl !== m || phase !== "rpsReveal" || rps.round !== round) return;
+    if (w === null) return onlineRps(round + 1);
+    openOrders();
+    onl.timers.rps = setTimeout(() => onl === m && phase === "rpsReveal" && rps.orders && onlineToBattle(rps.orders.first), 2500);
+  }, 1600);
+}
+function onlineToBattle(f) {
+  if (!onlineOn() || onl.first != null) return;
+  onl.first = f; first = cur = f;
+  if (onl.seat === 0) net.send({t: "rps", round: rps.round, outcome: {first: f}}, "all"); // who shoots first, for anyone watching (no picks)
+  onlineBeginTurn();
+}
+function onlineBeginTurn() {
+  onl.turn = players[0].shots.length + players[1].shots.length + 1;
+  onl.turnStart = performance.now();
+  onlineTurkeys(onl.turn);
+  go("aim");
+}
+// Operation Drumstick online: this turn's turkeys, the same on both phones (roasts stay; walkers are planned afresh).
+function onlineTurkeys(n) {
+  turkeys = turkeys.filter(tk => tk.cooked);
+  if (opts.campaign !== "drumstick") return;
+  const r = mulberry32((onl.seed ^ 0x7a11) + n * 7919), T = players[0].terrain || [];
+  let at = 3000 + r() * 4000;
+  for (let k = 0; k < 8; k++) {
+    let y = 70 + r() * (H - 140);
+    for (let j = 0; j < 20 && T.some(f => { const q = footprint(f) || {y: -999, r: 0}; return Math.abs(q.y - y) < q.r + 16; }); j++) y = 70 + r() * (H - 140);
+    const dir = r() < .5 ? 1 : -1;
+    turkeys.push({id: n * 100 + k, y, dir, speed: 18 + r() * 10, x0: dir === 1 ? -30 : W + 30, t0: onl.turnStart + at, cooked: null});
+    at += 9000 + r() * 7000;
+  }
+}
+// Shot n: who fires it. Stateless per n (it runs before the ordering buffer): the agreed first shooter and the number of
+// hand-offs before it, which every shot and result carries (t). Without the bonus-turn rule t is always n - 1; with it a
+// shot may skip up to two hand-offs (one namesake per side). The game checks t against its own count when the shot lands.
+function onlineTurnCheck(d) {
+  if (d.t !== "shot" && d.t !== "result") return true;
+  if (!onl || d.m !== onl.matchId || onl.first == null) return true; // nothing to judge by yet
+  const t = onlInt(d.handoffs, Math.max(0, d.n - 1 - onl.bonusMax), d.n - 1);
+  if (t == null) return false;
+  const shooter = onl.seats[(onl.first + t) % 2];
+  return d.t === "shot" ? d.from === shooter : d.from !== shooter;
+}
+net.turnCheck = onlineTurnCheck;
+// The shooter's half: send the shot and wait for the other phone's word on what it hit.
+function onlineShoot() {
+  const s = pending, n = onl.turn, msg = {t: "shot", n, handoffs: onl.handoffs, x: s.x, y: s.y, at: Math.max(0, (s.at || performance.now()) - onl.turnStart)};
+  if (s.fling) { msg.fling = true; msg.path = s.path.map(([x, y]) => [x, y]); }
+  if (s.off) { msg.off = true; msg.timeout = !!s.timeout; }
+  onl.lastShot = msg; onl.awaiting = n; net.send(msg, "all"); updateUI();
+}
+function onlineCleanShot(d) {
+  const x = onlNum(d.x, -50, W + 50), y = onlNum(d.y, -50, H + 50); if (x == null || y == null) return null;
+  const s = {x, y, at: onlNum(d.at, 0, 36e5) || 0};
+  if (d.off === true) { s.off = true; s.timeout = d.timeout === true; }
+  if (d.fling === true && players[onl.them].flingsLeft > 0 && Array.isArray(d.path) && d.path.length >= 2 && d.path.length <= 800) {
+    const path = d.path.map(p => Array.isArray(p) ? [onlNum(p[0], -10, W + 10), onlNum(p[1], -10, H + 10)] : [null, null]);
+    if (path.every(p => p[0] != null && p[1] != null)) { s.fling = true; s.path = path; }
+  }
+  return s;
+}
+// A shot that lands before this phone has moved on (it was still showing the last result, or the orders): catch up.
+function onlineCatchUp() {
+  if (phase === "rpsReveal" && rps && rpsResult() !== null) { openOrders(); onlineToBattle(rps.orders.first); }
+  if (phase === "result") next();
+}
+net.on("shot", d => {
+  if (!onlineMine(d) || onl.over) return;
+  onlineCatchUp();
+  if (phase !== "aim" || cur !== onl.them || onl.turn !== d.n || d.handoffs !== onl.handoffs) { console.warn("[paperwar] online: shot out of turn", d.n, onl.turn, phase); return; }
+  const me = players[onl.seat], shot = onlineCleanShot(d); if (!shot) return;
+  shot.at += onl.turnStart; // its turkeys, as they were when it was fired
+  const o = resolveIncoming(me, shot, {terrain: me.terrain, campaign: opts.campaign, turkeys, near: opts.near, reveal: opts.reveal, rand: shotRand(onl.seed, d.n), page: onl.seat, now: shot.at});
+  const w = wireOutcome(o); // never o itself: what the shooter may learn, and nothing else
+  if (w.shot.at != null) w.shot.at -= onl.turnStart; w.scares.forEach(c => { c.t0 -= onl.turnStart; }); // times from the start of the turn
+  onl.lastResult = {t: "result", n: d.n, handoffs: d.handoffs, outcome: w}; net.send(onl.lastResult, "all");
+  applyOutcome(players[onl.them], me, o);
+  onlineAfterShot(o, onl.seat);
+});
+// What came over the wire, made safe: known values and our own lines only, the shot as this phone fired it.
+function onlineCleanOutcome(w, shot) {
+  if (!w || typeof w !== "object" || !w.res || typeof w.res !== "object") return null;
+  const r = w.res, foe = players[onl.them];
+  if (!["soldier", "miss", "scratch", "fort", "rock", "off", "turkey", "slide"].includes(r.type)) return null;
+  const res = {type: r.type};
+  for (const k of ["timeout", "fling", "splash", "wet", "mountain", "fortHit"]) if (typeof r[k] === "boolean") res[k] = r[k];
+  if (onlInt(r.kills, 1, MAX_REINFORCED) != null) res.kills = r.kills;
+  if (["hay", "pumpkin"].includes(r.crop)) res.crop = r.crop;
+  if (r.type === "turkey" && r.turkey && typeof r.turkey === "object") { const x = onlNum(r.turkey.x, -200, W + 200), y = onlNum(r.turkey.y, -200, H + 200); if (x != null && y != null) res.turkey = {x, y}; }
+  if (r.type === "soldier" && onlInt(r.i, 0, MAX_REINFORCED - 1) != null) res.i = r.i;
+  if (r.type === "soldier" && r.namesake === true) { res.namesake = true; res.namesakeName = foe.namesake.name; } // their call sign as their own hello gave it
+  const line = t => onlineLineOk(t) ? t : null;
+  if (r.death && typeof r.death === "object" && line(r.death.text)) res.death = {text: r.death.text, ...(r.death.bugle === true ? {bugle: true, taps: r.death.taps === true} : {})};
+  if (r.medic && line(r.medic.text)) res.medic = {text: r.medic.text};
+  if (r.fart && line(r.fart.text)) res.fart = {text: r.fart.text, poop: r.fart.poop === true};
+  if (r.ouch && line(r.ouch.text)) res.ouch = {text: r.ouch.text};
+  const idx = a => Array.isArray(a) ? [...new Set(a.filter(i => onlInt(i, 0, MAX_REINFORCED - 1) != null))] : [];
+  const unit = (u, dead) => {
+    if (!u || typeof u !== "object") return null;
+    const i = onlInt(u.i, 0, MAX_REINFORCED - 1), x = onlNum(u.x, -50, W + 50), y = onlNum(u.y, -50, H + 50); if (i == null || x == null || y == null) return null;
+    const o = {i, x, y, pose: u.pose === 1 ? 1 : 0, seed: onlInt(u.seed, 0, 99999) == null ? 1 : u.seed, wading: u.wading === true};
+    if (WEAPONS.includes(u.weapon)) o.weapon = u.weapon;
+    if (dead) { o.name = u.namesake === true ? foe.namesake.name : SOLDIER_NAMES.includes(u.name) ? u.name : "A soldier"; if (u.namesake === true) o.namesake = true; }
+    return o;
+  };
+  const units = (a, dead) => (Array.isArray(a) ? a : []).slice(0, MAX_REINFORCED).map(u => unit(u, dead)).filter(Boolean);
+  const pt = p => p && typeof p === "object" && onlNum(p.x, -50, W + 50) != null && onlNum(p.y, -50, H + 50) != null ? {x: onlNum(p.x, -50, W + 50), y: onlNum(p.y, -50, H + 50)} : null;
+  const scares = (Array.isArray(w.scares) ? w.scares : []).slice(0, 8).map(c => c && typeof c === "object" && {i: onlInt(c.i, 0, 99), x0: onlNum(c.x0, -500, W + 500),
+    t0: onlNum(c.t0, -36e5, 36e5), speed: onlNum(c.speed, 0, 200)}).filter(c => c && c.i != null && c.x0 != null && c.t0 != null && c.speed != null)
+    .map(c => ({...c, t0: c.t0 + onl.turnStart}));
+  const turkey = onlInt(w.turkey, -1, 99);
+  return {shot, res, killed: idx(w.killed), fortHit: w.fortHit === true, spotted: idx(w.spotted), spottedFort: w.spottedFort === true,
+    spottedUnits: units(w.spottedUnits, false), killedUnits: units(w.killedUnits, true), spottedFortAt: pt(w.spottedFortAt), turkey: turkey == null ? -1 : turkey,
+    scares, fortHp: onlInt(w.fortHp, 0, 3), alive: onlInt(w.alive, 0, MAX_REINFORCED) || 0, room: w.room === true, gone: w.gone === true, close: w.close === true, incoming: null};
+}
+net.on("result", d => {
+  if (!onlineMine(d) || onl.over || d.n !== onl.awaiting || phase !== "fold" || cur !== onl.seat || !pending) return;
+  const o = onlineCleanOutcome(d.outcome, pending); if (!o) return;
+  onl.awaiting = 0;
+  // what this phone now knows about the other army
+  const foe = players[onl.them], s = o.shot;
+  o.spottedUnits.forEach(u => { const k = foe.soldiers[u.i] || stubSoldier(); foe.soldiers[u.i] = {...k, ...u, alive: k.alive !== false, unseen: false}; });
+  o.killedUnits.forEach(u => { foe.soldiers[u.i] = {...(foe.soldiers[u.i] || stubSoldier()), ...u, alive: false, unseen: false}; });
+  o.killed.forEach(i => { foe.soldiers[i] = {...(foe.soldiers[i] || stubSoldier()), alive: false}; });
+  foe.aliveCount = o.alive; foe.gone = o.gone;
+  if (foe.fort && o.fortHp != null) foe.fort.hp = o.fortHp;
+  if (foe.fort && o.spottedFortAt) Object.assign(foe.fort, o.spottedFortAt, {unseen: false});
+  foe.incoming.push({x: W - s.x, y: s.y, res: s.off ? "off" : o.res.type, wet: !!o.res.wet, path: s.fling ? s.path.map(([x, y]) => [W - x, y]) : null}); // for the Big Reveal
+  if (opts.near && o.close && !o.res.fart) o.res.whoosh = true; // "whoosh, close!" (the distance stays on their phone)
+  applyOutcome(players[onl.seat], null, o);
+  onlineAfterShot(o, onl.them);
+});
+// Close-match tuning: the "Last Stand" stamp and a line from the sergeant when a side is down to one soldier.
+function onlineAfterShot(o, defSeat) {
+  if (o.alive !== 1 || o.gone || onl.lastStand.has(defSeat)) return;
+  onl.lastStand.add(defSeat); onl.lastStandAt = players[0].shots.length + players[1].shots.length;
+  lastStand(defSeat);
+}
+function lastStand(side) {
+  const mine = side === onl.seat, line = pickOf(mine ? LAST_STAND_LINES.mine : LAST_STAND_LINES.theirs), el = $("lastStand"), m = onl;
+  el.querySelector("small").textContent = line; el.classList.remove("hidden");
+  onl.lastStandLine = line; setTimeout(() => sound("drum"), 900); speak(line, 1600, "coach");
+  onl.timers.stand = setTimeout(() => { if (onl === m) el.classList.add("hidden"); }, 4200);
+}
+net.on("hidden", d => {
+  if (!onlineMine(d) || onl.hidden[onl.them]) return;
+  onl.hidden[onl.them] = true; players[onl.them].setupReady = true;
+  onlineMaybeRps();
+});
+net.on("rps", d => {
+  if (!onlineMine(d) || onlInt(d.round, 1, 99) == null || ![0, 1, 2].includes(d.pick)) return;
+  if (onl.picks[d.round] == null) onl.picks[d.round] = d.pick;
+  if (rps && rps.round === d.round && phase === "rps") onlineRpsCheck();
+});
+net.on("taunt", d => {
+  if (!onlineOn() || d.from !== onl.seats[onl.them] || !onlineLineOk(d.say) || phase === "over") return;
+  players[onl.them].tauntOut = d.say; speak(d.say, 200); updateUI();
+});
+// ---------- leaving and coming back ----------
+function onlineWaitStart() {
+  if (onl.waitEnds) return;
+  onl.waitEnds = performance.now() + MATCH_RECONNECT_MS;
+  const m = onl, el = $("onlineWait");
+  const tick = () => {
+    if (onl !== m || !onl.waitEnds) return;
+    const left = Math.max(0, Math.ceil((onl.waitEnds - performance.now()) / 1000));
+    el.textContent = `${players[onl.them].name} lost the connection. Waiting for them to come back... ${left}s`;
+    if (performance.now() >= onl.waitEnds) { onlineWaitEnd(); onlineForfeit(onl.seat); }
+  };
+  el.classList.remove("hidden"); tick(); onl.timers.wait = setInterval(tick, 250);
+}
+function onlineWaitEnd() { if (!onl) return; clearInterval(onl.timers.wait); onl.waitEnds = 0; $("onlineWait").classList.add("hidden"); }
+// Whatever the other phone may have missed while it was gone (it drops anything it already had).
+function onlineResend() {
+  if (!onlineOn()) return;
+  if (onl.overSent) { net.send({t: "over", ...onl.overMsg}, "all"); if (onl.revealMsg) net.send(onl.revealMsg, "all"); return; }
+  if (onl.first == null) {
+    if (onl.sentHidden) net.send({t: "hidden"}, "all");
+    if (onl.myPick) net.send({t: "rps", ...onl.myPick}, "opponent");
+  }
+  if (onl.lastResult) net.send(onl.lastResult, "all");
+  if (onl.awaiting && onl.lastShot) net.send(onl.lastShot, "all");
+}
+net.on("left", e => { if (onlineOn() && !onl.over && e.pid && e.pid === onl.seats[onl.them]) onlineWaitStart(); });
+net.on("back", e => { if (onlineOn() && e.pid && e.pid === onl.seats[onl.them]) { onlineWaitEnd(); onlineResend(); } });
+net.on("hello", p => { if (onlineOn() && p && p.pid === onl.seats[onl.them]) { onlineWaitEnd(); onlineResend(); } });
+function onlineForfeit(winner) {
+  if (!onlineOn() || onl.over) return;
+  clearInterval(turnTimer); turnEnds = 0; pending = flick = dotAim = null;
+  gameOver(winner, true);
+}
+// Go AWOL online: the other phone wins by forfeit, and this phone leaves the battle.
+function onlineAwol() {
+  if (!onl.over) { onl.over = {winner: onl.them, forfeit: true}; net.send({t: "over", winner: onl.them, forfeit: true}, "all"); }
+  onlineLeave();
+}
+function onlineLeave() {
+  onlineClear(); onlineStart = null;
+  if (net.me().isHost) net.send({t: "remove", pid: lobbyMe()}, "all"); // a host leaving on purpose hands over at once
+  lobbyEnd(null, true);
+}
+// ---------- the end ----------
+net.on("over", d => {
+  if (!onlineMine(d) || onl.over) return;
+  if (d.forfeit === true && (d.winner === 0 || d.winner === 1)) onlineForfeit(d.winner); // they gave up, or waited out this phone
+  // otherwise this phone works out the end from the last result itself
+});
+function onlineCleanArmy(a) {
+  if (!a || typeof a !== "object" || !Array.isArray(a.soldiers)) return null;
+  const foe = players[onl.them];
+  const soldiers = a.soldiers.slice(0, MAX_REINFORCED).map(u => {
+    const x = onlNum(u && u.x, -50, W + 50), y = onlNum(u && u.y, -50, H + 50); if (x == null || y == null) return null;
+    const o = {x, y, alive: u.alive !== false, pose: u.pose === 1 ? 1 : 0, seed: onlInt(u.seed, 0, 99999) == null ? 1 : u.seed,
+      name: SOLDIER_NAMES.includes(u.name) ? u.name : "A soldier", wading: u.wading === true};
+    if (u.namesake === true) { const s = netCleanSoldier({...onl.oppSoldier, ...u}); Object.assign(o, {namesake: true, name: foe.namesake.name, weapon: s.weapon, pose: s.pose, hat: s.hat}); }
+    else if (WEAPONS.includes(u.weapon)) o.weapon = u.weapon;
+    return o;
+  }).filter(Boolean);
+  const f = a.fort && typeof a.fort === "object" ? {x: onlNum(a.fort.x, -50, W + 50), y: onlNum(a.fort.y, -50, H + 50), hp: onlInt(a.fort.hp, 0, 3) || 0} : null;
+  return {soldiers, fort: f && f.x != null && f.y != null ? f : null};
+}
+net.on("reveal", d => {
+  if (!onlineMine(d) || onl.theirReveal) return;
+  const army = onlineCleanArmy(d.army); if (!army) return;
+  const near = (Array.isArray(d.near) ? d.near : []).slice(0, 2000).filter(x => x && onlInt(x.n, 1, 1e5) != null).map(x => ({n: x.n,
+    near: onlNum(x.near, 0, 1e4), soldierNear: onlNum(x.soldierNear, 0, 1e4), nearIdx: onlInt(x.nearIdx, 0, MAX_REINFORCED - 1), i: onlInt(x.i, 0, MAX_REINFORCED - 1)}));
+  const drops = (Array.isArray(d.drops) ? d.drops : []).slice(0, MAX_REINFORCED).filter(x => x && onlInt(x.after, 0, 1e5) != null)
+    .map(x => ({after: x.after, soldier: (onlineCleanArmy({soldiers: [x.soldier]}) || {soldiers: []}).soldiers[0]})).filter(x => x.soldier);
+  onl.theirReveal = {army, initial: onlineCleanArmy(d.initial) || clone(army), near, drops};
+  if (onl.over && !onl.finished) onlineFinish();
+});
+// This phone's end: its own "over" (which lets its army out), then the Big Reveal for everyone.
+function onlineOver(winner, forfeit) {
+  onl.over = {winner, forfeit: !!forfeit}; onlineWaitEnd(); clearInterval(onl.timers.hide); clearTimeout(onl.timers.rps);
+  const me = players[onl.seat], shotEvents = () => { let n = 0; return replay.events.map(e => e.shot ? ++n : n); }, at = shotEvents();
+  onl.overMsg = {winner, forfeit: !!forfeit}; net.send({t: "over", ...onl.overMsg}, "all"); onl.overSent = true;
+  const near = [];
+  replay.events.forEach((e, k) => { if (!e.shot || e.who !== onl.them) return; const r = e.res, x = {n: at[k]};
+    ["near", "soldierNear"].forEach(key => { if (typeof r[key] === "number" && isFinite(r[key])) x[key] = r[key]; });
+    if (Number.isInteger(r.nearIdx)) x.nearIdx = r.nearIdx; if (Number.isInteger(r.i)) x.i = r.i; near.push(x); });
+  const drops = replay.events.map((e, k) => e.reinforce && e.who === onl.seat ? {after: at[k], soldier: e.reinforce} : null).filter(Boolean);
+  onl.revealMsg = {t: "reveal", army: clone({soldiers: me.soldiers, fort: me.fort}), initial: clone(replay.armies ? replay.armies[onl.seat] : {soldiers: me.soldiers, fort: me.fort}), near, drops};
+  net.send(onl.revealMsg, "all");
+  $("medals").innerHTML = ""; $("careerNews").classList.add("hidden"); $("stats").textContent = "";
+  $("recordNote").textContent = forfeit ? "" : "Waiting for the Big Reveal from the other phone...";
+  if (forfeit || onl.theirReveal) return onlineFinish();
+  const m = onl; onl.timers.reveal = setTimeout(() => onl === m && onlineFinish(), ONLINE_REVEAL_WAIT_MS);
+}
+function onlineFinish() {
+  if (!onl || onl.finished || !onl.over) return;
+  onl.finished = true; clearTimeout(onl.timers.reveal);
+  const r = onl.theirReveal, t = onl.them;
+  if (r) {
+    const foe = players[t];
+    Object.assign(foe, {soldiers: r.army.soldiers, fort: r.army.fort, remote: false});
+    if (replay.armies) replay.armies[t] = r.initial;
+    const shots = replay.events.filter(e => e.shot);
+    r.near.forEach(x => { const e = shots[x.n - 1]; if (!e || e.who !== onl.seat) return;
+      ["near", "soldierNear", "nearIdx"].forEach(k => { if (x[k] != null) e.res[k] = x[k]; }); if (x.i != null && e.res.i == null) e.res.i = x.i; });
+    r.drops.slice().sort((a, b) => b.after - a.after).forEach(dp => { // their reinforcements, where they landed in the war
+      let n = 0, k = replay.events.findIndex(e => e.shot && ++n === dp.after); if (dp.after === 0) k = -1;
+      replay.events.splice(k + 1, 0, {who: t, reinforce: dp.soldier}); });
+  }
+  gameOverTail(onl.over.winner, !onl.over.forfeit);
+}
+// "Back to the lobby": the same friends, ready for the next battle.
+function onlineBackToLobby() {
+  onlineClear(); onlineStart = null; replayRun++;
+  $("over").classList.add("hidden"); $("rematchBtn").textContent = "Rematch"; $("menuBtn").textContent = "Change settings";
+  openLobby();
+  const h = lobbyHost();
+  if (h && h !== lobbyMe() && !net.peers().some(p => p.pid === h)) lobbyHandOff(h); // the host left during the battle
+  if (lobbyOpen) { if (net.me().isHost) lobbySync(); else renderLobby(); }
+}
 
 // test hook for automated play-testing
 window.paperWar = {get state() { return {phase, cur, players, opts, pending, lastResult, replay}; }, hitTest, mirror, W, H, cpuAim, playReplay, awards};
