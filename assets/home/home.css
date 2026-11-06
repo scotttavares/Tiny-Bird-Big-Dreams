@@ -322,15 +322,6 @@ footer a{margin:0 10px}
 #pwToy{display:block;cursor:pointer;background:#fbf8ee;text-decoration:none}
 #pwToy video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:50% 45%}
 #pwToy .tip{bottom:14px}
-/* sound toggle: says what it is; little bars dance when sound is on */
-.sndbtn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px 0 12px;border-radius:99px;border:1px solid var(--line);background:rgba(20,16,30,.3);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:#fff;font:600 13px/1 inherit;font-family:inherit;cursor:pointer;transition:background .3s}
-.sndbtn .eq{display:flex;align-items:flex-end;gap:2px;height:12px}
-.sndbtn .eq i{width:3px;height:3px;border-radius:2px;background:currentColor;opacity:.7}
-.sndbtn.on{background:rgba(20,16,30,.55)}
-.sndbtn.on .eq i{animation:eq .9s ease-in-out infinite;opacity:1}
-.sndbtn.on .eq i:nth-child(2){animation-delay:-.3s}.sndbtn.on .eq i:nth-child(3){animation-delay:-.6s}
-@keyframes eq{0%,100%{height:3px}50%{height:12px}}
-@media (max-width:700px){.sndbtn .lbl{display:none}.sndbtn{width:40px;padding:0;justify-content:center}}
 .hero .dev .pwscr{background:#fbf8ee}
 .hero .dev .pwscr video{width:100%;height:100%;object-fit:contain;object-position:50% 55%;display:block}
 .hero .dev .lullscr{position:relative}
