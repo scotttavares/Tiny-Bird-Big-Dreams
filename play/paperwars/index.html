@@ -147,8 +147,35 @@ button.awol{background:none;border:0;color:var(--muted);font-size:16px;padding:2
 button.awol.sure{color:var(--red);font-weight:700}
 .record{max-width:560px;text-align:center;margin:4px 0;font-size:19px;color:var(--text)}
 .record b{font-family:Caveat;font-size:24px;color:#e3b341}
-#cabinet,#callsign,#online{position:fixed;inset:0;z-index:40;background:var(--bg);overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom))}
-#cabinet.hidden,#callsign.hidden,#online.hidden{display:none}
+#cabinet,#callsign,#online,#lobby{position:fixed;inset:0;z-index:40;background:var(--bg);overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom))}
+#cabinet.hidden,#callsign.hidden,#online.hidden,#lobby.hidden{display:none}
+/* The lobby: players are manila folders, spectators notebook slips, the host wears a crown. */
+.lbSpots{display:grid;grid-template-columns:1fr 1fr;gap:12px 10px}
+.lbSpot{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;min-height:116px;padding:14px 6px 8px;margin-top:9px;background:#efd9a0;border:1.5px solid #b89a5a;border-radius:3px 10px 6px 8px;box-shadow:2px 3px 0 #0002;text-align:center;font-size:16px;line-height:1.1}
+.lbSpot::before{content:"";position:absolute;top:-10px;left:10px;width:44%;height:10px;background:#efd9a0;border:1.5px solid #b89a5a;border-bottom:0;border-radius:7px 7px 0 0}
+#lobbyWatch .lbSpot{background:#fbf8ef;border-color:#c9d8ea;border-radius:4px;background-image:repeating-linear-gradient(#0000 0 13px,#dbe5f1 13px 14px)}
+#lobbyWatch .lbSpot::before{display:none}
+.lbSpot.empty{background:transparent !important;border:2px dashed #c9bfa8;box-shadow:none;color:#7d776a;justify-content:center;font:700 21px Caveat,cursive}
+.lbSpot.empty::before{display:none}
+.lbSoldier{width:56px;height:62px}
+.lbName{font:700 21px/1 Caveat,cursive;color:#1f4fa8}
+.lbSpot small{color:#7d776a;font-size:13px}
+.lbCrown{position:absolute;top:0;right:6px;font-size:26px;color:#b3261e;transform:rotate(12deg)}
+.lbStamp{position:absolute;top:4px;left:6px;font:700 11px/1 "Stardos Stencil","Special Elite",monospace;color:#b3261e;border:2px double #b3261e;border-radius:3px;padding:2px 4px 1px;transform:rotate(-6deg);opacity:.85}
+.lbActs{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin-top:4px}
+.lbActs button{font:15px "Patrick Hand",sans-serif;background:#fffef9;color:var(--ink);border:1.5px solid #8b8576;border-radius:9px;padding:1px 9px}
+.lbActs button[data-act=remove]{color:#b3261e;border-color:#b3261e88}
+#lobby h5{margin:10px 0 4px;font:700 20px/1 Caveat,cursive;color:#1f4fa8}
+#lobby .tile:disabled{opacity:1;cursor:default}
+#lobby .tile.on:disabled{transform:rotate(-1.5deg) scale(1.03)}
+.lbOpts label{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed #d6cfbc;font-size:17px;line-height:1.15}
+.lbOpts label:last-child{border-bottom:0}
+.lbOpts label > span{flex:1}
+.lbOpts small{display:block;color:#7d776a;font-size:14px}
+.lbOpts label.locked{opacity:.55}
+.lbOpts label.locked > span::after{content:" \1F512";font-size:13px}
+#lobbyFree{color:#b3261e;font-size:15px}
+#lobbyQueue:empty,#lobbyFree:empty{display:none}
 .csHelp{margin:0 0 6px;font-size:17px}
 .csName{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;font:700 34px/1.1 Caveat,cursive;color:#1f4fa8;margin:4px 0}
 .csName #csRank{color:#b3261e}
@@ -538,6 +565,40 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
   <div id="onlineHelp" class="hidden"><h4 id="onlineHelpTitle"></h4><ol class="csHelp" id="onlineSteps"></ol>
     <p class="csHelp">Everything else in Paper Wars works without it.</p></div>
   <div class="bar"><button type="button" class="primary" id="onlineBack">Back to HQ</button></div>
+</div></section>
+
+<section id="lobby" class="hidden"><div class="menu cabpage">
+  <h3 class="mtitle">Battle lobby<small>Play friends online</small></h3>
+  <p class="csHelp" id="lobbyStatus"></p>
+  <div class="bar"><button type="button" class="primary" id="lobbyInvite">&#9993; Invite friends</button></div>
+  <h4>Fighting</h4><div class="lbSpots" id="lobbySeats"></div>
+  <h4>Watching</h4><div class="lbSpots" id="lobbyWatch"></div>
+  <p class="csHelp" id="lobbyQueue"></p>
+  <div class="bar" id="lobbyAsk"><button type="button" id="lobbyWatchBtn">Watch</button><button type="button" id="lobbyNextBtn">Next game</button></div>
+  <div id="lobbyOrders"><h4>Battle orders</h4>
+    <div class="tiles two" id="lobbyCamps">
+      <button type="button" class="tile" data-lcamp="regular"><canvas class="pic" data-pic="camp-regular"></canvas><span>Regular War</span></button>
+      <button type="button" class="tile" data-lcamp="drumstick"><canvas class="pic" data-pic="camp-drumstick"></canvas><span>Operation Drumstick</span><small>Free for everyone</small></button>
+    </div>
+    <div id="lobbyMapsWrap"><h5>Battlefield</h5><div class="tiles maps" id="lobbyMaps">
+      <button type="button" class="tile" data-lmap="random"><canvas class="pic" data-pic="map-random"></canvas><span>Surprise me</span></button>
+      <button type="button" class="tile" data-lmap="plain"><canvas class="pic" data-pic="map-plain"></canvas><span>Open field</span><small>No Man's Land</small></button>
+      <button type="button" class="tile" data-lmap="boulders"><canvas class="pic" data-pic="map-boulders"></canvas><span>Boulders</span><small>Monte Cassino</small></button>
+      <button type="button" class="tile" data-lmap="pass"><canvas class="pic" data-pic="map-pass"></canvas><span>Mountains</span><small>Kasserine Pass</small></button>
+      <button type="button" class="tile" data-lmap="river"><canvas class="pic" data-pic="map-river"></canvas><span>River</span><small>The Somme</small></button>
+      <button type="button" class="tile" data-lmap="lake"><canvas class="pic" data-pic="map-lake"></canvas><span>Lake</span><small>Masurian Lakes</small></button>
+    </div></div>
+    <p class="csHelp" id="lobbyFree"></p>
+    <div class="lbOpts">
+      <label><input type="checkbox" data-lopt="fortOn"><span>Fort<small>3 hearts, placed after your soldiers</small></span></label>
+      <label data-paid><input type="checkbox" data-lopt="fortWin"><span>Fort must fall<small>Or just wipe out the soldiers</small></span></label>
+      <label data-paid><input type="checkbox" data-lopt="reinforce"><span>Reinforcements<small>Help drops in after misses in a row</small></span></label>
+      <label><input type="checkbox" data-lopt="brassBonus"><span>Bonus turn for the brass<small>Fire again after taking out a namesake</small></span></label>
+      <label><span>Turn timer<small>Seconds per shot</small></span><select data-lopt="timer"><option value="0">Off</option><option value="10">10 s</option><option value="15">15 s</option><option value="20">20 s</option><option value="30">30 s</option><option value="60">60 s</option></select></label>
+    </div>
+  </div>
+  <div class="go"><button class="stampbtn" id="lobbyStart">START BATTLE</button></div>
+  <div class="bar"><button type="button" id="lobbyLeave">Leave the lobby</button></div>
 </div></section>
 
 <div id="foldFx" class="hidden"><div class="duo"><div class="base"></div><div class="lid"></div><div class="thump">*thump*</div></div></div>
@@ -6359,12 +6420,14 @@ function netCleanTag(tag, pid) {
   const h = parseInt(String(pid).slice(0, 8), 16) || 0, w = tag && Array.isArray(tag.words) ? tag.words : [];
   const A = CALLSIGN_WORDS.a, B = CALLSIGN_WORDS.b;
   const n = tag && (typeof tag.num === "number" || typeof tag.num === "string") && /^\d{4}$/.test(String(tag.num)) && +tag.num >= 1000 ? +tag.num : 1000 + h % 9000;
-  return {words: [A.includes(w[0]) ? w[0] : A[h % A.length], B.includes(w[1]) ? w[1] : B[(h >>> 8) % B.length]], num: n};
+  const rank = tag && Number.isInteger(tag.rank) && tag.rank >= 0 && tag.rank < RANK_ABBR.length ? tag.rank : 0;
+  return {words: [A.includes(w[0]) ? w[0] : A[h % A.length], B.includes(w[1]) ? w[1] : B[(h >>> 8) % B.length]], num: n, rank};
 }
 function netCleanSoldier(s) {
   s = s && typeof s === "object" ? s : {};
   return {weapon: CALLSIGN_WEAPONS.includes(s.weapon) ? s.weapon : "rifle", pose: s.pose === 1 ? 1 : 0, hat: CALLSIGN_HATS.includes(s.hat) ? s.hat : "none"};
 }
+const netRank = () => { try { return rankOf(loadRecord().points); } catch (e) { return 0; } }; // the career rank shown before a call sign
 const netPids = a => Array.isArray(a) ? [...new Set(a.filter(p => typeof p === "string" && NET_PID.test(p)))].slice(0, 4) : [];
 
 // Game Center, through the iPhone app: posts {type: "gc", op, ...}; the app answers through window.gcEvent(evt).
@@ -6442,7 +6505,7 @@ const net = (() => {
   const fakeCs = fakeNetRoom ? fakeCallsign() : null, mine = () => fakeCs || callsign();
   const session = newPid().slice(0, 8), handlers = {};
   const peers = new Map(), idOf = new Map(), present = new Set(), helloSent = new Set(), waiting = new Map();
-  let k = 0, isHost = false, catchups = 0, st;
+  let k = 0, isHost = false, catchups = 0, authed = false, st;
   const reset = () => { st = {host: null, seats: [], spectators: [], queue: [], match: null, past: new Set(), over: false,
     next: 0, held: new Map(), early: [], seen: new Set(), log: [], parts: new Map(), updateNeeded: null}; };
   reset();
@@ -6464,7 +6527,7 @@ const net = (() => {
     if (!ids.length) return;
     const cs = mine();
     ids.forEach(id => helloSent.add(id));
-    T.send(ids, envelope({t: "hello", pid: cs.pid, tag: {words: [...cs.words], num: cs.num}, soldier: {...cs.soldier}, owns: netOwns(), host: isHost}));
+    T.send(ids, envelope({t: "hello", pid: cs.pid, tag: {words: [...cs.words], num: cs.num, rank: netRank()}, soldier: {...cs.soldier}, owns: netOwns(), host: isHost}));
   }
   function setRoles(d) {
     if (typeof d.host === "string" && NET_PID.test(d.host)) st.host = d.host;
@@ -6548,7 +6611,7 @@ const net = (() => {
     route(d);
   }
   T.onEvent(e => {
-    if (e.event === "auth") emit("auth", {ok: e.ok, reason: e.reason || null});
+    if (e.event === "auth") { authed = e.ok === true; emit("auth", {ok: e.ok, reason: e.reason || null}); }
     else if (e.event === "people") {
       const now = (e.people || []).map(p => p.id).filter(Boolean), fresh = now.filter(id => !present.has(id));
       present.clear(); now.forEach(id => present.add(id));
@@ -6561,7 +6624,7 @@ const net = (() => {
   const api = {
     transport: T,
     available: () => T.available(),
-    me: () => { const cs = mine(); return {pid: cs.pid, isHost, id: T.id, tag: {words: [...cs.words], num: cs.num}, soldier: {...cs.soldier}}; },
+    me: () => { const cs = mine(); return {pid: cs.pid, isHost, id: T.id, tag: {words: [...cs.words], num: cs.num, rank: netRank()}, soldier: {...cs.soldier}}; },
     auth: () => T.connect(),
     // Only a Full Arsenal (or future paid pack) owner can host; what this phone owns is checked here, not taken from the caller.
     host() {
@@ -6599,6 +6662,17 @@ const net = (() => {
       chunks.forEach((log, part) => api.send({t: "catchup", cid, match: {...st.match}, log, part, parts: chunks.length}, [pid]));
       return chunks.length;
     },
+    // The host left: the lobby passes to a remaining Full Arsenal owner (the lowest pid, so every phone picks the same one),
+    // else to nobody (the lobby then ends). Returns the new host's pid or null.
+    passHost(gone) {
+      if (!gone || gone !== st.host) return st.host;
+      const me = mine().pid, owners = list().filter(p => p.pid !== gone && p.owns.arsenal).map(p => p.pid);
+      if (netOwns().arsenal) owners.push(me);
+      st.host = owners.sort()[0] || null;
+      if (st.host === me && !isHost) { isHost = true; helloSent.clear(); sendHello([...present]); }
+      return st.host;
+    },
+    get authed() { return authed; },
     get over() { return st.over; },
     get updateNeeded() { return st.updateNeeded; },
     _resolve: resolve,
@@ -6621,7 +6695,7 @@ function sendGuard(msg, to) {
   return r;
 }
 
-// ---------- Play friends online (iPhone app only; Task 6 builds the lobby behind it) ----------
+// ---------- Play friends online (iPhone app only) ----------
 // The app answers net.auth() with Game Center's verdict. When it's off, the card explains how to turn it on; nothing
 // else in the game changes.
 const ONLINE_HELP = {
@@ -6639,15 +6713,215 @@ function onlineHelp(reason) {
   $("onlineSteps").innerHTML = h.steps.map(s => `<li>${s}</li>`).join(""); // our own words only
   $("onlineHelp").classList.remove("hidden");
 }
-function showOnline() { onlineOpen = true; onlineStatus("Checking Game Center…"); $("online").classList.remove("hidden"); net.auth(); }
+function showOnline() {
+  if (net.authed) { openLobby(); return; }
+  onlineOpen = true; onlineStatus("Checking Game Center…"); $("online").classList.remove("hidden"); net.auth();
+}
 net.on("auth", e => {
   if (!onlineOpen) return;
-  if (e.ok) onlineStatus("You're signed in to Game Center. Battles with friends open here soon.");
+  if (e.ok) { onlineStatus("You're signed in to Game Center."); openLobby(); }
   else onlineHelp(e.reason);
 });
-$("onlineRow").classList.toggle("hidden", !(net.transport.kind === "gamecenter" && net.available()));
+$("onlineRow").classList.toggle("hidden", !net.available()); // the app's bridge (or a test room); never the website
 $("onlineBtn").onclick = () => { sound("click"); showOnline(); };
 $("onlineBack").onclick = () => { onlineOpen = false; $("online").classList.add("hidden"); };
+
+// ---------- the lobby ----------
+// The host's phone is the one source of truth: it seats people, picks the battle orders, removes people and starts.
+// Everyone else draws the host's `lobby` messages and can only ask, for themselves: queue {pid, join} (join = "Next game",
+// not join = "I'd rather watch"). Up to 4 people: 2 seats and 2 spectator spots. Shared content is what BOTH seated players
+// own (a free guest seated -> free battlefields and options only); the seasonal free campaigns are open to everyone.
+// Lobby messages carry pids and battle orders only: call signs and soldiers come from each phone's own hello. (The fort
+// option is "fortOn": "fort" is an army key sendGuard never lets out.)
+const LOBBY_TIMERS = [0, 10, 15, 20, 30, 60];
+let lobbyOpen = false, onlineStart = null;
+const lob = {seats: [], spectators: [], queue: [], settings: null, removed: new Set(), pics: false};
+const lobbyMe = () => net.me().pid, lobbyHost = () => net.roles().host;
+// What a person owns: this phone checks its own purchase; the others' come from their (cleaned) hello.
+function lobbyOwns(pid) { if (pid === lobbyMe()) return fullArsenal(); const p = net.peers().find(q => q.pid === pid); return !!(p && p.owns.arsenal); }
+const lobbyPaid = seats => seats.length > 0 && seats.every(lobbyOwns);
+// Battle orders from anyone, made safe: known values only, paid ones dropped unless everyone seated owns them.
+function lobbyClean(s, paid) {
+  s = s && typeof s === "object" ? s : {};
+  const int = (v, lo, hi, d) => Number.isInteger(v) && v >= lo && v <= hi ? v : d, bool = (v, d) => typeof v === "boolean" ? v : d;
+  const o = {campaign: CAMPAIGNS[s.campaign] ? s.campaign : "regular", map: s.map === "random" || (MAPS[s.map] && !MAPS[s.map].campaign) ? s.map : "random",
+    fortOn: bool(s.fortOn, true), fortWin: bool(s.fortWin, false), reinforce: int(s.reinforce, 0, 6, 3), brassBonus: bool(s.brassBonus, false),
+    timer: LOBBY_TIMERS.includes(s.timer) ? s.timer : 0, flings: int(s.flings, 0, 5, 2), reveal: int(s.reveal, 0, 120, 80)};
+  if (!paid) { if (ARSENAL.maps.includes(o.map)) o.map = "random"; o.reinforce = 0; o.fortWin = false; }
+  if (!o.fortOn) o.fortWin = false;
+  if (o.campaign === "drumstick") o.map = "harvest"; // Drumstick has its own battlefield
+  return o;
+}
+// The host: fit everyone here into seats and spectator spots, tidy the orders, tell the room.
+function lobbySync() {
+  if (!lobbyOpen) return; // only while the lobby screen is in use
+  if (!net.me().isHost) { renderLobby(); return; }
+  const me = lobbyMe(), here = [me, ...net.peers().map(p => p.pid)].filter(p => !lob.removed.has(p));
+  const keep = a => a.filter((p, i) => here.includes(p) && a.indexOf(p) === i);
+  lob.seats = keep(lob.seats).slice(0, 2);
+  lob.spectators = keep(lob.spectators).filter(p => !lob.seats.includes(p));
+  here.forEach(p => { if (!lob.seats.includes(p) && !lob.spectators.includes(p)) (lob.seats.length < 2 ? lob.seats : lob.spectators).push(p); });
+  lob.queue = keep(lob.queue).filter(p => lob.spectators.includes(p));
+  if (!lob.settings) { const m = readSettings(); lob.settings = {...m, fortOn: m.fort, fort: undefined, campaign: currentCampaign()}; }
+  lob.settings = lobbyClean(lob.settings, lobbyPaid(lob.seats));
+  net.send({t: "lobby", host: me, seats: lob.seats.slice(), spectators: lob.spectators.slice(), queue: lob.queue.slice(), settings: lob.settings}, "all");
+  renderLobby();
+}
+function lobbyPerson(pid) {
+  if (pid === lobbyMe()) { const m = net.me(); return {pid, tag: m.tag, soldier: m.soldier}; }
+  return net.peers().find(p => p.pid === pid) || null;
+}
+const lobbyName = p => `${RANK_ABBR[p.tag.rank] || RANK_ABBR[0]} ${p.tag.words[0]} ${p.tag.words[1]}`;
+function lobbySpot(pid, seat, i) {
+  const el = document.createElement("div"), p = pid && lobbyPerson(pid), me = lobbyMe(), amHost = net.me().isHost;
+  el.className = "lbSpot";
+  if (!p) { el.classList.add("empty"); el.textContent = seat ? "Empty seat" : "Spectator spot"; return el; }
+  el.dataset.pid = pid;
+  const add = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; el.appendChild(e); return e; };
+  if (seat) add("span", "lbStamp", `SEAT ${i + 1}`);
+  if (pid === lobbyHost()) add("span", "lbCrown", "\u265B").title = "Host";
+  const cv = add("canvas", "lbSoldier"), c = picCtx(cv, 56, 62), s = p.soldier; // their namesake soldier, with his star
+  withStdSize(() => drawSoldier(c, {x: 27.7, y: 16, pose: s.pose, seed: parseInt(pid.slice(0, 6), 16) % 97, alive: true, name: "", weapon: s.weapon, hat: s.hat,
+    namesake: true, face: 1}, seat ? ["#1f4fa8", "#b3261e"][i] : "#2a2a2a"));
+  add("div", "lbName", lobbyName(p));
+  add("small", null, `#${p.tag.num}${pid === me ? " · you" : ""}${!seat && lob.queue.includes(pid) ? " · next game" : ""}`);
+  if (amHost) {
+    const acts = add("div", "lbActs"), btn = (a, text, off) => { const b = document.createElement("button"); b.type = "button"; b.dataset.act = a; b.textContent = text; b.disabled = !!off; acts.appendChild(b); };
+    if (seat) btn("watch", "Watch"); else btn("seat", "Seat", lob.seats.length >= 2);
+    if (pid !== me) btn("remove", "Remove");
+  }
+  return el;
+}
+function renderLobby() {
+  if (!lobbyOpen) return;
+  const me = lobbyMe(), host = lobbyHost(), amHost = net.me().isHost;
+  const others = [me, ...net.peers().map(p => p.pid)], watch = host ? lob.spectators : others; // nobody hosting yet: everyone here just waits
+  const seats = $("lobbySeats"), spots = $("lobbyWatch");
+  seats.replaceChildren(...[0, 1].map(i => lobbySpot(host ? lob.seats[i] : null, true, i)));
+  spots.replaceChildren(...[0, 1, ...watch.slice(2).map((p, i) => i + 2)].map(i => lobbySpot(watch[i], false, i)));
+  const hp = host && lobbyPerson(host);
+  $("lobbyStatus").textContent = amHost ? "You're the host. Invite up to 3 friends, pick who plays, then start the battle."
+    : host ? `${hp ? lobbyName(hp) : "A friend"} is the host.` + (onlineStart ? " The battle is starting…" : "")
+    : fullArsenal() ? "Tap Invite friends to send a Game Center invite."
+    : "Hosting needs the Full Arsenal. A friend who has it can invite you from their Paper Wars.";
+  $("lobbyInvite").classList.toggle("hidden", !(amHost || (!host && fullArsenal())));
+  $("lobbyStart").classList.toggle("hidden", !amHost);
+  $("lobbyStart").disabled = lob.seats.length !== 2;
+  const q = lob.queue.map(lobbyPerson).filter(Boolean);
+  $("lobbyQueue").textContent = host && q.length ? "Next game: " + q.map(lobbyName).join(", ") : "";
+  const seated = lob.seats.includes(me), queued = lob.queue.includes(me), asking = !!host && !amHost;
+  $("lobbyAsk").classList.toggle("hidden", !asking);
+  $("lobbyWatchBtn").classList.toggle("hidden", !(asking && (seated || queued)));
+  $("lobbyNextBtn").classList.toggle("hidden", !(asking && !seated && !queued));
+  // the battle orders: the host changes them; everyone sees them
+  const paid = lobbyPaid(lob.seats), s = lobbyClean(lob.settings, paid);
+  $("lobbyOrders").classList.toggle("hidden", !host);
+  document.querySelectorAll("#lobby [data-lcamp]").forEach(b => { b.classList.toggle("on", b.dataset.lcamp === s.campaign); b.disabled = !amHost; });
+  document.querySelectorAll("#lobby [data-lmap]").forEach(b => { b.classList.toggle("on", b.dataset.lmap === s.map); b.disabled = !amHost;
+    b.classList.toggle("locked", !paid && ARSENAL.maps.includes(b.dataset.lmap)); });
+  $("lobbyMapsWrap").classList.toggle("hidden", s.campaign === "drumstick");
+  document.querySelectorAll("#lobby [data-lopt]").forEach(el => {
+    const k = el.dataset.lopt, label = el.closest("label"), locked = label.hasAttribute("data-paid") && !paid;
+    label.classList.toggle("locked", locked); el.disabled = !amHost || locked || (k === "fortWin" && !s.fortOn);
+    if (k === "timer") el.value = s.timer; else if (k === "reinforce") el.checked = s.reinforce > 0; else el.checked = s[k];
+  });
+  $("lobbyFree").textContent = host && lob.seats.length && !paid ? "Free battlefields and orders this time: everyone fighting needs the Full Arsenal for the rest." : "";
+}
+function openLobby() {
+  if (!net.available()) return;
+  lobbyOpen = true; onlineOpen = false;
+  $("online").classList.add("hidden"); $("lobby").classList.remove("hidden");
+  if (!lob.pics) { lob.pics = true; withStdSize(() => document.querySelectorAll("#lobby canvas.pic").forEach(cv => {
+    const k = cv.dataset.pic; if (k.startsWith("camp-")) drawCampPic(picCtx(cv, 150, 100), k.slice(5)); else drawMap(picCtx(cv, 150, 100), k.slice(4)); })); }
+  renderLobby();
+}
+// Back to HQ, with a note on the Game Center card when there's something to say ("The host left").
+function lobbyEnd(text, leave) {
+  lobbyOpen = false; $("lobby").classList.add("hidden");
+  lob.seats = []; lob.spectators = []; lob.queue = []; lob.settings = null; lob.removed.clear(); onlineStart = null;
+  if (leave) net.leave();
+  if (text) { onlineOpen = false; onlineStatus(text); $("online").classList.remove("hidden"); }
+}
+// Everyone gets the same start: seats, battle orders (limited to what both seated players own, checked again on each
+// phone) and the seed for everything random.
+function lobbyStartMsg(d) {
+  const seats = netPids(d.seats).slice(0, 2);
+  return {t: "start", matchId: String(d.matchId).slice(0, 40), seats, settings: lobbyClean(d.settings, lobbyPaid(seats)), seed: d.seed | 0};
+}
+// Task 7 plays the match from here.
+function startOnlineMatch(start) { onlineStart = start; renderLobby(); }
+
+$("lobbyInvite").onclick = () => {
+  sound("click");
+  if (net.me().isHost) { net.invite(); return; }
+  const r = net.host({}); // checks the Full Arsenal on this phone
+  if (!r.ok) { $("lobbyStatus").textContent = r.why; return; }
+  lobbySync();
+};
+$("lobbyLeave").onclick = () => { sound("click"); lobbyEnd(null, true); };
+$("lobbyStart").onclick = () => {
+  if (!net.me().isHost || lob.seats.length !== 2) return;
+  const paid = lobbyPaid(lob.seats), settings = lobbyClean(lob.settings, paid), seed = Math.floor(Math.random() * 0x7fffffff);
+  if (settings.map === "random") { // picked here, so every phone fights on the same one
+    const ids = Object.keys(MAPS).filter(k => !MAPS[k].campaign && (paid || !ARSENAL.maps.includes(k)));
+    settings.map = ids[Math.floor(mulberry32(seed)() * ids.length)];
+  }
+  const start = {t: "start", matchId: newPid().slice(0, 12), seats: lob.seats.slice(), settings, seed};
+  sound("click"); net.send(start, "all"); startOnlineMatch(lobbyStartMsg(start));
+};
+$("lobby").addEventListener("click", e => {
+  if (!net.me().isHost) return;
+  const b = e.target.closest("[data-act],[data-lcamp],[data-lmap]");
+  if (!b || b.disabled || b.classList.contains("locked")) return;
+  sound("click");
+  if (b.dataset.lcamp) lob.settings = {...lob.settings, campaign: b.dataset.lcamp};
+  else if (b.dataset.lmap) lob.settings = {...lob.settings, map: b.dataset.lmap};
+  else {
+    const pid = b.closest("[data-pid]").dataset.pid, a = b.dataset.act;
+    if (a === "seat" && lob.seats.length < 2) { lob.spectators = lob.spectators.filter(p => p !== pid); lob.seats.push(pid); }
+    else if (a === "watch") { lob.seats = lob.seats.filter(p => p !== pid); lob.spectators.push(pid); }
+    else if (a === "remove" && pid !== lobbyMe()) { lob.removed.add(pid); net.send({t: "remove", pid}, "all"); }
+  }
+  lobbySync();
+});
+$("lobbyOrders").addEventListener("change", e => {
+  const el = e.target.closest("[data-lopt]"); if (!el || !net.me().isHost) return;
+  const k = el.dataset.lopt;
+  lob.settings = {...lob.settings, [k]: k === "timer" ? +el.value : k === "reinforce" ? (el.checked ? 3 : 0) : el.checked};
+  lobbySync();
+});
+const lobbyAsk = join => { const h = lobbyHost(); if (h && !net.me().isHost) { sound("click"); net.send({t: "queue", pid: lobbyMe(), join}, [h]); } };
+$("lobbyWatchBtn").onclick = () => lobbyAsk(false);
+$("lobbyNextBtn").onclick = () => lobbyAsk(true);
+// The host applies requests, each only for the person asking.
+net.on("queue", d => {
+  if (!lobbyOpen || !net.me().isHost || d.pid !== d.from || lob.removed.has(d.pid) || typeof d.join !== "boolean") return;
+  if (d.join) { if (!lob.seats.includes(d.pid) && !lob.queue.includes(d.pid)) lob.queue.push(d.pid); }
+  else { lob.queue = lob.queue.filter(p => p !== d.pid); if (lob.seats.includes(d.pid)) { lob.seats = lob.seats.filter(p => p !== d.pid); lob.spectators.push(d.pid); } }
+  lobbySync();
+});
+// Everyone else draws the host's lobby (net only hands over lobby messages from the host). An invite accepted from
+// Messages opens the lobby by itself.
+net.on("lobby", d => {
+  if (net.me().isHost) return;
+  lob.seats = netPids(d.seats).slice(0, 2); lob.spectators = netPids(d.spectators); lob.queue = netPids(d.queue);
+  lob.settings = lobbyClean(d.settings, lobbyPaid(lob.seats));
+  if (!lobbyOpen && !onlineStart) openLobby(); else renderLobby();
+});
+net.on("start", d => startOnlineMatch(lobbyStartMsg(d)));
+net.on("people", () => { if (net.me().isHost) lobbySync(); else renderLobby(); });
+net.on("removed", () => lobbyEnd("The host removed you from this battle.")); // net leaves the match itself
+// Review Focus 5: the host left -> the lobby passes to the remaining Full Arsenal owner, else it ends politely.
+net.on("left", e => {
+  if (!lobbyOpen || !e.pid || e.pid !== lobbyHost()) return;
+  const h = net.passHost(e.pid), gone = a => a.filter(p => p !== e.pid);
+  lob.seats = gone(lob.seats); lob.spectators = gone(lob.spectators); lob.queue = gone(lob.queue);
+  if (!h) { lobbyEnd("The host left, so this battle is over. Thanks for playing!", true); return; }
+  if (h === lobbyMe()) {
+    if (lob.seats.length < 2 && !lob.seats.includes(h)) { lob.spectators = lob.spectators.filter(p => p !== h); lob.seats.unshift(h); } // the new host fights
+    lobbySync(); setTimeout(lobbySync, 800); // again, in case a phone heard the lobby before it heard the old host go
+  } else renderLobby();
+});
 
 // test hook for automated play-testing
 window.paperWar = {get state() { return {phase, cur, players, opts, pending, lastResult, replay}; }, hitTest, mirror, W, H, cpuAim, playReplay, awards};
