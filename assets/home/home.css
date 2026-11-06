@@ -134,7 +134,7 @@ section{position:relative;padding:16vh 6vw}
 .eq .op{font-family:"Instrument Serif",serif;font-size:44px;opacity:.7}
 .eq .res{width:auto;padding:18px 26px;font-family:"Instrument Serif",serif;font-size:34px;background:var(--gold);color:#1c1206;border:none}
 .seen .eq>*{animation:pin .7s var(--ease) both}
-.eq>:nth-child(3){animation-delay:.2s!important}.eq>:nth-child(5){animation-delay:.4s!important}.eq>:nth-child(7){animation-delay:.6s!important}.eq>:nth-child(9){animation-delay:.9s!important}
+.eq>:nth-child(3){animation-delay:.2s!important}.eq>:nth-child(5){animation-delay:.4s!important}.eq>:nth-child(7){animation-delay:.6s!important}.eq>:nth-child(9){animation-delay:.8s!important}.eq>:nth-child(11){animation-delay:1.1s!important}
 @keyframes pin{from{opacity:0;transform:translateY(30px) scale(.9)}}
 
 /* team */
@@ -357,3 +357,7 @@ footer a{margin:0 10px}
 .seen #fgToy .map{animation:mapdraw 2.4s .6s cubic-bezier(.4,0,.2,1) forwards}
 @keyframes mapdraw{to{clip-path:inset(0 0 0 0)}}
 @media (prefers-reduced-motion:reduce){#fgToy .map{clip-path:none;animation:none}}
+/* Paper Wars toy: the clip now has the phone's shape, notebook paper and margin line included */
+#pwToy::before{display:none}
+#pwToy video{object-fit:cover;object-position:center}
+#pwToy .tip{bottom:18px}
