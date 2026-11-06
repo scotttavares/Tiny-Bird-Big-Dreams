@@ -344,8 +344,9 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
     <button type="button" class="tile" data-map="pass"><canvas class="pic" data-pic="map-pass"></canvas><span>Mountains</span><small>Kasserine Pass</small></button>
     <button type="button" class="tile" data-map="river"><canvas class="pic" data-pic="map-river"></canvas><span>River</span><small>The Somme</small></button>
     <button type="button" class="tile" data-map="lake"><canvas class="pic" data-pic="map-lake"></canvas><span>Lake</span><small>Masurian Lakes</small></button>
+    <button type="button" class="tile" data-map="harvest"><canvas class="pic" data-pic="map-harvest"></canvas><span>Harvest</span><small>Harvest Field</small></button>
   </div>
-  <select id="optMap" class="hidden" aria-label="Map"><option value="random">Surprise me</option><option value="plain">No Man's Land</option><option value="boulders">Monte Cassino</option><option value="pass">Kasserine Pass</option><option value="river">The Somme</option><option value="lake">Masurian Lakes</option></select>
+  <select id="optMap" class="hidden" aria-label="Map"><option value="random">Surprise me</option><option value="plain">No Man's Land</option><option value="boulders">Monte Cassino</option><option value="pass">Kasserine Pass</option><option value="river">The Somme</option><option value="lake">Masurian Lakes</option><option value="harvest">Harvest Field</option></select>
   <div class="go"><button class="stampbtn" id="startBtn">START MISSION</button></div>
   <div class="bar small"><button id="bootBtn">&#9733; Boot Camp <small>first time?</small></button><button id="introBtn">&#9654; Intro</button><button id="cabBtn">Medals <small id="cabCount"></small></button></div>
   <!-- Supply depot (user, 2026-11-04: "under upgrades or something military sounding ... was hard to notice") -->
@@ -3241,7 +3242,9 @@ function newMatch(preset) {
   if (opts.tent) opts.fireBy = "tap";
   H = opts.tent ? IH : pageHeight(); RP_H = H + RP_TOP + 12;
   if (!fullArsenal() && !opts.bootcamp) { if (ARSENAL.maps.includes(opts.map)) opts.map = "random"; if (ARSENAL.levels.includes(opts.level)) opts.level = "sergeant"; opts.reinforce = 0; opts.fortWin = false; }
-  if (!MAPS[opts.map]) { const ids = fullArsenal() ? Object.keys(MAPS).filter(k => k !== "plain") : Object.keys(MAPS).filter(k => !ARSENAL.maps.includes(k)); opts.map = ids[Math.floor(Math.random() * ids.length)]; }
+  if (opts.campaign === "drumstick") opts.map = "harvest"; // Drumstick has its own battlefield
+  else if (MAPS[opts.map] && MAPS[opts.map].campaign) opts.map = "random";
+  if (!MAPS[opts.map]) { const ids = (fullArsenal() ? Object.keys(MAPS).filter(k => k !== "plain") : Object.keys(MAPS).filter(k => !ARSENAL.maps.includes(k))).filter(k => !MAPS[k].campaign); opts.map = ids[Math.floor(Math.random() * ids.length)]; }
   coachSeen.clear(); coachQ.length = 0; $("coach").classList.add("hidden"); // shown with its first line
   players = [0, 1].map(i => ({name: i && opts.foe === "cpu" ? "Computer" : `Player ${i + 1}`, cpu: i === 1 && opts.foe === "cpu",
     soldiers: [], fort: null, shots: [], incoming: [], known: new Set(), fortKnown: false, flingsLeft: opts.flings, missStreak: 0, reinforce: 0}));
@@ -3421,7 +3424,7 @@ function resolveShot() {
       // Boulders and mountains stop the shot, and whoever hides behind them is safe. (Mountains used to start a
       // rockslide that buried soldiers below them; user, 2026-11-05: "the shrapnel killed 2 soldiers hiding behind it.
       // that should not happen". Cover is cover.)
-      if (f && (f.kind === "rock" || f.kind === "mountain")) res = {type: "rock", mountain: f.kind === "mountain"};
+      if (solid(f)) res = crop(f) ? {type: "rock", crop: f.kind} : {type: "rock", mountain: f.kind === "mountain"};
       else {
         res = hitTest(def, t.x, t.y);
         if (wet(f) && res.type !== "soldier" && res.type !== "fort") { // splash: soldiers on the shore get soaked
@@ -3525,7 +3528,7 @@ function shotText(res, who) {
     case "fort": return def.fort.hp > 0 ? `Fort cracked. ${def.fort.hp} hit${def.fort.hp > 1 ? "s" : ""} left.` : "Fort destroyed!";
     case "scratch": return "Just a scratch. Arms and legs don't count.";
     case "off": return res.timeout ? "Time's up, soldier! Shot wasted." : "Off the paper. Shot wasted.";
-    case "rock": return res.mountain ? "Thud! That one hit a mountain." : "Ping! That one hit a boulder.";
+    case "rock": return res.crop === "hay" ? "Thwump! Right into a hay bale." : res.crop === "pumpkin" ? "Splat! Pumpkin's done for." : res.mountain ? "Thud! That one hit a mountain." : "Ping! That one hit a boulder.";
     case "slide": return "Rockslide! ...but nobody was standing below the mountain.";
     default: return res.fart ? (res.fart.poop ? "Miss... *squelch* Someone just pooped their pants!" : "Miss... *pfffrt* Did someone just fart?") : opts.near && res.near < NEAR ? "Miss... whoosh, close!" : "Miss.";
   }
@@ -4598,10 +4601,13 @@ const MAPS = {
   pass:     {name: "Kasserine Pass", spec: ["mountain", "mountain", "rock", "rock", "rock"]},
   river:    {name: "The Somme", spec: ["river", "mountain", "rock", "rock", "rock"]},
   lake:     {name: "Masurian Lakes", spec: ["lake", "mountain", "rock", "rock", "rock"]},
+  // Operation Drumstick (1.1): hay bales and pumpkins are cover, exactly like boulders.
+  harvest:  {name: "Harvest Field", campaign: "drumstick", spec: ["hay", "hay", "hay", "pumpkin", "pumpkin", "pumpkin"]},
 };
+const crop = f => !!f && (f.kind === "hay" || f.kind === "pumpkin");
 // Each piece as a circle that must stay clear of the others. A mountain's circle covers its rockslide zone too.
 function footprint(f) {
-  if (f.kind === "rock") return {x: f.x, y: f.y, r: f.r};
+  if (f.kind === "rock" || crop(f)) return {x: f.x, y: f.y, r: f.r};
   if (f.kind === "lake") return {x: f.x, y: f.y, r: Math.max(f.rx, f.ry)};
   if (f.kind === "mountain") return {x: f.x, y: f.y - f.h / 2 + SLIDE / 2, r: Math.max(f.w / 2, (f.h + SLIDE) / 2)};
 }
@@ -4616,6 +4622,7 @@ function overlaps(a, b, gap = 14) {
 const between = (a, b) => a + Math.random() * (b - a);
 function makePiece(kind) {
   if (kind === "rock") { const r = between(13, 22); return rock(between(r + 8, W - r - 8), between(50, H - 40), r); }
+  if (kind === "hay" || kind === "pumpkin") { const r = kind === "hay" ? between(16, 22) : between(12, 17); return {kind, x: between(r + 8, W - r - 8), y: between(50, H - 40), r}; }
   if (kind === "mountain") { const w = between(90, 125), h = between(60, 92); return mountain(between(w / 2 + 6, W - w / 2 - 6), between(h + 45, H - SLIDE), w, h); }
   if (kind === "lake") { const rx = between(55, 75), ry = between(38, 48); return {kind: "lake", x: between(rx + 12, W - rx - 12), y: between(ry + 60, H - ry - 40), rx, ry}; }
   if (kind === "river") { const y0 = between(170, 320); return {kind: "river", w: 30, pts: [0, 72, 144, 216, 288, 360].map(x => [x, y0 + between(-24, 24)])}; }
@@ -4634,14 +4641,14 @@ function generateMap(id) {
 const mirrorMap = feats => feats.map(f => f.kind === "river" ? {...f, pts: f.pts.map(([x, y]) => [W - x, y])} : {...f, x: W - f.x});
 function terrainAt(T, x, y) {
   for (const f of T || []) {
-    if (f.kind === "rock" && Math.hypot(x - f.x, y - f.y) < f.r) return f;
+    if ((f.kind === "rock" || crop(f)) && Math.hypot(x - f.x, y - f.y) < f.r) return f;
     if (f.kind === "mountain" && y <= f.y && y >= f.y - f.h && Math.abs(x - f.x) <= f.w / 2 * (y - (f.y - f.h)) / f.h) return f;
     if (f.kind === "lake" && ((x - f.x) / f.rx) ** 2 + ((y - f.y) / f.ry) ** 2 < 1) return f;
     if (f.kind === "river" && f.pts.some((p, i) => i && segDist(x, y, [...f.pts[i - 1], ...p]) < f.w / 2)) return f;
   }
   return null;
 }
-const solid = f => !!f && (f.kind === "rock" || f.kind === "mountain");
+const solid = f => !!f && (f.kind === "rock" || f.kind === "mountain" || crop(f));
 const wet = f => !!f && (f.kind === "lake" || f.kind === "river");
 // Ink can't seep through stone: a rock or mountain between the blot and a soldier keeps them hidden.
 function sightBlocked(T, x1, y1, x2, y2) {
@@ -4664,6 +4671,7 @@ const inSlide = (f, x, y) => Math.abs(x - f.x) < f.w / 2 && y > f.y - 6 && y < f
 
 function drawTerrain(c, T) {
   const pencil = "#5f5b52", waterInk = "#4f8fd1", waterFill = "#dbeaf8";
+  if ((T || []).some(crop)) drawLeaves(c, T);
   for (const f of T || []) {
     const r = rand(Math.round(f.kind === "river" ? f.pts[0][1] : f.x * 3 + f.y) + 11);
     c.save(); c.lineJoin = "round"; c.lineCap = "round";
@@ -4677,6 +4685,14 @@ function drawTerrain(c, T) {
       line(); c.strokeStyle = waterInk; c.lineWidth = f.w + 3; c.stroke();
       line(); c.strokeStyle = waterFill; c.lineWidth = f.w - 1; c.stroke();
       f.pts.forEach((p, i) => { if (i) wave(c, (p[0] + f.pts[i - 1][0]) / 2, (p[1] + f.pts[i - 1][1]) / 2, waterInk); });
+    } else if (f.kind === "pumpkin") {
+      drawPumpkin(c, f.x, f.y, f.r * .9);
+    } else if (f.kind === "hay") { // a round hay bale, side on, with its spiral and loose straws
+      c.fillStyle = "#f1d77a"; c.strokeStyle = "#a88a2c"; c.lineWidth = 1.8;
+      c.beginPath(); c.ellipse(f.x, f.y, f.r, f.r * .85, 0, 0, 7); c.fill(); c.stroke();
+      c.lineWidth = 1.1; c.beginPath();
+      for (let a = 0; a < 14; a += .35) { const k = a / 14; c.lineTo(f.x + Math.cos(a) * f.r * k, f.y + Math.sin(a) * f.r * .85 * k); } c.stroke();
+      for (let i = 0; i < 5; i++) { const a = r() * 6.283, x = f.x + Math.cos(a) * f.r, y = f.y + Math.sin(a) * f.r * .85; c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * 5, y + Math.sin(a) * 4 - 1); c.stroke(); }
     } else if (f.kind === "rock") {
       c.beginPath();
       for (let i = 0; i <= 10; i++) { const a = i / 10 * 6.283, k = .82 + r() * .26; c[i ? "lineTo" : "moveTo"](f.x + Math.cos(a) * f.r * k, f.y + Math.sin(a) * f.r * k * .85); }
@@ -5202,6 +5218,7 @@ const MAP_PIECES = {
   pass: [mountain(42, 76, 64, 50), mountain(104, 82, 58, 40)],
   river: [{kind: "river", w: 18, pts: [[0, 50], [40, 38], [80, 56], [120, 42], [160, 52]]}],
   lake: [{kind: "lake", x: 74, y: 48, rx: 46, ry: 24}],
+  harvest: [{kind: "hay", x: 34, y: 40, r: 15}, {kind: "pumpkin", x: 82, y: 66, r: 12}, {kind: "hay", x: 118, y: 34, r: 13}, {kind: "pumpkin", x: 120, y: 74, r: 9}],
 };
 function drawMap(c, id) {
   miniPaper(c, 150, 100);
@@ -5282,12 +5299,36 @@ function drawCampPic(c, id) {
   c.restore();
 }
 // A crayon pumpkin (picker art now; the Harvest map's pumpkins use it too).
+// Crayon fall leaves scattered on a Harvest page (same spots every time for the same layout).
+function drawLeaves(c, T) {
+  const r = rand(Math.round(T[0].x * 7 + T[0].y)), cols = ["#d9622b", "#e3a12f", "#b8452a", "#c98a2a"];
+  const w = c.canvas.width / (window.devicePixelRatio || 1), h = c.canvas.height / (window.devicePixelRatio || 1);
+  c.save(); c.globalAlpha = .55;
+  for (let i = 0; i < 14; i++) {
+    const x = r() * Math.min(w, W), y = r() * Math.min(h, H), a = r() * 6.283, s = 4 + r() * 3;
+    c.save(); c.translate(x, y); c.rotate(a); c.fillStyle = cols[i % 4];
+    c.beginPath(); c.moveTo(-s, 0); c.quadraticCurveTo(0, -s * .9, s, 0); c.quadraticCurveTo(0, s * .9, -s, 0); c.fill();
+    c.strokeStyle = "#7a3b17"; c.lineWidth = .8; c.beginPath(); c.moveTo(-s - 2, 0); c.lineTo(s, 0); c.stroke(); c.restore();
+  }
+  c.restore();
+}
 function drawPumpkin(c, x, y, r) {
   c.save(); c.lineJoin = c.lineCap = "round"; c.fillStyle = "#f08a24"; c.strokeStyle = "#a4520c"; c.lineWidth = 1.6;
   c.beginPath(); c.ellipse(x, y, r * 1.15, r * .9, 0, 0, 7); c.fill(); c.stroke();
   c.beginPath(); c.ellipse(x, y, r * .45, r * .9, 0, 0, 7); c.stroke(); // the ribs
   c.strokeStyle = "#4f7a2a"; c.lineWidth = 2.4; c.beginPath(); c.moveTo(x, y - r * .85); c.quadraticCurveTo(x + 2, y - r * 1.3, x + 5, y - r * 1.35); c.stroke(); // the stem
   c.restore();
+}
+// Each campaign shows its own battlefields: Drumstick only the Harvest Field, the regular war everything else.
+function campaignMaps(id) {
+  document.querySelectorAll("#mapTiles .tile").forEach(t => { const m = MAPS[t.dataset.map], own = (m && m.campaign) || "regular";
+    t.style.display = t.dataset.map === "random" ? (id === "regular" ? "" : "none") : own === id ? "" : "none"; });
+  if (id === "drumstick") $("optMap").value = "harvest";
+  else if (MAPS[$("optMap").value] && MAPS[$("optMap").value].campaign) {
+    const saved = window.__settingsReady ? readSettings().map : null;
+    $("optMap").value = saved && MAPS[saved] && !MAPS[saved].campaign && (!ARSENAL.maps.includes(saved) || fullArsenal()) ? saved : "random";
+  }
+  markMap();
 }
 function markMap() { document.querySelectorAll("#mapTiles .tile").forEach(t => t.classList.toggle("on", t.dataset.map === $("optMap").value)); }
 document.querySelectorAll("#mapTiles .tile").forEach(t => t.onclick = () => {
@@ -5656,6 +5697,7 @@ function saveSettings() {
     flings: +$("optFlings").value, size: +$("optSize").value, reveal: +$("optReveal").value, timer: +$("optTimer").value,
     foe: radio("foe"), level: radio("level"), map: $("optMap").value, campaign: currentCampaign()};
   const prev = readSettings(); // Full Arsenal choices the free game can't show are kept as they were
+  if (MAPS[s.map] && MAPS[s.map].campaign) s.map = prev.map || "random"; // a campaign's own map never replaces your usual battlefield
   if (fullArsenal()) s.reinforce = +$("optReinforce").value; else { if ("reinforce" in prev) s.reinforce = prev.reinforce; s.fortWin = prev.fortWin;
     if (ARSENAL.maps.includes(prev.map) && s.map === "random") s.map = prev.map; if (ARSENAL.levels.includes(prev.level) && s.level === "sergeant") s.level = prev.level; }
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch (e) {}
