@@ -318,3 +318,7 @@ footer a{margin:0 10px}
 #sleepToy.on .tip{opacity:0}
 @keyframes sleepglow{0%,100%{transform:scale(.92);opacity:.55}50%{transform:scale(1);opacity:.9}}
 @media (prefers-reduced-motion:reduce){#sleepToy .sorb{animation:none}}
+/* Paper Wars toy: real gameplay from the web game; tapping opens it */
+#pwToy{display:block;cursor:pointer;background:#fbf8ee;text-decoration:none}
+#pwToy video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:50% 45%}
+#pwToy .tip{bottom:14px}

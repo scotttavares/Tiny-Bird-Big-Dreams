@@ -253,44 +253,6 @@
       requestAnimationFrame(f);
     }
   })();
-  // Paper Wars: draw a line of fire
-  (function () {
-    var toy = $("#pwToy"), svg = $("#pwSvg"), tip = $("#pwTip"), NS = "http://www.w3.org/2000/svg";
-    var pts = [], dr = false, busy = false, en, tr;
-    function el(t, a) { var e = document.createElementNS(NS, t); for (var k in a) e.setAttribute(k, a[k]); svg.appendChild(e); return e; }
-    function stick(x, y, c) {
-      var g = document.createElementNS(NS, "g");
-      g.innerHTML = '<circle cx="' + x + '" cy="' + y + '" r="9" class="ink" style="stroke:' + c + '"/><path class="ink" style="stroke:' + c + '" d="M' + x + ' ' + (y + 9) + ' L' + x + ' ' + (y + 38) + ' M' + x + ' ' + (y + 38) + ' L' + (x - 10) + ' ' + (y + 58) + ' M' + x + ' ' + (y + 38) + ' L' + (x + 10) + ' ' + (y + 58) + ' M' + x + ' ' + (y + 19) + ' L' + (x - 13) + ' ' + (y + 29) + ' M' + x + ' ' + (y + 19) + ' L' + (x + 13) + ' ' + (y + 27) + '"/>';
-      svg.appendChild(g);
-    }
-    function sheetNew() { svg.innerHTML = ""; busy = false; stick(70, 440, "#2b2b2b"); var ex = 170 + Math.random() * 70, ey = 110 + Math.random() * 120; en = { x: ex, y: ey + 28 }; stick(ex, ey, "#3a5a9a"); tip.textContent = "draw a line to the blue guy ✏️"; }
-    sheetNew();
-    function pos(e) { var r = toy.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * 300, (e.clientY - r.top) / r.height * 600]; }
-    toy.addEventListener("pointerdown", function (e) { if (busy) { sheetNew(); return; } toy.setPointerCapture(e.pointerId); dr = true; pts = [pos(e)]; tr = el("path", { "class": "trace" }); trackOnce("toy", "paperwars"); });
-    toy.addEventListener("pointermove", function (e) { if (!dr) return; pts.push(pos(e)); tr.setAttribute("d", "M" + pts.map(function (p) { return p.join(" "); }).join(" L")); if (pts.length % 3 === 0) noise(.05, 3000, 2500, .04, "highpass"); });
-    toy.addEventListener("pointerup", function () {
-      if (!dr) return; dr = false;
-      var a0 = pts[0], a1 = pts[pts.length - 1];
-      if (pts.length < 2 || Math.hypot(a1[0] - a0[0], a1[1] - a0[1]) < 16) { tr.remove(); return; }
-      var d = [pts[0]];
-      for (var i = 1; i < pts.length; i++) { var a = pts[i - 1], b = pts[i], n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 3)); for (var j = 1; j <= n; j++) d.push([a[0] + (b[0] - a[0]) * j / n, a[1] + (b[1] - a[1]) * j / n]); }
-      pts = d; tr.setAttribute("d", "M" + pts.map(function (p) { return p.join(" "); }).join(" L")); busy = true;
-      var shot = el("circle", { r: 4, fill: "#2b2b2b" }), k = 0; noise(.25, 600, 200, .18);
-      (function s() { k += 2; if (k >= pts.length) { shot.remove(); land(); return; } shot.setAttribute("cx", pts[k][0]); shot.setAttribute("cy", pts[k][1]); requestAnimationFrame(s); })();
-    });
-    function land() {
-      var p = pts[pts.length - 1], hit = Math.hypot(p[0] - en.x, p[1] - en.y) < 55, b = document.createElement("div");
-      b.className = "boom"; b.textContent = hit ? "BOOM!" : "miss…"; if (!hit) b.style.color = "#666";
-      b.style.left = p[0] / 3 + "%"; b.style.top = p[1] / 6 + "%"; toy.appendChild(b); requestAnimationFrame(function () { b.classList.add("go"); });
-      if (hit) {
-        noise(.6, 400, 60, .4, "lowpass");
-        var s = el("path", { "class": "ink", style: "stroke:#d4381e;stroke-width:4", d: "M" + (en.x - 26) + " " + (en.y - 40) + " L" + (en.x + 24) + " " + (en.y + 32) + " M" + (en.x + 26) + " " + (en.y - 40) + " L" + (en.x - 24) + " " + (en.y + 32) });
-        var L = s.getTotalLength(); s.style.strokeDasharray = L; s.animate([{ strokeDashoffset: L }, { strokeDashoffset: 0 }], { duration: 500, fill: "forwards" });
-        tip.textContent = "got him! tap for a new sheet";
-      } else tip.textContent = "so close. tap to try again";
-      setTimeout(function () { b.remove(); }, 1600);
-    }
-  })();
   // Lull Sleep: tap Begin, the screen dims to a slow orb and the 8 hr timer counts down; tap again to wake
   (function () {
     var toy = $("#sleepToy"); if (!toy) return;
