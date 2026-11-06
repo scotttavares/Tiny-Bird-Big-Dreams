@@ -147,8 +147,8 @@ button.awol{background:none;border:0;color:var(--muted);font-size:16px;padding:2
 button.awol.sure{color:var(--red);font-weight:700}
 .record{max-width:560px;text-align:center;margin:4px 0;font-size:19px;color:var(--text)}
 .record b{font-family:Caveat;font-size:24px;color:#e3b341}
-#cabinet,#callsign{position:fixed;inset:0;z-index:40;background:var(--bg);overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom))}
-#cabinet.hidden,#callsign.hidden{display:none}
+#cabinet,#callsign,#online{position:fixed;inset:0;z-index:40;background:var(--bg);overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom))}
+#cabinet.hidden,#callsign.hidden,#online.hidden{display:none}
 .csHelp{margin:0 0 6px;font-size:17px}
 .csName{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;font:700 34px/1.1 Caveat,cursive;color:#1f4fa8;margin:4px 0}
 .csName #csRank{color:#b3261e}
@@ -376,6 +376,7 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
   </div>
   <select id="optMap" class="hidden" aria-label="Map"><option value="random">Surprise me</option><option value="plain">No Man's Land</option><option value="boulders">Monte Cassino</option><option value="pass">Kasserine Pass</option><option value="river">The Somme</option><option value="lake">Masurian Lakes</option><option value="harvest">Harvest Field</option></select>
   <div class="go"><button class="stampbtn" id="startBtn">START MISSION</button></div>
+  <div class="bar small hidden" id="onlineRow"><button type="button" id="onlineBtn">&#9733; Play friends online <small>Game Center</small></button></div>
   <div class="bar small"><button id="bootBtn">&#9733; Boot Camp <small>first time?</small></button><button id="introBtn">&#9654; Intro</button><button id="cabBtn">Medals <small id="cabCount"></small></button></div>
   <!-- Supply depot (user, 2026-11-04: "under upgrades or something military sounding ... was hard to notice") -->
   <div id="arsenalDepot"><h4>Supply depot</h4>
@@ -529,6 +530,14 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
   <h5>Stance</h5><div class="csRow"><button type="button" data-pose="0">Arms down</button><button type="button" data-pose="1">Arms up</button></div>
   <h5>Hat</h5><div class="csRow"><button type="button" data-hat="none">No hat</button><button type="button" data-hat="helmet">Helmet</button><button type="button" data-hat="beret">Beret</button></div>
   <div class="bar"><button type="button" class="primary" id="csBack">Back to HQ</button></div>
+</div></section>
+
+<section id="online" class="hidden"><div class="menu cabpage">
+  <h3 class="mtitle">Play friends online</h3>
+  <p class="csHelp" id="onlineStatus"></p>
+  <div id="onlineHelp" class="hidden"><h4 id="onlineHelpTitle"></h4><ol class="csHelp" id="onlineSteps"></ol>
+    <p class="csHelp">Everything else in Paper Wars works without it.</p></div>
+  <div class="bar"><button type="button" class="primary" id="onlineBack">Back to HQ</button></div>
 </div></section>
 
 <div id="foldFx" class="hidden"><div class="duo"><div class="base"></div><div class="lid"></div><div class="thump">*thump*</div></div></div>
@@ -6374,8 +6383,8 @@ function gameCenterNet() {
   const gid = e => e && e.gamePlayerID != null ? String(e.gamePlayerID) : e && e.id != null ? String(e.id) : null;
   window.gcEvent = e => {
     if (!e || typeof e !== "object") return;
-    if (e.event === "auth") { if (e.ok !== false && gid(e)) T.id = gid(e); fn({event: "auth", ok: e.ok !== false, id: T.id}); }
-    else if (e.event === "people") fn({event: "people", people: (Array.isArray(e.people) ? e.people : []).map(p => ({id: gid(p)})).filter(p => p.id && p.id !== T.id)});
+    if (e.event === "auth") { if (e.ok !== false && gid(e)) T.id = gid(e); fn({event: "auth", ok: e.ok !== false, id: T.id, reason: typeof e.reason === "string" ? e.reason : null}); }
+    else if (e.event === "people") fn({event: "people", people: (Array.isArray(e.players) ? e.players : Array.isArray(e.people) ? e.people : []).map(p => ({id: gid(p)})).filter(p => p.id && p.id !== T.id)});
     else if (e.event === "message" && e.from != null) fn({event: "message", from: String(e.from), data: e.data});
     else if ((e.event === "left" || e.event === "back") && gid(e)) fn({event: e.event, id: gid(e)});
   };
@@ -6537,7 +6546,7 @@ const net = (() => {
     route(d);
   }
   T.onEvent(e => {
-    if (e.event === "auth") emit("auth", {ok: e.ok});
+    if (e.event === "auth") emit("auth", {ok: e.ok, reason: e.reason || null});
     else if (e.event === "people") {
       const now = (e.people || []).map(p => p.id).filter(Boolean), fresh = now.filter(id => !present.has(id));
       present.clear(); now.forEach(id => present.add(id));
@@ -6608,8 +6617,36 @@ function sendGuard(msg, to) {
   return r;
 }
 
+// ---------- Play friends online (iPhone app only; Task 6 builds the lobby behind it) ----------
+// The app answers net.auth() with Game Center's verdict. When it's off, the card explains how to turn it on; nothing
+// else in the game changes.
+const ONLINE_HELP = {
+  notSignedIn: {title: "Turn on Game Center", steps: ["Open the Settings app.", "Tap Game Center and sign in with your Apple Account.", "Come back and tap Play friends online again."]},
+  restricted: {title: "Game Center is limited on this iPhone", steps: ["Screen Time doesn't allow multiplayer games here.", "A parent can allow them in Settings, Screen Time, Content &amp; Privacy Restrictions, Game Center.", "Then tap Play friends online again."]},
+  offline: {title: "Can't reach Game Center", steps: ["Check your Wi-Fi or mobile data.", "Then tap Play friends online again."]},
+  unavailable: {title: "Game Center isn't ready", steps: ["Game Center isn't working for Paper Wars right now.", "Try again in a little while."]},
+};
+let onlineOpen = false;
+function onlineStatus(text) { $("onlineHelp").classList.add("hidden"); $("onlineStatus").textContent = text; $("onlineStatus").classList.remove("hidden"); }
+function onlineHelp(reason) {
+  const h = ONLINE_HELP[reason] || ONLINE_HELP.notSignedIn;
+  $("onlineStatus").classList.add("hidden");
+  $("onlineHelpTitle").textContent = h.title;
+  $("onlineSteps").innerHTML = h.steps.map(s => `<li>${s}</li>`).join(""); // our own words only
+  $("onlineHelp").classList.remove("hidden");
+}
+function showOnline() { onlineOpen = true; onlineStatus("Checking Game Center…"); $("online").classList.remove("hidden"); net.auth(); }
+net.on("auth", e => {
+  if (!onlineOpen) return;
+  if (e.ok) onlineStatus("You're signed in to Game Center. Battles with friends open here soon.");
+  else onlineHelp(e.reason);
+});
+$("onlineRow").classList.toggle("hidden", !(net.transport.kind === "gamecenter" && net.available()));
+$("onlineBtn").onclick = () => { sound("click"); showOnline(); };
+$("onlineBack").onclick = () => { onlineOpen = false; $("online").classList.add("hidden"); };
+
 // test hook for automated play-testing
-window.paperWar = {get state() { return {phase, cur, players, opts, pending, lastResult, replay}; }, hitTest, mirror, W, H, cpuAim, playReplay, awards};
+window.paperWar ={get state() { return {phase, cur, players, opts, pending, lastResult, replay}; }, hitTest, mirror, W, H, cpuAim, playReplay, awards};
 </script>
 </body>
 </html>

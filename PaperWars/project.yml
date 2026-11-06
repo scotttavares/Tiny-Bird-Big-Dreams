@@ -36,6 +36,8 @@ targets:
       properties:
         # The player's settings, inks, stats and medals live in their own iCloud key-value store.
         com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)$(CFBundleIdentifier)
+        # Two-phone multiplayer: Game Center real-time matches with friends (1.2).
+        com.apple.developer.game-center: true
     info:
       path: PaperWars/Resources/Info.plist
       properties:
