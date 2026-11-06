@@ -6507,7 +6507,7 @@ const net = (() => {
   const peers = new Map(), idOf = new Map(), present = new Set(), helloSent = new Set(), waiting = new Map();
   let k = 0, isHost = false, catchups = 0, authed = false, st;
   const reset = () => { st = {host: null, seats: [], spectators: [], queue: [], match: null, past: new Set(), over: false,
-    next: 0, held: new Map(), early: [], seen: new Set(), log: [], parts: new Map(), updateNeeded: null}; };
+    next: 0, held: new Map(), early: [], seen: new Set(), log: [], parts: new Map(), updateNeeded: null, hostEpoch: 0}; };
   reset();
   const emit = (type, ...a) => (handlers[type] || []).slice().forEach(f => { try { f(...a); } catch (e) { setTimeout(() => { throw e; }); } });
   const idFor = pid => { const p = peers.get(pid); return p && present.has(p.id) ? p.id : null; };
@@ -6527,7 +6527,7 @@ const net = (() => {
     if (!ids.length) return;
     const cs = mine();
     ids.forEach(id => helloSent.add(id));
-    T.send(ids, envelope({t: "hello", pid: cs.pid, tag: {words: [...cs.words], num: cs.num, rank: netRank()}, soldier: {...cs.soldier}, owns: netOwns(), host: isHost}));
+    T.send(ids, envelope({t: "hello", pid: cs.pid, tag: {words: [...cs.words], num: cs.num, rank: netRank()}, soldier: {...cs.soldier}, owns: netOwns(), host: isHost, hostEpoch: st.hostEpoch}));
   }
   function setRoles(d) {
     if (typeof d.host === "string" && NET_PID.test(d.host)) st.host = d.host;
@@ -6578,7 +6578,13 @@ const net = (() => {
     const old = idOf.get(id); if (old && old !== pid) peers.delete(old);
     peers.set(pid, {pid, id, tag: netCleanTag(d.tag, pid), soldier: netCleanSoldier(d.soldier), owns, host});
     idOf.set(id, pid);
-    if (host && !isHost && !st.host) st.host = pid;
+    // Who hosts: each hand-off raises hostEpoch, so the newest host wins (same epoch: the lowest pid). A phone that still
+    // thinks it hosts (e.g. back from a long drop, or two owners hosting at once) steps down and follows the agreed host.
+    const epoch = Number.isInteger(d.hostEpoch) && d.hostEpoch >= 0 && d.hostEpoch < 1e6 ? d.hostEpoch : 0;
+    if (host) {
+      if (isHost) { if (epoch > st.hostEpoch || (epoch === st.hostEpoch && pid < mine().pid)) { isHost = false; st.host = pid; st.hostEpoch = epoch; emit("host", {pid}); } }
+      else if (!st.host || epoch > st.hostEpoch || (epoch === st.hostEpoch && !idFor(st.host))) { const was = st.host; st.host = pid; st.hostEpoch = Math.max(st.hostEpoch, epoch); if (was !== pid) emit("host", {pid}); }
+    }
     if (!helloSent.has(id) && present.has(id)) sendHello([id]);
     emit("hello", list().find(p => p.pid === pid)); emit("people", list());
     const q = waiting.get(id); waiting.delete(id); if (q) q.forEach(m => receive(id, m));
@@ -6618,7 +6624,10 @@ const net = (() => {
       sendHello(fresh); emit("people", list());
     } else if (e.event === "message") receive(e.from, e.data);
     else if (e.event === "left") { present.delete(e.id); helloSent.delete(e.id); emit("left", {pid: idOf.get(e.id) || null, id: e.id}); emit("people", list()); }
-    else if (e.event === "matchmaker") emit("matchmaker", {ok: e.ok === true, reason: e.reason || null}); // Apple's invite screen closed without a match
+    else if (e.event === "matchmaker") { // Apple's invite screen closed without a match
+      if (e.reason === "signed-out" || e.reason === "failed") authed = false; // ask Game Center again next time
+      emit("matchmaker", {ok: e.ok === true, reason: e.reason || null});
+    }
     else if (e.event === "back") { present.add(e.id); sendHello([e.id]); emit("back", {pid: idOf.get(e.id) || null, id: e.id}); emit("people", list()); }
   });
   const api = {
@@ -6668,7 +6677,7 @@ const net = (() => {
       if (!gone || gone !== st.host) return st.host;
       const me = mine().pid, owners = list().filter(p => p.pid !== gone && p.owns.arsenal).map(p => p.pid);
       if (netOwns().arsenal) owners.push(me);
-      st.host = owners.sort()[0] || null;
+      st.host = owners.sort()[0] || null; st.hostEpoch++;
       if (st.host === me && !isHost) { isHost = true; helloSent.clear(); sendHello([...present]); }
       return st.host;
     },
@@ -6734,8 +6743,12 @@ $("onlineBack").onclick = () => { onlineOpen = false; $("online").classList.add(
 // Lobby messages carry pids and battle orders only: call signs and soldiers come from each phone's own hello. (The fort
 // option is "fortOn": "fort" is an army key sendGuard never lets out.)
 const LOBBY_TIMERS = [0, 10, 15, 20, 30, 60];
+// A host who drops (lost signal, phone asleep) has this long to come back before the lobby passes on. (The match itself
+// waits 60 s; tests shorten this.)
+let LOBBY_HOST_GRACE_MS = 20000;
 let lobbyOpen = false, onlineStart = null;
-const lob = {seats: [], spectators: [], queue: [], settings: null, removed: new Set(), pics: false};
+const lob = {seats: [], spectators: [], queue: [], settings: null, removed: new Set(), pics: false, note: null,
+  wait: new Map(), quit: new Set()}; // wait: dropped host pid -> hand-off timer; quit: hosts who said they're leaving
 const lobbyMe = () => net.me().pid, lobbyHost = () => net.roles().host;
 // What a person owns: this phone checks its own purchase; the others' come from their (cleaned) hello.
 function lobbyOwns(pid) { if (pid === lobbyMe()) return fullArsenal(); const p = net.peers().find(q => q.pid === pid); return !!(p && p.owns.arsenal); }
@@ -6800,7 +6813,8 @@ function renderLobby() {
   seats.replaceChildren(...[0, 1].map(i => lobbySpot(host ? lob.seats[i] : null, true, i)));
   spots.replaceChildren(...[0, 1, ...watch.slice(2).map((p, i) => i + 2)].map(i => lobbySpot(watch[i], false, i)));
   const hp = host && lobbyPerson(host);
-  $("lobbyStatus").textContent = amHost ? "You're the host. Invite up to 3 friends, pick who plays, then start the battle."
+  $("lobbyStatus").textContent = lob.note ? lob.note : host && lob.wait.has(host) ? "The host lost the connection. Waiting for them to come back…"
+    : amHost ? "You're the host. Invite up to 3 friends, pick who plays, then start the battle."
     : host ? `${hp ? lobbyName(hp) : "A friend"} is the host.` + (onlineStart ? " The battle is starting…" : "")
     : fullArsenal() ? "Tap Invite friends to send a Game Center invite."
     : "Hosting needs the Full Arsenal. A friend who has it can invite you from their Paper Wars.";
@@ -6838,7 +6852,8 @@ function openLobby() {
 // Back to HQ, with a note on the Game Center card when there's something to say ("The host left").
 function lobbyEnd(text, leave) {
   lobbyOpen = false; $("lobby").classList.add("hidden");
-  lob.seats = []; lob.spectators = []; lob.queue = []; lob.settings = null; lob.removed.clear(); onlineStart = null;
+  lob.seats = []; lob.spectators = []; lob.queue = []; lob.settings = null; lob.removed.clear(); onlineStart = null; lob.note = null;
+  lob.wait.forEach(clearTimeout); lob.wait.clear(); lob.quit.clear();
   if (leave) net.leave();
   if (text) { onlineOpen = false; onlineStatus(text); $("online").classList.remove("hidden"); }
 }
@@ -6852,13 +6867,17 @@ function lobbyStartMsg(d) {
 function startOnlineMatch(start) { onlineStart = start; renderLobby(); }
 
 $("lobbyInvite").onclick = () => {
-  sound("click");
-  if (net.me().isHost) { net.invite(); return; }
-  const r = net.host({}); // checks the Full Arsenal on this phone
+  sound("click"); lob.note = null;
+  if (net.me().isHost && net.peers().length) { net.invite(); renderLobby(); return; } // a match is running: add people to it
+  const r = net.host({}); // checks the Full Arsenal on this phone; with no match yet (or after a cancel) this opens the invite screen
   if (!r.ok) { $("lobbyStatus").textContent = r.why; return; }
   lobbySync();
 };
-$("lobbyLeave").onclick = () => { sound("click"); lobbyEnd(null, true); };
+$("lobbyLeave").onclick = () => {
+  sound("click");
+  if (net.me().isHost) net.send({t: "remove", pid: lobbyMe()}, "all"); // a host leaving on purpose: hand over now, no waiting
+  lobbyEnd(null, true);
+};
 $("lobbyStart").onclick = () => {
   if (!net.me().isHost || lob.seats.length !== 2) return;
   const paid = lobbyPaid(lob.seats), settings = lobbyClean(lob.settings, paid), seed = Math.floor(Math.random() * 0x7fffffff);
@@ -6911,16 +6930,37 @@ net.on("lobby", d => {
 net.on("start", d => startOnlineMatch(lobbyStartMsg(d)));
 net.on("people", () => { if (net.me().isHost) lobbySync(); else renderLobby(); });
 net.on("removed", () => lobbyEnd("The host removed you from this battle.")); // net leaves the match itself
-// Review Focus 5: the host left -> the lobby passes to the remaining Full Arsenal owner, else it ends politely.
-net.on("left", e => {
-  if (!lobbyOpen || !e.pid || e.pid !== lobbyHost()) return;
-  const h = net.passHost(e.pid), gone = a => a.filter(p => p !== e.pid);
+// Review Focus 5: the host left -> the lobby passes to the remaining Full Arsenal owner, else it ends politely. A host
+// who only dropped gets LOBBY_HOST_GRACE_MS to come back first; one who tapped Leave hands over at once.
+function lobbyHandOff(pid) {
+  clearTimeout(lob.wait.get(pid)); lob.wait.delete(pid);
+  if (!lobbyOpen || pid !== lobbyHost() || net.peers().some(p => p.pid === pid)) return; // back already, or not the host now
+  const h = net.passHost(pid), gone = a => a.filter(p => p !== pid);
   lob.seats = gone(lob.seats); lob.spectators = gone(lob.spectators); lob.queue = gone(lob.queue);
   if (!h) { lobbyEnd("The host left, so this battle is over. Thanks for playing!", true); return; }
   if (h === lobbyMe()) {
     if (lob.seats.length < 2 && !lob.seats.includes(h)) { lob.spectators = lob.spectators.filter(p => p !== h); lob.seats.unshift(h); } // the new host fights
     lobbySync(); setTimeout(lobbySync, 800); // again, in case a phone heard the lobby before it heard the old host go
   } else renderLobby();
+}
+net.on("left", e => {
+  if (!lobbyOpen || !e.pid || e.pid !== lobbyHost() || lob.wait.has(e.pid)) return;
+  if (lob.quit.has(e.pid)) { lobbyHandOff(e.pid); return; }
+  lob.wait.set(e.pid, setTimeout(() => lobbyHandOff(e.pid), LOBBY_HOST_GRACE_MS));
+  renderLobby();
+});
+net.on("back", e => { if (e.pid && lob.wait.has(e.pid)) { clearTimeout(lob.wait.get(e.pid)); lob.wait.delete(e.pid); renderLobby(); } });
+net.on("remove", d => { // the host removing itself = leaving on purpose
+  if (d.pid !== d.from || d.from !== lobbyHost()) return;
+  lob.quit.add(d.pid); if (lob.wait.has(d.pid)) lobbyHandOff(d.pid);
+});
+net.on("host", () => renderLobby()); // this phone stepped down, or follows a new host
+// The invite screen closed without a match: cancelled -> say so; signed out / failed -> how to fix Game Center.
+net.on("matchmaker", e => {
+  if (!lobbyOpen || e.ok) return;
+  if (e.reason === "cancelled") { lob.note = "No invite sent. Tap Invite friends to try again."; renderLobby(); return; }
+  lobbyEnd(null, true);
+  onlineHelp(e.reason === "failed" ? "offline" : "notSignedIn"); $("online").classList.remove("hidden");
 });
 
 // test hook for automated play-testing
