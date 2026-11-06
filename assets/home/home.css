@@ -70,23 +70,6 @@ section{position:relative;padding:16vh 6vw}
 .hero .cta .btn.ghost{color:#3a2416;border-color:rgba(58,36,22,.35)}
 @keyframes fade{to{opacity:1}}
 
-/* reel */
-.reel{padding:0 3vw 10vh}
-.reel .frame{position:relative;max-width:1400px;margin:0 auto;aspect-ratio:16/9;border-radius:34px;overflow:hidden;background:#20160f;box-shadow:0 60px 120px rgba(60,30,10,.35);clip-path:inset(6% 6% round 34px);transition:clip-path 1.6s var(--ease)}
-.reel.seen .frame{clip-path:inset(0 0 round 34px)}
-.reel video,.reel .still{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .9s ease}
-.reel video.on,.reel .still.on{opacity:1}
-.reel .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.05) 40%,rgba(0,0,0,.55));pointer-events:none}
-.reel .over{position:absolute;left:4%;right:4%;bottom:6%;display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap}
-.reel .eyebrow{font-size:12px;letter-spacing:.22em;text-transform:uppercase;opacity:.85}
-.reel h2{font-size:clamp(34px,5vw,80px);line-height:.95;letter-spacing:-.02em;margin-top:8px}
-.reel .cap{display:flex;align-items:center;gap:12px}
-.reel .cap img,.reel .cap .li{width:44px;height:44px;border-radius:12px}
-.reel .cap b{display:block;font-size:15px}.reel .cap span{font-size:13px;opacity:.8}
-.reel .ticks{display:flex;gap:6px;margin-top:12px}
-.reel .ticks i{height:3px;width:34px;border-radius:3px;background:rgba(255,255,255,.3);overflow:hidden;display:block}
-.reel .ticks i b{display:block;height:100%;width:0;background:#fff}
-.reel .pp{position:absolute;top:18px;right:18px}
 
 /* picker */
 .picker{text-align:center;padding:16vh 6vw 10vh}
@@ -237,7 +220,6 @@ footer a{margin:0 10px}
   .moment.flip .toy{margin:-40% auto 0 6%}
   .quote,.moment.flip .quote{right:22px;left:22px;text-align:left;bottom:auto;top:70px}
   .grid{grid-template-columns:1fr}
-  .reel{padding:0 0 8vh}.reel .frame{border-radius:0;aspect-ratio:4/5}.reel .frame,.reel.seen .frame{clip-path:none}
   #clock{bottom:auto;top:66px;right:12px;padding:6px 12px 6px 8px}#clock b{font-size:13px}
   .eq .t{width:96px}
 }
@@ -245,7 +227,7 @@ footer a{margin:0 10px}
   *,*::before,*::after{animation-duration:.001s!important;animation-delay:0s!important;transition-duration:.001s!important}
   #bird,.clouds{display:none}
   .rv{opacity:1;transform:none}
-  .scene .ph,.reel .frame{clip-path:none!important}
+  .scene .ph{clip-path:none!important}
 }
 
 /* daytime sections: dark ink on the bright sky */
@@ -259,20 +241,9 @@ footer a{margin:0 10px}
 
 .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
 
-/* reel headline: one line per scene, words rise in */
-#reelLine .w{display:inline-block;opacity:0;transform:translateY(.35em);filter:blur(6px);animation:wordin .9s cubic-bezier(.2,.8,.2,1) forwards}
 @keyframes wordin{to{opacity:1;transform:none;filter:none}}
-.reel h2{max-width:19ch}
 
 /* real app screen, shown beside the lifestyle footage */
-.appshot{position:absolute;right:4%;top:7%;height:66%;aspect-ratio:9/19.5;margin:0;border:7px solid #111;border-radius:30px;background:#111;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.2),0 30px 70px rgba(0,0,0,.45);opacity:0;transform:translateY(24px) rotate(3deg) scale(.96);transition:opacity .5s ease,transform .7s cubic-bezier(.2,.8,.2,1);z-index:2}
-.appshot.in{opacity:1;transform:rotate(3deg)}
-.appshot[data-kind="duo"]{aspect-ratio:13/9;border-radius:18px;height:44%}
-.appshot img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
-.appshot figcaption{position:absolute;left:0;right:0;bottom:0;padding:22px 8px 8px;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;text-align:center;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.6))}
-.reel .over{right:auto;max-width:62%}
-.reel .over>div:last-child{margin-top:14px}
-@media (max-width:900px){.appshot{height:40%;top:10%;right:5%;border-width:5px;border-radius:20px}.appshot[data-kind="duo"]{height:34%}.reel .over{max-width:none;right:4%}}
 
 /* Lull toy, modelled on the real Lull breathing screen (App Store "Just breathe.") */
 #lullToy{background:radial-gradient(90% 40% at 50% 0%,#2a1f4e,transparent 70%),linear-gradient(180deg,#181430,#0d0b19 70%,#1a0f1c)}
