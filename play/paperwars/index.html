@@ -6578,12 +6578,14 @@ const net = (() => {
     const old = idOf.get(id); if (old && old !== pid) peers.delete(old);
     peers.set(pid, {pid, id, tag: netCleanTag(d.tag, pid), soldier: netCleanSoldier(d.soldier), owns, host});
     idOf.set(id, pid);
-    // Who hosts: each hand-off raises hostEpoch, so the newest host wins (same epoch: the lowest pid). A phone that still
-    // thinks it hosts (e.g. back from a long drop, or two owners hosting at once) steps down and follows the agreed host.
+    // Who hosts, one rule on every phone: each hand-off raises hostEpoch, the newest epoch wins, and at the same epoch the
+    // lowest pid wins. A phone that thinks it hosts (back from a long drop, two owners hosting at once, a split hand-off)
+    // steps down, follows the agreed host and says hello again so the others hear it promptly.
     const epoch = Number.isInteger(d.hostEpoch) && d.hostEpoch >= 0 && d.hostEpoch < 1e6 ? d.hostEpoch : 0;
-    if (host) {
-      if (isHost) { if (epoch > st.hostEpoch || (epoch === st.hostEpoch && pid < mine().pid)) { isHost = false; st.host = pid; st.hostEpoch = epoch; emit("host", {pid}); } }
-      else if (!st.host || epoch > st.hostEpoch || (epoch === st.hostEpoch && !idFor(st.host))) { const was = st.host; st.host = pid; st.hostEpoch = Math.max(st.hostEpoch, epoch); if (was !== pid) emit("host", {pid}); }
+    if (host && pid !== st.host && (epoch > st.hostEpoch || (epoch === st.hostEpoch && (!st.host || pid < st.host)))) {
+      const was = isHost; st.host = pid; st.hostEpoch = epoch; isHost = false;
+      if (was) { helloSent.clear(); sendHello([...present]); }
+      emit("host", {pid});
     }
     if (!helloSent.has(id) && present.has(id)) sendHello([id]);
     emit("hello", list().find(p => p.pid === pid)); emit("people", list());
