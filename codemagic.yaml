@@ -320,10 +320,12 @@ workflows:
         script: |
           # Codemagic's per-app build counter keeps every upload's build number unique.
           BUILD="${PROJECT_BUILD_NUMBER:-$BUILD_NUMBER}"
+          # FIELDGUIDE_DUO_SDK compiles in the hinge and fold code (PostureProvider.swift);
+          # without it the app only sees window size, never laptop, tent or closed.
           xcode-project build-ipa \
             --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME" \
-            --archive-xcargs "CURRENT_PROJECT_VERSION=$BUILD"
+            --archive-xcargs "CURRENT_PROJECT_VERSION=$BUILD SWIFT_ACTIVE_COMPILATION_CONDITIONS=FIELDGUIDE_DUO_SDK"
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
