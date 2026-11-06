@@ -217,12 +217,12 @@
       requestAnimationFrame(f);
     }
   })();
-  // Orbit: drag a friend away, they spring back
+  // Orbit: real faces orbit You (you can still drag one away; they spring back)
   (function () {
     var toy = $("#orbitToy"), teth = $("#tether");
-    var ppl = [{ c: "#ffb4a2", l: "Mom", r: .27, a: 0, sp: .0005 }, { c: "#ffd166", l: "Sis", r: .4, a: 2.1, sp: .00032 }, { c: "#9be7c4", l: "Jo", r: .4, a: 4.2, sp: .00032 }];
+    var ppl = [{ f: "mom", l: "Mom", k: "fam", r: .2, a: 0, sp: .0005 }, { f: "dev", l: "Dev", k: "fr", r: .28, a: 2.4, sp: .00042 }, { f: "sarah", l: "Sis", k: "fam", r: .4, a: 1.1, sp: .0003 }, { f: "jordan", l: "Jo", k: "fr", r: .38, a: 3.6, sp: .00028 }, { f: "gramps", l: "Gramps", k: "fam", r: .42, a: 5.1, sp: .00024 }];
     ppl.forEach(function (p) {
-      var d = document.createElement("div"); d.className = "friend"; d.style.background = p.c; d.textContent = p.l; toy.appendChild(d);
+      var d = document.createElement("div"); d.className = "friend"; d.style.backgroundImage = "url(/assets/home/faces/" + p.f + ".jpg)"; d.innerHTML = '<span class="' + p.k + '">' + p.l + "</span>"; toy.appendChild(d);
       p.el = d; p.x = null; p.vx = 0; p.vy = 0;
       d.addEventListener("pointerdown", function (e) { e.stopPropagation(); d.setPointerCapture(e.pointerId); p.drag = true; tone(520, .12); trackOnce("toy", "orbit"); });
       d.addEventListener("pointermove", function (e) { if (!p.drag) return; var r = toy.getBoundingClientRect(); p.x = e.clientX - r.left; p.y = e.clientY - r.top; });
