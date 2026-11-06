@@ -161,7 +161,7 @@
     }
     if (!RM) {
       var nr = nest.getBoundingClientRect(), near = nr.top < innerHeight * .7 && nr.bottom > 60;
-      var tx = mx, ty = my; if (near) { tx = nr.left + nr.width / 2; ty = nr.top + 6; }
+      var tx = mx, ty = my; if (near) { tx = nr.left + nr.width * .5; ty = nr.top + nr.height * .55; }
       if (near !== landed) { landed = near; bird.classList.toggle("landed", near); if (near) tone(660, .2); }
       bx += (tx - bx) * .1; by += (ty - by) * .1 + (landed ? 0 : Math.sin(t / 260) * .5);
       var vx = bx - lastX; lastX = bx;
@@ -187,17 +187,23 @@
   /* ---------- the reel: four real-life clips, crossfading ---------- */
   (function () {
     var clips = [
-      { n: "lull", cap: "7:12 am · Lull", sub: "One breath before the emails", ic: '<span class="li"><i></i></span>' },
-      { n: "orbit", cap: "12:40 pm · Orbit", sub: "A hello on the lunch break", ic: '<img src="/assets/home/icon-orbit.png" alt="" />' },
-      { n: "fieldguide", cap: "6:30 pm · Field Guide", sub: "One page at the kitchen table", ic: '<img src="/assets/home/icon-fieldguide.png" alt="" />' },
-      { n: "paperwars", cap: "9:15 pm · Paper Wars", sub: "One more round on the couch", ic: '<img src="/assets/home/icon-paperwars.png" alt="" />' },
+      { n: "lull", line: "A breath before the day.", cap: "7:12 am · Lull", sub: "One breath before the emails", ic: '<img src="/assets/home/icon-lull.png" alt="" />' },
+      { n: "orbit", line: "A hello that brings them closer.", cap: "12:40 pm · Orbit", sub: "A hello on the lunch break", ic: '<img src="/assets/home/icon-orbit.png" alt="" />' },
+      { n: "fieldguide", line: "A page for every adventure.", cap: "6:30 pm · Field Guide", sub: "A butterfly, saved forever", ic: '<img src="/assets/home/icon-fieldguide.png" alt="" />' },
+      { n: "paperwars", line: "A laugh to end the night.", cap: "9:15 pm · Paper Wars", sub: "Face to face, one more round", ic: '<img src="/assets/home/icon-paperwars.png" alt="" />' },
     ];
     var root = $("#reel"), vids = [$("#vA"), $("#vB")], still = $(".reel .still"), capEl = $("#reelCap"), ticks = $$("#ticks i b"), pp = $("#reelPP");
+    var RATE = 0.8; // play the clips a little slower than real time
     var idx = 0, front = 0, playing = !RM, visible = false, started = false, raf = 0;
     var saveData = navigator.connection && navigator.connection.saveData;
     if (saveData) playing = false;
     function src(i) { return "/assets/home/reel/" + clips[i].n + ".mp4"; }
-    function caption(i) { capEl.innerHTML = clips[i].ic + "<div><b>" + clips[i].cap + "</b><span>" + clips[i].sub + "</span></div>"; }
+    var lineEl = $("#reelLine");
+    function caption(i) {
+      capEl.innerHTML = clips[i].ic + "<div><b>" + clips[i].cap + "</b><span>" + clips[i].sub + "</span></div>";
+      if (lineEl.textContent === clips[i].line) return;
+      lineEl.innerHTML = clips[i].line.split(" ").map(function (w, k) { return '<span class="w" style="animation-delay:' + (k * 90) + 'ms">' + w + "</span>"; }).join(" ");
+    }
     function setTicks() {
       var v = vids[front];
       ticks.forEach(function (b, i) { b.style.width = i < idx ? "100%" : i > idx ? "0" : ((v.duration ? v.currentTime / v.duration : 0) * 100) + "%"; });
@@ -206,7 +212,7 @@
     function show(i) {
       var next = vids[1 - front], cur = vids[front];
       next.src = src(i); next.poster = "/assets/home/reel/" + clips[i].n + "-poster.jpg";
-      next.currentTime = 0;
+      next.currentTime = 0; next.playbackRate = RATE; next.defaultPlaybackRate = RATE;
       var go = function () {
         next.classList.add("on"); cur.classList.remove("on"); still.classList.remove("on");
         setTimeout(function () { cur.pause(); }, 900);
@@ -288,14 +294,14 @@
     function f(t) {
       if (!vis()) { running = false; return; }
       var dt = Math.min(50, t - t0); t0 = t;
-      var S = toy.clientWidth, c = S / 2, L = "";
+      var S = toy.clientWidth, c = S / 2, cy = toy.clientHeight / 2, L = "";
       ppl.forEach(function (p) {
         if (!RM) p.a += p.sp * dt;
-        var hx = c + Math.cos(p.a) * p.r * S, hy = c + Math.sin(p.a) * p.r * S;
+        var hx = c + Math.cos(p.a) * p.r * S, hy = cy + Math.sin(p.a) * p.r * S;
         if (p.x === null) { p.x = hx; p.y = hy; }
         if (!p.drag) { p.vx = (p.vx + (hx - p.x) * .0035 * dt) * .9; p.vy = (p.vy + (hy - p.y) * .0035 * dt) * .9; p.x += p.vx; p.y += p.vy; }
         var dd = Math.hypot(p.x - hx, p.y - hy);
-        if (dd > 6) L += '<line x1="' + c + '" y1="' + c + '" x2="' + p.x + '" y2="' + p.y + '" stroke="rgba(255,255,255,' + Math.min(.8, dd / 120) + ')" stroke-width="1.5" stroke-dasharray="4 5"/>';
+        if (dd > 6) L += '<line x1="' + c + '" y1="' + cy + '" x2="' + p.x + '" y2="' + p.y + '" stroke="rgba(255,255,255,' + Math.min(.8, dd / 120) + ')" stroke-width="1.5" stroke-dasharray="4 5"/>';
         p.el.style.transform = "translate(" + p.x + "px," + p.y + "px)";
       });
       if (L !== teth._last) { teth.innerHTML = L; teth._last = L; }
@@ -312,9 +318,9 @@
       g.innerHTML = '<circle cx="' + x + '" cy="' + y + '" r="9" class="ink" style="stroke:' + c + '"/><path class="ink" style="stroke:' + c + '" d="M' + x + ' ' + (y + 9) + ' L' + x + ' ' + (y + 38) + ' M' + x + ' ' + (y + 38) + ' L' + (x - 10) + ' ' + (y + 58) + ' M' + x + ' ' + (y + 38) + ' L' + (x + 10) + ' ' + (y + 58) + ' M' + x + ' ' + (y + 19) + ' L' + (x - 13) + ' ' + (y + 29) + ' M' + x + ' ' + (y + 19) + ' L' + (x + 13) + ' ' + (y + 27) + '"/>';
       svg.appendChild(g);
     }
-    function sheetNew() { svg.innerHTML = ""; busy = false; stick(72, 190, "#2b2b2b"); var ex = 190 + Math.random() * 60, ey = 40 + Math.random() * 80; en = { x: ex, y: ey + 28 }; stick(ex, ey, "#3a5a9a"); tip.textContent = "draw a line to the blue guy ✏️"; }
+    function sheetNew() { svg.innerHTML = ""; busy = false; stick(70, 440, "#2b2b2b"); var ex = 170 + Math.random() * 70, ey = 110 + Math.random() * 120; en = { x: ex, y: ey + 28 }; stick(ex, ey, "#3a5a9a"); tip.textContent = "draw a line to the blue guy ✏️"; }
     sheetNew();
-    function pos(e) { var r = toy.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * 300, (e.clientY - r.top) / r.height * 300]; }
+    function pos(e) { var r = toy.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * 300, (e.clientY - r.top) / r.height * 600]; }
     toy.addEventListener("pointerdown", function (e) { if (busy) { sheetNew(); return; } toy.setPointerCapture(e.pointerId); dr = true; pts = [pos(e)]; tr = el("path", { "class": "trace" }); trackOnce("toy", "paperwars"); });
     toy.addEventListener("pointermove", function (e) { if (!dr) return; pts.push(pos(e)); tr.setAttribute("d", "M" + pts.map(function (p) { return p.join(" "); }).join(" L")); if (pts.length % 3 === 0) noise(.05, 3000, 2500, .04, "highpass"); });
     toy.addEventListener("pointerup", function () {
@@ -330,7 +336,7 @@
     function land() {
       var p = pts[pts.length - 1], hit = Math.hypot(p[0] - en.x, p[1] - en.y) < 55, b = document.createElement("div");
       b.className = "boom"; b.textContent = hit ? "BOOM!" : "miss…"; if (!hit) b.style.color = "#666";
-      b.style.left = p[0] / 3 + "%"; b.style.top = p[1] / 3 + "%"; toy.appendChild(b); requestAnimationFrame(function () { b.classList.add("go"); });
+      b.style.left = p[0] / 3 + "%"; b.style.top = p[1] / 6 + "%"; toy.appendChild(b); requestAnimationFrame(function () { b.classList.add("go"); });
       if (hit) {
         noise(.6, 400, 60, .4, "lowpass");
         var s = el("path", { "class": "ink", style: "stroke:#d4381e;stroke-width:4", d: "M" + (en.x - 26) + " " + (en.y - 40) + " L" + (en.x + 24) + " " + (en.y + 32) + " M" + (en.x + 26) + " " + (en.y - 40) + " L" + (en.x - 24) + " " + (en.y + 32) });
