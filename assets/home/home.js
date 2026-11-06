@@ -194,6 +194,7 @@
       { n: "lull-sleep", file: "lull-sleep", app: "lull", kind: "phone", alt: "Lull's Sleep screen", line: "A softer way to drift off.", cap: "10:45 pm · Lull", sub: "Sleep mode, lights out", ic: '<img src="/assets/home/icon-lull.png" alt="" />' },
     ];
     var root = $("#reel"), vids = [$("#vA"), $("#vB")], still = $(".reel .still"), capEl = $("#reelCap"), ticks = $$("#ticks i b"), pp = $("#reelPP");
+    var fails = 0;
     var RATE = 0.8; // play the clips a little slower than real time
     var idx = 0, front = 0, playing = !RM, visible = false, started = false, raf = 0;
     var saveData = navigator.connection && navigator.connection.saveData;
@@ -233,14 +234,19 @@
         front = 1 - front; idx = i; caption(i);
       };
       var p = next.play();
-      if (p && p.then) p.then(go).catch(function () {
-        still.src = next.poster; still.classList.add("on"); idx = i; caption(i);
-        playing = false; started = false; pp.textContent = "▶"; pp.setAttribute("aria-label", "Play video");
+      if (p && p.then) p.then(function () { fails = 0; go(); }).catch(function (err) {
+        if (err && err.name === "NotAllowedError") {
+          // Autoplay refused (e.g. Low Power Mode): show this clip's still with its own caption and wait for the play button.
+          still.src = next.poster; still.classList.add("on"); idx = i; caption(i);
+          playing = false; started = false; pp.textContent = "▶"; pp.setAttribute("aria-label", "Play video");
+        } else if (++fails < clips.length) {
+          // This clip didn't load: skip it, leaving the current footage and caption together.
+          idx = i; show((i + 1) % clips.length);
+        }
       });
       else go();
     }
     vids.forEach(function (v) {
-      v.addEventListener("error", function () { if (v === vids[1 - front] && playing && visible) show((idx + 2) % clips.length); });
       v.addEventListener("ended", function () { if (v === vids[front] && playing && visible) show((idx + 1) % clips.length); });
     });
     function start() {
