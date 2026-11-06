@@ -6303,6 +6303,302 @@ Promise.all([document.fonts.load('700 30px Caveat'), document.fonts.load('20px "
 window.addEventListener("keydown", e => {
   if (e.code === "Space" || e.code === "Enter") { e.preventDefault(); fire(); }
 });
+// ---------- online: transport and match protocol (two-phone multiplayer, 1.2) ----------
+// The game talks only to `net`. Under it sits one transport: Game Center (gameCenterNet, through the iPhone app's bridge)
+// or, for automated tests, fakeNet (?fakenet=<room>: tabs of one browser talk over a BroadcastChannel). A relay can be
+// another transport later without touching the game. A transport is
+//   {kind, id, available(), connect(), host(), invite(), send(ids, data), leave(), onEvent(fn)}
+// and calls fn({event: "auth", ok, id} | {event: "people", people: [{id}]} | {event: "message", from: id, data}
+//   | {event: "left", id} | {event: "back", id}). Ids are the transport's (Game Center's gamePlayerID); the game only
+// sees call-sign pids, which `hello` maps to ids.
+// The game's side:
+//   net.available(), net.me() -> {pid, isHost, id, tag, soldier}, net.host({owns}) -> {ok, why}, net.invite(),
+//   net.send(msg, to: "all" | "opponent" | "spectators" | [pid]), net.on(type, fn) -> off, net.leave(),
+//   net.peers(), net.roles() -> {host, seats, spectators, queue}, net.catchup(pid), net.hello().
+//   on(): any message type, "message" (every one), "people", "hello", "left", "back", "update", "auth", "removed", "catchup".
+// Every message on the wire is {v: 1, t, from: pid, s: session, k: count, pub?, m?, ...}. Secrecy (sendGuard): army data
+// (soldiers / fort / known / army / armies) never leaves this phone before this phone has itself sent `over` (an
+// opponent's "over" can't trick it into revealing), and private content (a Rock-Paper-Scissors pick, or anything marked
+// private) only ever goes to the opponent. Shots and results carry n and are handed to the game exactly once, in turn
+// order (shot 1, result 1, shot 2, ...), however the network duplicates or reorders them.
+const NET_V = 1, NET_UPDATE_TEXT = "Update Paper Wars to play together.";
+const NET_TYPES = ["hello", "lobby", "start", "hidden", "rps", "shot", "result", "reinforce", "taunt", "spin", "queue", "remove", "over", "reveal", "catchup"];
+const NET_HOST_ONLY = ["lobby", "start", "spin", "remove", "catchup"];
+const NET_LOGGED = ["start", "hidden", "rps", "shot", "result", "reinforce", "taunt", "spin", "queue", "over", "reveal"]; // what a late spectator is caught up on
+const NET_ARMY_KEYS = ["soldiers", "fort", "known", "army", "armies"];
+const NET_MAX = 60000, NET_CHUNK = 40000; // Game Center's reliable messages top out near 87 KB
+const NET_PID = /^[0-9a-f]{16}$/;
+// Where a shot or result sits in the match's turn order (null for messages that aren't ordered).
+const netPos = m => (m.t === "shot" || m.t === "result") && Number.isInteger(m.n) && m.n >= 1 && m.n < 1e6 ? 2 * m.n - (m.t === "shot" ? 2 : 1) : null;
+// The first army key anywhere inside o (or "too deep"), else null.
+function netArmyKey(o, depth = 0) {
+  if (!o || typeof o !== "object") return null;
+  if (depth > 30) return "too deep";
+  for (const [k, v] of Object.entries(o)) { if (NET_ARMY_KEYS.includes(k)) return k; const d = netArmyKey(v, depth + 1); if (d) return d; }
+  return null;
+}
+const netPrivate = m => !!m && (m.private === true || (m.t === "rps" && m.pick != null));
+const netOwns = () => ({arsenal: fullArsenal()});
+const netCleanOwns = o => ({arsenal: !!(o && o.arsenal === true)});
+// A call sign from another phone: only words from our own lists, a 4-digit number and a soldier from the allowed looks,
+// so a modified app can't get typed text onto anyone's screen. Anything else becomes a safe one made from the pid.
+function netCleanTag(tag, pid) {
+  const h = parseInt(String(pid).slice(0, 8), 16) || 0, w = tag && Array.isArray(tag.words) ? tag.words : [];
+  const A = CALLSIGN_WORDS.a, B = CALLSIGN_WORDS.b;
+  const n = tag && (typeof tag.num === "number" || typeof tag.num === "string") && /^\d{4}$/.test(String(tag.num)) && +tag.num >= 1000 ? +tag.num : 1000 + h % 9000;
+  return {words: [A.includes(w[0]) ? w[0] : A[h % A.length], B.includes(w[1]) ? w[1] : B[(h >>> 8) % B.length]], num: n};
+}
+function netCleanSoldier(s) {
+  s = s && typeof s === "object" ? s : {};
+  return {weapon: CALLSIGN_WEAPONS.includes(s.weapon) ? s.weapon : "rifle", pose: s.pose === 1 ? 1 : 0, hat: CALLSIGN_HATS.includes(s.hat) ? s.hat : "none"};
+}
+const netPids = a => Array.isArray(a) ? [...new Set(a.filter(p => typeof p === "string" && NET_PID.test(p)))].slice(0, 4) : [];
+
+// Game Center, through the iPhone app: posts {type: "gc", op, ...}; the app answers through window.gcEvent(evt).
+// Game Center aliases are typed by people, so they're dropped here: the game only ever shows call signs.
+function gameCenterNet() {
+  const bridge = () => window.webkit && webkit.messageHandlers && webkit.messageHandlers.paperWars;
+  const post = (op, extra) => { try { bridge().postMessage({type: "gc", op, ...extra}); } catch (e) {} };
+  let fn = () => {};
+  const T = {kind: "gamecenter", id: null,
+    available: () => !!bridge(),
+    connect: () => post("auth"),
+    host: () => post("host", {maxPlayers: 4}),
+    invite: () => post("invite"),
+    send: (ids, data) => post("send", {to: ids, data: JSON.stringify(data)}),
+    leave: () => post("leave"),
+    onEvent: f => { fn = f; }};
+  const gid = e => e && e.gamePlayerID != null ? String(e.gamePlayerID) : e && e.id != null ? String(e.id) : null;
+  window.gcEvent = e => {
+    if (!e || typeof e !== "object") return;
+    if (e.event === "auth") { if (e.ok !== false && gid(e)) T.id = gid(e); fn({event: "auth", ok: e.ok !== false, id: T.id}); }
+    else if (e.event === "people") fn({event: "people", people: (Array.isArray(e.people) ? e.people : []).map(p => ({id: gid(p)})).filter(p => p.id && p.id !== T.id)});
+    else if (e.event === "message" && e.from != null) fn({event: "message", from: String(e.from), data: e.data});
+    else if ((e.event === "left" || e.event === "back") && gid(e)) fn({event: e.event, id: gid(e)});
+  };
+  return T;
+}
+// Tests only: tabs of one browser on ?fakenet=<room>. Honours `to`; fakeNet.fault = (data, ids) => [{to, delay}, ...]
+// replans each send (an empty list drops it, two entries duplicate it, delays reorder it). drop()/rejoin() fake a lost signal.
+function fakeNetTransport(room) {
+  const ch = new BroadcastChannel("paperwars-fakenet-" + room), members = new Set(), gone = new Set();
+  let fn = () => {}, joined = false, id = null;
+  try { id = sessionStorage.getItem("paperWarsFakeId"); } catch (e) {}
+  if (!id) { id = "fake-" + newPid().slice(0, 8); try { sessionStorage.setItem("paperWarsFakeId", id); } catch (e) {} }
+  const people = () => fn({event: "people", people: [...members].map(m => ({id: m}))});
+  const T = {kind: "fake", id, room, fault: null, hosted: false,
+    available: () => true,
+    connect() { if (joined) return; joined = true; ch.postMessage({kind: "hi", id}); fn({event: "auth", ok: true, id}); },
+    host() { T.hosted = true; }, invite() {},
+    send(ids, data) {
+      const json = JSON.stringify(data), plan = typeof T.fault === "function" ? T.fault(data, ids) : null;
+      for (const d of Array.isArray(plan) ? plan : [{to: ids, delay: 0}]) {
+        const go = () => joined && ch.postMessage({kind: "msg", from: id, to: d.to || ids, data: json});
+        d.delay ? setTimeout(go, d.delay) : go();
+      }
+    },
+    leave() { if (!joined) return; ch.postMessage({kind: "bye", id}); joined = false; members.clear(); },
+    drop() { T.leave(); }, rejoin() { T.connect(); },
+    onEvent(f) { fn = f; }};
+  ch.onmessage = ({data: m}) => {
+    if (!joined || !m || m.id === id || m.from === id) return;
+    if (m.kind === "hi" || m.kind === "here") {
+      if (m.kind === "hi") ch.postMessage({kind: "here", id});
+      if (!members.has(m.id)) { members.add(m.id); if (gone.delete(m.id)) fn({event: "back", id: m.id}); people(); }
+    } else if (m.kind === "bye") { if (members.delete(m.id)) { gone.add(m.id); fn({event: "left", id: m.id}); people(); } }
+    else if (m.kind === "msg" && members.has(m.from) && Array.isArray(m.to) && m.to.includes(id)) fn({event: "message", from: m.from, data: m.data});
+  };
+  addEventListener("pagehide", () => T.leave());
+  return T;
+}
+// fakeNet tabs share one localStorage, so each tab rolls its own call sign for the session.
+function fakeCallsign() {
+  let cs = null; try { cs = JSON.parse(sessionStorage.getItem("paperWarsFakeCallsign")); } catch (e) {}
+  if (!(cs && NET_PID.test(cs.pid))) {
+    cs = {pid: newPid(), words: [pickOf(CALLSIGN_WORDS.a), pickOf(CALLSIGN_WORDS.b)], num: 1000 + Math.floor(Math.random() * 9000),
+      soldier: {weapon: pickOf(CALLSIGN_WEAPONS), pose: Math.floor(Math.random() * 2), hat: "none"}};
+    try { sessionStorage.setItem("paperWarsFakeCallsign", JSON.stringify(cs)); } catch (e) {}
+  }
+  return cs;
+}
+const fakeNetRoom = (location.search.match(/[?&]fakenet=([\w-]{1,40})/) || [])[1] || null;
+
+const net = (() => {
+  const T = fakeNetRoom ? fakeNetTransport(fakeNetRoom) : gameCenterNet();
+  const fakeCs = fakeNetRoom ? fakeCallsign() : null, mine = () => fakeCs || callsign();
+  const session = newPid().slice(0, 8), handlers = {};
+  const peers = new Map(), idOf = new Map(), present = new Set(), helloSent = new Set(), waiting = new Map();
+  let k = 0, isHost = false, catchups = 0, st;
+  const reset = () => { st = {host: null, seats: [], spectators: [], queue: [], match: null, past: new Set(), over: false,
+    next: 0, held: new Map(), early: [], seen: new Set(), log: [], parts: new Map(), updateNeeded: null}; };
+  reset();
+  const emit = (type, ...a) => (handlers[type] || []).slice().forEach(f => { try { f(...a); } catch (e) { setTimeout(() => { throw e; }); } });
+  const idFor = pid => { const p = peers.get(pid); return p && present.has(p.id) ? p.id : null; };
+  const opponent = () => { const me = mine().pid; return st.seats.includes(me) ? st.seats.find(p => p !== me) || null : null; };
+  const list = () => [...peers.values()].filter(p => present.has(p.id)).map(p => ({...p, tag: {...p.tag, words: [...p.tag.words]}, soldier: {...p.soldier}, owns: {...p.owns}}));
+  // Who `to` reaches: transport ids, and whether that's the opponent alone (the only place private content may go).
+  function resolve(to) {
+    const opp = opponent();
+    if (to === "all") return {ids: [...present], onlyOpponent: false};
+    if (to === "opponent") { if (!opp) throw new Error("net: not seated, so there's no opponent to send to"); const id = idFor(opp); return {ids: id ? [id] : [], onlyOpponent: true}; }
+    if (to === "spectators") return {ids: [...present].filter(id => !st.seats.includes(idOf.get(id))), onlyOpponent: false}; // anyone not seated counts as a spectator
+    if (Array.isArray(to) && to.length && to.every(p => typeof p === "string")) return {ids: [...new Set(to.map(idFor).filter(Boolean))], onlyOpponent: !!opp && to.every(p => p === opp)};
+    throw new Error("net: every send names its recipients");
+  }
+  const envelope = msg => ({...msg, v: NET_V, from: mine().pid, s: session, k: ++k});
+  function sendHello(ids) {
+    if (!ids.length) return;
+    const cs = mine();
+    ids.forEach(id => helloSent.add(id));
+    T.send(ids, envelope({t: "hello", pid: cs.pid, tag: {words: [...cs.words], num: cs.num}, soldier: {...cs.soldier}, owns: netOwns(), host: isHost}));
+  }
+  function setRoles(d) {
+    if (typeof d.host === "string" && NET_PID.test(d.host)) st.host = d.host;
+    st.seats = netPids(d.seats).slice(0, 2); st.spectators = netPids(d.spectators); st.queue = netPids(d.queue);
+  }
+  function beginMatch(d) {
+    if (st.match) st.past.add(st.match.matchId);
+    st.match = {matchId: String(d.matchId).slice(0, 40), seats: netPids(d.seats).slice(0, 2), settings: d.settings && typeof d.settings === "object" ? d.settings : {}, seed: d.seed | 0};
+    st.seats = st.match.seats.slice(); st.over = false; st.next = 0; st.held.clear(); st.log = [];
+  }
+  const loggable = d => st.match && d.pub === true && NET_LOGGED.includes(d.t) && !netArmyKey(d) && !netPrivate(d);
+  function flushHeld() {
+    for (const p of [...st.held.keys()]) if (p < st.next) st.held.delete(p);
+    while (st.held.has(st.next)) { const h = st.held.get(st.next); st.held.delete(st.next); st.next++; deliver(h); }
+  }
+  function flushEarly() { const e = st.early; st.early = []; e.forEach(route); }
+  function deliver(d) {
+    if (d.t === "lobby") setRoles(d);
+    if (d.t === "catchup") return gotCatchup(d);
+    if (d.t === "remove" && d.pid === mine().pid) { emit("removed", d); api.leave(); return; }
+    if (loggable(d)) st.log.push(d);
+    emit(d.t, d); emit("message", d);
+  }
+  function route(d) {
+    if (d.t === "start") {
+      const id = String(d.matchId);
+      if (st.past.has(id) || (st.match && st.match.matchId === id)) return;
+      beginMatch(d); deliver(d); flushEarly(); return;
+    }
+    const pos = netPos(d);
+    if (pos == null) return deliver(d);
+    if (!st.match || d.m !== st.match.matchId) { if (!st.past.has(d.m) && st.early.length < 200) st.early.push(d); return; }
+    if (pos < st.next || st.held.has(pos)) return; // already had it
+    if (pos > st.next) { st.held.set(pos, d); return; } // too early: wait for the ones before it
+    st.next++; deliver(d); flushHeld();
+  }
+  function gotHello(id, d) {
+    const pid = d.pid;
+    if (typeof pid !== "string" || !NET_PID.test(pid) || d.from !== pid || pid === mine().pid) return;
+    const prev = peers.get(pid);
+    if (prev && prev.id !== id && present.has(prev.id)) return; // someone else already speaks as this pid
+    const key = `${pid}:${d.s}:${d.k}`; if (st.seen.has(key)) return; st.seen.add(key);
+    const owns = netCleanOwns(d.owns), host = d.host === true && owns.arsenal; // only an owner can host
+    const old = idOf.get(id); if (old && old !== pid) peers.delete(old);
+    peers.set(pid, {pid, id, tag: netCleanTag(d.tag, pid), soldier: netCleanSoldier(d.soldier), owns, host});
+    idOf.set(id, pid);
+    if (host && !isHost && !st.host) st.host = pid;
+    if (!helloSent.has(id) && present.has(id)) sendHello([id]);
+    emit("hello", list().find(p => p.pid === pid)); emit("people", list());
+    const q = waiting.get(id); waiting.delete(id); if (q) q.forEach(m => receive(id, m));
+  }
+  function gotCatchup(d) {
+    if (!Number.isInteger(d.parts) || d.parts < 1 || d.parts > 50 || !Number.isInteger(d.part) || d.part < 0 || d.part >= d.parts || !Array.isArray(d.log)) return;
+    const key = `${d.from}:${d.cid}`, got = st.parts.get(key) || []; got[d.part] = d.log; st.parts.set(key, got);
+    for (let i = 0; i < d.parts; i++) if (!got[i]) return; // wait for every part
+    st.parts.delete(key);
+    const m = d.match || {}, log = got.flat().filter(e => e && typeof e === "object" && NET_TYPES.includes(e.t));
+    if (!st.match || st.match.matchId !== String(m.matchId)) beginMatch(m);
+    let last = -1;
+    for (const e of log) { st.seen.add(`${e.from}:${e.s}:${e.k}`); const p = netPos(e); if (p != null && p > last) last = p; }
+    st.next = Math.max(st.next, last + 1); st.log = log.slice();
+    emit("catchup", {match: {...st.match}, log}); emit("message", d);
+    flushHeld(); flushEarly();
+  }
+  function receive(id, raw) {
+    let d = raw;
+    if (typeof d === "string") { if (d.length > NET_MAX * 2) return; try { d = JSON.parse(d); } catch (e) { return; } }
+    if (!d || typeof d !== "object" || Array.isArray(d)) return;
+    if (d.t === "hello" && d.v !== NET_V) { st.updateNeeded = NET_UPDATE_TEXT; emit("update", {text: NET_UPDATE_TEXT, v: d.v}); return; }
+    if (d.v !== NET_V || !NET_TYPES.includes(d.t)) return;
+    if (d.t === "hello") return gotHello(id, d);
+    const pid = idOf.get(id);
+    if (!pid) { const q = waiting.get(id) || []; if (q.length < 100) q.push(d); waiting.set(id, q); return; } // before its hello
+    if (d.from !== pid) return; // nobody speaks for someone else
+    if (NET_HOST_ONLY.includes(d.t) && pid !== st.host) return;
+    const key = `${pid}:${d.s}:${d.k}`; if (st.seen.has(key)) return; st.seen.add(key);
+    route(d);
+  }
+  T.onEvent(e => {
+    if (e.event === "auth") emit("auth", {ok: e.ok});
+    else if (e.event === "people") {
+      const now = (e.people || []).map(p => p.id).filter(Boolean), fresh = now.filter(id => !present.has(id));
+      present.clear(); now.forEach(id => present.add(id));
+      sendHello(fresh); emit("people", list());
+    } else if (e.event === "message") receive(e.from, e.data);
+    else if (e.event === "left") { present.delete(e.id); helloSent.delete(e.id); emit("left", {pid: idOf.get(e.id) || null, id: e.id}); emit("people", list()); }
+    else if (e.event === "back") { present.add(e.id); sendHello([e.id]); emit("back", {pid: idOf.get(e.id) || null, id: e.id}); emit("people", list()); }
+  });
+  const api = {
+    transport: T,
+    available: () => T.available(),
+    me: () => { const cs = mine(); return {pid: cs.pid, isHost, id: T.id, tag: {words: [...cs.words], num: cs.num}, soldier: {...cs.soldier}}; },
+    auth: () => T.connect(),
+    // Only a Full Arsenal (or future paid pack) owner can host; what this phone owns is checked here, not taken from the caller.
+    host() {
+      if (!netOwns().arsenal) return {ok: false, why: "Hosting needs the Full Arsenal. Anyone can join a friend's battle."};
+      isHost = true; st.host = mine().pid; T.connect(); T.host(); helloSent.clear(); sendHello([...present]);
+      return {ok: true};
+    },
+    invite: () => T.invite(),
+    send(msg, to) {
+      const r = sendGuard(msg, to);
+      const env = envelope(msg);
+      env.pub = to === "all" || to === "spectators";
+      if (msg.t === "start") { beginMatch(msg); env.m = st.match.matchId; }
+      else if (netPos(msg) != null && st.match) env.m = st.match.matchId;
+      if (msg.t === "lobby" && isHost) setRoles(msg);
+      if (msg.t === "over") st.over = true; // this phone's own "over": now its army may be revealed
+      const pos = netPos(env);
+      if (pos != null && pos >= st.next) { st.next = pos + 1; flushHeld(); }
+      if (loggable(env)) st.log.push(env);
+      if (r.ids.length) T.send(r.ids, env);
+      return env;
+    },
+    on(type, fn) { (handlers[type] = handlers[type] || []).push(fn); return () => { handlers[type] = handlers[type].filter(f => f !== fn); }; },
+    leave() { T.leave(); present.clear(); peers.clear(); idOf.clear(); helloSent.clear(); waiting.clear(); isHost = false; reset(); },
+    peers: list,
+    roles: () => ({host: st.host, seats: st.seats.slice(), spectators: st.spectators.slice(), queue: st.queue.slice()}),
+    hello: () => { helloSent.clear(); sendHello([...present]); },
+    // Host -> a late spectator: everything public in this match so far (in parts small enough for Game Center).
+    catchup(pid) {
+      if (!isHost || !st.match) return 0;
+      const chunks = [[]]; let size = 0;
+      for (const e of st.log) { const n = JSON.stringify(e).length; if (size + n > NET_CHUNK && chunks[chunks.length - 1].length) { chunks.push([]); size = 0; } chunks[chunks.length - 1].push(e); size += n; }
+      const cid = ++catchups;
+      chunks.forEach((log, part) => api.send({t: "catchup", cid, match: {...st.match}, log, part, parts: chunks.length}, [pid]));
+      return chunks.length;
+    },
+    get over() { return st.over; },
+    get updateNeeded() { return st.updateNeeded; },
+    _resolve: resolve,
+  };
+  if (fakeNetRoom) T.connect(); // a fake room is joined on load (like accepting a Game Center invite)
+  return api;
+})();
+const fakeNet = fakeNetRoom ? net.transport : null;
+// Throws instead of sending anything that would give away a hidden army or a private pick. Returns who `to` reaches.
+function sendGuard(msg, to) {
+  if (!msg || typeof msg !== "object" || Array.isArray(msg) || !NET_TYPES.includes(msg.t)) throw new Error("sendGuard: unknown message " + (msg && msg.t));
+  const r = net._resolve(to);
+  const army = netArmyKey(msg);
+  if (!net.over && (army || msg.t === "reveal")) throw new Error(`sendGuard: ${army ? `"${army}"` : "a reveal"} can't leave this phone before the match is over`);
+  if (netPrivate(msg) && !r.onlyOpponent) throw new Error("sendGuard: private content goes to the opponent only, never to a spectator");
+  if (msg.t === "catchup" && Array.isArray(msg.log) && msg.log.some(netPrivate)) throw new Error("sendGuard: a catch-up can't carry private content");
+  if (JSON.stringify(msg).length > NET_MAX) throw new Error("sendGuard: message too big");
+  return r;
+}
+
 // test hook for automated play-testing
 window.paperWar = {get state() { return {phase, cur, players, opts, pending, lastResult, replay}; }, hitTest, mirror, W, H, cpuAim, playReplay, awards};
 </script>
