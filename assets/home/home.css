@@ -340,3 +340,20 @@ footer a{margin:0 10px}
   .hero .dev .lab span{font-size:12px}
   .hero .dev .lab small{font-size:9px}
 }
+/* Orbit toy: face photos like the real app, name under each with a family/friend dot */
+#orbitToy .friend{width:34px;height:34px;margin:-17px;background-size:cover;background-position:center;border:2px solid rgba(255,255,255,.9);color:transparent}
+#orbitToy .friend span{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:4px;font-size:9px;font-weight:600;color:#fff;white-space:nowrap;opacity:.85}
+#orbitToy .friend span::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:3px;vertical-align:1px;background:#ff7aa2}
+#orbitToy .friend span.fr::before{background:#6aa8ff}
+#orbitToy .you{width:48px;height:48px;margin:-24px;background:radial-gradient(circle at 35% 30%,#9d8cff,#5b3df5);color:#fff;box-shadow:0 0 0 4px rgba(120,100,255,.25),0 0 30px rgba(120,100,255,.5)}
+/* Field Guide: a little hand-drawn map that inks itself in */
+#fgToy .map{position:absolute;left:4%;top:22%;width:64%;height:72%;overflow:visible;pointer-events:none}
+#fgToy .map path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+#fgToy .map .trail{stroke:#3f63b0;stroke-width:3.2;stroke-dasharray:5 5}
+#fgToy .map .ink{stroke:#4a3826;stroke-width:2.4}
+#fgToy .map .x{stroke:#d2452f;stroke-width:4}
+#fgToy .map text{font-family:Caveat,cursive;font-size:17px;fill:#4a3826}
+#fgToy .map{clip-path:inset(0 100% 0 0)}
+.seen #fgToy .map{animation:mapdraw 2.4s .6s cubic-bezier(.4,0,.2,1) forwards}
+@keyframes mapdraw{to{clip-path:inset(0 0 0 0)}}
+@media (prefers-reduced-motion:reduce){#fgToy .map{clip-path:none;animation:none}}
