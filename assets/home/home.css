@@ -140,7 +140,6 @@ section{position:relative;padding:16vh 6vw}
 /* team */
 .team .wrap{display:grid;grid-template-columns:1fr 1fr;gap:6vw;align-items:start}
 .team h2{font-size:clamp(46px,6vw,96px);line-height:.94;letter-spacing:-.025em}.team h2 em{color:var(--gold)}
-#nest{width:170px;display:block;margin:10px 0 18px -10px}
 .team .lede{font-size:19px;line-height:1.55;opacity:.88;margin-top:22px;max-width:460px}
 .vals{display:grid;gap:14px;margin-top:30px}
 .vals div{padding:20px 22px;border-radius:22px;background:rgba(255,255,255,.07);border:1px solid var(--line)}
@@ -361,3 +360,13 @@ footer a{margin:0 10px}
 #pwToy::before{display:none}
 #pwToy video{object-fit:cover;object-position:center}
 #pwToy .tip{bottom:18px}
+/* studio: a night tree at the left edge; its long branch reaches over the headline and the bird perches at the tip */
+.team{position:relative;overflow:hidden}
+.team .wrap{position:relative;z-index:1}
+.team .tree{position:absolute;left:0;top:0;width:min(48vw,700px);height:100%;pointer-events:none;z-index:0}
+.team .tree svg{position:absolute;left:-2vw;top:clamp(10px,3vh,40px);width:100%;height:auto;overflow:visible}
+.team .tree .wood path:first-child{fill:#221b40}
+.team .tree .wood path{stroke:#221b40;stroke-linecap:round}
+.team .tree .leaves ellipse{fill:#241f48}
+.team .tree .leaves.front ellipse{fill:#2e2858}
+@media (max-width:900px){.team .tree{width:96vw;opacity:.7}}
