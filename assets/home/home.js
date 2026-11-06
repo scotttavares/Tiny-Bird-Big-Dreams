@@ -93,7 +93,7 @@
   function paintSky(t) {
     var now = hourNow(), h = now.h;
     clockT.textContent = fmt(h); clockL.textContent = now.l;
-    // the reel cycles through the whole day on its own, so the clock only joins once the day is scrolled, and leaves once the day is done
+    // the clock joins once the day starts (the picker) and leaves once the day is done
     var mid = scrollY + innerHeight * .5; clockEl.classList.toggle("on", !!picker && mid > picker.offsetTop && (!dayEnd || mid < dayEnd.offsetTop));
     var ang = Math.PI * (1 - Math.min(1, Math.max(0, (h - 6) / 14)));
     sunDot.setAttribute("cx", (17 + 15 * Math.cos(ang)).toFixed(1)); sunDot.setAttribute("cy", (18 - 15 * Math.sin(ang)).toFixed(1));
@@ -186,87 +186,6 @@
   var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) e.target.classList.add("seen"); }); }, { threshold: .18 });
   $$("section").forEach(function (s) { io.observe(s); });
 
-  /* ---------- the reel: four real-life clips, crossfading ---------- */
-  (function () {
-    var clips = [
-      { n: "lull", kind: "phone", alt: "Lull's breathing screen", line: "A breath before the day.", cap: "7:12 am · Lull", sub: "One breath before the emails", ic: '<img src="/assets/home/icon-lull.png" alt="" />' },
-      { n: "orbit", kind: "phone", alt: "Orbit's orbit view of friends and family", line: "A hello that brings them closer.", cap: "12:40 pm · Orbit", sub: "A hello on the lunch break", ic: '<img src="/assets/home/icon-orbit.png" alt="" />' },
-      { n: "fieldguide", kind: "duo", alt: "A Field Guide journal spread on iPhone Duo", line: "A page for every adventure.", cap: "6:30 pm · Field Guide", sub: "A butterfly, saved forever", ic: '<img src="/assets/home/icon-fieldguide.png" alt="" />' },
-      { n: "paperwars", kind: "phone", alt: "A Paper Wars battlefield on notebook paper", line: "A laugh to end the night.", cap: "9:15 pm · Paper Wars", sub: "Face to face, one more round", ic: '<img src="/assets/home/icon-paperwars.png" alt="" />' },
-      { n: "lull-sleep", file: "lull-sleep", app: "lull", kind: "phone", alt: "Lull's Sleep screen", line: "A softer way to drift off.", cap: "10:45 pm · Lull", sub: "Sleep mode, lights out", ic: '<img src="/assets/home/icon-lull.png" alt="" />' },
-    ];
-    var root = $("#reel"), vids = [$("#vA"), $("#vB")], still = $(".reel .still"), capEl = $("#reelCap"), ticks = $$("#ticks i b"), pp = $("#reelPP");
-    var fails = 0;
-    var RATE = 0.8; // play the clips a little slower than real time
-    var idx = 0, front = 0, playing = !RM, visible = false, started = false, raf = 0;
-    var saveData = navigator.connection && navigator.connection.saveData;
-    if (saveData) playing = false;
-    function src(i) { return "/assets/home/reel/" + clips[i].n + ".mp4"; }
-    var lineEl = $("#reelLine"), shot = $("#appshot"), shotImg = $("#appshotImg");
-    var NAMES = { lull: "Lull", "lull-sleep": "Lull Sleep", orbit: "Orbit", fieldguide: "Field Guide", paperwars: "Paper Wars" };
-    clips.forEach(function (c) { var im = new Image(); im.src = "/assets/home/screens/" + c.n + ".jpg"; });
-    function showShot(i) {
-      var c = clips[i];
-      if (shotImg.getAttribute("src") === "/assets/home/screens/" + c.n + ".jpg") { shot.classList.add("in"); return; }
-      shot.classList.remove("in");
-      setTimeout(function () {
-        shotImg.src = "/assets/home/screens/" + c.n + ".jpg"; shotImg.alt = c.alt;
-        shot.dataset.kind = c.kind;
-        shot.classList.add("in");
-      }, 350);
-    }
-    function caption(i) {
-      showShot(i);
-      capEl.innerHTML = clips[i].ic + "<div><b>" + clips[i].cap + "</b><span>" + clips[i].sub + "</span></div>";
-      if (lineEl.textContent === clips[i].line) return;
-      lineEl.innerHTML = clips[i].line.split(" ").map(function (w, k) { return '<span class="w" style="animation-delay:' + (k * 90) + 'ms">' + w + "</span>"; }).join(" ");
-    }
-    function setTicks() {
-      var v = vids[front];
-      ticks.forEach(function (b, i) { b.style.width = i < idx ? "100%" : i > idx ? "0" : ((v.duration ? v.currentTime / v.duration : 0) * 100) + "%"; });
-      raf = (playing && visible) ? requestAnimationFrame(setTicks) : 0;
-    }
-    function show(i) {
-      var next = vids[1 - front], cur = vids[front];
-      next.src = src(i); next.poster = "/assets/home/reel/" + clips[i].n + "-poster.jpg";
-      next.currentTime = 0; next.playbackRate = RATE; next.defaultPlaybackRate = RATE;
-      var go = function () {
-        next.classList.add("on"); cur.classList.remove("on"); still.classList.remove("on");
-        setTimeout(function () { cur.pause(); }, 900);
-        front = 1 - front; idx = i; caption(i);
-      };
-      var p = next.play();
-      if (p && p.then) p.then(function () { fails = 0; go(); }).catch(function (err) {
-        if (err && err.name === "NotAllowedError") {
-          // Autoplay refused (e.g. Low Power Mode): show this clip's still with its own caption and wait for the play button.
-          still.src = next.poster; still.classList.add("on"); idx = i; caption(i);
-          playing = false; started = false; pp.textContent = "▶"; pp.setAttribute("aria-label", "Play video");
-        } else if (++fails < clips.length) {
-          // This clip didn't load: skip it, leaving the current footage and caption together.
-          idx = i; show((i + 1) % clips.length);
-        }
-      });
-      else go();
-    }
-    vids.forEach(function (v) {
-      v.addEventListener("ended", function () { if (v === vids[front] && playing && visible) show((idx + 1) % clips.length); });
-    });
-    function start() {
-      if (started) { if (playing) vids[front].play().catch(function () {}); return; }
-      started = true; show(0); cancelAnimationFrame(raf); setTicks();
-    }
-    function stop() { vids.forEach(function (v) { v.pause(); }); }
-    pp.addEventListener("click", function () {
-      playing = !playing;
-      pp.textContent = playing ? "❚❚" : "▶"; pp.setAttribute("aria-label", playing ? "Pause video" : "Play video");
-      if (playing && visible) { start(); cancelAnimationFrame(raf); setTicks(); } else stop();
-    });
-    if (!playing) { pp.textContent = "▶"; pp.setAttribute("aria-label", "Play video"); }
-    new IntersectionObserver(function (es) {
-      visible = es[0].isIntersecting;
-      if (visible && playing) { start(); cancelAnimationFrame(raf); setTicks(); } else stop();
-    }, { threshold: .25 }).observe(root);
-  })();
 
   /* ---------- picker + shop + outbound tracking ---------- */
   $$("[data-pick]").forEach(function (a) { a.addEventListener("click", function () { track("pick", a.dataset.pick); }); });
