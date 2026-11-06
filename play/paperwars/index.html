@@ -56,6 +56,13 @@ button:disabled{opacity:.4;cursor:default}
 .menu{--ink:#2b2a27;position:relative;color:var(--ink);max-width:560px;width:100%;border-radius:16px;padding:14px 16px 16px 46px;box-shadow:0 8px 24px #0004;
   background:linear-gradient(90deg,#0000 33px,#e7a3a3 33px 34px,#0000 34px),repeating-linear-gradient(#fbf8ef 0 21px,#c9d8ea 21px 22px) #fbf8ef}
 .menu .mtitle{font:700 40px/1 Caveat,cursive;margin:0 0 4px;color:#1f4fa8}
+.menu .mtitle small{display:block;font-size:24px;color:#b3261e}
+.camps{display:grid;gap:14px;grid-template-columns:1fr 1fr}
+.camps .camp:first-child{grid-column:1/-1}
+.camps .camp span{font:700 22px/1.1 Caveat,cursive}
+.camps .camp.soon{opacity:.45;cursor:default}
+.campback{display:block;margin:0 0 6px;padding:2px 10px;font:700 18px/1.2 Caveat,cursive;color:#1f4fa8;background:transparent;border:1.5px solid #1f4fa855;border-radius:12px;cursor:pointer}
+#menu[data-campaign=drumstick] #bootBtn{display:none}
 .menu h4{font:700 25px/1.1 Caveat,cursive;margin:12px 0 6px;color:var(--ink)}
 .tiles{display:grid;gap:10px}
 .tiles.two{grid-template-columns:1fr 1fr}
@@ -303,8 +310,17 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
 
 <div id="coach" class="coach hidden"><b>Drill Sergeant</b><span id="coachText"></span></div>
 
-<section id="menu" class="menu">
-  <h3 class="mtitle">New mission</h3>
+<section id="campaigns" class="menu hidden">
+  <h3 class="mtitle">Choose your campaign</h3>
+  <div class="camps">
+    <button type="button" class="tile camp" data-campaign="regular"><canvas class="pic" data-pic="camp-regular"></canvas><span>Regular War</span><small>The pencil war</small></button>
+    <button type="button" class="tile camp" data-campaign="drumstick"><canvas class="pic" data-pic="camp-drumstick"></canvas><span>Operation Drumstick</span><small>Thanksgiving</small></button>
+    <button type="button" class="tile camp soon" data-campaign="editions" disabled><canvas class="pic" data-pic="camp-editions"></canvas><span>Editions</span><small>Coming soon</small></button>
+  </div>
+</section>
+<section id="menu" class="menu" data-campaign="regular">
+  <button type="button" id="campaignsBtn" class="campback">&#9664; Campaigns</button>
+  <h3 class="mtitle">New mission<small id="campName"></small></h3>
   <h4>Who's the enemy?</h4>
   <div class="tiles two">
     <label class="tile"><input type="radio" name="foe" value="human" checked><canvas class="pic" data-pic="friend"></canvas><span>A friend</span></label>
@@ -3217,7 +3233,9 @@ function newMatch(preset) {
     fortWin: $("optFortWin").checked && $("optFort").checked, near: $("optNear").checked, size: +$("optSize").value,
     reveal: +$("optReveal").value, reinforce: +$("optReinforce").value, timer: +$("optTimer").value,
     foe: document.querySelector("input[name=foe]:checked").value, level: document.querySelector("input[name=level]:checked").value, bootcamp: false, map: $("optMap").value,
+    campaign: currentCampaign(),
   };
+  if (!CAMPAIGNS[opts.campaign] || opts.bootcamp) opts.campaign = "regular"; // a preset without one (Boot Camp, old tests) is the regular war
   // Tent mode: two people, phone standing as a tent. Both set up and pick at once; no hand-off screens.
   opts.tent = opts.foe === "human" && !opts.bootcamp && tentWanted();
   if (opts.tent) opts.fireBy = "tap";
@@ -5221,8 +5239,9 @@ function drawIcon(c, kind) {
 }
 function drawMenuPics() {
   withStdSize(() => {
-    document.querySelectorAll("#menu canvas.pic").forEach(cv => {
+    document.querySelectorAll("#menu canvas.pic, #campaigns canvas.pic").forEach(cv => {
       const k = cv.dataset.pic;
+      if (k.startsWith("camp-")) { drawCampPic(picCtx(cv, 150, 100), k.slice(5)); return; }
       if (k.startsWith("map-")) { drawMap(picCtx(cv, 150, 100), k.slice(4)); return; }
       if (k === "ink0" || k === "ink1") {
         const i = +k[3], c = picCtx(cv, 44, 60);
@@ -5242,6 +5261,33 @@ function drawMenuPics() {
     });
     document.querySelectorAll("#menu canvas.ico").forEach(cv => drawIcon(picCtx(cv, 34, 34), cv.dataset.ico));
   });
+}
+// The campaign folders: a manila file with its codename stamped on, and what's inside peeking out.
+function drawCampPic(c, id) {
+  c.save(); c.lineJoin = c.lineCap = "round";
+  c.fillStyle = "#e9cf94"; c.strokeStyle = "#8a6a32"; c.lineWidth = 1.6;
+  c.beginPath(); c.moveTo(14, 30); c.lineTo(14, 22); c.lineTo(52, 22); c.lineTo(58, 30); c.closePath(); c.fill(); c.stroke(); // the tab
+  if (id === "regular") {
+    drawSoldier(c, {x: 50, y: 10, pose: 0, seed: 41, alive: true, name: "", weapon: "rifle", face: 1}, INK[0]);
+    drawSoldier(c, {x: 100, y: 10, pose: 1, seed: 42, alive: true, name: "", weapon: "tommy", face: -1}, INK[1]);
+  } else if (id === "drumstick") {
+    if (typeof drawTurkey === "function") drawTurkey(c, 56, 34, 1, 0); else drawPumpkin(c, 56, 40, 12);
+    drawPumpkin(c, 104, 42, 13);
+  }
+  c.fillStyle = "#e9cf94"; c.strokeStyle = "#8a6a32"; c.fillRect(10, 46, 130, 50); c.strokeRect(10, 46, 130, 50); // the front cover
+  const stamp = id === "regular" ? "PENCIL WAR" : id === "drumstick" ? "DRUMSTICK" : "CLASSIFIED";
+  c.translate(75, 72); c.rotate(-.05); c.font = '700 17px "Stardos Stencil", monospace'; c.textAlign = "center"; c.textBaseline = "middle";
+  const w = c.measureText(stamp).width + 14; c.strokeStyle = "#b3261e"; c.lineWidth = 2.2; c.strokeRect(-w / 2, -13, w, 26);
+  c.fillStyle = "#b3261e"; c.fillText(stamp, 0, 1);
+  c.restore();
+}
+// A crayon pumpkin (picker art now; the Harvest map's pumpkins use it too).
+function drawPumpkin(c, x, y, r) {
+  c.save(); c.lineJoin = c.lineCap = "round"; c.fillStyle = "#f08a24"; c.strokeStyle = "#a4520c"; c.lineWidth = 1.6;
+  c.beginPath(); c.ellipse(x, y, r * 1.15, r * .9, 0, 0, 7); c.fill(); c.stroke();
+  c.beginPath(); c.ellipse(x, y, r * .45, r * .9, 0, 0, 7); c.stroke(); // the ribs
+  c.strokeStyle = "#4f7a2a"; c.lineWidth = 2.4; c.beginPath(); c.moveTo(x, y - r * .85); c.quadraticCurveTo(x + 2, y - r * 1.3, x + 5, y - r * 1.35); c.stroke(); // the stem
+  c.restore();
 }
 function markMap() { document.querySelectorAll("#mapTiles .tile").forEach(t => t.classList.toggle("on", t.dataset.map === $("optMap").value)); }
 document.querySelectorAll("#mapTiles .tile").forEach(t => t.onclick = () => {
@@ -5509,7 +5555,35 @@ function stopAmbient() {
   const bed = ambient.bed; ambient.bed = null;
   if (bed) try { const t = ac.currentTime; bed.g.gain.cancelScheduledValues(t); bed.g.gain.setValueAtTime(bed.g.gain.value, t); bed.g.gain.linearRampToValueAtTime(0, t + .8); bed.src.stop(t + .9); bed.lfo.stop(t + .9); } catch (e) {}
 }
-function endIntro() { introRun++; $("intro").classList.add("hidden"); $("intro").classList.remove("folding"); }
+function endIntro() { introRun++; $("intro").classList.add("hidden"); $("intro").classList.remove("folding"); afterIntro(); }
+// ---------- Choose your campaign (Operation Drumstick, 1.1) ----------
+// The first time, the picker comes after the intro; after that the game opens on the last campaign's New mission page,
+// and "Campaigns" goes back to the picker (user-approved design, 2026-11-06).
+const CAMPAIGNS = {regular: {name: "Regular War"}, drumstick: {name: "Operation Drumstick"}};
+const SEEN_CAMPAIGNS = "paperWarsSeenCampaigns";
+const currentCampaign = () => CAMPAIGNS[$("menu").dataset.campaign] ? $("menu").dataset.campaign : "regular";
+function showCampaigns() {
+  $("menu").classList.add("hidden"); $("campaigns").classList.remove("hidden"); window.scrollTo(0, 0);
+  try { localStorage.setItem(SEEN_CAMPAIGNS, "1"); } catch (e) {}
+}
+function setCampaign(id) {
+  if (!CAMPAIGNS[id]) id = "regular";
+  $("menu").dataset.campaign = id;
+  $("campName").textContent = id === "regular" ? "" : CAMPAIGNS[id].name;
+  if (typeof campaignMaps === "function") campaignMaps(id);
+}
+function openCampaign(id) {
+  setCampaign(id);
+  $("campaigns").classList.add("hidden"); $("menu").classList.remove("hidden"); window.scrollTo(0, 0);
+  if (window.__settingsReady) saveSettings();
+}
+function afterIntro() {
+  if (phase && phase !== "menu" && phase !== "over") return; // the Intro button mid-game never moves you
+  let seen = false; try { seen = localStorage.getItem(SEEN_CAMPAIGNS) === "1"; } catch (e) {}
+  if (!seen) showCampaigns();
+}
+document.querySelectorAll("#campaigns .camp").forEach(b => b.onclick = () => { if (b.disabled) return; pageTurn($("campaigns")); openCampaign(b.dataset.campaign); });
+$("campaignsBtn").onclick = () => { pageTurn($("menu")); showCampaigns(); };
 function showIntroCard() {
   introRun++; $("intro").classList.remove("hidden", "folding"); $("intro").classList.add("carding"); $("introCard").classList.remove("hidden"); $("introBar").classList.add("hidden");
   fitIntro(); ictx.clearRect(0, 0, W, IH); paper(ictx, IH); drawIntroPic();
@@ -5580,7 +5654,7 @@ function saveSettings() {
   const radio = n => (document.querySelector(`input[name=${n}]:checked`) || {}).value;
   const s = {fort: $("optFort").checked, fortWin: $("optFortWin").checked, near: $("optNear").checked, fireBy: radio("fireBy"),
     flings: +$("optFlings").value, size: +$("optSize").value, reveal: +$("optReveal").value, timer: +$("optTimer").value,
-    foe: radio("foe"), level: radio("level"), map: $("optMap").value};
+    foe: radio("foe"), level: radio("level"), map: $("optMap").value, campaign: currentCampaign()};
   const prev = readSettings(); // Full Arsenal choices the free game can't show are kept as they were
   if (fullArsenal()) s.reinforce = +$("optReinforce").value; else { if ("reinforce" in prev) s.reinforce = prev.reinforce; s.fortWin = prev.fortWin;
     if (ARSENAL.maps.includes(prev.map) && s.map === "random") s.map = prev.map; if (ARSENAL.levels.includes(prev.level) && s.level === "sergeant") s.level = prev.level; }
@@ -5606,6 +5680,7 @@ function applySettings(s, arsenalOnly = false) {
   }
 }
 window.__settingsReady = true; applySettings(readSettings()); applyArsenal();
+setCampaign(readSettings().campaign || "regular"); // shown on the New mission page (the picker, if it's up, stays up)
 document.addEventListener("change", e => e.target.closest && e.target.closest("#menu") && e.target.matches("input, select") && e.target.name !== "rvMode" && saveSettings());
 document.querySelectorAll("#mapTiles .tile").forEach(t => t.addEventListener("click", () => !t.classList.contains("locked") && saveSettings()));
 $("startBtn").onclick = () => { if (inkProblem()) return; rematchFirst = null; pageTurn($("menu")); newMatch(); };
