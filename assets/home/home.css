@@ -273,10 +273,14 @@ footer a{margin:0 10px}
 .reel .over>div:last-child{margin-top:14px}
 @media (max-width:900px){.appshot{height:40%;top:10%;right:5%;border-width:5px;border-radius:20px}.appshot[data-kind="duo"]{height:34%}.reel .over{max-width:none;right:4%}}
 
-/* Lull toy, modelled on the real Lull breathing screen */
-#lullToy .lullhead{position:absolute;top:34px;left:0;right:0;text-align:center}
-#lullToy .lullhead b{display:block;font-weight:500;font-size:12px;letter-spacing:.5em;padding-left:.5em}
-#lullToy .lullhead span{font-size:10px;opacity:.6}
-#lullToy .lullring{position:absolute;left:8%;width:84%;top:50%;transform:translateY(-50%)}
-#lullToy #sphere{width:52%;margin:-26% 0 0 -26%;top:50%;background:url(/assets/home/lull-orb.jpg) center/cover;border:2px solid rgba(255,255,255,.4);display:grid;place-items:center}
-#lullToy #breathTxt{position:static;font-family:"Inter Tight",sans-serif;font-style:normal;font-size:15px;font-weight:500;color:#fff;text-shadow:0 1px 8px rgba(60,30,120,.8)}
+/* Lull toy, modelled on the real Lull breathing screen (App Store "Just breathe.") */
+#lullToy{background:radial-gradient(90% 40% at 50% 0%,#2a1f4e,transparent 70%),linear-gradient(180deg,#181430,#0d0b19 70%,#1a0f1c)}
+#lullToy .lullhead{position:absolute;top:13%;left:0;right:0;text-align:center}
+#lullToy .lullhead b{display:block;font-weight:500;font-size:11px;letter-spacing:.55em;padding-left:.55em;opacity:.9}
+#lullToy .lullhead span{display:block;font-size:9px;opacity:.55;margin-top:6px}
+#lullToy .lullring{position:absolute;left:12%;width:76%;top:42%;transform:translateY(-50%)}
+#lullToy #sphere{width:56%;margin:-28% 0 0 -28%;top:42%;background:#05040a url(/assets/home/lull-orb.jpg) center/118% no-repeat;border:none;display:grid;place-items:center}
+#lullToy #breathTxt{position:static;font-family:"Inter Tight",sans-serif;font-style:normal;font-size:16px;font-weight:400;color:#fff;text-shadow:0 1px 10px rgba(0,0,0,.6)}
+#lullToy .lulltime{position:absolute;top:63%;left:0;right:0;text-align:center;font-size:10px;opacity:.7;font-variant-numeric:tabular-nums}
+#lullToy .lullpill{position:absolute;bottom:13%;left:22%;right:22%;padding:8px 0;border-radius:99px;text-align:center;font-size:11px;font-weight:700;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.06));border:1px solid rgba(255,255,255,.28);box-shadow:0 0 18px rgba(213,139,255,.25)}
+#lullToy .lullend{position:absolute;bottom:7.5%;left:0;right:0;text-align:center;font-size:9px;opacity:.5}
