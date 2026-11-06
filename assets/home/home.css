@@ -285,3 +285,36 @@ footer a{margin:0 10px}
 #lullToy .lulltime{position:absolute;top:63%;left:0;right:0;text-align:center;font-size:10px;opacity:.7;font-variant-numeric:tabular-nums}
 #lullToy .lullpill{position:absolute;bottom:13%;left:22%;right:22%;padding:8px 0;border-radius:99px;text-align:center;font-size:11px;font-weight:700;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.06));border:1px solid rgba(255,255,255,.28);box-shadow:0 0 18px rgba(213,139,255,.25)}
 #lullToy .lullend{position:absolute;bottom:7.5%;left:0;right:0;text-align:center;font-size:9px;opacity:.5}
+/* big app buttons in the moments: icon, two-line label, arrow that slides, a sheen on hover */
+.btn.big{position:relative;overflow:hidden;gap:12px;padding:9px 20px 9px 9px;border-radius:20px;background:#fff;color:#111;box-shadow:0 10px 30px -10px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.6)}
+.btn.big img{width:42px;height:42px;border-radius:11px;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.btn.big span{display:flex;flex-direction:column;align-items:flex-start;line-height:1.1;font-size:18px;font-weight:700;letter-spacing:-.01em}
+.btn.big small{font-size:11px;font-weight:500;opacity:.6;letter-spacing:.02em;margin-bottom:3px}
+.btn.big i{font-style:normal;font-size:18px;margin-left:6px;transition:transform .4s var(--pop)}
+.btn.big::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.55) 50%,transparent 65%);transform:translateX(-120%);transition:transform .8s var(--ease)}
+.btn.big:hover{box-shadow:0 18px 40px -12px rgba(0,0,0,.5),inset 0 0 0 1px rgba(255,255,255,.6)}
+.btn.big:hover i{transform:translateX(5px)}
+.btn.big:hover::after{transform:translateX(120%)}
+.moment.day .btn.big{background:#111;color:#fff;box-shadow:0 12px 30px -10px rgba(20,33,58,.55)}
+.moment.day .btn.big::after{background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.18) 50%,transparent 65%)}
+@media (prefers-reduced-motion:reduce){.btn.big::after{display:none}}
+/* Field Guide toy: an unfolded iPhone Duo spread with a photo, a video clip, writing and stickers */
+#fgToy.duo{width:62%;aspect-ratio:13/9;right:-12%;bottom:-8%;border-radius:22px;border-width:6px;display:flex;gap:0;background:#111}
+#fgToy.duo::after{display:none}
+#fgToy.duo .pg{position:relative;flex:1;background:#fbf6ea repeating-linear-gradient(transparent 0 15px,#e6dcc6 15px 16px)}
+#fgToy.duo .pg:first-child{border-radius:15px 0 0 15px;box-shadow:inset -10px 0 14px -10px rgba(0,0,0,.35)}
+#fgToy.duo .pg:last-child{border-radius:0 15px 15px 0;box-shadow:inset 10px 0 14px -10px rgba(0,0,0,.35);margin-left:3px}
+#fgToy.duo .scrib{left:9%;right:6%;top:6%;font-size:clamp(14px,1.6vw,22px);color:#4a6a2c}
+#fgToy.duo .scrib.s2{top:8%;color:#7a4fa0;font-size:clamp(12px,1.25vw,18px)}
+#fgToy .pol{position:absolute;margin:0;background:#fff;padding:4px 4px 12px;box-shadow:0 4px 10px rgba(0,0,0,.22);transform:rotate(var(--r))}
+#fgToy .pol img,#fgToy .pol video{display:block;width:100%;aspect-ratio:3/2;object-fit:cover}
+
+#fgToy .p1{left:10%;top:27%;width:58%;--r:-5deg}
+#fgToy .p2{left:30%;top:58%;width:60%;--r:4deg}
+#fgToy .pol b{position:absolute;left:8px;top:8px;font-size:9px;font-weight:700;color:#fff;background:rgba(0,0,0,.55);padding:2px 6px;border-radius:99px}
+#fgToy .tape{position:absolute;top:-6px;left:50%;width:34%;height:12px;margin-left:-17%;background:rgba(214,196,140,.7);transform:rotate(-3deg)}
+#fgToy .p2 .tape{background:rgba(168,200,170,.75)}
+#fgToy.duo .stk{font-size:clamp(20px,2.4vw,32px)}
+#fgToy.duo .tip{bottom:6px;font-size:9px}
+.moment.flip #fgToy.duo{right:auto;left:-12%}
+@media (max-width:860px){#fgToy.duo{width:92%;margin:-30% auto 0}}
