@@ -20,7 +20,7 @@
   var AC = null, soundOn = false, snd = $("#snd");
   snd.addEventListener("click", function () {
     soundOn = !soundOn;
-    snd.textContent = soundOn ? "🔊" : "🔇";
+    snd.querySelector(".lbl").textContent = soundOn ? "Sounds on" : "Sounds off"; snd.classList.toggle("on", soundOn);
     snd.setAttribute("aria-pressed", String(soundOn));
     if (soundOn && !AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { soundOn = false; } }
   });
