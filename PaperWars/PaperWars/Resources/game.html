@@ -2872,6 +2872,7 @@ function drawSoldier(c, u, ink, alpha = 1) {
   c.beginPath(); c.ellipse(p.head.x, p.head.y, p.head.r, p.head.r * (0.92 + r() * .16), r(), 0, 7); c.stroke();
   wobblyLine(c, ...p.torso, r); p.limbs.forEach(l => wobblyLine(c, ...l, r));
   drawWeapon(c, u, s);
+  if (opts && opts.campaign === "drumstick") drawPilgrimHat(c, p.head.x, p.head.y, p.head.r, ink, u.seed); // Operation Drumstick dress-up
   if (u.wading) { // river water up to the waist: a pale band with a pen wave on top hides the legs
     const wy = u.y + 31 * s, ww = 17 * s;
     c.fillStyle = "#dbeaf8"; c.globalAlpha = .92; c.beginPath(); c.ellipse(u.x, wy + 7 * s, ww, 9 * s, 0, 0, 7); c.fill(); c.globalAlpha = 1;
@@ -2965,12 +2966,40 @@ function spark(kind, x, y, ink) {
 }
 const sparkFor = (res, isWet) => res === "soldier" ? "blood" : res === "fort" ? "shrapnel" : res === "scratch" ? "nick"
   : res === "rock" || res === "slide" ? "chips" : isWet ? "splash" : null;
+// A crayon pilgrim hat (capotain) with a buckle, sitting on a soldier's head. Tilt comes from the soldier's seed.
+function drawPilgrimHat(c, hx, hy, hr, ink, seed = 1) {
+  const tilt = (rand(seed + 5)() - .5) * .3, top = hy - hr * .55;
+  c.save(); c.translate(hx, top); c.rotate(tilt); c.lineJoin = "round"; c.lineCap = "round";
+  c.fillStyle = "#2b2a27"; c.strokeStyle = "#1b1b1b"; c.lineWidth = 1;
+  c.beginPath(); c.ellipse(0, 0, hr * 1.55, hr * .32, 0, 0, 7); c.fill(); // the brim
+  c.beginPath(); c.moveTo(-hr * .95, 0); c.lineTo(-hr * .7, -hr * 1.6); c.lineTo(hr * .7, -hr * 1.6); c.lineTo(hr * .95, 0); c.closePath(); c.fill(); // the crown
+  c.fillStyle = "#6d6a62"; c.fillRect(-hr * .9, -hr * .55, hr * 1.8, hr * .32); // band
+  c.strokeStyle = "#e3b341"; c.lineWidth = Math.max(1, hr * .14); c.strokeRect(-hr * .22, -hr * .6, hr * .44, hr * .42); // buckle
+  c.restore();
+}
+// Operation Drumstick's fort: a log cabin the same size as the regular fort, so the hit rules don't change.
+function drawLogCabin(c, b, ink, s) {
+  const roof = b.h * .42, wallTop = b.y + roof * .55;
+  c.save(); c.lineJoin = c.lineCap = "round";
+  c.fillStyle = "#c98a4b"; c.fillRect(b.x + 1, wallTop, b.w - 2, b.y + b.h - wallTop); // log walls
+  c.strokeStyle = "#7a4a1d"; c.lineWidth = 1.2;
+  for (let y = wallTop + 4 * s; y < b.y + b.h - 1; y += 4.5 * s) { c.beginPath(); c.moveTo(b.x + 1, y); c.lineTo(b.x + b.w - 1, y); c.stroke(); }
+  c.fillStyle = "#5b3a1a"; c.fillRect(b.x + b.w / 2 - 4 * s, b.y + b.h - 11 * s, 8 * s, 11 * s); // door
+  c.fillStyle = "#8a5a2b"; c.fillRect(b.x + b.w * .72, b.y - 2 * s, 5 * s, roof * .8); // chimney
+  c.strokeStyle = ink; c.lineWidth = 2;
+  c.beginPath(); c.moveTo(b.x - 3 * s, wallTop + 1); c.lineTo(b.x + b.w / 2, b.y); c.lineTo(b.x + b.w + 3 * s, wallTop + 1); c.stroke(); // roof
+  c.strokeRect(b.x + 1, wallTop, b.w - 2, b.y + b.h - wallTop); // walls, in the owner's ink
+  c.restore();
+}
 function drawFort(c, f, ink) {
   const b = fortBox(f), s = sc(), m = 7 * s;
   c.save(); c.strokeStyle = ink; c.lineWidth = 2; c.globalAlpha *= f.hp > 0 ? 1 : .45;
-  c.beginPath(); c.moveTo(b.x, b.y + b.h); c.lineTo(b.x, b.y);
-  for (let i = 0; i < 3; i++) { const x = b.x + i * (b.w / 3); c.lineTo(x + m, b.y); c.lineTo(x + m, b.y + m); c.lineTo(x + b.w / 3, b.y + m); c.lineTo(x + b.w / 3, b.y); }
-  c.lineTo(b.x + b.w, b.y + b.h); c.closePath(); c.stroke();
+  if (opts && opts.campaign === "drumstick") drawLogCabin(c, b, ink, s);
+  else {
+    c.beginPath(); c.moveTo(b.x, b.y + b.h); c.lineTo(b.x, b.y);
+    for (let i = 0; i < 3; i++) { const x = b.x + i * (b.w / 3); c.lineTo(x + m, b.y); c.lineTo(x + m, b.y + m); c.lineTo(x + b.w / 3, b.y + m); c.lineTo(x + b.w / 3, b.y); }
+    c.lineTo(b.x + b.w, b.y + b.h); c.closePath(); c.stroke();
+  }
   c.strokeStyle = RED; c.lineWidth = 1.6;
   for (let i = 0; i < 3 - f.hp; i++) { const x = b.x + 9 * s + i * 12 * s; c.beginPath(); c.moveTo(x, b.y + m); c.lineTo(x + 4 * s, b.y + m + 7 * s); c.lineTo(x, b.y + b.h - 3); c.stroke(); }
   c.fillStyle = f.hp > 0 ? "#e0559a" : "#6d6a62"; c.font = `${13 * Math.max(.8, s)}px "Patrick Hand"`; c.textAlign = "center"; // pink hearts
