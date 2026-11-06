@@ -187,10 +187,10 @@
   /* ---------- the reel: four real-life clips, crossfading ---------- */
   (function () {
     var clips = [
-      { n: "lull", line: "A breath before the day.", cap: "7:12 am · Lull", sub: "One breath before the emails", ic: '<img src="/assets/home/icon-lull.png" alt="" />' },
-      { n: "orbit", line: "A hello that brings them closer.", cap: "12:40 pm · Orbit", sub: "A hello on the lunch break", ic: '<img src="/assets/home/icon-orbit.png" alt="" />' },
-      { n: "fieldguide", line: "A page for every adventure.", cap: "6:30 pm · Field Guide", sub: "A butterfly, saved forever", ic: '<img src="/assets/home/icon-fieldguide.png" alt="" />' },
-      { n: "paperwars", line: "A laugh to end the night.", cap: "9:15 pm · Paper Wars", sub: "Face to face, one more round", ic: '<img src="/assets/home/icon-paperwars.png" alt="" />' },
+      { n: "lull", kind: "phone", alt: "Lull's breathing screen", line: "A breath before the day.", cap: "7:12 am · Lull", sub: "One breath before the emails", ic: '<img src="/assets/home/icon-lull.png" alt="" />' },
+      { n: "orbit", kind: "phone", alt: "Orbit's orbit view of friends and family", line: "A hello that brings them closer.", cap: "12:40 pm · Orbit", sub: "A hello on the lunch break", ic: '<img src="/assets/home/icon-orbit.png" alt="" />' },
+      { n: "fieldguide", kind: "duo", alt: "A Field Guide journal spread on iPhone Duo", line: "A page for every adventure.", cap: "6:30 pm · Field Guide", sub: "A butterfly, saved forever", ic: '<img src="/assets/home/icon-fieldguide.png" alt="" />' },
+      { n: "paperwars", kind: "phone", alt: "A Paper Wars battlefield on notebook paper", line: "A laugh to end the night.", cap: "9:15 pm · Paper Wars", sub: "Face to face, one more round", ic: '<img src="/assets/home/icon-paperwars.png" alt="" />' },
     ];
     var root = $("#reel"), vids = [$("#vA"), $("#vB")], still = $(".reel .still"), capEl = $("#reelCap"), ticks = $$("#ticks i b"), pp = $("#reelPP");
     var RATE = 0.8; // play the clips a little slower than real time
@@ -198,8 +198,21 @@
     var saveData = navigator.connection && navigator.connection.saveData;
     if (saveData) playing = false;
     function src(i) { return "/assets/home/reel/" + clips[i].n + ".mp4"; }
-    var lineEl = $("#reelLine");
+    var lineEl = $("#reelLine"), shot = $("#appshot"), shotImg = $("#appshotImg"), shotCap = $("#appshotCap");
+    var NAMES = { lull: "Lull", orbit: "Orbit", fieldguide: "Field Guide", paperwars: "Paper Wars" };
+    clips.forEach(function (c) { var im = new Image(); im.src = "/assets/home/screens/" + c.n + ".jpg"; });
+    function showShot(i) {
+      var c = clips[i];
+      if (shotImg.getAttribute("src") === "/assets/home/screens/" + c.n + ".jpg") { shot.classList.add("in"); return; }
+      shot.classList.remove("in");
+      setTimeout(function () {
+        shotImg.src = "/assets/home/screens/" + c.n + ".jpg"; shotImg.alt = c.alt;
+        shot.dataset.kind = c.kind; shotCap.textContent = "The real " + NAMES[c.n] + " screen";
+        shot.classList.add("in");
+      }, 350);
+    }
     function caption(i) {
+      showShot(i);
       capEl.innerHTML = clips[i].ic + "<div><b>" + clips[i].cap + "</b><span>" + clips[i].sub + "</span></div>";
       if (lineEl.textContent === clips[i].line) return;
       lineEl.innerHTML = clips[i].line.split(" ").map(function (w, k) { return '<span class="w" style="animation-delay:' + (k * 90) + 'ms">' + w + "</span>"; }).join(" ");
