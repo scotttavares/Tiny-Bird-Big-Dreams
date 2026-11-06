@@ -28,6 +28,8 @@ test("sanitizeBatch whitelists, truncates and caps", () => {
   assert.equal(r.events[0].v.length, 80);
   assert.equal(r.events[1].t, "egg");
   assert.equal(sanitizeBatch({ vid: VID, events: [] }).vid, VID);
+  const paths = sanitizeBatch({ events: [{ t: "pv", p: "/paperwars.html" }, { t: "pv", p: "/index.html" }, { t: "pv", p: "/play/paperwars/" }, { t: "pv", p: "/orbit?x=1" }] }).events.map((e) => e.p);
+  assert.deepEqual(paths, ["/paperwars", "/", "/play/paperwars", "/orbit"]);
   assert.ok(isValidVid(VID));
 });
 

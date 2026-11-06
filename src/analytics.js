@@ -33,7 +33,8 @@ export function sanitizeBatch(body) {
     if (!e || typeof e !== "object" || !EVENT_TYPES.has(e.t)) continue;
     if (e.t === "pv") {
       if (typeof e.p !== "string" || !e.p.startsWith("/") || e.p.startsWith("//")) continue;
-      out.events.push({ t: "pv", p: e.p.split(/[?#]/)[0].slice(0, MAX_STR) });
+      const p = e.p.split(/[?#]/)[0].replace(/\/index\.html$/, "/").replace(/\.html$/, "").replace(/(.)\/$/, "$1");
+      out.events.push({ t: "pv", p: p.slice(0, MAX_STR) });
     } else {
       const v = str(e.v);
       if (!v) continue;
