@@ -187,8 +187,18 @@ button.awol{background:none;border:0;color:var(--muted);font-size:16px;padding:2
 button.awol.sure{color:var(--red);font-weight:700}
 .record{max-width:560px;text-align:center;margin:4px 0;font-size:19px;color:var(--text)}
 .record b{font-family:Caveat;font-size:24px;color:#e3b341}
-#cabinet{position:fixed;inset:0;z-index:40;background:var(--bg);overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom))}
-#cabinet.hidden{display:none}
+#cabinet,#callsign{position:fixed;inset:0;z-index:40;background:var(--bg);overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom))}
+#cabinet.hidden,#callsign.hidden{display:none}
+.csHelp{margin:0 0 6px;font-size:17px}
+.csName{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;font:700 34px/1.1 Caveat,cursive;color:#1f4fa8;margin:4px 0}
+.csName #csRank{color:#b3261e}
+.csName small{font:400 16px "Patrick Hand",sans-serif;color:#7d776a}
+.csWord{font:inherit;color:inherit;background:transparent;border:2px dashed #1f4fa866;border-radius:12px;padding:0 10px;cursor:pointer}
+#csPreview{display:block;width:200px;height:150px;margin:0 auto 6px;border:1.5px solid #c9d8ea;border-radius:10px}
+#callsign h5{margin:8px 0 2px;font:700 20px/1 Caveat,cursive;color:#1f4fa8}
+.csRow{display:flex;flex-wrap:wrap;gap:6px}
+.csRow button{font:17px "Patrick Hand",sans-serif;background:#fffef9;color:var(--ink);border:1.5px solid #8b8576;border-radius:10px;padding:3px 10px;cursor:pointer}
+.csRow button.on{background:#1f4fa8;color:#fff;border-color:#1f4fa8}
 .cabstats{margin:0;font-size:19px}
 .cabgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .cab{text-align:center;line-height:1.1;font-size:15px;position:relative}
@@ -377,7 +387,7 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
   </div>
 </section>
 <section id="menu" class="menu" data-campaign="regular">
-  <div class="campbar"><button type="button" id="campaignsBtn" class="campback">&#9664; Campaigns</button><button type="button" id="storyBtn" class="campback">&#9733; True story</button></div>
+  <div class="campbar"><button type="button" id="campaignsBtn" class="campback">&#9664; Campaigns</button><button type="button" id="storyBtn" class="campback">&#9733; True story</button><button type="button" id="callsignBtn" class="campback">&#9998; Your call sign</button></div>
   <h3 class="mtitle">New mission<small id="campName"></small></h3>
   <h4>Who's the enemy?</h4>
   <div class="tiles two">
@@ -543,6 +553,21 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
   <h4>Medal cabinet</h4>
   <div id="cabGrid" class="cabgrid"></div>
   <div class="bar"><button class="primary" id="cabClose">Back to HQ</button></div>
+</div></section>
+
+<!-- Your call sign and namesake soldier (no typing: a die and taps). Kept on the device and in iCloud. -->
+<section id="callsign" class="hidden"><div class="menu cabpage">
+  <h3 class="mtitle">Your call sign</h3>
+  <p class="csHelp">Tap a word to change it, or roll the die for a whole new name.</p>
+  <div class="csName"><span id="csRank"></span><button type="button" id="csWordA" class="csWord"></button><button type="button" id="csWordB" class="csWord"></button><small id="csNum"></small></div>
+  <div class="bar"><button type="button" class="primary" id="csDie">&#9856; Roll the die</button></div>
+  <h4>Your soldier</h4>
+  <p class="csHelp">He fights for you in every battle, with a little star over his head on your own page.</p>
+  <canvas id="csPreview" width="400" height="300"></canvas>
+  <h5>Weapon</h5><div class="csRow" id="csWeapons"></div>
+  <h5>Stance</h5><div class="csRow"><button type="button" data-pose="0">Arms down</button><button type="button" data-pose="1">Arms up</button></div>
+  <h5>Hat</h5><div class="csRow"><button type="button" data-hat="none">No hat</button><button type="button" data-hat="helmet">Helmet</button><button type="button" data-hat="beret">Beret</button></div>
+  <div class="bar"><button type="button" class="primary" id="csBack">Back to HQ</button></div>
 </div></section>
 
 <div id="foldFx" class="hidden"><div class="duo"><div class="base"></div><div class="lid"></div><div class="thump">*thump*</div></div></div>
@@ -2971,7 +2996,8 @@ function drawSoldier(c, u, ink, alpha = 1) {
   c.beginPath(); c.ellipse(p.head.x, p.head.y, p.head.r, p.head.r * (0.92 + r() * .16), r(), 0, 7); c.stroke();
   wobblyLine(c, ...p.torso, r); p.limbs.forEach(l => wobblyLine(c, ...l, r));
   drawWeapon(c, u, s);
-  if (opts && opts.campaign === "drumstick") drawPilgrimHat(c, p.head.x, p.head.y, p.head.r, ink, u.seed); // Operation Drumstick dress-up
+  if (u.hat === "helmet" || u.hat === "beret") drawSoldierHat(c, u.hat, p.head.x, p.head.y, p.head.r, ink); // a namesake's own hat
+  else if (opts && opts.campaign === "drumstick") drawPilgrimHat(c, p.head.x, p.head.y, p.head.r, ink, u.seed); // Operation Drumstick dress-up
   if (u.wading) { // river water up to the waist: a pale band with a pen wave on top hides the legs
     const wy = u.y + 31 * s, ww = 17 * s;
     c.fillStyle = "#dbeaf8"; c.globalAlpha = .92; c.beginPath(); c.ellipse(u.x, wy + 7 * s, ww, 9 * s, 0, 0, 7); c.fill(); c.globalAlpha = 1;
@@ -2981,6 +3007,7 @@ function drawSoldier(c, u, ink, alpha = 1) {
   }
   c.restore();
   if (!u.alive) { splat(c, u.x, u.y + 18 * s, s, u.seed); scribble(c, u.x, u.y + 20 * s, 14 * s, u.seed); }
+  else if (u.namesake && alpha === 1) drawNamesakeStar(c, u, s); // only passed on a soldier drawn on its owner's own page
   if (u.name && alpha === 1) { c.save(); c.globalAlpha *= u.alive ? .75 : .45; label(c, u.name, u.x, u.y + 52 * s, 11 * Math.max(.85, s), ink); c.restore(); }
 }
 // Every soldier holds a pen-drawn WW2-era weapon (user, 2026-11-03), picked at random from its seed so it
@@ -3066,6 +3093,25 @@ function spark(kind, x, y, ink) {
 const sparkFor = (res, isWet) => res === "soldier" ? "blood" : res === "fort" ? "shrapnel" : res === "scratch" ? "nick"
   : res === "rock" || res === "slide" ? "chips" : isWet ? "splash" : null;
 // A crayon pilgrim hat (capotain) with a buckle, sitting on a soldier's head. Tilt comes from the soldier's seed.
+// The small gold star over a namesake: you see it on your own army, never on the sighting of the enemy's.
+function drawNamesakeStar(c, u, s) {
+  const x = u.x, y = u.y - 13 * s, R = 5 * s, r = 2.2 * s;
+  c.save(); c.lineJoin = "round"; c.fillStyle = "#e3b341"; c.strokeStyle = "#8a6a1b"; c.lineWidth = Math.max(.8, s);
+  c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, d = i % 2 ? r : R; c[i ? "lineTo" : "moveTo"](x + Math.cos(a) * d, y + Math.sin(a) * d); }
+  c.closePath(); c.fill(); c.stroke(); c.restore();
+}
+// A soldier's own hat (cosmetic): an army helmet or a beret.
+function drawSoldierHat(c, kind, hx, hy, hr, ink) {
+  c.save(); c.lineJoin = c.lineCap = "round"; c.lineWidth = Math.max(1, hr * .22); c.strokeStyle = ink;
+  if (kind === "helmet") {
+    c.fillStyle = "#8f9d6a"; c.beginPath(); c.arc(hx, hy - hr * .1, hr * 1.2, Math.PI, 0); c.closePath(); c.fill(); c.stroke();
+    c.beginPath(); c.moveTo(hx - hr * 1.5, hy - hr * .1); c.lineTo(hx + hr * 1.5, hy - hr * .1); c.stroke();
+  } else {
+    c.fillStyle = "#a3282a"; c.beginPath(); c.ellipse(hx + hr * .25, hy - hr * .85, hr * 1.3, hr * .55, -.18, 0, 7); c.fill(); c.stroke();
+    c.beginPath(); c.moveTo(hx + hr * .25, hy - hr * 1.4); c.lineTo(hx + hr * .25, hy - hr * 1.75); c.stroke();
+  }
+  c.restore();
+}
 function drawPilgrimHat(c, hx, hy, hr, ink, seed = 1) {
   const tilt = (rand(seed + 5)() - .5) * .3, top = hy - hr * .55;
   c.save(); c.translate(hx, top); c.rotate(tilt); c.lineJoin = "round"; c.lineCap = "round";
@@ -3204,7 +3250,7 @@ function drawHalf(c, pi, {map = true, highlightLast = false} = {}) {
     // Enemy units spotted by ink bleed, drawn where you'd aim: mirrored onto your half.
     c.save(); c.globalAlpha = .3;
     if (p.fortKnown && foe.fort) drawFort(c, {...foe.fort, x: W - foe.fort.x}, INK[1 - pi]);
-    p.known.forEach(i => { const u = foe.soldiers[i]; drawSoldier(c, {...u, x: W - u.x}, INK[1 - pi]); });
+    p.known.forEach(i => { const u = foe.soldiers[i]; drawSoldier(c, {...u, x: W - u.x, namesake: false}, INK[1 - pi]); });
     c.restore();
     if (opts.reveal) p.shots.forEach(sh => { if (sh.res === "off") return; c.save(); c.fillStyle = RED; c.globalAlpha = .04; c.beginPath(); c.arc(sh.x, sh.y, opts.reveal * (sh.wet ? WET_BLEED : 1), 0, 7); c.fill(); c.restore(); });
     p.shots.forEach(sh => { if (sh.fling) strokePath(c, sh.path, RED, .25); marker(c, sh); });
@@ -3313,7 +3359,7 @@ function say(who, text, kind = "chatter") {
 function placeUnit(p, x, y) {
   if (p.soldiers.length < MAX_UNITS) {
     const pos = legalPos(x, y, false, p);
-    p.soldiers.push({...pos, alive: true, pose: p.soldiers.length % 2, seed: Math.floor(Math.random() * 99999), name: soldierName(p)});
+    p.soldiers.push({...pos, alive: true, pose: p.soldiers.length % 2, seed: Math.floor(Math.random() * 99999), name: soldierName(p), ...namesakeFor(p)});
     say(p.soldiers.length - 1, soldierLine("ready")); setupTalk.p = p;
     sound("click");
   } else if (opts.fort && !p.fort) {
@@ -3682,6 +3728,9 @@ function newMatch(preset) {
   coachSeen.clear(); coachQ.length = 0; $("coach").classList.add("hidden"); // shown with its first line
   players = [0, 1].map(i => ({name: i && opts.foe === "cpu" ? "Computer" : `Player ${i + 1}`, cpu: i === 1 && opts.foe === "cpu",
     soldiers: [], fort: null, shots: [], incoming: [], known: new Set(), fortKnown: false, flingsLeft: opts.flings, missStreak: 0, reinforce: 0}));
+  const cs = callsign(); // every game has a namesake per side (see "call signs")
+  players[0].namesake = {name: callsignText(cs), ...cs.soldier};
+  players[1].namesake = {name: opts.foe === "cpu" ? pickOf(ROBOT_CALLSIGNS) : guestCallsignText()};
   pending = flick = dotAim = lastResult = null; startedAt = Date.now(); replayRun++; matchId++;
   players[0].terrain = generateMap(opts.map); players[1].terrain = mirrorMap(players[0].terrain);
   videoReady = null; // a new battle needs a new video
@@ -4030,7 +4079,7 @@ function cpuSpot(p, isFort) {
   }
   return best;
 }
-const cpuSoldier = p => ({...cpuSpot(p, false), alive: true, pose: p.soldiers.length % 2, seed: Math.floor(Math.random() * 99999), name: soldierName(p)});
+const cpuSoldier = p => ({...cpuSpot(p, false), alive: true, pose: p.soldiers.length % 2, seed: Math.floor(Math.random() * 99999), name: soldierName(p), ...namesakeFor(p)});
 function cpuSetup(p) {
   p.soldiers = []; p.fort = null;
   if ((RANKS[opts.level] || {}).smart) return generalSetup(p);
@@ -4057,7 +4106,7 @@ function generalSetup(p) {
     }
     return best || cpuSpot(p, isFort);
   };
-  for (let i = 0; i < MAX_UNITS; i++) p.soldiers.push({...place(false, 90 * s), alive: true, pose: i % 2, seed: Math.floor(Math.random() * 99999), name: soldierName(p)});
+  for (let i = 0; i < MAX_UNITS; i++) p.soldiers.push({...place(false, 90 * s), alive: true, pose: i % 2, seed: Math.floor(Math.random() * 99999), name: soldierName(p), ...namesakeFor(p)});
   if (opts.fort) p.fort = {...place(true, 50 * s), hp: 3};
 }
 // Where to put a dot on its own half to hit the middle of an enemy soldier (shots land mirrored).
@@ -4496,6 +4545,113 @@ function soldierName(p) {
   const taken = new Set([...players[0].soldiers, ...players[1].soldiers, ...p.soldiers].map(u => u.name)), free = SOLDIER_NAMES.filter(n => !taken.has(n));
   return free[Math.floor(Math.random() * free.length)] || "Pvt. Nobody";
 }
+
+// ---------- call signs ----------
+// A call sign is a rank plus two silly words ("Sgt. Soggy Pancake"), rolled with a die: no typing, no names stored
+// anywhere but on the player's own phone (kept under a paperWars key, so the iPhone app mirrors it to their iCloud).
+// Every game has one namesake soldier per side: the player's own (designed on the call sign screen), a random guest
+// for pass-and-play player 2, or a robot for the computer. Two lists of single words, hand-checked: original,
+// family-friendly, nothing real, and no pairing that turns rude.
+const CALLSIGN_WORDS = {
+  a: (
+    "Soggy Nervous Crispy Wobbly Grumpy Sleepy Fuzzy Dizzy Bouncy Squeaky Sneaky Jolly Cranky Giddy Wiggly Crunchy Mushy Sparkly Bashful Clumsy " +
+    "Fluffy Gloomy Hasty Itchy Jumpy Lumpy Mighty Noisy Peppy Quirky Rowdy Sassy Tiny Unlucky Vague Wacky Yodeling Zesty Brave Cheesy Daring " +
+    "Eager Fancy Gentle Happy Icy Jazzy Kooky Lazy Merry Nifty Odd Plucky Quiet Rusty Silly Tippy Upbeat Velvet Wheezy Yawning Zippy Breezy " +
+    "Chilly Dapper Epic Frosty Goofy Hungry Inky Jittery Keen Lofty Muddy Nutty Polite Rambling Salty Toasty Vivid Wonky Zany Amber Bubbly " +
+    "Chatty Dusty Elastic Frilly Gooey Hiccuping Impish Jiggly Kindly Mellow Napping Oily Peachy Quaking Rubbery Shiny Tickled Unready Vain Wavy " +
+    "Yappy Baffled Cuddly Dazzling Feisty Grand Hopeful Jaunty Knobbly Loopy Moody Nosy Overdone Quizzical Rumpled Spicy Tangy Unsure Vexed " +
+    "Whiny Yummy Zigzag Alert Blushing Cozy Dreamy Excited Fidgety Grinning Humming Inventive Jovial Marching Obedient Proud Quivering Ragged " +
+    "Snoring Tardy Vigilant Wistful Yelling Zealous Adorable Beaming Earnest Flappy Glittery Huffy Ironic Jokey Knitted Lucky Murky Nimble " +
+    "Orderly Perky Rattling Scruffy Twirly Uptight Waddling Youthful Bold Cheery Dull Eerie Frizzy Gleeful Hushed Jangly Luminous Mushroomy " +
+    "Nonstop Oaty Puffy Quacky Roasted Slippery Thrifty Underdone Whistling Yeasty Zoomy Antsy Bumpy Cunning Doodled Fierce Gruff Honest Jumbo " +
+    "Knotty Leaky Mossy Noble Pouty Quilted Restless Stuffy Unruly Varnished Wriggly Yolky Zapping Bonkers Crooked Dainty Eggy Frazzled Gawky " +
+    "Haughty Juicy Kettled Limber Misty Nibbling Outspoken Prickly Speedy Roaring Sticky Twitchy Wobbling Yawny Zingy"
+  ).split(" "),
+  b: (
+    "Pancake Noodle Crumbs Waffle Pickle Biscuit Muffin Pudding Meatball Nugget Dumpling Pretzel Burrito Taco Sprinkle Cupcake Doughnut Crouton " +
+    "Casserole Gravy Turnip Radish Parsnip Walnut Pistachio Raisin Pumpkin Jellybean Gumdrop Cookie Brownie Biscotti Crepe Bagel Pierogi Ravioli " +
+    "Gnocchi Lasagna Omelet Pepperoni Mustard Walrus Badger Gerbil Hamster Otter Penguin Ferret Llama Alpaca Moose Pelican Platypus Narwhal " +
+    "Wombat Possum Hedgehog Porcupine Armadillo Chipmunk Squirrel Goose Duckling Turkey Chicken Rooster Pigeon Seagull Toucan Flamingo Ostrich " +
+    "Lobster Crab Clam Oyster Sardine Herring Minnow Tadpole Newt Gecko Iguana Tortoise Snail Beetle Cricket Ladybug Moth Firefly Bumblebee " +
+    "Teapot Kettle Spatula Whisk Ladle Colander Thimble Button Zipper Bucket Mop Broom Sponge Pillow Blanket Slipper Sock Mitten Umbrella Kazoo " +
+    "Banjo Tuba Trombone Bugle Whistle Triangle Maraca Ukulele Cowbell Doorknob Teacup Saucer Lantern Compass Anchor Helmet Canteen Foxhole " +
+    "Bunker Parade Salute Trumpet Drumstick Rucksack Cadet Gizmo Doodle Scribble Squiggle Wiggle Blob Splat Zigzag Doohickey Kerfuffle Rigmarole " +
+    "Flapjack Hotcake Spud Yam Beet Kale Leek Cabbage Rutabaga Artichoke Zucchini Olive Pepper Celery Pea Bean Lentil Cashew Peanut Almond Pecan " +
+    "Acorn Chestnut Hazelnut Pineapple Banana Papaya Mango Kiwi Plum Peach Apricot Cherry Lemon Lime Melon Fig Quince Guava Sundae Smoothie " +
+    "Trifle Fritter Cobbler Strudel Scone Bannock Popover Tamale Empanada Kebab Falafel Hummus Porridge Oatmeal Cornbread Cracker Toastie " +
+    "Sandwich Pickles Sprout Turnover Dingo Yak Zebra Bison Gopher Koala Lemur Mole Marmot Okapi Puffin Quail Raccoon Sloth Tapir Vole Weasel " +
+    "Gibbon Hare Ibis Jackal Lark Mink Owl Panda Rhino Stoat Tuna Urchin Viper Wren Yeti Zebu Gazebo Pogo Pylon Rocket Gadget Widget Trinket " +
+    "Bauble Pebble Cobweb Dandelion Thistle Clover Acornet Pinecone Mushroom Toadstool Crayon Eraser Sharpener Stapler Paperclip Scissors Ruler " +
+    "Marker Pencil Notebook"
+  ).split(" "),
+};
+const RANK_ABBR = ["Pvt.", "PFC", "Cpl.", "Sgt.", "SSgt.", "SFC", "MSgt.", "SgtMaj.", "2Lt.", "1Lt.", "Capt.", "Maj.", "LtCol.", "Col.",
+  "BrigGen.", "MajGen.", "LtGen.", "Gen.", "GenA."]; // one per CAREER_RANKS entry, in the same order
+const ROBOT_CALLSIGNS = ["Gen. Beep Boop", "Col. Clank", "Maj. Whirr Whirr", "Capt. Tinkerbolt", "Lt. Sparkplug", "Sgt. Rusty Gears",
+  "Gen. Bleep Bloop", "Col. Cogsworth Clunk", "Maj. Buzz Fizz", "Capt. Ratchet Rattle", "Sgt. Zap Zap", "Gen. Whiz Bang"];
+const CALLSIGN_KEY = "paperWarsCallsign", CALLSIGN_WEAPONS = [...new Set(WEAPONS)], CALLSIGN_HATS = ["none", "helmet", "beret"];
+let callsignMem = null; // in case storage is unavailable, the sign still holds for this session
+const pickOf = list => list[Math.floor(Math.random() * list.length)];
+function rollWord(list, not) { let w; do w = pickOf(list); while (w === not && list.length > 1); return w; }
+function newPid() {
+  try { return [...crypto.getRandomValues(new Uint8Array(8))].map(b => b.toString(16).padStart(2, "0")).join(""); }
+  catch (e) { let s = ""; for (let i = 0; i < 16; i++) s += Math.floor(Math.random() * 16).toString(16); return s; }
+}
+function saveCallsign(cs) { callsignMem = cs; try { localStorage.setItem(CALLSIGN_KEY, JSON.stringify(cs)); } catch (e) {} }
+// {pid, words:[a, b], num, soldier:{weapon, pose, hat}}: made on first use, then always the same one (until the player rolls it).
+function callsign() {
+  let cs = null;
+  try { cs = JSON.parse(localStorage.getItem(CALLSIGN_KEY)); } catch (e) {}
+  const word = w => typeof w === "string" && w.length > 0 && w.length < 30;
+  if (!(cs && typeof cs === "object" && /^[0-9a-f]{16}$/.test(cs.pid) && Array.isArray(cs.words) && cs.words.length === 2 && cs.words.every(word))) {
+    cs = callsignMem || {pid: newPid(), words: [pickOf(CALLSIGN_WORDS.a), pickOf(CALLSIGN_WORDS.b)], num: 1000 + Math.floor(Math.random() * 9000),
+      soldier: {weapon: pickOf(CALLSIGN_WEAPONS), pose: Math.floor(Math.random() * 2), hat: "none"}};
+    if (!callsignMem) saveCallsign(cs);
+  }
+  const s = cs.soldier && typeof cs.soldier === "object" ? cs.soldier : {};
+  cs.soldier = {weapon: CALLSIGN_WEAPONS.includes(s.weapon) ? s.weapon : "rifle", pose: s.pose === 1 ? 1 : 0, hat: CALLSIGN_HATS.includes(s.hat) ? s.hat : "none"};
+  cs.num = /^\d{4}$/.test(String(cs.num)) ? +cs.num : 1000 + Math.floor(Math.random() * 9000);
+  return cs;
+}
+// "Sgt. Soggy Pancake": the rank is the player's real career rank unless one is given (an index into CAREER_RANKS).
+const callsignText = (cs, rank) => `${RANK_ABBR[rank == null ? rankOf(loadRecord().points) : rank]} ${cs.words[0]} ${cs.words[1]}`;
+const guestCallsignText = () => `${pickOf(["Pvt.", "Pvt.", "PFC", "Cpl.", "Sgt."])} ${pickOf(CALLSIGN_WORDS.a)} ${pickOf(CALLSIGN_WORDS.b)}`;
+// The first soldier a player places is their namesake: it takes the call sign as its name and, for the phone's owner, the
+// look they designed. The others keep their random names. (Empty once the army has its namesake.)
+function namesakeFor(p) {
+  if (!p.namesake || p.soldiers.some(u => u.namesake)) return {};
+  return {...p.namesake, namesake: true};
+}
+// The call sign screen: roll the die, tap a word to change just that one, and design your soldier.
+function drawCallsignPreview() {
+  const cv = $("csPreview"), c = cv.getContext("2d"), s = callsign().soldier;
+  c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = "#fbf8ef"; c.fillRect(0, 0, cv.width, cv.height);
+  c.setTransform(4.8, 0, 0, 4.8, 0, 0);
+  withStdSize(() => drawSoldier(c, {x: 41.7, y: 16, pose: s.pose, seed: 7, alive: true, name: "", weapon: s.weapon, hat: s.hat, namesake: true, face: 1}, INK[0]));
+}
+function renderCallsign() {
+  const cs = callsign();
+  $("csRank").textContent = RANK_ABBR[rankOf(loadRecord().points)];
+  $("csWordA").textContent = cs.words[0]; $("csWordB").textContent = cs.words[1]; $("csNum").textContent = "#" + cs.num;
+  document.querySelectorAll("#callsign [data-weapon]").forEach(b => b.classList.toggle("on", b.dataset.weapon === cs.soldier.weapon));
+  document.querySelectorAll("#callsign [data-pose]").forEach(b => b.classList.toggle("on", +b.dataset.pose === cs.soldier.pose));
+  document.querySelectorAll("#callsign [data-hat]").forEach(b => b.classList.toggle("on", b.dataset.hat === cs.soldier.hat));
+  drawCallsignPreview();
+}
+function showCallsign() { renderCallsign(); $("callsign").classList.remove("hidden"); }
+const WEAPON_LABELS = {rifle: "Rifle", tommy: "Tommy gun", bazooka: "Bazooka", grenade: "Grenade", pistol: "Pistol", mg: "Machine gun"};
+$("csWeapons").innerHTML = CALLSIGN_WEAPONS.map(w => `<button type="button" data-weapon="${w}">${WEAPON_LABELS[w] || w}</button>`).join("");
+$("callsignBtn").onclick = showCallsign;
+$("csBack").onclick = () => $("callsign").classList.add("hidden");
+$("csDie").onclick = () => { const cs = callsign(); cs.words = [rollWord(CALLSIGN_WORDS.a, cs.words[0]), rollWord(CALLSIGN_WORDS.b, cs.words[1])]; saveCallsign(cs); sound("click"); renderCallsign(); };
+$("csWordA").onclick = () => { const cs = callsign(); cs.words[0] = rollWord(CALLSIGN_WORDS.a, cs.words[0]); saveCallsign(cs); sound("click"); renderCallsign(); };
+$("csWordB").onclick = () => { const cs = callsign(); cs.words[1] = rollWord(CALLSIGN_WORDS.b, cs.words[1]); saveCallsign(cs); sound("click"); renderCallsign(); };
+$("callsign").addEventListener("click", e => {
+  const b = e.target.closest("[data-weapon],[data-pose],[data-hat]"); if (!b) return;
+  const cs = callsign();
+  if (b.dataset.weapon) cs.soldier.weapon = b.dataset.weapon; else if (b.dataset.pose) cs.soldier.pose = +b.dataset.pose; else cs.soldier.hat = b.dataset.hat;
+  saveCallsign(cs); sound("click"); renderCallsign();
+});
 
 // ---------- taunts ----------
 // Once per turn a player can make one of their soldiers yell across the fold. On a Duo the other player hears it.
