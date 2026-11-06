@@ -278,8 +278,9 @@
   (function () {
     var toy = $("#lullToy"), sp = $("#sphere"), tx = $("#breathTxt"), s = .8, hold = false, n = 0, peak = false, running = false;
     var vis = whenVisible(toy, function () { if (!running) { running = true; requestAnimationFrame(f); } });
-    function down(e) { if (e) e.preventDefault(); hold = true; tx.textContent = "breathe in…"; noise(4, 300, 700, .1, "lowpass"); trackOnce("toy", "lull"); }
-    function up() { if (!hold) return; hold = false; if (peak) { n++; peak = false; } tx.textContent = n ? "…out. " + n + " breath" + (n > 1 ? "s" : "") : "…and out"; noise(4, 700, 250, .08, "lowpass"); }
+    var arc = $("#lullArc");
+    function down(e) { if (e) e.preventDefault(); hold = true; tx.textContent = "Breathe in"; noise(4, 300, 700, .1, "lowpass"); trackOnce("toy", "lull"); }
+    function up() { if (!hold) return; hold = false; if (peak) { n++; peak = false; } tx.textContent = "Breathe out"; setTimeout(function () { if (!hold) tx.textContent = n ? n + " breath" + (n > 1 ? "s" : "") : "Hold"; }, 2600); noise(4, 700, 250, .08, "lowpass"); }
     toy.addEventListener("pointerdown", down); addEventListener("pointerup", up); toy.addEventListener("pointerleave", up);
     toy.addEventListener("keydown", function (e) { if ((e.key === " " || e.key === "Enter") && !hold) down(e); });
     toy.addEventListener("keyup", function (e) { if (e.key === " " || e.key === "Enter") up(); });
@@ -287,6 +288,7 @@
       if (!vis()) { running = false; return; }
       s += ((hold ? 1.3 : .8) - s) * (hold ? .012 : .016); if (s > 1.2) peak = true;
       sp.style.transform = "scale(" + s + ")";
+      arc.setAttribute("stroke-dashoffset", String(289 - 289 * Math.min(1, Math.max(0, (s - .8) / .5))));
       sp.style.boxShadow = "0 0 " + (30 + (s - .8) * 180) + "px " + ((s - .8) * 40) + "px rgba(160,130,255," + (.35 + (s - .8) * .6) + ")";
       requestAnimationFrame(f);
     }

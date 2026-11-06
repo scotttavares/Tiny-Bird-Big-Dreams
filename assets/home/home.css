@@ -272,3 +272,11 @@ footer a{margin:0 10px}
 .reel .over{right:auto;max-width:62%}
 .reel .over>div:last-child{margin-top:14px}
 @media (max-width:900px){.appshot{height:40%;top:10%;right:5%;border-width:5px;border-radius:20px}.appshot[data-kind="duo"]{height:34%}.reel .over{max-width:none;right:4%}}
+
+/* Lull toy, modelled on the real Lull breathing screen */
+#lullToy .lullhead{position:absolute;top:34px;left:0;right:0;text-align:center}
+#lullToy .lullhead b{display:block;font-weight:500;font-size:12px;letter-spacing:.5em;padding-left:.5em}
+#lullToy .lullhead span{font-size:10px;opacity:.6}
+#lullToy .lullring{position:absolute;left:8%;width:84%;top:50%;transform:translateY(-50%)}
+#lullToy #sphere{width:52%;margin:-26% 0 0 -26%;top:50%;background:url(/assets/home/lull-orb.jpg) center/cover;border:2px solid rgba(255,255,255,.4);display:grid;place-items:center}
+#lullToy #breathTxt{position:static;font-family:"Inter Tight",sans-serif;font-style:normal;font-size:15px;font-weight:500;color:#fff;text-shadow:0 1px 8px rgba(60,30,120,.8)}
