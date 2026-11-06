@@ -200,7 +200,7 @@
     var saveData = navigator.connection && navigator.connection.saveData;
     if (saveData) playing = false;
     function src(i) { return "/assets/home/reel/" + clips[i].n + ".mp4"; }
-    var lineEl = $("#reelLine"), shot = $("#appshot"), shotImg = $("#appshotImg"), shotCap = $("#appshotCap");
+    var lineEl = $("#reelLine"), shot = $("#appshot"), shotImg = $("#appshotImg");
     var NAMES = { lull: "Lull", "lull-sleep": "Lull Sleep", orbit: "Orbit", fieldguide: "Field Guide", paperwars: "Paper Wars" };
     clips.forEach(function (c) { var im = new Image(); im.src = "/assets/home/screens/" + c.n + ".jpg"; });
     function showShot(i) {
@@ -209,7 +209,7 @@
       shot.classList.remove("in");
       setTimeout(function () {
         shotImg.src = "/assets/home/screens/" + c.n + ".jpg"; shotImg.alt = c.alt;
-        shot.dataset.kind = c.kind; shotCap.textContent = "The real " + NAMES[c.n] + " screen";
+        shot.dataset.kind = c.kind;
         shot.classList.add("in");
       }, 350);
     }

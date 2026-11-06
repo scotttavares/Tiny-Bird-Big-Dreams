@@ -266,7 +266,7 @@ footer a{margin:0 10px}
 /* real app screen, shown beside the lifestyle footage */
 .appshot{position:absolute;right:4%;top:7%;height:66%;aspect-ratio:9/19.5;margin:0;border:7px solid #111;border-radius:30px;background:#111;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.2),0 30px 70px rgba(0,0,0,.45);opacity:0;transform:translateY(24px) rotate(3deg) scale(.96);transition:opacity .5s ease,transform .7s cubic-bezier(.2,.8,.2,1);z-index:2}
 .appshot.in{opacity:1;transform:rotate(3deg)}
-.appshot[data-kind="duo"]{aspect-ratio:3/4;border-radius:22px;height:62%}
+.appshot[data-kind="duo"]{aspect-ratio:13/9;border-radius:18px;height:44%}
 .appshot img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
 .appshot figcaption{position:absolute;left:0;right:0;bottom:0;padding:22px 8px 8px;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;text-align:center;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.6))}
 .reel .over{right:auto;max-width:62%}
