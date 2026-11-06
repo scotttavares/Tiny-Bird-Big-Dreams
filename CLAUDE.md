@@ -28,7 +28,7 @@ The Cloudflare deploy runs automatically via GitHub Actions on every push to `ma
 - **Positioning**: Tiny Bird, Big Dreams is a *small independent team*. Never describe it as a one-person studio, a founder plus AI, or "building in public with Claude". Never name an AI provider on public pages; the AI disclosure says "AI tools" (see `privacy.html#ai`).
 - **Home page** (`index.html`, `assets/home/`): "A day with Tiny Bird: Small moments. Big life." A film reel of real-life clips (`assets/home/reel/`), a "What brings you here?" picker, four app "moments" with playable mini-toys, the studio with the contact form, and the Shop. Tap the flying bird 5 times for the hummingbird easter egg. Design spec: `docs/superpowers/specs/2026-11-06-site-redesign-design.md`.
 - **Simple pages** (`apps`, `privacy`, `terms`, `404`) use `assets/page.css`.
-- **Photos/video** on the home page are AI-generated stand-ins; quotes are labelled "placeholder story" until real ones exist.
+- **Photos/video** on the home page are AI-generated stand-ins. No customer quotes until real ones exist (add them as `<div class="quote">` in a moment scene).
 
 ## Key Systems
 
