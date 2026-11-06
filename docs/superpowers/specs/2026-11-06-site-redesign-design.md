@@ -10,7 +10,7 @@ Approved prototype (the visual and interaction reference for this whole document
 Tiny Bird, Big Dreams should read as a **real, growing small app company**, not a solo founder working with an AI. The site has two jobs:
 
 1. **Show off the apps and games**, front and centre, and make people want to use them.
-2. **Make the name mean something.** Tiny Bird, Big Dreams = *tiny things go a long way*. The ruby-throated hummingbird weighs about as much as a penny yet crosses the Gulf of Mexico without stopping. Our apps are tiny moments (one breath, one hello, one page, one game) that add up to a better day. Tagline: **"Small moments. Big life."**
+2. **Make the name mean something.** Tiny Bird, Big Dreams = *tiny things go a long way*. Our apps are tiny moments (one breath, one hello, one page, one game) that add up to a better day. Tagline: **"Small moments. Big life."**
 
 The user asked for something premium, high-end and genuinely creative: the site itself should be a showcase of craft ("show off super skills"). It should be *played with*, not just read, while staying grounded in how the apps help real people in a normal day.
 
@@ -52,15 +52,15 @@ References the user liked (inspiration, never copy): neal.fun/deep-sea (scroll a
 Sky, clock and bird run across the whole page; sections in order:
 
 1. **Header:** bird logo + "Tiny Bird, Big Dreams"; glass pill nav (Our idea · A day with us · Studio · **Shop** highlighted); sound toggle (off by default). Bottom-right **day clock** (time + label + little sun arc) that follows scroll.
-2. **Hero (6:00 am, dawn):** "Small moments. / *Big life.*" (line-by-line reveal). Sub: "Tiny Bird, Big Dreams is a small team making apps and games for the everyday moments that make a day good." Hint chip: you're the bird.
-3. **Why the name (sunrise):** full-bleed hummingbird photo with slow zoom; headline about the hummingbird; animated counters 3 grams · 500 miles of open sea · 0 stops; "Tiny things go a long way…" kicker.
+2. **Hero (6:00 am, dawn):** "Small moments. / *Big life.*" (line-by-line reveal). Sub: "Tiny Bird, Big Dreams is a small team making apps and games for the everyday moments that make a good day great." Hint chip: you're the bird.
+3. **Life with our apps (film reel, sunrise):** *user decision: replaces the hummingbird photo section.* A full-bleed, muted, auto-playing, looping reel of four short real-life clips (morning breath with Lull → lunch-break hello with Orbit → kitchen-table drawing with Field Guide → couch game night with Paper Wars), crossfading one into the next. Overlay: small eyebrow "Life with Tiny Bird", a large serif line, and a caption that changes per clip (time + app, e.g. "7:12 am · Lull"); a pause/play button (accessibility). Clips are AI-generated stand-ins (image-to-video from the scene photos, 16:9, no audio, ~6s each, MP4 H.264, each ≤ ~4 MB) with the wide scene still as `poster`. Reduced motion or data-saver: show the poster stills as a static crossfade-free grid, no autoplay.
 4. **"What brings you here?"**: four pills (calmer → Lull, miss my people → Orbit, remember more → Field Guide, something fun → Paper Wars) that smooth-scroll to the moment.
 5. **The day:** four "moments", alternating left/right. Each: real-life photo with clip-reveal and parallax, time chip, short quote with name ("placeholder story" until real ones exist), app eyebrow with icon + status, big serif headline, description, an "In real life" note, primary CTA, and a **mini-toy** floating over the photo corner:
    - 7:12 am **Lull** (hold to breathe in, release to breathe out, breath count).
    - 12:40 pm **Orbit** (drag a friend away; spring back with tether line).
    - 6:30 pm **Field Guide** (tap to place stickers on a journal page).
    - 9:15 pm **Paper Wars** (draw a line; shot follows it; BOOM or miss; tap for a new sheet).
-6. **It adds up:** "It adds up to *a good day*." and 1 breath + 1 hello + 1 page + 1 game = a big life.
+6. **It adds up:** "It adds up to *a great day*." and 1 breath + 1 hello + 1 page + 1 game = a big life.
 7. **Studio (night):** nest (the bird lands in it), "Small team. *Big dreams.*", short paragraph, three values (Made for every day · Private by design · Small on purpose), plus a **contact form** (posts to `/email-webhook` as today) and the email-signup/"say hello".
 8. **The Shop** (light cream panel): tabs All / Apps / Games; product cards (photo, icon, badge, name, category/platform, one line, price/status, button): Lull, Orbit, Field Guide (beta), Paper Wars (play free; iPhone soon; mention Operation Drumstick), Full Arsenal crate (in-game), "Something's hatching" mystery egg. Then "Get news when something hatches" signup.
 9. **Footer:** Privacy · Terms · Support · Press · Cookie settings · ©.
@@ -75,7 +75,7 @@ Sky colours, clouds, stars, moon follow the clock (dawn → day → golden hour 
 - Real links: Lull `https://apps.apple.com/app/id6783862542`, Orbit `https://apps.apple.com/app/id6785966852`, Paper Wars `/play/paperwars/` + `/paperwars`, Field Guide `/fieldguide` (beta).
 - **Photos:** the five AI-generated scene photos are stand-ins (ship optimised JPG/WebP in `assets/home/`); the user may replace them with real photos later. Quotes/names are placeholders and must stay visibly marked until real ones exist.
 - **Lull icon:** no icon file exists in the repo; use the glowing-sphere rendering from the prototype unless the user provides one.
-- **Facts:** ruby-throated hummingbird ≈ 3 g, ≈ 500 miles nonstop across the Gulf of Mexico.
+- **Hummingbird easter egg** (user decision): the fact lives on as a hidden "cool bird fact". Trigger: tap/click the flying golden bird 5 times (or the header logo bird 5 times on touch devices). A small card pops up near the bird with the hummingbird photo (`scene-hummingbird`), "Cool bird fact", "The ruby-throated hummingbird weighs about 3 grams (about a penny) and flies roughly 500 miles across the Gulf of Mexico without stopping. Tiny bird, big dreams.", and a close button; the bird does a little celebratory loop. Also shown as the fact on `404.html`. Facts: ≈ 3 g, ≈ 500 miles nonstop across the Gulf of Mexico.
 - **Remove old-story copy site-wide:** `index.html` (replaced), `apps.html`, `privacy.html` ("Claude by Anthropic" → "AI tools"), `paperwars.html` ("one-person studio building in public with Claude"), `orbit.html`, `orbit-privacy.html`, `orbit-support.html` ("Made with Claude · Shipped from scratch"), `provenance.html`. Also drop the old Tiny Thoughts / Tiny Superpowers mentions from `apps.html`.
 - `apps.html` stays at its URL; restyle it to match the new site and list the same products as the Shop (or make it a slim page pointing at `/#shop`; builder's choice).
 - Fix the broken `assets/icon-512.png` (it is base64 text, not a PNG) and make sure the manifest/OG images are real files.
@@ -121,7 +121,7 @@ The user's questions on a Monday: **how many visitors, what they did, what's imp
 
 ## 9. Decided by the user vs left to the builder
 
-**User decided:** small-startup positioning; apps front and centre; premium, playful, interactive; the "A day with Tiny Bird" concept and prototype; "Small moments. Big life."; the hummingbird meaning; real-life photos (AI now, real later); a Shop; ClearConsent; the dashboard questions; generic AI disclosure.
+**User decided:** small-startup positioning; apps front and centre; premium, playful, interactive; the "A day with Tiny Bird" concept and prototype; "Small moments. Big life."; the hummingbird fact as an easter egg (not a section); a film reel of life with our apps near the top; real-life photos (AI now, real later); a Shop; ClearConsent; the dashboard questions; generic AI disclosure.
 
 Also user-decided: all analytics wait for consent (only the anonymous consent tally and direct submissions are recorded without it).
 
