@@ -3,32 +3,28 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Page Not Found — Tiny Bird, Big Dreams</title>
+<title>Page not found: Tiny Bird, Big Dreams</title>
 <meta name="robots" content="noindex" />
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="assets/site.css?v=2" />
-<style>
-  .nf-wrap { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px 24px; }
-  .nf-bird { font-size:clamp(56px,12vw,84px); line-height:1; display:block; margin-bottom:18px; animation:nfBob 2.4s ease-in-out infinite; }
-  @keyframes nfBob { 0%,100%{ transform:translateY(0) rotate(-5deg); } 50%{ transform:translateY(-10px) rotate(5deg); } }
-  @media (prefers-reduced-motion: reduce) { .nf-bird { animation:none; } }
-  .nf-code { font-family:'Fraunces',serif; font-weight:900; font-size:clamp(72px,18vw,140px); line-height:.9; color:var(--gold); letter-spacing:-.04em; margin-bottom:4px; }
-  .nf-wrap h1 { font-family:'Fraunces',serif; font-size:clamp(24px,5vw,38px); font-weight:700; color:var(--cream); letter-spacing:-.02em; margin-bottom:14px; }
-  .nf-wrap p { font-size:15px; line-height:1.8; color:rgba(251,247,242,.5); max-width:440px; margin:0 auto 32px; }
-  .nf-links { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
-</style>
+<link rel="icon" href="/favicon.ico" />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&amp;family=Inter+Tight:wght@400;500;600;700&amp;display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/assets/page.css?v=1" />
 </head>
 <body>
-<div class="nf-wrap">
-  <span class="nf-bird" aria-hidden="true">🐦</span>
-  <div class="nf-code">404</div>
-  <h1>This page flew the coop.</h1>
-  <p>The page you're looking for doesn't exist — or maybe it dreamed so big it flew somewhere new. Either way, let's get you back on track.</p>
-  <div class="nf-links">
-    <a href="/" class="btn btn-gold">← Back home</a>
-    <a href="/#contact" class="btn btn-outline">Say hello</a>
+<header class="bar">
+  <a class="brand" href="/"><svg viewBox="0 0 52 52" aria-hidden="true"><ellipse cx="30" cy="32" rx="14" ry="9.5" fill="#E8A022"/><circle cx="20" cy="22" r="9.5" fill="#E8A022"/><path d="M10.5 22 L15 20.5 L15 23.5Z" fill="#b86d08"/><circle cx="18.5" cy="20" r="2.6" fill="#2C1F3E"/></svg>Tiny Bird, Big Dreams</a>
+  <nav aria-label="Main"><a href="/apps">Apps</a><a class="shop" href="/#shop">Shop</a></nav>
+</header>
+<main class="nf">
+  <div class="code serif"><span class="bob" aria-hidden="true">🐦</span> 404</div>
+  <h1 class="serif">This page flew the coop.</h1>
+  <p>The page you're looking for doesn't exist, or maybe it dreamed so big it flew somewhere new. Let's get you back on track.</p>
+  <a href="/" class="btn dark">← Back home</a> <a href="/apps" class="btn line">See our apps</a>
+  <div class="fact">
+    <img src="/assets/home/hummingbird.jpg" alt="A ruby-throated hummingbird hovering over the sea at sunrise" />
+    <div><b>Cool bird fact while you're here</b><p>The ruby-throated hummingbird weighs about 3 grams, about as much as a penny, and every autumn it flies roughly 500 miles across the Gulf of Mexico without stopping. Unlike this page, it never gets lost.</p></div>
   </div>
-</div>
+</main>
+<footer class="site-foot"><a href="/">Home</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="#" data-cookie-settings="">Cookie settings</a></footer>
 <script src="/assets/consent.js" defer></script>
 </body>
 </html>

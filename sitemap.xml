@@ -9,7 +9,7 @@
   </url>
 
   <url>
-    <loc>https://www.tinybirdbigdreams.com/apps.html</loc>
+    <loc>https://www.tinybirdbigdreams.com/apps</loc>
     <lastmod>2026-06-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -57,4 +57,13 @@
     <priority>0.3</priority>
   </url>
 
+  <url>
+    <loc>https://www.tinybirdbigdreams.com/orbit</loc>
+  </url>
+  <url>
+    <loc>https://www.tinybirdbigdreams.com/orbit-support</loc>
+  </url>
+  <url>
+    <loc>https://www.tinybirdbigdreams.com/paperwars-support</loc>
+  </url>
 </urlset>
