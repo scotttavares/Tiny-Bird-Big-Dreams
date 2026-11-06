@@ -32,7 +32,8 @@ a{color:inherit}
 .sheet a.navshop{background:#111;color:#fff;margin-top:4px;text-align:center}
 
 /* clock */
-#clock{position:fixed;right:3vw;bottom:3vh;z-index:30;display:flex;align-items:center;gap:12px;padding:10px 16px 10px 12px;border-radius:99px;background:rgba(20,16,30,.32);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line);pointer-events:none;font-variant-numeric:tabular-nums}
+#clock{position:fixed;right:3vw;bottom:3vh;z-index:30;display:flex;align-items:center;gap:12px;padding:10px 16px 10px 12px;border-radius:99px;background:rgba(20,16,30,.32);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line);pointer-events:none;font-variant-numeric:tabular-nums;opacity:0;transform:translateY(8px);transition:opacity .5s,transform .5s}
+#clock.on{opacity:1;transform:none}
 #clock svg{width:34px;height:20px}#clock b{font-size:15px;font-weight:600}#clock span{font-size:11px;opacity:.75;letter-spacing:.08em;text-transform:uppercase}
 
 /* the bird */
