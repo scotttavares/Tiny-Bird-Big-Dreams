@@ -55,6 +55,29 @@ enum GameCenterMatchmaking: Equatable {
     }
 }
 
+/// What losing the Game Center sign-in does to a running match, decided apart from GameKit so it can be unit tested.
+/// Signed out (in Settings) or newly restricted mid-match, GameKit stops passing this phone's events on but the `GKMatch`
+/// stays connected, so the others would never hear `left` and their battle would freeze. So the match is left (the others
+/// hear `left` and, after their 60 s wait, win by forfeit) and the page is told, so it leaves the battle with the sign-in help.
+struct GameCenterSignIn: Equatable {
+    let dropMatch: Bool
+    let events: [GameBridge.GameCenterEvent]
+
+    static func changed(signedIn: Bool, hasMatch: Bool) -> GameCenterSignIn {
+        guard hasMatch, !signedIn else { return GameCenterSignIn(dropMatch: false, events: []) }
+        return GameCenterSignIn(dropMatch: true, events: [.matchmaker(ok: false, reason: "signed-out")])
+    }
+}
+
+/// Hands GameKit's callbacks (which may come on any thread) to the main actor one after another, in the order GameKit made
+/// them: the main queue is first in, first out, where a separate `Task` per callback could let a player's connect and
+/// disconnect swap places (and leave a false 60 s wait on the other phone).
+enum GameCenterHop {
+    static func toMain(_ body: @escaping @MainActor @Sendable () -> Void) {
+        DispatchQueue.main.async { MainActor.assumeIsolated { body() } }
+    }
+}
+
 /// Game Center for two-phone multiplayer: signs the player in, opens Apple's invite screen (friends only, no strangers),
 /// keeps the real-time `GKMatch`, sends the page's messages to the people it names (reliable mode) and hands
 /// everything that arrives back to the page as `gcEvent` scripts. No server of ours and nothing stored.
@@ -97,8 +120,8 @@ final class GameCenter {
         started = true
         // GameKit may call this off the main thread, so it isn't main-actor isolated; it hops over.
         GKLocalPlayer.local.authenticateHandler = { @Sendable [weak self] controller, error in
-            let carried = Carry(value: controller)
-            Task { @MainActor in self?.authChanged(carried.value, error) }
+            let carried = Carry(value: controller), owner = self
+            GameCenterHop.toMain { owner?.authChanged(carried.value, error) }
         }
     }
 
@@ -137,6 +160,7 @@ final class GameCenter {
     private func authChanged(_ controller: UIViewController?, _ error: (any Error)?) {
         if let controller {
             status = .needsSignIn(controller)
+            signInChanged()
             if pageAsked, controller.presentingViewController == nil { show(controller) }
             return
         }
@@ -155,9 +179,24 @@ final class GameCenter {
             }
         }
         if pageAsked { tellAuth() }
+        signInChanged()
         guard let op = queued else { return }
         queued = nil
         if case .ready = status { handle(op) } else { emit(.matchmaker(ok: false, reason: "signed-out")) }
+    }
+
+    /// Signed out (or restricted) with a match running: leave it and tell the page (see `GameCenterSignIn`).
+    private func signInChanged() {
+        var signedIn = false
+        if case .ready = status { signedIn = true }
+        let plan = GameCenterSignIn.changed(signedIn: signedIn, hasMatch: match != nil)
+        guard plan.dropMatch else { return }
+        matchmaker?.dismiss(animated: true)
+        matchmaker = nil
+        dropMatch()
+        pageKnowsAuth = false
+        // straight to the page: emit() holds match news back while not signed in, and this is the page's cue to leave the battle
+        plan.events.forEach { onEvent?(GameBridge.gcEventScript($0)) }
     }
 
     private func tellAuth() {
@@ -310,30 +349,30 @@ private struct Carry<Value>: @unchecked Sendable {
 }
 
 /// GameKit's delegates. GameKit may call them on any thread, so this isn't main-actor isolated: it copies out plain
-/// values (ids, data) and hands them to `GameCenter` on the main actor.
+/// values (ids, data) and hands them to `GameCenter` on the main actor, in order (`GameCenterHop`).
 nonisolated private final class GameCenterRelay: NSObject, GKMatchDelegate, GKMatchmakerViewControllerDelegate, GKLocalPlayerListener, @unchecked Sendable {
     weak var owner: GameCenter?
 
     // GKMatchmakerViewControllerDelegate
     func matchmakerViewControllerWasCancelled(_ viewController: GKMatchmakerViewController) {
         let owner = self.owner
-        Task { @MainActor in owner?.matchmakerFinished(nil) }
+        GameCenterHop.toMain { owner?.matchmakerFinished(nil) }
     }
 
     func matchmakerViewController(_ viewController: GKMatchmakerViewController, didFailWithError error: any Error) {
         let owner = self.owner
-        Task { @MainActor in owner?.matchmakerFinished(nil, reason: "failed") }
+        GameCenterHop.toMain { owner?.matchmakerFinished(nil, reason: "failed") }
     }
 
     func matchmakerViewController(_ viewController: GKMatchmakerViewController, didFind match: GKMatch) {
         let owner = self.owner, carried = Carry(value: match)
-        Task { @MainActor in owner?.matchmakerFinished(carried.value) }
+        GameCenterHop.toMain { owner?.matchmakerFinished(carried.value) }
     }
 
     // GKMatchDelegate
     func match(_ match: GKMatch, didReceive data: Data, fromRemotePlayer player: GKPlayer) {
         let owner = self.owner, id = ObjectIdentifier(match), from = player.gamePlayerID
-        Task { @MainActor in owner?.received(data, from: from, in: id) }
+        GameCenterHop.toMain { owner?.received(data, from: from, in: id) }
     }
 
     func match(_ match: GKMatch, player: GKPlayer, didChange state: GKPlayerConnectionState) {
@@ -345,15 +384,16 @@ nonisolated private final class GameCenterRelay: NSObject, GKMatchDelegate, GKMa
         }
         let owner = self.owner, id = ObjectIdentifier(match)
         let person = GameBridge.GameCenterPerson(gamePlayerID: player.gamePlayerID, alias: player.alias)
-        Task { @MainActor in owner?.playerChanged(person, connected: connected, in: id) }
+        GameCenterHop.toMain { owner?.playerChanged(person, connected: connected, in: id) }
     }
 
     func match(_ match: GKMatch, didFailWithError error: (any Error)?) {
         let owner = self.owner, id = ObjectIdentifier(match)
-        Task { @MainActor in owner?.matchFailed(id) }
+        GameCenterHop.toMain { owner?.matchFailed(id) }
     }
 
     /// Two-person matches only (GameKit's rule): ask Game Center to bring a dropped player back into this same match.
+    /// In a match of three or four the host's page offers "Bring them back" instead, which is the `invite` (addPeople) path.
     func match(_ match: GKMatch, shouldReinviteDisconnectedPlayer player: GKPlayer) -> Bool {
         true
     }
@@ -361,6 +401,6 @@ nonisolated private final class GameCenterRelay: NSObject, GKMatchDelegate, GKMa
     // GKInviteEventListener (through GKLocalPlayerListener): a friend's invite was accepted on this phone.
     func player(_ player: GKPlayer, didAccept invite: GKInvite) {
         let owner = self.owner, carried = Carry(value: invite)
-        Task { @MainActor in owner?.accept(carried.value) }
+        GameCenterHop.toMain { owner?.accept(carried.value) }
     }
 }

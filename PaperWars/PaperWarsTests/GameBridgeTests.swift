@@ -3,6 +3,11 @@ import GameKit
 import Testing
 @testable import PaperWars
 
+/// The order GameKit callbacks reached the main actor in.
+@MainActor final class HopLog {
+    var order: [Int] = []
+}
+
 /// Game Center bridge (two-phone multiplayer, Task 5): what the page asks for and what it's told.
 struct GameCenterBridgeTests {
     @Test func testParsesGcOps() {
@@ -100,6 +105,25 @@ struct GameCenterBridgeTests {
         let odd = GameBridge.gcEventScript(.matchmaker(ok: false, reason: "a\"b\u{2029}"))
         #expect(odd.contains("\"reason\":\"a\\\"b\\u2029\""))
         #expect(!odd.contains("\u{2029}"))
+    }
+
+    @Test func testSignOutMidMatchLeavesIt() {
+        // signed out (or restricted) with a match running: leave it, so the others hear `left` instead of a frozen battle,
+        // and tell the page so it leaves the battle
+        #expect(GameCenterSignIn.changed(signedIn: false, hasMatch: true)
+            == GameCenterSignIn(dropMatch: true, events: [.matchmaker(ok: false, reason: "signed-out")]))
+        #expect(GameCenterSignIn.changed(signedIn: false, hasMatch: false) == GameCenterSignIn(dropMatch: false, events: []))
+        #expect(GameCenterSignIn.changed(signedIn: true, hasMatch: true) == GameCenterSignIn(dropMatch: false, events: []))
+    }
+
+    @Test @MainActor func testGameKitCallbacksReachTheMainActorInOrder() async throws {
+        // GameKit calls back on its own threads; each callback must reach the main actor in the order it was made
+        let log = HopLog()
+        await Task.detached {
+            for i in 0..<500 { GameCenterHop.toMain { log.order.append(i) } }
+        }.value
+        for _ in 0..<300 where log.order.count < 500 { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(log.order == Array(0..<500))
     }
 
     @Test func testAuthFailureReasons() {

@@ -157,6 +157,7 @@ button.big{font-size:23px;padding:9px 26px}
 button.awol{background:none;border:0;color:var(--muted);font-size:16px;padding:2px 10px;margin-top:-4px}
 button.awol.sure{color:var(--red);font-weight:700}
 .onlineWait{background:#fff4d6;border:2px dashed var(--red);color:var(--red);font-family:"Patrick Hand";font-size:17px;padding:4px 10px;margin:2px 8px;border-radius:6px;text-align:center}
+.onlineWait button{display:block;font:inherit;margin:4px auto 0;padding:2px 10px} /* its own line, so the countdown doesn't shift it */
 .lastStand{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%) rotate(-8deg);border:5px double var(--red);color:var(--red);background:#fbf8efe8;padding:6px 18px;text-align:center;pointer-events:none;z-index:5}
 .lastStand b{display:block;font-family:"Stardos Stencil",monospace;font-size:40px;letter-spacing:3px}.lastStand small{display:block;font-family:"Patrick Hand";font-size:16px;max-width:240px}
 .record{max-width:560px;text-align:center;margin:4px 0;font-size:19px;color:var(--text)}
@@ -665,8 +666,9 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
 </section>
 
 <!-- The taunt wheel: flick it; the host's phone picks where it lands. -->
-<div id="tauntWheel" class="hidden"><div class="twCard"><canvas id="twCv"></canvas><p id="twSay"></p><small id="twCool"></small>
-  <div class="bar"><button type="button" id="twClose">Close</button></div></div></div>
+<div id="tauntWheel" class="hidden"><div class="twCard"><canvas id="twCv" aria-hidden="true"></canvas><p id="twSay"></p><small id="twCool"></small>
+  <p id="twSr" class="sr-only" role="status" aria-live="polite"></p>
+  <div class="bar"><button type="button" class="primary" id="twSpin">Spin the wheel</button><button type="button" id="twClose">Close</button></div></div></div>
 
 <div id="foldFx" class="hidden"><div class="duo"><div class="base"></div><div class="lid"></div><div class="thump">*thump*</div></div></div>
 
@@ -6608,6 +6610,7 @@ window.addEventListener("resize", fit);
 // Canvas text only uses web fonts once they have loaded.
 Promise.all([document.fonts.load('700 30px Caveat'), document.fonts.load('20px "Patrick Hand"')]).then(() => players && render()).catch(() => {});
 window.addEventListener("keydown", e => {
+  if (e.target && e.target.closest && e.target.closest("#tauntWheel")) return; // the wheel's own buttons work from a keyboard
   if (e.code === "Space" || e.code === "Enter") { e.preventDefault(); fire(); }
 });
 // ---------- online: transport and match protocol (two-phone multiplayer, 1.2) ----------
@@ -6703,10 +6706,10 @@ function fakeNetTransport(room) {
   try { id = sessionStorage.getItem("paperWarsFakeId"); } catch (e) {}
   if (!id) { id = "fake-" + newPid().slice(0, 8); try { sessionStorage.setItem("paperWarsFakeId", id); } catch (e) {} }
   const people = () => fn({event: "people", people: [...members].map(m => ({id: m}))});
-  const T = {kind: "fake", id, room, fault: null, hosted: false,
+  const T = {kind: "fake", id, room, fault: null, hosted: false, gk: false, invites: 0, awaitingInvite: false, dropSize: 0,
     available: () => true,
-    connect() { if (joined) return; joined = true; ch.postMessage({kind: "hi", id}); fn({event: "auth", ok: true, id}); },
-    host() { T.hosted = true; }, invite() {},
+    connect() { if (joined) return; joined = true; T.awaitingInvite = false; ch.postMessage({kind: "hi", id}); fn({event: "auth", ok: true, id}); },
+    host() { T.hosted = true; }, invite() { T.invites++; if (joined) ch.postMessage({kind: "invite", id}); },
     send(ids, data) {
       const json = JSON.stringify(data), plan = typeof T.fault === "function" ? T.fault(data, ids) : null;
       for (const d of Array.isArray(plan) ? plan : [{to: ids, delay: 0}]) {
@@ -6715,9 +6718,18 @@ function fakeNetTransport(room) {
       }
     },
     leave() { if (!joined) return; ch.postMessage({kind: "bye", id}); joined = false; members.clear(); },
-    drop() { T.leave(); }, rejoin() { T.connect(); },
+    // gk = true behaves like GameKit: the phone that lost its signal sees everyone else leave, and in a match of three or
+    // more nobody comes back by themselves (GameKit only re-invites in a match of two): the host's invite brings them back.
+    drop() {
+      if (!T.gk) return T.leave();
+      const others = [...members]; T.dropSize = others.length + 1; T.leave();
+      others.forEach(m => { gone.add(m); fn({event: "left", id: m}); }); people();
+    },
+    rejoin() { if (T.gk && T.dropSize > 2) { T.awaitingInvite = true; return; } T.connect(); },
+    event(e) { fn(e); }, // what the app's Game Center side would say, e.g. {event: "matchmaker", ok: false, reason: "signed-out"}
     onEvent(f) { fn = f; }};
   ch.onmessage = ({data: m}) => {
+    if (m && m.kind === "invite" && T.awaitingInvite && m.id !== id) { T.connect(); return; } // the host's invite, accepted
     if (!joined || !m || m.id === id || m.from === id) return;
     if (m.kind === "hi" || m.kind === "here") {
       if (m.kind === "hi") ch.postMessage({kind: "here", id});
@@ -6738,7 +6750,9 @@ function fakeCallsign() {
   }
   return cs;
 }
-const fakeNetRoom = (location.search.match(/[?&]fakenet=([\w-]{1,40})/) || [])[1] || null;
+// Test rooms only from a file or this computer: the published website copies never open the lobby from a ?fakenet= link.
+const fakeNetLocal = location.protocol === "file:" || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+const fakeNetRoom = fakeNetLocal && (location.search.match(/[?&]fakenet=([\w-]{1,40})/) || [])[1] || null;
 
 const net = (() => {
   const T = fakeNetRoom ? fakeNetTransport(fakeNetRoom) : gameCenterNet();
@@ -7111,7 +7125,7 @@ function lobbyEnd(text, leave) {
   lobbyOpen = false; $("lobby").classList.add("hidden");
   lob.seats = []; lob.spectators = []; lob.queue = []; lob.settings = null; lob.removed.clear(); onlineStart = null; lob.note = null;
   lob.wait.forEach(clearTimeout); lob.wait.clear(); lob.quit.clear(); lob.lastMatch = null;
-  spectatorEnd(); bigRevealHide(); wheel.open = false; $("tauntWheel").classList.add("hidden");
+  spectatorEnd(); bigRevealHide(); wheelReset();
   if (leave) net.leave();
   if (text) { onlineOpen = false; onlineStatus(text); $("online").classList.remove("hidden"); }
 }
@@ -7195,7 +7209,7 @@ net.on("lobby", d => {
   if (net.me().isHost) return;
   lob.seats = netPids(d.seats).slice(0, 2); lob.spectators = netPids(d.spectators); lob.queue = netPids(d.queue);
   lob.settings = lobbyClean(d.settings, lobbyPaid(lob.seats));
-  if (!lobbyOpen && !onlineStart) openLobby(); else renderLobby();
+  if (!lobbyOpen && !onlineStart) { localBattleEnd(); openLobby(); } else renderLobby();
   bigRevealButtons(); specRender(); // the line for the next game
 });
 net.on("start", d => startOnlineMatch(lobbyStartMsg(d)));
@@ -7229,11 +7243,26 @@ net.on("remove", d => { // the host removing itself = leaving on purpose
 net.on("host", () => renderLobby()); // this phone stepped down, or follows a new host
 // The invite screen closed without a match: cancelled -> say so; signed out / failed -> how to fix Game Center.
 net.on("matchmaker", e => {
+  if (!e.ok && e.reason === "signed-out" && (onlineOn() || spec)) { onlineSignedOut(); return; }
   if (!lobbyOpen || e.ok) return;
   if (e.reason === "cancelled") { lob.note = "No invite sent. Tap Invite friends to try again."; renderLobby(); return; }
   lobbyEnd(null, true);
   onlineHelp(e.reason === "failed" ? "offline" : "notSignedIn"); $("online").classList.remove("hidden");
 });
+
+// Signed out of Game Center mid-battle: the app has left the match (so the other phones hear "left" and, after their wait,
+// win by forfeit) and can't send anything more. This phone leaves the battle, off the record, with the sign-in help.
+function onlineSignedOut() {
+  onlineClear(); onlineStart = null; goAwol(); // (no online match any more, so Go AWOL only tidies the screens away)
+  lobbyEnd(null, true);
+  onlineHelp("notSignedIn"); $("online").classList.remove("hidden");
+}
+// A friend's invite accepted while this phone plays a battle of its own (vs the computer, pass-the-phone or tent): that
+// battle ends first, the way Go AWOL ends it (nothing on the service record), so its timers and computer turns stop.
+function localBattleEnd() {
+  if (onlineOn() || spec || !opts || opts.online) return;
+  if (["game", "tent", "over", "replayView"].some(id => !$(id).classList.contains("hidden"))) goAwol();
+}
 
 // ---------- the online match (two phones, 1.2) ----------
 // Each phone holds only its own army. players[i] is seat i on every phone, so turn order, turkeys and the replay line up;
@@ -7263,7 +7292,7 @@ const onlineMine = d => onlineOn() && d && d.m === onl.matchId && d.from === onl
 const stubSoldier = () => ({x: -999, y: -999, alive: true, pose: 0, seed: 1, name: "", unseen: true});
 function onlineClear() {
   if (!onl) return;
-  Object.values(onl.timers).forEach(t => { clearInterval(t); clearTimeout(t); });
+  Object.values(onl.timers).forEach(t => { clearInterval(t); clearTimeout(t); }); wheelReset();
   $("onlineWait").classList.add("hidden"); $("lastStand").classList.add("hidden"); $("wheelBtn").classList.add("hidden"); onl = null;
 }
 function onlineBegin(start, seat) {
@@ -7512,14 +7541,25 @@ net.on("taunt", d => {
   players[onl.them].tauntOut = d.say; speak(d.say, 200); updateUI();
 });
 // ---------- leaving and coming back ----------
+// GameKit brings a dropped player back by itself only in a match of two. With a spectator (three or four people) only the
+// host can, so the host's banner has "Bring them back" (net.invite: Apple's invite screen, adding them to this match).
+// The limit: a HOST who drops from a match of three or four can't be brought back by anyone (only the host invites, and
+// guests can't host), so the other phone says so plainly and, unless the host's phone reconnects by itself within the
+// wait, the forfeit stands.
 function onlineWaitStart() {
   if (onl.waitEnds) return;
   onl.waitEnds = performance.now() + MATCH_RECONNECT_MS;
-  const m = onl, el = $("onlineWait");
+  const m = onl, el = $("onlineWait"), crowd = net.peers().length >= 1; // someone besides the two players is still here
+  const reinvite = crowd && net.me().isHost, hostGone = crowd && onl.seats[onl.them] === lobbyHost();
+  el.innerHTML = '<span id="onlineWaitText"></span><button type="button" id="onlineWaitInvite" class="hidden">Bring them back</button>';
+  $("onlineWaitInvite").classList.toggle("hidden", !reinvite);
+  $("onlineWaitInvite").onclick = () => { sound("click"); net.invite(); };
   const tick = () => {
     if (onl !== m || !onl.waitEnds) return;
-    const left = Math.max(0, Math.ceil((onl.waitEnds - performance.now()) / 1000));
-    el.textContent = `${players[onl.them].name} lost the connection. Waiting for them to come back... ${left}s`;
+    const left = Math.max(0, Math.ceil((onl.waitEnds - performance.now()) / 1000)), name = players[onl.them].name;
+    $("onlineWaitText").textContent = hostGone
+      ? `${name}, the host, lost the connection. Only the host can invite people, so nobody can bring them back: unless their phone reconnects in ${left}s, you win by forfeit.`
+      : `${name} lost the connection. Waiting for them to come back... ${left}s`;
     if (performance.now() >= onl.waitEnds) { onlineWaitEnd(); onlineForfeit(onl.seat); }
   };
   el.classList.remove("hidden"); tick(); onl.timers.wait = setInterval(tick, 250);
@@ -7536,9 +7576,11 @@ function onlineResend() {
   if (onl.lastResult) { net.send(onl.lastResult, "opponent"); if (onl.lastPublic) net.send(onl.lastPublic, "spectators"); }
   if (onl.awaiting && onl.lastShot) net.send(onl.lastShot, "all");
 }
-net.on("left", e => { if (onlineOn() && !onl.over && e.pid && e.pid === onl.seats[onl.them]) onlineWaitStart(); });
-net.on("back", e => { if (onlineOn() && e.pid && e.pid === onl.seats[onl.them]) { onlineWaitEnd(); onlineResend(); } });
-net.on("hello", p => { if (onlineOn() && p && p.pid === onl.seats[onl.them]) { onlineWaitEnd(); onlineResend(); } });
+// onl.cut: the connection to the opponent is down (onl.cutBack: when it came back), the only time their forfeit win can be real.
+const onlineReturned = () => { if (onl.cut) { onl.cut = false; onl.cutBack = performance.now(); } };
+net.on("left", e => { if (onlineOn() && !onl.over && e.pid && e.pid === onl.seats[onl.them]) { onl.cut = true; onlineWaitStart(); } });
+net.on("back", e => { if (onlineOn() && e.pid && e.pid === onl.seats[onl.them]) { onlineReturned(); onlineWaitEnd(); onlineResend(); } });
+net.on("hello", p => { if (onlineOn() && p && p.pid === onl.seats[onl.them]) { onlineReturned(); onlineWaitEnd(); onlineResend(); } });
 function onlineForfeit(winner) {
   if (!onlineOn() || onl.over) return;
   clearInterval(turnTimer); turnEnds = 0; pending = flick = dotAim = null;
@@ -7555,10 +7597,13 @@ function onlineLeave() {
   lobbyEnd(null, true);
 }
 // ---------- the end ----------
+const ONLINE_CLAIM_MS = 30000; // how soon after the connection came back the other phone's forfeit win still counts
 net.on("over", d => {
-  if (!onlineMine(d) || onl.over) return;
-  if (d.forfeit === true && (d.winner === 0 || d.winner === 1)) onlineForfeit(d.winner); // they gave up, or waited out this phone
-  // otherwise this phone works out the end from the last result itself
+  if (!onlineMine(d) || onl.over || d.forfeit !== true) return; // (otherwise this phone works out the end from the last result itself)
+  // They gave up: always. They say they waited this phone out: only if this phone really lost the connection (it's down
+  // now, or came back moments ago), so a connected opponent can't simply declare a win.
+  if (d.winner === onl.seat) onlineForfeit(d.winner);
+  else if (d.winner === onl.them && (onl.cut || (onl.cutBack && performance.now() - onl.cutBack < ONLINE_CLAIM_MS))) onlineForfeit(d.winner);
 });
 function onlineCleanArmy(a) {
   if (!a || typeof a !== "object" || !Array.isArray(a.soldiers)) return null;
@@ -7937,7 +7982,13 @@ const WHEEL_SLICES = [
 ];
 const WHEEL_GOLDEN = [10, 11], WHEEL_BACKFIRE = 9, WHEEL_ODDS = {golden: 1 / 15, backfire: 1 / 20}, WHEEL_SPIN_MS = 2500, TAU = 2 * Math.PI;
 let WHEEL_COOLDOWN_MS = 8000;
-const wheel = {angle: 0, spinning: null, queue: [], shown: [], picked: [], hostLast: new Map(), asked: -1e12, open: false, sparks: [], seq: 0, hideT: 0, coolT: 0, flick: null};
+const wheel = {angle: 0, spinning: null, queue: [], shown: [], picked: [], hostLast: new Map(), asked: -1e12, open: false, sparks: [], seq: 0, hideT: 0, coolT: 0, landT: 0, flick: null};
+// Leaving the battle (or a new one starting): nothing spinning or queued may turn up, or be heard, later.
+function wheelReset() {
+  clearTimeout(wheel.hideT); clearTimeout(wheel.landT); clearInterval(wheel.coolT);
+  wheel.spinning = null; wheel.queue = []; wheel.open = false; wheel.flick = null; wheel.sparks = [];
+  $("tauntWheel").classList.add("hidden"); $("tauntWheel").classList.remove("passive");
+}
 // The host's pick: golden slices share about 1 in 15, backfire about 1 in 20, the nine taunts share the rest.
 function wheelPick(rand = Math.random) {
   const r = rand(), g = WHEEL_ODDS.golden, b = WHEEL_ODDS.backfire;
@@ -7979,12 +8030,12 @@ function wheelPlay(s) {
   const el = $("tauntWheel"); el.classList.remove("hidden"); el.classList.toggle("passive", !wheel.open); clearTimeout(wheel.hideT);
   const from = wheel.angle, target = -(s.slice + .5) * TAU / 12, end = from + 4 * TAU + ((target - from) % TAU + TAU) % TAU, t0 = performance.now();
   wheel.spinning = {...s, end};
-  $("twSay").textContent = `${partyName(s.pid)} spins the taunt wheel...`; sound("wheelClick");
+  $("twSay").textContent = `${partyName(s.pid)} spins the taunt wheel...`; sound("wheelClick"); srSay($("twSr"), "");
   const loop = () => { if (!wheel.spinning || wheel.spinning.end !== end) return;
     const k = Math.min(1, (performance.now() - t0) / WHEEL_SPIN_MS); wheel.angle = from + (end - from) * (1 - Math.pow(1 - k, 3)); wheelDraw();
     if (k < 1) requestAnimationFrame(loop); };
   requestAnimationFrame(loop);
-  setTimeout(wheelLand, WHEEL_SPIN_MS); // lands on time even where animation frames are held back
+  clearTimeout(wheel.landT); wheel.landT = setTimeout(wheelLand, WHEEL_SPIN_MS); // lands on time even where animation frames are held back
 }
 function wheelLand() {
   const s = wheel.spinning; if (!s) return;
@@ -7992,6 +8043,7 @@ function wheelLand() {
   const sl = WHEEL_SLICES[s.slice], who = partyName(s.pid);
   wheel.shown.push({pid: s.pid, slice: s.slice});
   $("twSay").textContent = sl.kind === "backfire" ? `${who} spun BACKFIRE! ${sl.text}` : `${who}: "${sl.text}"`;
+  srSay($("twSr"), $("twSay").textContent); // VoiceOver hears where it landed (once: the live region is written only when it changes)
   sound(sl.sound);
   if (sl.kind !== "golden") speak(sl.text, sl.kind === "backfire" ? 900 : 450, "event"); // the crowd heckles (the golden slices are all roar and confetti)
   if (sl.kind === "golden") { burst(wheel.sparks, "confetti", 150, 150, "#e3b341"); burst(wheel.sparks, "confetti", 110, 170, "#e3b341"); burst(wheel.sparks, "confetti", 190, 170, "#e3b341");
@@ -8023,6 +8075,7 @@ function wheelDraw() {
 $("twCv").addEventListener("pointerdown", e => { wheel.flick = {x: e.clientX, y: e.clientY}; });
 $("twCv").addEventListener("pointerup", () => { if (!wheel.flick) return; wheel.flick = null; wheelAsk(); });
 $("twClose").onclick = () => { sound("click"); wheelClose(); };
+$("twSpin").onclick = () => wheelAsk(); // the same spin request as a flick, for VoiceOver, Switch Control and keyboards
 $("wheelBtn").onclick = () => { sound("click"); wheelOpen(); };
 
 // test hook for automated play-testing
