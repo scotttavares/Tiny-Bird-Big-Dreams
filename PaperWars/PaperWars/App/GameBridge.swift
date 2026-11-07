@@ -44,6 +44,80 @@ enum GameBridge {
         }
     }
 
+    /// A Game Center request from the page (two-phone multiplayer): `{type: "gc", op, ...}` with op
+    /// `auth`, `host {maxPlayers}`, `invite`, `send {to: [gamePlayerID], data: "<JSON string>"}` or `leave`.
+    enum GameCenterOp: Equatable {
+        case auth
+        case host(maxPlayers: Int)
+        case invite
+        case send(to: [String], data: String)
+        case leave
+
+        /// Game Center real-time matches here are 2 players plus up to 2 spectators.
+        static let playerRange = 2...4
+
+        init?(_ body: Any) {
+            guard let dict = body as? [String: Any], dict["type"] as? String == "gc", let op = dict["op"] as? String else { return nil }
+            switch op {
+            case "auth": self = .auth
+            case "host":
+                let asked = dict["maxPlayers"] as? Int ?? Self.playerRange.upperBound
+                self = .host(maxPlayers: min(max(asked, Self.playerRange.lowerBound), Self.playerRange.upperBound))
+            case "invite": self = .invite
+            case "send":
+                guard let list = dict["to"] as? [Any], let data = dict["data"] as? String else { return nil }
+                let ids = list.compactMap { $0 as? String }
+                guard !ids.isEmpty, ids.count == list.count else { return nil }
+                self = .send(to: ids, data: data)
+            case "leave": self = .leave
+            default: return nil
+            }
+        }
+    }
+
+    /// Someone in the Game Center match (never the player on this phone).
+    struct GameCenterPerson: Equatable {
+        let gamePlayerID: String
+        let alias: String
+    }
+
+    /// What the app tells the page about Game Center, through `window.gcEvent(...)`.
+    enum GameCenterEvent: Equatable {
+        case auth(ok: Bool, gamePlayerID: String?, reason: String?)
+        case people([GameCenterPerson])
+        case message(from: String, data: String)
+        case left(String)
+        case back(String)
+        /// Apple's invite screen closed without a match: reason "cancelled", "failed" or "signed-out".
+        case matchmaker(ok: Bool, reason: String?)
+
+        var payload: [String: Any] {
+            switch self {
+            case let .auth(ok, gamePlayerID, reason):
+                var out: [String: Any] = ["event": "auth", "ok": ok]
+                if let gamePlayerID { out["gamePlayerID"] = gamePlayerID }
+                if let reason { out["reason"] = reason }
+                return out
+            case .people(let people):
+                return ["event": "people", "players": people.map { ["gamePlayerID": $0.gamePlayerID, "alias": $0.alias] }]
+            case let .message(from, data):
+                return ["event": "message", "from": from, "data": data]
+            case .left(let id):
+                return ["event": "left", "id": id, "gamePlayerID": id]
+            case .back(let id):
+                return ["event": "back", "id": id, "gamePlayerID": id]
+            case let .matchmaker(ok, reason):
+                var out: [String: Any] = ["event": "matchmaker", "ok": ok]
+                if let reason { out["reason"] = reason }
+                return out
+            }
+        }
+    }
+
+    static func gcEventScript(_ event: GameCenterEvent) -> String {
+        "window.gcEvent && window.gcEvent(\(json(event.payload)));"
+    }
+
     /// The share sheet closed: `saved` is true when the player picked somewhere for the video.
     static func videoSharedScript(saved: Bool) -> String {
         "window.paperWarsVideo && window.paperWarsVideo.done(\(saved));"
