@@ -255,6 +255,10 @@ button.awol.sure{color:var(--red);font-weight:700}
 /* career */
 .careerNews{display:flex;flex-direction:column;align-items:center;gap:8px;margin:6px 0}
 .careerNews.hidden{display:none}
+.rivals{display:flex;flex-direction:column;gap:6px;margin:4px 0 10px}
+.rivalRow{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;padding:6px 10px;border:1.5px solid var(--ink,#2b3a8f);border-radius:10px;background:rgba(255,255,255,.55);text-align:left}
+.rivalRow b{flex:1 1 auto}.rivalRow span{font-weight:700}.rivalRow small{flex:1 0 100%;opacity:.7}
+#cabRivalsBox.hidden{display:none}
 .promo{display:flex;align-items:center;gap:10px;background:#fbf8ef;color:#2b2a27;border-radius:12px;padding:6px 16px 6px 8px;box-shadow:0 3px 10px #0005;animation:tapSlam .45s 2.2s both}
 .promo small,.badgeNew small{display:block;font:12px "Special Elite",monospace;letter-spacing:.15em;color:#b3261e}
 .promo b{font:700 26px/1 Caveat,cursive}
@@ -558,6 +562,7 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
   <h3 style="font-family:Caveat;font-size:32px;margin:6px 0 2px">Medal ceremony</h3>
   <div id="medals" class="medals"></div>
   <p class="record" id="recordNote"></p>
+  <p class="record" id="rivalNote"></p>
   <div id="careerNews" class="careerNews hidden"></div>
   <p class="stats" id="stats"></p>
   <div class="bar"><button class="primary big" id="watchBtn">&#9654; Watch the replay</button></div>
@@ -603,6 +608,7 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
   <div id="cabBadges" class="cabgrid badges"></div>
   <h4>Medal cabinet</h4>
   <div id="cabGrid" class="cabgrid"></div>
+  <div id="cabRivalsBox" class="hidden"><h4>Rivals</h4><div id="cabRivals" class="rivals"></div></div>
   <div class="bar"><button class="primary" id="cabClose">Back to HQ</button></div>
 </div></section>
 
@@ -4266,7 +4272,7 @@ function gameOver(winner, forfeit = false) {
 }
 // The rest of the end: medals, the service record (not for a forfeit), both pages and the numbers.
 function gameOverTail(winner, record = true) {
-  showMedals();
+  showMedals(); $("rivalNote").textContent = "";
   if (record) recordMatch(winner, awards());
   else { $("recordNote").textContent = "A battle won or lost by forfeit doesn't go on the service record."; $("careerNews").classList.add("hidden"); }
   [0, 1].forEach(i => {
@@ -5415,6 +5421,41 @@ function recordMatch(winner, medals) {
   $("recordNote").innerHTML = (got ? `<b>${got[0].toUpperCase() + got.slice(1)}</b> added to ${you} service record. ` : "") +
     `Record: ${r.wins} win${r.wins === 1 ? "" : "s"}, ${r.losses} loss${r.losses === 1 ? "" : "es"}, ${medalTotal(r)} medal${medalTotal(r) === 1 ? "" : "s"}.`;
 }
+// ---------- rivalry record (1.2) ----------
+// Online matches only. Kept per opponent call-sign pid (a rerolled call sign is still the same rival): {tag, wins, losses,
+// poops, roasts, last}. Poops and roasts are lifetime fun counts of what happened in your battles with them. A paperWars
+// key, so the iPhone app mirrors it to iCloud. Forfeits never count.
+const RIVALS_KEY = "paperWarsRivals", RIVALS_KEEP = 50, RIVALS_SHOWN = 10;
+function loadRivals() {
+  let o = null; try { o = JSON.parse(localStorage.getItem(RIVALS_KEY)); } catch (e) {}
+  const out = {};
+  if (o && typeof o === "object") Object.keys(o).forEach(k => { const v = o[k]; if (!v || typeof v !== "object") return;
+    out[k] = {tag: String(v.tag || "A friend").slice(0, 60), wins: v.wins | 0, losses: v.losses | 0, poops: v.poops | 0, roasts: v.roasts | 0, last: +v.last || 0}; });
+  return out;
+}
+function recordRival(pid, tag, won, poops, roasts) {
+  const all = loadRivals(), e = all[pid] || {tag: "", wins: 0, losses: 0, poops: 0, roasts: 0, last: 0};
+  e.tag = String(tag || e.tag || "A friend").slice(0, 60);
+  if (won) e.wins++; else e.losses++;
+  e.poops += poops | 0; e.roasts += roasts | 0; e.last = Date.now(); all[pid] = e;
+  const keep = Object.keys(all).sort((a, b) => all[b].last - all[a].last).slice(0, RIVALS_KEEP), out = {};
+  keep.forEach(k => out[k] = all[k]);
+  try { localStorage.setItem(RIVALS_KEY, JSON.stringify(out)); } catch (err) {}
+  return e;
+}
+const rivalLine = pid => { const e = loadRivals()[pid]; return e ? `You vs ${e.tag}: ${e.wins}\u2013${e.losses}` : ""; };
+function rivalCounts(events) { // what happened in a battle: soldiers who pooped (either side), turkeys roasted
+  const ev = (events || []).filter(e => e && e.shot && e.res);
+  return {poops: ev.filter(e => e.res.fart && e.res.fart.poop).length, roasts: ev.filter(e => e.res.type === "turkey").length};
+}
+function renderRivals() {
+  const all = loadRivals(), ids = Object.keys(all).sort((a, b) => all[b].last - all[a].last).slice(0, RIVALS_SHOWN), box = $("cabRivals");
+  box.innerHTML = ""; $("cabRivalsBox").classList.toggle("hidden", !ids.length);
+  ids.forEach(id => { const e = all[id], d = document.createElement("div"), b = document.createElement("b"), w = document.createElement("span"), n = document.createElement("small");
+    d.className = "rivalRow"; b.textContent = e.tag; w.textContent = `${e.wins}\u2013${e.losses}`;
+    n.textContent = `${e.poops} Code Brown${e.poops === 1 ? "" : "s"} \u00b7 ${e.roasts} turkey roast${e.roasts === 1 ? "" : "s"}`;
+    d.append(b, w, n); box.appendChild(d); });
+}
 function showCareerNews(r0, r1, earned, pts) {
   const box = $("careerNews"); box.innerHTML = ""; box.classList.toggle("hidden", r1 === r0 && !earned.length);
   if (r1 > r0) {
@@ -5445,6 +5486,7 @@ function showCabinet() {
     d.innerHTML = `${trophySvg(t, INK[0], 50)}<b>${n ? t : "???"}</b>${n > 1 ? `<span class="n">&times;${n}</span>` : ""}`;
     grid.appendChild(d);
   });
+  renderRivals();
   $("cabinet").classList.remove("hidden");
 }
 
@@ -7677,7 +7719,7 @@ function onlineOver(winner, forfeit) {
   onl.revealMsg = {t: "reveal", army: clone({soldiers: me.soldiers, fort: me.fort}), initial: clone(replay.armies ? replay.armies[onl.seat] : {soldiers: me.soldiers, fort: me.fort}), near, drops};
   net.send(onl.revealMsg, "all");
   $("medals").innerHTML = ""; $("careerNews").classList.add("hidden"); $("stats").textContent = "";
-  $("recordNote").textContent = forfeit ? "" : "Waiting for the Big Reveal from the other phone...";
+  $("recordNote").textContent = forfeit ? "" : "Waiting for the Big Reveal from the other phone..."; $("rivalNote").textContent = "";
   if (forfeit || onl.theirReveal) return onlineFinish();
   const m = onl; onl.timers.reveal = setTimeout(() => onl === m && onlineFinish(), ONLINE_REVEAL_WAIT_MS);
 }
@@ -7697,6 +7739,11 @@ function onlineFinish() {
       replay.events.splice(k + 1, 0, {who: t, reinforce: dp.soldier}); });
   }
   gameOverTail(onl.over.winner, !onl.over.forfeit);
+  if (!onl.over.forfeit) { // the rivalry record: this opponent's pid, today's call sign, what happened in the war
+    const pid = onl.seats[t], c = rivalCounts(replay.events);
+    recordRival(pid, onl.names[t], onl.over.winner === onl.seat, c.poops, c.roasts);
+    $("rivalNote").textContent = rivalLine(pid);
+  }
   partyOver(onl.matchId, onl.seats, onl.over.winner);
   if (r && !onl.over.forfeit) bigRevealOpen({matchId: onl.matchId, seats: onl.seats.slice(), winner: onl.over.winner, campaign: opts.campaign, terrain: players.map(p => p.terrain),
     roasts: turkeys.filter(tk => tk.cooked).map(tk => ({...tk.cooked})), armies: players.map(p => clone({soldiers: p.soldiers, fort: p.fort})), incoming: players.map(p => clone(p.incoming))});
