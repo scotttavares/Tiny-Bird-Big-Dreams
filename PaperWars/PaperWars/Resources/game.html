@@ -5838,6 +5838,8 @@ function inkPath(path, alpha = 1) {
   ctx.beginPath(); path.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); ctx.restore();
 }
 let uiWho = 0, uiTentPass = false;
+// A polite live region re-announces every write, even the same words: write only when the sentence changes.
+function srSay(el, s) { s = String(s == null ? "" : s); if (el.textContent !== s) el.textContent = s; }
 function updateUI() {
   if (tentOn() && !uiTentPass) { // once for each half
     uiTentPass = true;
@@ -5845,7 +5847,8 @@ function updateUI() {
     return;
   }
   const tent = tentOn(), on = onlineOn(), two = tent || on, me = tent ? uiWho : on ? onl.seat : cur;
-  const bar = tent ? TENT[me].bar : $("bar"), st = tent ? TENT[me].st : $("status"); bar.innerHTML = "";
+  const bar = tent ? TENT[me].bar : $("bar"), stEl = tent ? TENT[me].st : $("status"); bar.innerHTML = "";
+  const st = {set textContent(v) { srSay(stEl, v); }}; // the VoiceOver sentence: only written when it changes
   const bn = tent ? TENT[me].bn : $("turnBanner"), hn = tent ? TENT[me].hn : $("turnHint"), bt = players ? turnBannerText() : "";
   bn.textContent = bt; bn.classList.toggle("long", bt.length > 15); hn.textContent = bt && players ? shootHintText(me) : "";
   const btn = (t, cls, fn, dis) => { const b = document.createElement("button"); b.textContent = t; b.className = cls || ""; b.onclick = fn; b.disabled = !!dis; bar.appendChild(b); };
@@ -5853,7 +5856,7 @@ function updateUI() {
   if (two && phase === "setup") {
     const q = players[me];
     if (q.setupReady) { st.textContent = "Ready! Waiting for the other side..."; return; }
-    st.textContent = `${q.name}: hide your army at ${MAPS[opts.map].name}` + (on ? ` (${Math.max(0, Math.ceil((onl.hideEnds - performance.now()) / 1000))}s)` : "");
+    st.textContent = `${q.name}: hide your army at ${MAPS[opts.map].name}`; // (the hiding clock is on the page, not read out every second)
     btn("Clear", "", () => { q.soldiers = []; q.fort = null; render(); updateUI(); });
     btn("Ready", "primary", () => on ? onlineReady() : ready(me), !setupDone(q));
     return;
