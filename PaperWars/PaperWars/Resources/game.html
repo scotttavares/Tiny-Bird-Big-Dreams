@@ -57,7 +57,15 @@ body{background:var(--bg);color:var(--text);font:17px/1.4 "Patrick Hand",system-
 h1{font-family:Caveat,cursive;font-size:44px;margin:0;color:var(--blue);line-height:1}
 .top{display:flex;align-items:baseline;gap:12px;width:100%;max-width:560px;justify-content:space-between}
 .top small{color:var(--muted)}
-#status{min-height:2.7em;max-width:560px;margin:6px 0 10px;font-size:18px;line-height:1.35;text-align:center;display:flex;align-items:center;justify-content:center}
+#status{max-width:560px;font-size:18px;line-height:1.35;text-align:center}
+/* 1.1 (user, 2026-11-06: "cant it be whos turn it is"): the status sentence is read by VoiceOver only; a stamp says whose turn it is. */
+.sr-only{position:absolute !important;width:1px !important;height:1px !important;padding:0 !important;margin:-1px !important;overflow:hidden !important;clip:rect(0 0 0 0) !important;clip-path:inset(50%) !important;white-space:nowrap !important;border:0 !important}
+.turnbar{min-height:64px;margin:4px 0 6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;max-width:560px}
+.turnbanner{font:700 24px/1 "Stardos Stencil","Special Elite",monospace;letter-spacing:.08em;color:#b3261e;background:#fbf8ef;border:4px double #b3261e;border-radius:6px;padding:7px 16px 5px;transform:rotate(-2deg);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.turnbanner.long{font-size:18px;letter-spacing:.04em}
+.turnbanner:empty{visibility:hidden}
+.turnhint{font:16px/1.2 "Patrick Hand",sans-serif;color:var(--muted);text-align:center}
+.turnhint:empty{display:none}
 .phone{position:relative;background:#1b1b1b;border-radius:30px;padding:9px;box-shadow:0 10px 30px #0003}
 .hinge{position:absolute;top:-7px;left:22%;right:22%;height:10px;border-radius:6px;background:#3a3a3a}
 canvas{display:block;border-radius:22px;touch-action:none;background:#fbf8ef}
@@ -103,7 +111,7 @@ button:disabled{opacity:.4;cursor:default}
 .camps .camp[data-campaign=editions]{grid-column:1/-1}
 .camps .camp span{font:700 22px/1.1 Caveat,cursive}
 .camps .camp.soon{opacity:.45;cursor:default}
-.campbar{display:flex;gap:8px;flex-wrap:wrap}
+.campbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 8px}
 #menu:not([data-campaign=drumstick]) #storyBtn{display:none}
 #story{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:20px;background:#0009}
 #story.hidden{display:none}
@@ -114,7 +122,10 @@ button:disabled{opacity:.4;cursor:default}
 #story p{font:19px/1.4 "Patrick Hand",sans-serif;margin:0 0 10px}
 #story .storyNote{font-size:16px;color:#6d6a62}
 #story .stampbtn{font-size:22px;padding:6px 14px 4px;margin-top:4px}
-.campback{display:block;margin:0 0 6px;padding:2px 10px;font:700 18px/1.2 Caveat,cursive;color:#1f4fa8;background:transparent;border:1.5px solid #1f4fa855;border-radius:12px;cursor:pointer}
+/* 1.1 (user, 2026-11-06: the Campaigns pill "was hard to see"): a filled blue button; True story and call sign stay secondary. */
+.campback{display:inline-flex;align-items:center;gap:6px;min-height:44px;margin:0;padding:6px 14px;font:700 21px/1 Caveat,cursive;color:#1f4fa8;background:#fffef9;border:2px solid #1f4fa8;border-radius:12px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#campaignsBtn{font:700 19px/1 "Stardos Stencil","Special Elite",monospace;letter-spacing:.05em;text-transform:uppercase;color:#fff;background:#1f4fa8;border-color:#1f4fa8;padding:8px 18px 6px;box-shadow:2px 3px 0 #0f2d66}
+#campaignsBtn:active{transform:translate(1px,2px);box-shadow:1px 1px 0 #0f2d66}
 #menu[data-campaign=drumstick] #bootBtn{display:none}
 .menu h4{font:700 25px/1.1 Caveat,cursive;margin:12px 0 6px;color:var(--ink)}
 .tiles{display:grid;gap:10px}
@@ -336,7 +347,11 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
 #tent.hidden{display:none}
 #tent .half{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px 8px;min-height:0;overflow:hidden}
 #tent .far{transform:rotate(180deg);border-top:2px dashed var(--border)}
-#tent .tstatus{font-size:16px;line-height:1.25;text-align:center;min-height:2.6em;max-width:520px;display:flex;align-items:center;justify-content:center}
+#tent .tstatus{font-size:16px;line-height:1.25;text-align:center;max-width:520px}
+#tent .turnbar{min-height:44px;margin:0;gap:1px}
+#tent .turnbanner{font-size:19px;padding:4px 12px 3px;border-width:3px}
+#tent .turnbanner.long{font-size:15px}
+#tent .turnhint{font-size:14px}
 #tent canvas{border-radius:12px;box-shadow:0 2px 10px #0003;touch-action:none;flex:none}
 #tent .bar{margin:2px 0;min-height:42px;align-items:center}
 #intro{position:fixed;inset:0;z-index:50;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);background:#1b1b1b;display:flex;align-items:center;justify-content:center;perspective:1200px}
@@ -433,7 +448,7 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
     <button type="button" class="tile camp" data-campaign="regular"><canvas class="pic" data-pic="camp-regular"></canvas><span>Regular War</span><small>The pencil war</small></button>
     <button type="button" class="tile camp" data-campaign="drumstick"><canvas class="pic" data-pic="camp-drumstick"></canvas><span>Operation Drumstick</span><small>Thanksgiving</small></button>
     <button type="button" class="tile camp soon" data-campaign="mistletoe" disabled><canvas class="pic" data-pic="camp-mistletoe"></canvas><span>Operation Mistletoe</span><small>Coming at Christmas</small></button>
-    <button type="button" class="tile camp soon" data-campaign="editions" disabled><canvas class="pic" data-pic="camp-editions"></canvas><span>Editions</span><small>Coming soon</small></button>
+    <button type="button" class="tile camp soon" data-campaign="editions" disabled><canvas class="pic" data-pic="camp-editions"></canvas><span>Future Operations</span><small>Awaiting orders from HQ</small></button>
   </div>
 </section>
 <section id="menu" class="menu" data-campaign="regular">
@@ -499,7 +514,8 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
 </section>
 
 <section id="game" class="hidden" style="display:flex;flex-direction:column;align-items:center">
-  <div id="status"></div>
+  <div class="turnbar"><div id="turnBanner" class="turnbanner" aria-hidden="true"></div><div id="turnHint" class="turnhint" aria-hidden="true"></div></div>
+  <div id="status" class="sr-only" role="status" aria-live="polite"></div>
   <div id="onlineWait" class="onlineWait hidden"></div>
   <div class="phone"><div class="hinge"></div><canvas id="cv"></canvas>
     <div id="lastStand" class="lastStand hidden"><b>LAST STAND</b><small></small></div>
@@ -552,8 +568,8 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
 
 <!-- Tent mode (iPhone Duo standing as a tent): each player gets their own half; the far half is upside down for the player across the table. -->
 <section id="tent" class="hidden">
-  <div class="half far" id="half1"><div class="tstatus" id="tstatus1"></div><canvas id="tcv1"></canvas><div class="bar" id="tbar1"></div></div>
-  <div class="half near" id="half0"><div class="tstatus" id="tstatus0"></div><canvas id="tcv0"></canvas><div class="bar" id="tbar0"></div><button class="awol" data-awol>&#9873; Go AWOL</button></div>
+  <div class="half far" id="half1"><div class="turnbar"><div class="turnbanner" id="tbanner1" aria-hidden="true"></div><div class="turnhint" id="thint1" aria-hidden="true"></div></div><div class="tstatus sr-only" id="tstatus1" role="status" aria-live="polite"></div><canvas id="tcv1"></canvas><div class="bar" id="tbar1"></div></div>
+  <div class="half near" id="half0"><div class="turnbar"><div class="turnbanner" id="tbanner0" aria-hidden="true"></div><div class="turnhint" id="thint0" aria-hidden="true"></div></div><div class="tstatus sr-only" id="tstatus0" role="status" aria-live="polite"></div><canvas id="tcv0"></canvas><div class="bar" id="tbar0"></div><button class="awol" data-awol>&#9873; Go AWOL</button></div>
 </section>
 
 <section id="over" class="hidden" style="display:flex;flex-direction:column;align-items:center">
@@ -3766,7 +3782,7 @@ function drawAirdrop(c, a) {
 // When the Duo stands as a tent (the app tells us through window.paperWarsNative; ?tent forces it for testing),
 // a match between two people splits the screen: the near half is Player 1's page, the far half, upside down,
 // is Player 2's. Each only ever sees their own army. Setup and Rock, Paper, Scissors happen at the same time.
-const TENT = [0, 1].map(i => ({cv: $("tcv" + i), ctx: $("tcv" + i).getContext("2d"), st: $("tstatus" + i), bar: $("tbar" + i), half: $("half" + i)}));
+const TENT = [0, 1].map(i => ({cv: $("tcv" + i), ctx: $("tcv" + i).getContext("2d"), st: $("tstatus" + i), bn: $("tbanner" + i), hn: $("thint" + i), bar: $("tbar" + i), half: $("half" + i)}));
 const tentWanted = () => !!(window.paperWarsNative && window.paperWarsNative.posture === "tent") || /[?&]tent\b/.test(location.search);
 const tentOn = () => !!(opts && opts.tent && players);
 // Two-phone play (1.2): `onl` holds the online match on this phone (see "the online match" near the end).
@@ -3782,7 +3798,7 @@ function fitTent() {
   if (!tentOn()) return;
   const dpr = window.devicePixelRatio || 1;
   TENT.forEach(h => {
-    const avH = h.half.clientHeight - h.st.offsetHeight - h.bar.offsetHeight - 24, avW = h.half.clientWidth - 16;
+    const avH = h.half.clientHeight - h.bn.parentNode.offsetHeight - h.bar.offsetHeight - 24, avW = h.half.clientWidth - 16;
     const w = Math.max(150, Math.min(avW, avH * W / H));
     h.cv.style.width = w + "px"; h.cv.style.height = w * H / W + "px";
     h.cv.width = W * dpr; h.cv.height = H * dpr; h.ctx.setTransform(h.cv.width / W, 0, 0, h.cv.height / H, 0, 0);
@@ -3875,6 +3891,7 @@ function newMatch(preset) {
   else if (MAPS[opts.map] && MAPS[opts.map].campaign) opts.map = "random";
   if (!MAPS[opts.map]) { const ids = (fullArsenal() ? Object.keys(MAPS).filter(k => k !== "plain") : Object.keys(MAPS).filter(k => !ARSENAL.maps.includes(k))).filter(k => !MAPS[k].campaign); opts.map = ids[Math.floor(Math.random() * ids.length)]; }
   coachSeen.clear(); coachQ.length = 0; $("coach").classList.add("hidden"); // shown with its first line
+  shootHint = firstMatchHint(); // Boot Camp, and your first ever match, say how to shoot
   players = [0, 1].map(i => ({name: i && opts.foe === "cpu" ? "Computer" : `Player ${i + 1}`, cpu: i === 1 && opts.foe === "cpu",
     soldiers: [], fort: null, shots: [], incoming: [], known: new Set(), fortKnown: false, flingsLeft: opts.flings, missStreak: 0, reinforce: 0}));
   const cs = callsign(); // every game has a namesake per side (see "call signs")
@@ -3894,6 +3911,35 @@ function newMatch(preset) {
   if (opts.tent) $("game").classList.add("hidden");
   if (vsCpu()) { go("setup"); coach("setup", 400); } else if (opts.online) onlineSetup(); else if (opts.tent) go("setup"); else showCover("Player 1", "Hide your army. Player 2: divert your eyes, soldier!", () => go("setup"));
   fit(); if (opts.tent) requestAnimationFrame(fitTent);
+}
+// 1.1 (user, 2026-11-06): "Touch where to shoot, let go to fire" only in Boot Camp and the first match you ever play.
+const FIRST_MATCH_KEY = "paperWarsPlayedMatch";
+let shootHint = false;
+function firstMatchHint() {
+  if (opts.bootcamp) return true;
+  try {
+    if (localStorage.getItem(FIRST_MATCH_KEY) === "1") return false;
+    localStorage.setItem(FIRST_MATCH_KEY, "1");
+  } catch (e) { return false; }
+  const r = loadRecord(); return !(r.wins + r.losses); // someone who played 1.0 already knows
+}
+// Whose turn it is, for the stamp above the page (battle only; setup and Rock, Paper, Scissors have their own words).
+function turnBannerText() {
+  if (!players || !["aim", "fold", "cpu", "result"].includes(phase)) return "";
+  if (onlineOn()) {
+    if (cur === onl.seat) return "YOUR TURN";
+    const n = String(players[cur].name || "").toUpperCase();
+    return n && n.length <= 20 ? `${n}'S TURN` : "THEIR TURN";
+  }
+  if (vsCpu()) return cur === 0 ? "YOUR TURN" : "COMPUTER'S TURN";
+  return `PLAYER ${cur + 1}'S TURN`;
+}
+// How to shoot, in a few words (shown under the stamp while the hint is on).
+function shootHintText(me) {
+  if (!shootHint || phase !== "aim" || me !== cur || !players[cur] || players[cur].cpu || airdrop) return "";
+  if (pending) return opts.fireBy === "tap" ? "" : "Close the phone to fire";
+  if (shotType === "dot") return opts.fireBy === "tap" ? "Touch where to shoot, let go to fire" : "Tap to place your dot";
+  return "Touch one of your soldiers, drag where he should shoot" + (opts.fireBy === "tap" ? ", let go to fire" : "");
 }
 function go(ph) {
   phase = ph; hideCover();
@@ -3972,15 +4018,41 @@ function rpsPick(i, who = cur) {
     if (rps.picks[who] != null) return;
     rps.picks[who] = i; sound("click");
     if (rps.picks.some(v => v == null)) { render(); updateUI(); return; }
-    phase = "rpsReveal"; sound("drum"); render(); updateUI(); return;
+    phase = "rpsReveal"; sound("drum"); render(); updateUI(); rpsAuto(); return;
   }
   rps.picks[cur] = i; sound("click");
   if (cur === 0) {
     if (vsCpu()) rps.picks[1] = Math.floor(Math.random() * 3);
     else { cur = 1; showCover("Player 2", "Your pick. Player 1: divert your eyes, soldier!", () => go("rps")); return; }
   }
-  phase = "rpsReveal"; sound("drum"); render(); updateUI();
+  phase = "rpsReveal"; sound("drum"); render(); updateUI(); rpsAuto();
 }
+// 1.1 (user, 2026-11-06: "cant it be automatic and just go to battle", "too many button clicks"): after the reveal the HQ
+// stamp comes by itself, then the battle; a tie goes straight back to picking. A tap anywhere skips ahead (not online, where
+// both phones keep the same clock: see onlineRpsCheck).
+const RPS_ORDERS_MS = 2000, RPS_BATTLE_MS = 4000, RPS_TIE_MS = 1800;
+let rpsTimer = null, rpsShownAt = 0;
+function rpsAuto() {
+  clearTimeout(rpsTimer); rpsShownAt = performance.now();
+  if (onlineOn()) return;
+  const r = rps, id = matchId, live = () => rps === r && matchId === id && phase === "rpsReveal";
+  if (rpsResult() === null) rpsTimer = setTimeout(() => live() && startRps(), RPS_TIE_MS);
+  else if (!rps.orders) rpsTimer = setTimeout(() => { if (live()) { openOrders(); rpsAuto(); } }, RPS_ORDERS_MS);
+  else rpsTimer = setTimeout(() => live() && rpsToBattle(), RPS_BATTLE_MS);
+}
+function rpsToBattle() {
+  clearTimeout(rpsTimer);
+  const f = rps.orders.first; first = cur = f;
+  if (vsCpu() || tentOn()) return startBattle();
+  showCover(`${players[f].name} shoots first`, rps.orders.text + " Pass the phone.", () => go("aim"));
+}
+function rpsSkip() {
+  if (phase !== "rpsReveal" || onlineOn() || performance.now() - rpsShownAt < 400) return; // not the tap that picked
+  if (rpsResult() === null) { clearTimeout(rpsTimer); return startRps(); }
+  if (!rps.orders) { openOrders(); return rpsAuto(); }
+  rpsToBattle();
+}
+document.addEventListener("pointerdown", e => { if (phase === "rpsReveal" && !(e.target.closest && e.target.closest("button, a, input, label"))) rpsSkip(); });
 // After the winner is known, HQ sends random orders, so winning doesn't promise the first shot.
 const ORDERS = [["Winner goes first!", true], ["Winner goes last!", false], ["Loser goes first!", false]];
 function openOrders() {
@@ -5666,12 +5738,16 @@ function renderView(pi) {
     label(ctx, w === null ? "Tie!" : w === 0 ? "beats" : "loses to", W / 2, 236, 34, w === null ? RED : "#6d6a62", "Caveat"); // top pick vs bottom pick
     if (rps.orders) { // a rubber-stamped order across the page
       ctx.save(); ctx.translate(W / 2, 236); ctx.rotate(-.18);
-      ctx.fillStyle = "#fbf8efee"; ctx.fillRect(-150, -46, 300, 92);
-      ctx.strokeStyle = RED; ctx.lineWidth = 4; ctx.strokeRect(-150, -46, 300, 92); ctx.lineWidth = 1.5; ctx.strokeRect(-143, -39, 286, 78);
+      ctx.fillStyle = "#fbf8efee"; ctx.fillRect(-150, -50, 300, 112);
+      ctx.strokeStyle = RED; ctx.lineWidth = 4; ctx.strokeRect(-150, -50, 300, 112); ctx.lineWidth = 1.5; ctx.strokeRect(-143, -43, 286, 98);
       ctx.restore();
+      // the stamp also says who shoots first (1.1: the sentence above the page is gone)
+      const f = rps.orders.first, mine = vsCpu() ? f === 0 : onlineOn() ? f === onl.seat : false;
+      const who = mine ? "You shoot first" : vsCpu() ? "The computer shoots first" : `${players[f].name} shoots first`;
       ctx.save(); ctx.translate(W / 2, 236); ctx.rotate(-.18);
-      label(ctx, "ORDERS FROM HQ", 0, -14, 16, RED);
-      label(ctx, rps.orders.text, 0, 24, 36, RED, "Caveat");
+      label(ctx, "ORDERS FROM HQ", 0, -20, 16, RED);
+      label(ctx, rps.orders.text, 0, 16, 36, RED, "Caveat");
+      label(ctx, who, 0, 46, 22, RED, "Caveat");
       ctx.restore();
     }
   } else if (phase === "setup") {
@@ -5683,6 +5759,10 @@ function renderView(pi) {
     ctx.save(); ctx.font = '18px "Patrick Hand"'; const mw = ctx.measureText(msg).width + 20; ctx.restore();
     ctx.fillStyle = "#fbf8efdd"; ctx.fillRect(W / 2 - mw / 2, H - 32, mw, 26); // keep the hint readable over units
     label(ctx, msg, W / 2, H - 14, 18, "#6d6a62");
+    if (onlineOn() && !p.setupReady && onl.hideEnds) { // the hiding clock (it was in the sentence above the page)
+      const left = Math.max(0, Math.ceil((onl.hideEnds - performance.now()) / 1000));
+      label(ctx, `${left}s`, W - 26, 34, left <= 10 ? 30 : 24, left <= 10 ? RED : "#6d6a62", "Caveat");
+    }
     if (twoAtOnce() && p.setupReady) {
       ctx.fillStyle = "#fbf8efcc"; ctx.fillRect(0, H / 2 - 40, W, 80);
       label(ctx, "Ready! Waiting for the other side...", W / 2, H / 2 + 8, 28, INK[pi], "Caveat");
@@ -5766,6 +5846,8 @@ function updateUI() {
   }
   const tent = tentOn(), on = onlineOn(), two = tent || on, me = tent ? uiWho : on ? onl.seat : cur;
   const bar = tent ? TENT[me].bar : $("bar"), st = tent ? TENT[me].st : $("status"); bar.innerHTML = "";
+  const bn = tent ? TENT[me].bn : $("turnBanner"), hn = tent ? TENT[me].hn : $("turnHint"), bt = players ? turnBannerText() : "";
+  bn.textContent = bt; bn.classList.toggle("long", bt.length > 15); hn.textContent = bt && players ? shootHintText(me) : "";
   const btn = (t, cls, fn, dis) => { const b = document.createElement("button"); b.textContent = t; b.className = cls || ""; b.onclick = fn; b.disabled = !!dis; bar.appendChild(b); };
   const p = players && players[cur], foe = players && players[1 - cur];
   if (two && phase === "setup") {
@@ -5811,15 +5893,10 @@ function updateUI() {
     st.textContent = `${p.name}: Rock, Paper or Scissors?`;
   } else if (phase === "rpsReveal") {
     const w = rpsResult(), [a, b] = rps.picks;
-    if (w === null) { st.textContent = `Both picked ${RPS[a]}. Go again!`; btn("Go again", "primary", () => on ? onlineRps(rps.round + 1) : startRps()); }
+    if (w === null) st.textContent = `Both picked ${RPS[a]}. Go again!`; // and it does, by itself (see rpsAuto)
     else {
       const won = `${RPS[w ? b : a]} beats ${RPS[w ? a : b]}. ${players[w].name} wins`;
-      if (!rps.orders) { st.textContent = `${won}... but what does HQ say?`; btn("Open orders", "primary", openOrders); }
-      else {
-        const f = rps.orders.first;
-        st.textContent = `${rps.orders.text} ${players[f].name} shoots first.`;
-        btn("To battle", "primary", () => { if (on) return onlineToBattle(f); first = cur = f; if (vsCpu() || tentOn()) return startBattle(); showCover(`${players[f].name} shoots first`, rps.orders.text + " Pass the phone.", () => go("aim")); });
-      }
+      st.textContent = !rps.orders ? `${won}... but what does HQ say?` : `${rps.orders.text} ${players[rps.orders.first].name} shoots first.`;
     }
   } else if (phase === "cover" || phase === "fold") {
     st.textContent = on && phase === "fold" ? "Shot away! Waiting to hear what it hit..." : "";
@@ -7416,7 +7493,7 @@ function onlineSetup() {
   const m = onl;
   onl.timers.hide = setInterval(() => {
     if (onl !== m || phase !== "setup") return clearInterval(m.timers.hide);
-    if (performance.now() >= onl.hideEnds && !players[onl.seat].setupReady) onlineAutoHide(); else updateUI();
+    if (performance.now() >= onl.hideEnds && !players[onl.seat].setupReady) onlineAutoHide(); else { render(); updateUI(); }
   }, 500);
   go("setup");
 }
@@ -7462,8 +7539,8 @@ function onlineRpsCheck() {
     if (onl !== m || phase !== "rpsReveal" || rps.round !== round) return;
     if (w === null) return onlineRps(round + 1);
     openOrders();
-    onl.timers.rps = setTimeout(() => onl === m && phase === "rpsReveal" && rps.orders && onlineToBattle(rps.orders.first), 2500);
-  }, 1600);
+    onl.timers.rps = setTimeout(() => onl === m && phase === "rpsReveal" && rps.orders && onlineToBattle(rps.orders.first), RPS_BATTLE_MS);
+  }, w === null ? RPS_TIE_MS : RPS_ORDERS_MS);
 }
 function onlineToBattle(f) {
   if (!onlineOn() || onl.first != null) return;
