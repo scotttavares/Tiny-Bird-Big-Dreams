@@ -16,6 +16,14 @@
   }
   var trackOnce = function (t, v) { var k = t + v; if (once[k]) return; once[k] = 1; track(t, v); };
 
+  /* ---------- greeting: by the visitor's own clock (their device's time zone) ---------- */
+  (function () {
+    var g = $("#greet"); if (!g) return;
+    var h = new Date().getHours();
+    g.textContent = h >= 5 && h < 12 ? "Good morning ☀" : h >= 12 && h < 17 ? "Good afternoon ☀" : "Good evening ☾";
+    g.hidden = false;
+  })();
+
   /* ---------- sound: removed from the page; noise() and tone() stay silent ---------- */
   var AC = null, soundOn = false;
   function noise(d, f1, f2, v, type) {
