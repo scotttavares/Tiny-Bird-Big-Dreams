@@ -354,3 +354,16 @@ footer a{margin:0 10px}
 .hero .pill img{width:30px;height:30px;border-radius:8px}
 .hero .pill:hover{transform:translateY(-3px);background:#fff}
 @media (max-width:700px){.hero .strip{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}.hero .scenebox{min-height:86vh;border-radius:24px}.hero .over{padding:32px 18px}.hero .pill{font-size:13px}}
+/* header: the app-icon mark + serif wordmark on the left, menu on the right */
+.brand img{width:36px;height:36px;border-radius:10px;flex:none;box-shadow:0 4px 14px -4px rgba(30,15,50,.45)}
+.brand span{font-family:"Instrument Serif",serif;font-weight:400;font-size:23px;letter-spacing:-.005em;line-height:1}
+.brand span i{font-style:normal}
+.brand span em{font-style:italic}
+.top .pill{margin-left:auto}
+.top .tools:empty,.top .tools:not(:has(:not(.menubtn))){margin-left:0}
+/* hero: greeting by the visitor's own clock; shorter panel so the picker shows on the first screen */
+.hero .greet{margin:0 0 14px;font-family:"Instrument Serif",serif;font-style:italic;font-size:clamp(22px,2.2vw,30px);color:#ffe9c7;text-shadow:0 2px 20px rgba(0,0,0,.35);opacity:0;animation:fade 1s .3s forwards}
+.hero .scenebox{min-height:min(64vh,620px)}
+.hero .over{padding:32px 24px}
+.hero .ask{margin-top:clamp(18px,3vh,30px)}
+@media (max-width:700px){.brand span{font-size:20px}.brand img{width:32px;height:32px}.hero .scenebox{min-height:72vh}}
