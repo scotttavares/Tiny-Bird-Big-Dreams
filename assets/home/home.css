@@ -369,3 +369,15 @@ footer a{margin:0 10px}
 @media (max-width:700px){.brand span{font-size:20px}.brand img{width:32px;height:32px}.hero .scenebox{min-height:72vh}}
 /* one clock only: the floating one (bottom right) shows the time; the photo stamps stay as its hidden source */
 .scene .time{display:none}
+/* tighter rhythm: less dead air between moments */
+section{padding:11vh 6vw}
+.addup{min-height:auto;padding-top:14vh;padding-bottom:14vh}
+.shop{margin-top:6vh}
+.eq .res{white-space:nowrap}
+footer a{white-space:nowrap;display:inline-block;margin:4px 10px}
+@media (max-width:700px){
+  section{padding:9vh 6vw}
+  .eq{gap:10px}.eq .op{font-size:30px}.eq .t{width:84px;padding:14px 6px;font-size:12px}.eq .t img{width:44px;height:44px}
+  .eq .res{font-size:26px;padding:14px 20px}
+}
+@media (max-width:700px){.eq .t.res,.eq .res{width:auto;flex-basis:100%;max-width:220px}}
