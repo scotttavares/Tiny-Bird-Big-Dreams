@@ -85,7 +85,9 @@
     while (i < secs.length - 1 && mid > secs[i + 1].offsetTop) i++;
     var a = secs[i], b = secs[i + 1] || a;
     var t = b === a ? 0 : Math.min(1, Math.max(0, (mid - a.offsetTop) / (b.offsetTop - a.offsetTop)));
-    return { h: +a.dataset.h + (+b.dataset.h - +a.dataset.h) * t, l: a.dataset.l };
+    // h blends between sections for the sky; the clock shows the section's own time (its photo's time stamp)
+    var tm = a.querySelector(".time");
+    return { h: +a.dataset.h + (+b.dataset.h - +a.dataset.h) * t, at: +a.dataset.h, txt: tm ? tm.textContent.trim() : "", l: a.dataset.l };
   }
   function fmt(h) {
     h = Math.min(h, 23.99); var hh = Math.floor(h), mm = Math.floor((h - hh) * 60), ap = hh >= 12 ? "pm" : "am";
@@ -94,7 +96,7 @@
   var clockT = $("#clockT"), clockL = $("#clockL"), sunDot = $("#sunDot"), clockEl = $("#clock"), picker = $("#lull"), dayEnd = $("#team");
   function paintSky(t) {
     var now = hourNow(), h = now.h;
-    clockT.textContent = fmt(h); clockL.textContent = now.l;
+    clockT.textContent = now.txt || fmt(now.at); clockL.textContent = now.l;
     // the clock joins once the day starts (the first moment) and leaves once the day is done
     var mid = scrollY + innerHeight * .5; clockEl.classList.toggle("on", !!picker && mid > picker.offsetTop && (!dayEnd || mid < dayEnd.offsetTop));
     var ang = Math.PI * (1 - Math.min(1, Math.max(0, (h - 6) / 14)));
@@ -115,8 +117,12 @@
   /* ---------- the bird you fly ---------- */
   var bird = $("#bird"), mx = innerWidth * .5, my = innerHeight * .72, bx = mx, by = my, lastX = bx, landed = false;
   addEventListener("pointermove", function (e) { if (e.pointerType === "mouse") { mx = e.clientX; my = e.clientY; } });
+  // The bird follows the mouse, so it must never block a click: it's pointer-events:none and
+  // links/buttons under it get the click. A tap on the bird over empty sky still counts for the egg.
   addEventListener("pointerdown", function (e) {
-    if (e.target.closest("a,button,input,textarea,.toy,.chips,.egg-card,.sheet")) return;
+    if (e.target.closest("a,button,input,textarea,select,label,.toy,.chips,.egg-card,.sheet")) return;
+    var r = bird.getBoundingClientRect();
+    if (e.clientX >= r.left - 20 && e.clientX <= r.right + 20 && e.clientY >= r.top - 20 && e.clientY <= r.bottom + 30) { flap(); eggTap(); return; }
     mx = e.clientX; my = e.clientY; flap();
   });
   function flap() {
@@ -144,7 +150,7 @@
     var t = Date.now(); taps = taps.filter(function (x) { return t - x < 4000; }); taps.push(t);
     if (taps.length >= 5) { taps = []; openEgg(); }
   }
-  bird.addEventListener("click", function (e) { e.stopPropagation(); flap(); eggTap(); });
+  bird.addEventListener("click", function (e) { if (e.detail) return; e.stopPropagation(); flap(); eggTap(); }); // keyboard only
   $("#logo").addEventListener("click", function (e) {
     if (!TOUCH && !RM) return; // on desktop the logo just goes home; the flying bird is the egg
     if (scrollY < 10) e.preventDefault();

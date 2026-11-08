@@ -37,7 +37,7 @@ a{color:inherit}
 #clock svg{width:34px;height:20px}#clock b{font-size:15px;font-weight:600}#clock span{font-size:11px;opacity:.75;letter-spacing:.08em;text-transform:uppercase}
 
 /* the bird */
-#bird{position:fixed;left:0;top:0;width:56px;height:56px;z-index:35;cursor:pointer;will-change:transform;filter:drop-shadow(0 8px 16px rgba(0,0,0,.25));background:none;border:none;padding:0;touch-action:manipulation}
+#bird{position:fixed;left:0;top:0;width:56px;height:56px;z-index:35;pointer-events:none;will-change:transform;filter:drop-shadow(0 8px 16px rgba(0,0,0,.25));background:none;border:none;padding:0;touch-action:manipulation}
 #bird svg{width:100%;height:100%;pointer-events:none}
 #bird .wing{transform-origin:30px 30px;animation:flap .42s ease-in-out infinite alternate}
 #bird.fast .wing{animation-duration:.09s}
