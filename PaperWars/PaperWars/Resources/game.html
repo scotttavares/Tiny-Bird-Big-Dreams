@@ -7802,7 +7802,7 @@ net.on("taunt", d => {
 function onlineWaitStart() {
   if (onl.waitEnds) return;
   onl.waitEnds = performance.now() + MATCH_RECONNECT_MS;
-  const m = onl, el = $("onlineWait"), crowd = net.peers().length >= 1; // someone besides the two players is still here
+  const m = onl, el = $("onlineWait"), crowd = net.peers().some(p => p.pid !== onl.seats[onl.them]); // someone besides the two players is still here
   const reinvite = crowd && net.me().isHost, hostGone = crowd && onl.seats[onl.them] === lobbyHost();
   el.innerHTML = '<span id="onlineWaitText"></span><button type="button" id="onlineWaitInvite" class="hidden">Bring them back</button>';
   $("onlineWaitInvite").classList.toggle("hidden", !reinvite);
@@ -7854,9 +7854,12 @@ const ONLINE_CLAIM_MS = 30000; // how soon after the connection came back the ot
 net.on("over", d => {
   if (!onlineMine(d) || onl.over || d.forfeit !== true) return; // (otherwise this phone works out the end from the last result itself)
   // They gave up: always. They say they waited this phone out: only if this phone really lost the connection (it's down
-  // now, or came back moments ago), so a connected opponent can't simply declare a win.
+  // now, or came back moments ago), so a connected opponent can't simply declare a win; otherwise this phone's own wait starts.
   if (d.winner === onl.seat) onlineForfeit(d.winner);
-  else if (d.winner === onl.them && (onl.cut || (onl.cutBack && performance.now() - onl.cutBack < ONLINE_CLAIM_MS))) onlineForfeit(d.winner);
+  else if (d.winner === onl.them) {
+    if (onl.cut || (onl.cutBack && performance.now() - onl.cutBack < ONLINE_CLAIM_MS)) onlineForfeit(d.winner);
+    else onlineWaitStart(); // not accepted: they may have lost us while this phone never noticed, so this phone starts its own wait (no-op if running) rather than waiting forever
+  }
 });
 function onlineCleanArmy(a) {
   if (!a || typeof a !== "object" || !Array.isArray(a.soldiers)) return null;
