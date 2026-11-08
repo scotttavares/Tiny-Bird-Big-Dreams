@@ -367,3 +367,5 @@ footer a{margin:0 10px}
 .hero .over{padding:32px 24px}
 .hero .ask{margin-top:clamp(18px,3vh,30px)}
 @media (max-width:700px){.brand span{font-size:20px}.brand img{width:32px;height:32px}.hero .scenebox{min-height:72vh}}
+/* one clock only: the floating one (bottom right) shows the time; the photo stamps stay as its hidden source */
+.scene .time{display:none}
