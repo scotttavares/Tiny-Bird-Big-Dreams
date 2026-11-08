@@ -3829,6 +3829,11 @@ const tentWanted = () => !!(window.paperWarsNative && window.paperWarsNative.pos
 const tentOn = () => !!(opts && opts.tent && players);
 // Two-phone play (1.2): `onl` holds the online match on this phone (see "the online match" near the end).
 let onl = null, MATCH_RECONNECT_MS = 60000, ONLINE_HIDE_MS = 45000, ONLINE_REVEAL_WAIT_MS = 8000;
+// The silence watchdog: a phone waiting on its opponent that hears NOTHING from them for this long starts the reconnect
+// wait (a one-sided drop: GameKit may never say "left"). Each seated phone sends a tiny keepalive every ONLINE_PING_MS, so a
+// slow but connected opponent never trips it. (lets, so the tests can shorten them)
+let ONLINE_SILENCE_MS = 45000, ONLINE_PING_MS = 10000;
+const ONLINE_SILENCE_MARGIN_MS = 15000; // on top of a soft clock the other phone keeps (the turn timer, hiding)
 function onlineOn() { return !!(onl && opts && opts.online && players); }
 function viewSeat() { return onlineOn() ? onl.seat : cur; } // whose page this screen shows
 function twoAtOnce() { return tentOn() || onlineOn(); } // both players hide and pick at once, each on their own page
@@ -6888,12 +6893,12 @@ window.addEventListener("keydown", e => {
 // Only the two seated players' hidden / rps / shot / result / reinforce / over count (net.turnCheck adds whose turn it is),
 // and a pid, once it has said hello from one transport id, can't be claimed from another.
 const NET_V = 1, NET_UPDATE_TEXT = "Update Paper Wars to play together.";
-const NET_TYPES = ["hello", "lobby", "start", "hidden", "rps", "shot", "result", "reinforce", "taunt", "spin", "queue", "remove", "over", "reveal", "catchup", "spinreq", "rematch"];
+const NET_TYPES = ["hello", "lobby", "start", "hidden", "rps", "shot", "result", "reinforce", "taunt", "spin", "queue", "remove", "over", "reveal", "catchup", "spinreq", "rematch", "ping"];
 // The catch-up log is bounded: the host's own spins and the seated players' taunts count only up to a few dozen each
 // (anyone may send a taunt or a queue request with pub: true, so neither can bloat or poison what a late spectator gets).
 const NET_LOG_MAX = 1500, NET_LOG_SPINS = 30, NET_LOG_TAUNTS = 60;
 const NET_HOST_ONLY = ["lobby", "start", "spin", "remove", "catchup"];
-const NET_SEATED = ["hidden", "rps", "shot", "result", "reinforce", "over", "reveal"]; // only the two seated players may send these
+const NET_SEATED = ["hidden", "rps", "shot", "result", "reinforce", "over", "reveal", "ping"]; // only the two seated players may send these (ping: a keepalive, opponent only, never logged)
 const NET_LOGGED = ["start", "hidden", "rps", "shot", "result", "reinforce", "taunt", "spin", "queue", "over", "reveal"]; // what a late spectator is caught up on
 const NET_ARMY_KEYS = ["soldiers", "fort", "known", "army", "armies"];
 const NET_MAX = 60000, NET_CHUNK = 40000; // Game Center's reliable messages top out near 87 KB
@@ -7556,7 +7561,8 @@ function onlineBegin(start, seat) {
   onl = {matchId: start.matchId, seats: start.seats.slice(), seat, them, seed: start.seed | 0, first: null, handoffs: 0, bonusMax: s.brassBonus ? 2 : 0,
     names: start.seats.map(pid => { const p = person(pid); return p ? lobbyName(p) : "A friend"; }), oppSoldier: (person(start.seats[them]) || {}).soldier || {},
     hidden: [false, false], sentHidden: false, picks: {}, myPick: null, lastShot: null, lastResult: null, awaiting: 0, turn: 0, turnStart: 0, hideEnds: 0,
-    lastStand: new Set(), lastStandAt: null, over: null, overSent: false, overMsg: null, revealMsg: null, theirReveal: null, finished: false, waitEnds: 0, timers: {}};
+    lastStand: new Set(), lastStandAt: null, over: null, overSent: false, overMsg: null, revealMsg: null, theirReveal: null, finished: false, waitEnds: 0, timers: {},
+    heard: performance.now(), waitSince: 0, silentWait: false}; // the watchdog: when the opponent last said anything, since when this phone waits on them
   newMatch({fireBy: (document.querySelector("input[name=fireBy]:checked") || {value: "tap"}).value, flings: s.flings, fort: !!s.fortOn, fortWin: !!s.fortWin,
     brassBonus: !!s.brassBonus, near: true, size: 46, reveal: s.reveal, reinforce: s.reinforce ? 3 : 0, reinforceMax: 1, timer: s.timer, foe: "human",
     level: "sergeant", bootcamp: false, map, campaign: s.campaign, online: {seat, matchId: start.matchId}});
@@ -7578,6 +7584,7 @@ function onlineSetup() {
     if (onl !== m || phase !== "setup") return clearInterval(m.timers.hide);
     if (performance.now() >= onl.hideEnds && !players[onl.seat].setupReady) onlineAutoHide(); else { render(); updateUI(); }
   }, 500);
+  onlineWatch();
   go("setup");
 }
 // Time's up: whatever isn't placed yet is placed for you.
@@ -7817,7 +7824,45 @@ function onlineWaitStart() {
   };
   el.classList.remove("hidden"); tick(); onl.timers.wait = setInterval(tick, 250);
 }
-function onlineWaitEnd() { if (!onl) return; clearInterval(onl.timers.wait); onl.waitEnds = 0; $("onlineWait").classList.add("hidden"); }
+function onlineWaitEnd() { if (!onl) return; clearInterval(onl.timers.wait); onl.waitEnds = 0; onl.silentWait = false; $("onlineWait").classList.add("hidden"); }
+// Is this phone waiting on the opponent right now? (their turn; my shot's result; or my army is hidden / my pick is in and theirs isn't)
+function onlineWaitingOnThem() {
+  if (!onlineOn() || onl.over || phase === "over") return false;
+  if (phase === "setup") return !!onl.hidden[onl.seat] && !onl.hidden[onl.them];
+  if (phase === "rps") return !!rps && rps.picks[onl.seat] != null && onl.picks[rps.round] == null;
+  return onl.first != null && (!!onl.awaiting || (cur === onl.them && (phase === "aim" || phase === "fold")));
+}
+// How long a silence counts as a lost connection: never shorter than a soft clock the other phone keeps (+ a margin).
+function onlineSilenceLimit() {
+  const clock = phase === "setup" ? ONLINE_HIDE_MS : opts.timer ? opts.timer * 1000 : 0;
+  return clock ? Math.max(clock + ONLINE_SILENCE_MARGIN_MS, ONLINE_SILENCE_MS) : ONLINE_SILENCE_MS;
+}
+// Both run on a seated phone from setup to the end of the battle (onlineClear stops them; spectators never start them).
+function onlineWatch() {
+  const m = onl;
+  const ping = () => {
+    if (onl !== m || !onlineOn() || onl.over) return;
+    try { net.send({t: "ping"}, "opponent"); } catch (e) {} // a keepalive: no game data, to the opponent only
+    onl.timers.ping = setTimeout(ping, ONLINE_PING_MS);
+  };
+  const watch = () => {
+    if (onl !== m || !onlineOn() || onl.over) return;
+    const now = performance.now();
+    if (!onlineWaitingOnThem()) onl.waitSince = 0;
+    else if (!onl.waitSince) onl.waitSince = now;
+    else if (!onl.waitEnds && now - Math.max(onl.heard, onl.waitSince) >= onlineSilenceLimit()) { onlineWaitStart(); onl.silentWait = true; }
+    onl.timers.silence = setTimeout(watch, Math.max(100, Math.min(1000, ONLINE_SILENCE_MS / 5)));
+  };
+  ping(); watch();
+}
+// Anything at all from the opponent: the line is alive. A wait the watchdog started (not a real "left") ends, and each
+// phone re-sends what the other may have missed (the hello makes the other phone re-send too).
+function onlineHeard(d) {
+  if (!onlineOn() || !d || d.from !== onl.seats[onl.them] || (d.m != null && d.m !== onl.matchId)) return;
+  onl.heard = performance.now();
+  if (onl.silentWait && onl.waitEnds && !onl.over) { onlineWaitEnd(); onlineResend(); net.hello(); }
+}
+net.on("message", onlineHeard);
 // Whatever the other phone may have missed while it was gone (it drops anything it already had).
 function onlineResend() {
   if (!onlineOn()) return;
@@ -7831,9 +7876,9 @@ function onlineResend() {
 }
 // onl.cut: the connection to the opponent is down (onl.cutBack: when it came back), the only time their forfeit win can be real.
 const onlineReturned = () => { if (onl.cut) { onl.cut = false; onl.cutBack = performance.now(); } };
-net.on("left", e => { if (onlineOn() && !onl.over && e.pid && e.pid === onl.seats[onl.them]) { onl.cut = true; onlineWaitStart(); } });
-net.on("back", e => { if (onlineOn() && e.pid && e.pid === onl.seats[onl.them]) { onlineReturned(); onlineWaitEnd(); onlineResend(); } });
-net.on("hello", p => { if (onlineOn() && p && p.pid === onl.seats[onl.them]) { onlineReturned(); onlineWaitEnd(); onlineResend(); } });
+net.on("left", e => { if (onlineOn() && !onl.over && e.pid && e.pid === onl.seats[onl.them]) { onl.cut = true; onlineWaitStart(); onl.silentWait = false; } });
+net.on("back", e => { if (onlineOn() && e.pid && e.pid === onl.seats[onl.them]) { onl.heard = performance.now(); onlineReturned(); onlineWaitEnd(); onlineResend(); } });
+net.on("hello", p => { if (onlineOn() && p && p.pid === onl.seats[onl.them]) { onl.heard = performance.now(); onlineReturned(); onlineWaitEnd(); onlineResend(); } });
 function onlineForfeit(winner) {
   if (!onlineOn() || onl.over) return;
   clearInterval(turnTimer); turnEnds = 0; pending = flick = dotAim = null;
@@ -7858,7 +7903,7 @@ net.on("over", d => {
   if (d.winner === onl.seat) onlineForfeit(d.winner);
   else if (d.winner === onl.them) {
     if (onl.cut || (onl.cutBack && performance.now() - onl.cutBack < ONLINE_CLAIM_MS)) onlineForfeit(d.winner);
-    else onlineWaitStart(); // not accepted: they may have lost us while this phone never noticed, so this phone starts its own wait (no-op if running) rather than waiting forever
+    else { onlineWaitStart(); onl.silentWait = false; } // not accepted: they may have lost us while this phone never noticed, so this phone starts its own wait (no-op if running) rather than waiting forever
   }
 });
 function onlineCleanArmy(a) {
