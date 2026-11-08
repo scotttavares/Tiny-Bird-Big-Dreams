@@ -22,7 +22,7 @@ h1, h2, h3 { font-family:'Caprasimo', Georgia, serif; font-weight:400; letter-sp
 .hero h1 { font-size:clamp(46px, 6.6vw, 90px); line-height:1.02; }
 .hero .hand { font-size:clamp(28px, 3.6vw, 40px); line-height:1.1; margin:14px 0 18px; }
 .hero p.lede { max-width:30em; font-size:clamp(18px, 2vw, 21px); margin:0 0 26px; }
-.soon { display:inline-block; background:var(--forest); color:var(--cream); font:400 20px/1 'Caprasimo', Georgia, serif; padding:17px 28px; border-radius:999px; box-shadow:6px 8px 0 rgba(0,0,0,.18); transform:rotate(-1.5deg); }
+.soon { display:inline-block; text-decoration:none; background:var(--forest); color:var(--cream); font:400 20px/1 'Caprasimo', Georgia, serif; padding:17px 28px; border-radius:999px; box-shadow:6px 8px 0 rgba(0,0,0,.18); transform:rotate(-1.5deg); }
 .hero-note { display:block; font-size:15px; margin-top:20px; font-weight:500; }
 .hero-shot { align-self:end; justify-self:center; position:relative; }
 
