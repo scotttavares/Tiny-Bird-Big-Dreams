@@ -263,7 +263,7 @@
   })();
   // Field Guide: stickers
   (function () {
-    var toy = $("#fgToy"), st = ["🌼", "🦋", "🐸", "⛺", "⭐", "🍂"], i = 0;
+    var toy = $("#fgToy"), st = ["🎧", "☕", "🌙", "📼", "✨", "🎟️"], i = 0;
     toy.addEventListener("pointerdown", function (e) {
       var r = toy.getBoundingClientRect(), s = document.createElement("span");
       s.className = "stk"; s.textContent = st[i++ % st.length]; s.style.left = (e.clientX - r.left) + "px"; s.style.top = (e.clientY - r.top) + "px";

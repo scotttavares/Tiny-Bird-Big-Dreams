@@ -266,8 +266,8 @@ footer a{margin:0 10px}
 #fgToy.duo .pg{position:relative;flex:1;background:#fbf6ea repeating-linear-gradient(transparent 0 15px,#e6dcc6 15px 16px)}
 #fgToy.duo .pg:first-child{border-radius:15px 0 0 15px;box-shadow:inset -10px 0 14px -10px rgba(0,0,0,.35)}
 #fgToy.duo .pg:last-child{border-radius:0 15px 15px 0;box-shadow:inset 10px 0 14px -10px rgba(0,0,0,.35);margin-left:3px}
-#fgToy.duo .scrib{left:9%;right:6%;top:6%;font-size:clamp(14px,1.6vw,22px);color:#4a6a2c}
-#fgToy.duo .scrib.s2{top:8%;color:#7a4fa0;font-size:clamp(12px,1.25vw,18px)}
+#fgToy.duo .scrib{left:9%;right:6%;top:6%;font-size:clamp(14px,1.6vw,22px);color:#1f1d1b}
+#fgToy.duo .scrib.s2{top:8%;color:#5b5550;font-size:clamp(12px,1.25vw,18px)}
 #fgToy .pol{position:absolute;margin:0;background:#fff;padding:4px 4px 12px;box-shadow:0 4px 10px rgba(0,0,0,.22);transform:rotate(var(--r))}
 #fgToy .pol img,#fgToy .pol video{display:block;width:100%;aspect-ratio:3/2;object-fit:cover}
 
@@ -348,7 +348,7 @@ footer a{margin:0 10px}
 /* Field Guide: a little hand-drawn map that inks itself in */
 #fgToy .map{position:absolute;left:4%;top:22%;width:64%;height:72%;overflow:visible;pointer-events:none}
 #fgToy .map path{fill:none;stroke-linecap:round;stroke-linejoin:round}
-#fgToy .map .trail{stroke:#3f63b0;stroke-width:3.2;stroke-dasharray:5 5}
+#fgToy .map .trail{stroke:#2a2724;stroke-width:3.2;stroke-dasharray:5 5}
 #fgToy .map .ink{stroke:#4a3826;stroke-width:2.4}
 #fgToy .map .x{stroke:#d2452f;stroke-width:4}
 #fgToy .map text{font-family:Caveat,cursive;font-size:17px;fill:#4a3826}
