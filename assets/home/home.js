@@ -16,12 +16,14 @@
   }
   var trackOnce = function (t, v) { var k = t + v; if (once[k]) return; once[k] = 1; track(t, v); };
 
-  /* ---------- greeting: by the visitor's own clock (their device's time zone) ---------- */
+  /* ---------- greeting + hero sky: by the visitor's own clock (their device's time zone) ---------- */
+  var localH = (function () { var d = new Date(), h = d.getHours() + d.getMinutes() / 60; return h < 5 ? 24 : h; })();
   (function () {
-    var g = $("#greet"); if (!g) return;
-    var h = new Date().getHours();
-    g.textContent = h >= 5 && h < 12 ? "Good morning ☀" : h >= 12 && h < 17 ? "Good afternoon ☀" : "Good evening ☾";
-    g.hidden = false;
+    var g = $("#greet"), hero = $(".hero"); if (!hero) return;
+    hero.dataset.h = localH.toFixed(2);
+    hero.dataset.l = localH < 12 ? "Morning" : localH < 17 ? "Afternoon" : localH < 21 ? "Evening" : "Night";
+    hero.classList.toggle("dark", localH >= 19 || localH < 5);
+    if (g) { g.textContent = localH < 12 ? "Good morning ☀" : localH < 17 ? "Good afternoon ☀" : "Good evening ☾"; g.hidden = false; }
   })();
 
   /* ---------- sound: removed from the page; noise() and tone() stay silent ---------- */
@@ -85,6 +87,7 @@
     while (i < secs.length - 1 && mid > secs[i + 1].offsetTop) i++;
     var a = secs[i], b = secs[i + 1] || a;
     var t = b === a ? 0 : Math.min(1, Math.max(0, (mid - a.offsetTop) / (b.offsetTop - a.offsetTop)));
+    if (a.classList.contains("hero")) t = t * t * t; // hold the visitor's own sky over the hero, then ease into the morning
     // h blends between sections for the sky; the clock shows the section's own time (its photo's time stamp)
     var tm = a.querySelector(".time");
     return { h: +a.dataset.h + (+b.dataset.h - +a.dataset.h) * t, at: +a.dataset.h, txt: tm ? tm.textContent.trim() : "", l: a.dataset.l };

@@ -381,3 +381,9 @@ footer a{white-space:nowrap;display:inline-block;margin:4px 10px}
   .eq .res{font-size:26px;padding:14px 20px}
 }
 @media (max-width:700px){.eq .t.res,.eq .res{width:auto;flex-basis:100%;max-width:220px}}
+/* greeting sits up top, level with the logo and menu; the hero follows the visitor's sky */
+.hero{position:relative}
+.hero .greet{position:absolute;top:20px;left:50%;transform:translateX(-50%);z-index:41;margin:0;white-space:nowrap;color:#3a2416;text-shadow:none;font-size:clamp(22px,2vw,28px);pointer-events:none}
+.hero.dark .greet{color:#ffe9c7}
+.hero.dark .ask,.hero.dark .ask span{color:#f4ecff}
+@media (max-width:900px){.hero{padding-top:118px}.hero .greet{top:72px;font-size:22px}}
