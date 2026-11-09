@@ -147,9 +147,44 @@
     }
   }
 
+  /* ---------- cool bird facts: a new one every time the egg opens, no repeats until you've seen them all ---------- */
+  var FACTS = [
+    ["hummingbird.jpg", "A ruby-throated hummingbird hovering over the sea at sunrise", "Tiny bird. Big trip.", "The ruby-throated hummingbird weighs about 3 grams, about as much as a penny, and every autumn it flies roughly 500 miles across the Gulf of Mexico without stopping. Tiny bird, big dreams."],
+    ["facts/tern.jpg", "An Arctic tern flying over an icy polar sea", "Chasing the sun.", "The Arctic tern flies from the Arctic to the Antarctic and back every year, around 70,000 km (44,000 miles). Over a lifetime that adds up to about three trips to the Moon and back. Small wings, big world."],
+    ["facts/godwit.jpg", "A bar-tailed godwit flying low over the ocean at dawn", "Eleven days, no stops.", "In 2022 a five-month-old bar-tailed godwit flew about 13,560 km (8,435 miles) from Alaska to Tasmania without landing once, the longest non-stop bird flight on record. No food, no water, no rest. Tiny bird, big dreams."],
+    ["facts/bee-hummingbird.jpg", "A bee hummingbird on a thin twig beside a hibiscus flower", "The world's smallest bird.", "Cuba's bee hummingbird is about 5 to 6 cm long and weighs under 2 grams, lighter than a dime. Its nest is about the size of a bottle cap. Tiny, and still a whole bird."],
+    ["facts/blackpoll.jpg", "A blackpoll warbler on a spruce branch at sunrise", "A songbird crosses an ocean.", "Each autumn the blackpoll warbler, about 12 grams, flies non-stop out over the Atlantic from the northeastern US towards South America: up to 2,770 km (1,720 miles) in about three days. Tiny bird, big dreams."],
+    ["facts/swift.jpg", "A common swift gliding across a big evening sky", "Ten months in the air.", "Common swifts can stay airborne for around ten months at a time, eating and drinking on the wing, and are thought to nap up there too. Some barely touch down between leaving the nest and coming back to breed."],
+    ["facts/nutcracker.jpg", "A Clark's nutcracker holding a pine seed on a snowy pine", "A memory for thousands of spots.", "A Clark's nutcracker can bury tens of thousands of pine seeds in one autumn, spread across thousands of tiny caches, and find many of them again months later, even under snow. Small head, big plans."],
+    ["facts/chickadee.jpg", "A black-capped chickadee on a snowy branch", "A brain that grows for winter.", "Black-capped chickadees hide food in thousands of places. Each autumn their brains add new neurons in the area that handles spatial memory, just in time to remember where it all went."],
+    ["facts/nest.jpg", "A tiny hummingbird nest on a branch with two small white eggs", "A nest that grows with you.", "Many hummingbirds build a walnut-sized nest bound with spider silk. The silk stretches as the chicks grow, so the nest grows with them. The eggs are about the size of a jelly bean. Tiny home, big dreams."],
+    ["facts/robin.jpg", "A European robin on a branch under a starry twilight sky", "A compass in its eyes.", "European robins can sense Earth's magnetic field and use it to find their way on night-time migrations. Scientists think the sense works through light-sensitive molecules in their eyes."],
+    ["facts/rufous.jpg", "A rufous hummingbird hovering by red flowers in a meadow", "The longest trip, for its size.", "The rufous hummingbird is about 8 cm long, yet it migrates up to roughly 6,300 km (3,900 miles) each way between Alaska and Mexico. Measured in body lengths, that's one of the longest migrations of any bird. Tiny bird, big dreams."],
+    ["facts/goldcrest.jpg", "A goldcrest with its gold crown stripe on a pine twig", "The woodcock pilot.", "The goldcrest, one of Europe's smallest birds at 5 to 6 grams, crosses the North Sea every autumn. People once thought it couldn't possibly fly that far and must hitch a ride on a woodcock's back. It flies itself."],
+    ["facts/hover.jpg", "A ruby-throated hummingbird hovering beside a flower, wings blurred", "Reverse gear.", "Hummingbirds are the only birds that can keep flying backwards. Their wings rotate at the shoulder and trace a figure-eight, so they make lift on the upstroke as well as the downstroke."]
+  ];
+  function nextFact() {
+    var bag = null;
+    try { bag = JSON.parse(localStorage.getItem("tb_facts") || "null"); } catch (e) { bag = nextFact.mem; } // storage blocked: remember in memory
+    if (!Array.isArray(bag) || !bag.length || bag.some(function (i) { return !(i >= 0 && i < FACTS.length); })) {
+      bag = FACTS.map(function (_, i) { return i; });
+      for (var i = bag.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = bag[i]; bag[i] = bag[j]; bag[j] = t; }
+      if (nextFact.last != null && bag[0] === nextFact.last) bag.push(bag.shift()); // no back-to-back repeat across rounds
+    }
+    var n = bag.shift(); nextFact.last = n;
+    try { localStorage.setItem("tb_facts", JSON.stringify(bag)); } catch (e) { /* in-memory only */ }
+    nextFact.mem = bag;
+    return FACTS[n];
+  }
+  function showFact() {
+    var f = nextFact(), img = $("#eggCard img");
+    img.src = "/assets/home/" + f[0]; img.alt = f[1]; $("#eggTitle").textContent = f[2]; $("#eggCard .b p").textContent = f[3];
+  }
+
   /* ---------- easter egg: tap the bird 5 times ---------- */
   var eggCard = $("#eggCard"), taps = [];
   function openEgg() {
+    showFact();
     eggCard.classList.add("open"); eggCard.setAttribute("aria-hidden", "false");
     bird.classList.add("loop"); setTimeout(function () { bird.classList.remove("loop"); }, 1000);
     [523, 659, 784, 1047].forEach(function (f, i) { setTimeout(function () { tone(f, .18, .08); }, i * 110); });
