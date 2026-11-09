@@ -3170,14 +3170,19 @@ function wobblyLine(c, x1, y1, x2, y2, r) {
   c.beginPath(); c.moveTo(x1 + (r() - .5), y1 + (r() - .5));
   c.quadraticCurveTo((x1 + x2) / 2 + (r() - .5) * 2, (y1 + y2) / 2 + (r() - .5) * 2, x2 + (r() - .5), y2 + (r() - .5)); c.stroke();
 }
-function drawSoldier(c, u, ink, alpha = 1) {
+// army: whose soldier it is (0 = player 1 / you / seat 0, 1 = player 2 / the computer / seat 1). Left out, it goes by the ink.
+function drawSoldier(c, u, ink, alpha = 1, army = null) {
   const p = soldierParts(u), r = rand(u.seed), s = sc();
+  if (army !== 0 && army !== 1) army = ink === INK[1] && INK[0] !== INK[1] ? 1 : 0;
+  const look = soldierCostume(u, army);
   c.save(); c.globalAlpha *= alpha; c.strokeStyle = ink; c.lineWidth = 2 * Math.max(.8, s); c.lineCap = "round"; // multiply, so ghosts stay faint
+  if (drumstickOn() && drumstickSide(army) === "turkey") drawTurkeyTail(c, u, p, s, ink); // behind the body, so it goes first
   c.beginPath(); c.ellipse(p.head.x, p.head.y, p.head.r, p.head.r * (0.92 + r() * .16), r(), 0, 7); c.stroke();
   wobblyLine(c, ...p.torso, r); p.limbs.forEach(l => wobblyLine(c, ...l, r));
   drawWeapon(c, u, s);
-  if (u.hat === "helmet" || u.hat === "beret") drawSoldierHat(c, u.hat, p.head.x, p.head.y, p.head.r, ink); // a namesake's own hat
-  else if (opts && opts.campaign === "drumstick") drawPilgrimHat(c, p.head.x, p.head.y, p.head.r, ink, u.seed); // Operation Drumstick dress-up
+  if (look === "helmet" || look === "beret") drawSoldierHat(c, look, p.head.x, p.head.y, p.head.r, ink); // a namesake's own hat
+  else if (look === "pilgrim") drawPilgrimHat(c, p.head.x, p.head.y, p.head.r, ink, u.seed); // Operation Drumstick: the Pilgrims
+  else if (look === "turkey") drawTurkeyHood(c, p.head.x, p.head.y, p.head.r, ink, u.seed, u.face || (u.x <= W / 2 ? 1 : -1)); // ...and the Turkey Troopers
   if (u.wading) { // river water up to the waist: a pale band with a pen wave on top hides the legs
     const wy = u.y + 31 * s, ww = 17 * s;
     c.fillStyle = "#dbeaf8"; c.globalAlpha = .92; c.beginPath(); c.ellipse(u.x, wy + 7 * s, ww, 9 * s, 0, 0, 7); c.fill(); c.globalAlpha = 1;
@@ -3313,6 +3318,48 @@ function drawPilgrimHat(c, hx, hy, hr, ink, seed = 1) {
   c.strokeStyle = "#e3b341"; c.lineWidth = Math.max(1, hr * .14); c.strokeRect(-hr * .22, -hr * .6, hr * .44, hr * .42); // buckle
   c.restore();
 }
+// Operation Drumstick (1.2): Pilgrims vs Turkey Troopers. Army 0 (player 1, you vs the computer, seat 0 online) are the
+// Pilgrims, army 1 (player 2, the computer, seat 1) the Turkey Troopers. It goes by seat, never by "me", so both phones
+// draw each army the same way. Only in Drumstick; the intro and the menus have no costumes.
+const DRUMSTICK_SIDES = {pilgrim: "Pilgrims", turkey: "Turkey Troopers"};
+const drumstickOn = () => !!(opts && opts.campaign === "drumstick");
+const drumstickSide = army => army === 1 ? "turkey" : "pilgrim";
+const sideName = army => DRUMSTICK_SIDES[drumstickSide(army)];
+// What a soldier wears on his head: a namesake's own helmet or beret wins, then the Drumstick side's costume.
+function soldierCostume(u, army) {
+  if (u.hat === "helmet" || u.hat === "beret") return u.hat;
+  return drumstickOn() ? drumstickSide(army) : null;
+}
+// A Turkey Trooper's crayon turkey-head hood: a round brown cap with eyes, a little orange beak at the front and a red
+// wattle dangling under it. (No feathers on the head.) Tilt comes from the soldier's seed, like the pilgrim hat.
+function drawTurkeyHood(c, hx, hy, hr, ink, seed = 1, face = 1) {
+  const tilt = (rand(seed + 5)() - .5) * .3;
+  c.save(); c.translate(hx, hy); c.rotate(tilt); c.scale(face < 0 ? -1 : 1, 1); c.lineJoin = "round"; c.lineCap = "round";
+  c.fillStyle = "#8a5a2b"; c.strokeStyle = "#4a2f16"; c.lineWidth = Math.max(1, hr * .16);
+  c.beginPath(); c.arc(0, -hr * .05, hr * 1.18, Math.PI * 1.02, Math.PI * 1.98); c.closePath(); c.fill(); c.stroke(); // the cap
+  c.fillStyle = "#a8743d"; c.fillRect(-hr * 1.12, -hr * .2, hr * 2.24, hr * .26); // the rim
+  c.fillStyle = "#fffef8"; c.beginPath(); c.arc(hr * .42, -hr * .62, hr * .26, 0, 7); c.fill(); // an eye
+  c.fillStyle = "#1b1b1b"; c.beginPath(); c.arc(hr * .5, -hr * .6, hr * .12, 0, 7); c.fill();
+  c.fillStyle = "#e88a1f"; c.strokeStyle = "#a35a10"; c.lineWidth = Math.max(.8, hr * .1); // the beak, at the front
+  c.beginPath(); c.moveTo(hr * .95, -hr * .5); c.lineTo(hr * 1.75, -hr * .22); c.lineTo(hr * .98, -hr * .02); c.closePath(); c.fill(); c.stroke();
+  c.fillStyle = "#c62828"; c.strokeStyle = "#8e1c1c"; // the red wattle, dangling under the beak
+  c.beginPath(); c.moveTo(hr * 1.02, -hr * .08); c.quadraticCurveTo(hr * 1.42, hr * .35, hr * 1.12, hr * .78);
+  c.quadraticCurveTo(hr * .84, hr * .5, hr * 1.02, -hr * .08); c.closePath(); c.fill(); c.stroke();
+  c.restore();
+}
+// ...and his small fanned turkey tail, low behind the hips (brown, orange and tan), facing away from where he faces.
+function drawTurkeyTail(c, u, p, s, ink) {
+  const face = u.face || (u.x <= W / 2 ? 1 : -1), hx = p.torso[2] - face * 1.5 * s, hy = p.torso[3] - 1 * s, wob = rand(u.seed + 9);
+  const cols = ["#8a5a2b", "#e88a1f", "#d9b47a", "#e88a1f", "#8a5a2b"];
+  c.save(); c.lineJoin = "round"; c.strokeStyle = "#4a2f16"; c.lineWidth = Math.max(.6, .7 * s);
+  cols.forEach((col, i) => {
+    const a = -Math.PI / 2 - face * (.45 + i * .26) + (wob() - .5) * .08, L = (9 + (i % 2 ? 0 : 1.5)) * s;
+    c.save(); c.translate(hx, hy); c.rotate(a); c.fillStyle = col;
+    c.beginPath(); c.ellipse(L / 2, 0, L / 2, 2.1 * s, 0, 0, 7); c.fill(); c.stroke(); c.restore();
+  });
+  c.fillStyle = "#6b4321"; c.beginPath(); c.arc(hx, hy, 2.2 * s, 0, 7); c.fill();
+  c.restore();
+}
 // Operation Drumstick's fort: a log cabin the same size as the regular fort, so the hit rules don't change.
 function drawLogCabin(c, b, ink, s) {
   const roof = b.h * .42, wallTop = b.y + roof * .55;
@@ -3425,7 +3472,7 @@ function drawHalf(c, pi, {map = true, highlightLast = false} = {}) {
   paper(c); drawTerrain(c, p.terrain);
   if (opts && opts.campaign === "drumstick") turkeys.forEach(tk => { if (tk.cooked) { const q = onPage(pi, tk.cooked); drawRoast(c, q.x, q.y); } });
   if (p.fort) drawFort(c, p.fort, INK[pi]);
-  p.soldiers.forEach(u => drawSoldier(c, u, INK[pi]));
+  p.soldiers.forEach(u => drawSoldier(c, u, INK[pi], 1, pi));
   p.incoming.forEach((b, i) => {
     if (b.res === "off") return;
     if (b.path) strokePath(c, b.path, INK[1 - pi], .85);
@@ -3441,7 +3488,7 @@ function drawHalf(c, pi, {map = true, highlightLast = false} = {}) {
     // Enemy units spotted by ink bleed, drawn where you'd aim: mirrored onto your half.
     c.save(); c.globalAlpha = .3;
     if (p.fortKnown && foe.fort) drawFort(c, {...foe.fort, x: W - foe.fort.x}, INK[1 - pi]);
-    p.known.forEach(i => { const u = foe.soldiers[i]; drawSoldier(c, {...u, x: W - u.x, namesake: false}, INK[1 - pi]); });
+    p.known.forEach(i => { const u = foe.soldiers[i]; drawSoldier(c, {...u, x: W - u.x, namesake: false}, INK[1 - pi], 1, 1 - pi); }); // the enemy's look
     c.restore();
     if (opts.reveal) p.shots.forEach(sh => { if (sh.res === "off") return; c.save(); c.fillStyle = RED; c.globalAlpha = .04; c.beginPath(); c.arc(sh.x, sh.y, opts.reveal * (sh.wet ? WET_BLEED : 1), 0, 7); c.fill(); c.restore(); });
     p.shots.forEach(sh => { if (sh.fling) strokePath(c, sh.path, RED, .25); marker(c, sh); });
@@ -3529,12 +3576,21 @@ function legalPos(x, y, isFort, p) {
 // What a soldier says when you stamp them onto the page (our own lines).
 const READY_WORDS = LINES.ready;
 // Operation Drumstick (1.1): about half of what soldiers say is a Thanksgiving line (drumstickReady, drumstickFort, ...).
-function holidayLine(group, rand = Math.random) {
+// 1.2: army (0 Pilgrims, 1 Turkey Troopers), when known, keeps the side-only lines with their side.
+const SIDE_LINES = {"Pilgrim hat secured, sir!": 0, "Gobble gobble, sir!": 1};
+function holidayLine(group, rand = Math.random, army = null) {
   const g = "drumstick" + group[0].toUpperCase() + group.slice(1);
-  return opts && opts.campaign === "drumstick" && (LINES[g] || []).length && rand() < .5 ? bagPick(g, rand) : null;
+  if (!(opts && opts.campaign === "drumstick" && (LINES[g] || []).length && rand() < .5)) return null;
+  if (army !== 0 && army !== 1) return bagPick(g, rand);
+  const key = g + ":" + army;
+  if (!bags[key] || !bags[key].length) { // the Pilgrims never say their hat line for the turkeys; the turkeys gobble twice as often
+    const l = LINES[g].filter(t => !(t in SIDE_LINES) || SIDE_LINES[t] === army || t === "Gobble gobble, sir!");
+    bags[key] = [...l, ...l.filter(t => SIDE_LINES[t] === army && army === 1)].sort(() => rand() - .5);
+  }
+  return bags[key].pop();
 }
-function soldierLine(kind, rand = Math.random) {
-  const h = holidayLine(kind, rand); if (h) return h;
+function soldierLine(kind, rand = Math.random, army = null) {
+  const h = holidayLine(kind, rand, army); if (h) return h;
   if (kind === "ready") { if (!readyBag.length) readyBag = [...READY_WORDS].sort(() => rand() - .5); return readyBag.pop(); }
   if (kind === "fort") return FORT_WORDS[Math.floor(rand() * FORT_WORDS.length)];
   if (kind === "taunt") { if (!tauntBag.length) tauntBag = [...LINES.taunt].sort(() => rand() - .5); return tauntBag.pop(); }
@@ -3551,11 +3607,11 @@ function placeUnit(p, x, y) {
   if (p.soldiers.length < MAX_UNITS) {
     const pos = legalPos(x, y, false, p);
     p.soldiers.push({...pos, alive: true, pose: p.soldiers.length % 2, seed: Math.floor(Math.random() * 99999), name: soldierName(p), ...namesakeFor(p)});
-    say(p.soldiers.length - 1, soldierLine("ready")); setupTalk.p = p;
+    say(p.soldiers.length - 1, soldierLine("ready", Math.random, players.indexOf(p))); setupTalk.p = p;
     sound("click");
   } else if (opts.fort && !p.fort) {
     p.fort = {...legalPos(x, y, true, p), hp: 3}; sound("click");
-    say("fort", soldierLine("fort")); setupTalk.p = p;
+    say("fort", soldierLine("fort", Math.random, players.indexOf(p))); setupTalk.p = p;
   }
   render(); updateUI();
 }
@@ -3748,7 +3804,7 @@ function startAirdrop(p, done) {
     p.soldiers.push({...a.pos, alive: true, pose: a.pose, seed: a.seed, name: soldierName(p)});
     replay.events.push({who: players.indexOf(p), reinforce: clone(p.soldiers[p.soldiers.length - 1])});
     p.reinforce--; sound("click");
-    say(p.soldiers.length - 1, soldierLine("ready")); // a ready line, if nobody else is talking
+    say(p.soldiers.length - 1, soldierLine("ready", Math.random, players.indexOf(p))); // a ready line, if nobody else is talking
     if (p.reinforce > 0) return startAirdrop(p, done);
     render(); updateUI(); done && done();
   };
@@ -3811,7 +3867,7 @@ function drawAirdrop(c, a) {
   if (!landed) { c.save(); c.globalAlpha = .45; c.fillStyle = CUTOUT_SHADOW; c.beginPath(); c.ellipse(a.pos.x + 4, a.pos.y + 44 * s, 10 * s * k, 3 * s * k, 0, 0, 7); c.fill(); c.restore(); }
   const ink = a.ink || INK[players.indexOf(a.p)];
   drawParachute(c, a.pos.x, y, s, fold, ink);
-  drawSoldier(c, {...u, y}, ink);
+  drawSoldier(c, {...u, y}, ink, 1, a.p ? players.indexOf(a.p) : null);
   c.restore();
   if (landed) { // a little pencil dust puff where he touches down
     const d = (t - a.tLand) / 450; c.save(); c.globalAlpha = Math.max(0, 1 - d); c.strokeStyle = PENCIL; c.lineWidth = 1.2;
@@ -3979,8 +4035,11 @@ function turnBannerText() {
     return n && n.length <= 20 ? `${n}'S TURN` : "THEIR TURN";
   }
   if (vsCpu()) return cur === 0 ? "YOUR TURN" : "COMPUTER'S TURN";
+  if (drumstickOn()) return `${sideName(cur).toUpperCase()}' TURN`; // Operation Drumstick: PILGRIMS' TURN, TURKEY TROOPERS' TURN
   return `PLAYER ${cur + 1}'S TURN`;
 }
+// Operation Drumstick, vs the computer and online: the stamp says YOUR TURN; whose side is shooting goes under it.
+const turnSideText = () => drumstickOn() && players && (vsCpu() || onlineOn()) && ["aim", "fold", "cpu", "result"].includes(phase) ? sideName(cur) : "";
 // How to shoot, in a few words (shown under the stamp while the hint is on).
 function shootHintText(me) {
   if (!shootHint || phase !== "aim" || me !== cur || !players[cur] || players[cur].cpu || airdrop) return "";
@@ -4091,7 +4150,7 @@ function rpsToBattle() {
   clearTimeout(rpsTimer);
   const f = rps.orders.first; first = cur = f;
   if (vsCpu() || tentOn()) return startBattle();
-  showCover(`${players[f].name} shoots first`, rps.orders.text + " Pass the phone.", () => go("aim"));
+  showCover(drumstickOn() ? `The ${sideName(f)} shoot first` : `${players[f].name} shoots first`, rps.orders.text + " Pass the phone.", () => go("aim"));
 }
 function rpsSkip() {
   if (phase !== "rpsReveal" || onlineOn() || performance.now() - rpsShownAt < 400) return; // not the tap that picked
@@ -4376,7 +4435,7 @@ function next() {
   if (onlineOn()) { onl.handoffs++; return onlineBeginTurn(); }
   if (tentOn()) return go("aim");
   if (vsCpu()) return players[cur].cpu ? cpuTurn() : go("aim");
-  showCover(players[cur].name, `Your turn. ${players[prev].name}: divert your eyes, soldier!`, () => go("aim"));
+  showCover(drumstickOn() ? sideName(cur) : players[cur].name, `${drumstickOn() ? players[cur].name + ", your turn" : "Your turn"}. ${players[prev].name}: divert your eyes, soldier!`, () => go("aim"));
 }
 function gameOver(winner, forfeit = false) {
   const pages = snapPages(); setTimeout(() => crumpleAway(pages), 0);
@@ -4384,9 +4443,10 @@ function gameOver(winner, forfeit = false) {
   if (opts.campaign === "drumstick" && !players[winner].cpu) speak(bagPick("drumstickWin"), 2600);
   coachQ.length = 0; coach(winner === 0 ? "win" : "lose", 1600); // drop tips still waiting
   $("game").classList.add("hidden"); $("tent").classList.add("hidden"); $("over").classList.remove("hidden");
-  $("overTitle").textContent = onlineOn() ? (winner === onl.seat ? "You win" : `${players[winner].name} wins`) + (forfeit ? " by forfeit!" : "!")
+  $("overTitle").textContent = drumstickOn() ? `${sideName(winner)} win` + (forfeit ? " by forfeit!" : "!") // Operation Drumstick: Pilgrims win!
+    : onlineOn() ? (winner === onl.seat ? "You win" : `${players[winner].name} wins`) + (forfeit ? " by forfeit!" : "!")
     : vsCpu() ? (winner ? "The computer wins!" : "You win!") : `${players[winner].name} wins!`; setTimeout(() => sound("victory"), 900);
-  [0, 1].forEach(i => { const c = $("cap" + i); c.textContent = `${players[i].name} (${inkName(INK[i])})`; c.style.color = INK[i]; });
+  [0, 1].forEach(i => { const c = $("cap" + i); c.textContent = `${players[i].name} (${inkName(INK[i])})` + (drumstickOn() ? ` · ${sideName(i)}` : ""); c.style.color = INK[i]; });
   $("replayView").classList.add("hidden"); $("videoNote").classList.add("hidden"); replayButtons(false);
   $("rematchBtn").textContent = onlineOn() ? "Back to the lobby" : "Rematch"; $("menuBtn").textContent = onlineOn() ? "Leave the battle" : "Change settings";
   if (onlineOn()) return onlineOver(winner, forfeit); // medals, the record and the Big Reveal wait for the other phone's army
@@ -4640,7 +4700,7 @@ function drawReplay(c, st, fx, fxSparks) {
     paper(c); drawTerrain(c, replay.terrain && replay.terrain[i]);
     (st.roasts || []).forEach(q => { const r = onPage(i, q); drawRoast(c, r.x, r.y); });
     if (p.fort) drawFort(c, p.fort, INK[i]);
-    p.soldiers.forEach(u => drawSoldier(c, u, INK[i]));
+    p.soldiers.forEach(u => drawSoldier(c, u, INK[i], 1, i));
     p.incoming.forEach((b, k) => { if (b.path) strokePath(c, b.path, INK[1 - i], .85); blot(c, b.x, b.y, INK[1 - i], k * 31 + 5); });
     label(c, replay.names[i], W / 2, H - 12, 20, INK[i]);
     const ring = (x, y) => { c.save(); c.strokeStyle = RED; c.setLineDash([4, 4]); c.lineWidth = 2; c.beginPath(); c.arc(x, y, 16, 0, 7); c.stroke(); c.restore(); };
@@ -4707,7 +4767,7 @@ async function playReplay(highlights = false) {
     await sleep((res.medic ? 1200 : 0) + (cam ? 3600 : talk ? 3000 : res.type === "miss" || res.type === "scratch" ? 1000 : 1600));
   }
   if (!live()) return;
-  fx = {caption: replay.names[replay.winner] === "Computer" ? "The computer wins!" : `${N[replay.winner]} wins!`}; sound("victory");
+  fx = {caption: drumstickOn() ? `${sideName(replay.winner)} win!` : replay.names[replay.winner] === "Computer" ? "The computer wins!" : `${N[replay.winner]} wins!`}; sound("victory");
   await sleep(2600);
   if (!live()) return;
   const medals = awards();
@@ -5016,7 +5076,7 @@ let tauntBag = [];
 function taunt(p, quiet = false) {
   const alive = p.soldiers.map((u, i) => u.alive ? i : -1).filter(i => i >= 0);
   if (p.taunted || !alive.length) return;
-  const text = soldierLine("taunt"), idx = alive[Math.floor(Math.random() * alive.length)];
+  const text = soldierLine("taunt", Math.random, players.indexOf(p)), idx = alive[Math.floor(Math.random() * alive.length)];
   p.taunted = true; p.tauntOut = text;
   if (onlineOn() && p === players[onl.seat]) net.send({t: "taunt", say: text}, "all"); // heard on the other phone
   replay.events.push({who: players.indexOf(p), taunt: text, idx});
@@ -5793,7 +5853,8 @@ function renderView(pi) {
       ctx.restore();
       // the stamp also says who shoots first (1.1: the sentence above the page is gone)
       const f = rps.orders.first, mine = vsCpu() ? f === 0 : onlineOn() ? f === onl.seat : false;
-      const who = mine ? "You shoot first" : vsCpu() ? "The computer shoots first" : `${players[f].name} shoots first`;
+      const who = mine ? (drumstickOn() ? `You shoot first, ${sideName(f)}` : "You shoot first") : drumstickOn() ? `The ${sideName(f)} shoot first`
+        : vsCpu() ? "The computer shoots first" : `${players[f].name} shoots first`;
       ctx.save(); ctx.translate(W / 2, 236); ctx.rotate(-.18);
       label(ctx, "ORDERS FROM HQ", 0, -20, 16, RED);
       label(ctx, rps.orders.text, 0, 16, 36, RED, "Caveat");
@@ -5803,7 +5864,7 @@ function renderView(pi) {
   } else if (phase === "setup") {
     paper(ctx); drawTerrain(ctx, p.terrain);
     if (p.fort) drawFort(ctx, p.fort, INK[pi]);
-    p.soldiers.forEach(u => drawSoldier(ctx, u, INK[pi]));
+    p.soldiers.forEach(u => drawSoldier(ctx, u, INK[pi], 1, pi));
     const n = p.soldiers.length;
     const msg = n < MAX_UNITS ? `Tap to place soldier ${n + 1} of ${MAX_UNITS}` : (opts.fort && !p.fort ? "Tap to place your fort" : "Drag to adjust, then Ready");
     ctx.save(); ctx.font = '18px "Patrick Hand"'; const mw = ctx.measureText(msg).width + 20; ctx.restore();
@@ -5898,9 +5959,11 @@ function updateUI() {
   }
   const tent = tentOn(), on = onlineOn(), two = tent || on, me = tent ? uiWho : on ? onl.seat : cur;
   const bar = tent ? TENT[me].bar : $("bar"), stEl = tent ? TENT[me].st : $("status"); bar.innerHTML = "";
-  const st = {set textContent(v) { srSay(stEl, v); }}; // the VoiceOver sentence: only written when it changes
+  // the VoiceOver sentence: only written when it changes (Operation Drumstick: it starts with whose side is shooting)
+  const sided = v => v && players && drumstickOn() && ["aim", "fold", "cpu"].includes(phase) ? `${sideName(cur)}' turn. ${v}` : v;
+  const st = {set textContent(v) { srSay(stEl, sided(v)); }};
   const bn = tent ? TENT[me].bn : $("turnBanner"), hn = tent ? TENT[me].hn : $("turnHint"), bt = players ? turnBannerText() : "";
-  bn.textContent = bt; bn.classList.toggle("long", bt.length > 15); hn.textContent = bt && players ? shootHintText(me) : "";
+  bn.textContent = bt; bn.classList.toggle("long", bt.length > 15); hn.textContent = bt && players ? shootHintText(me) || turnSideText() : "";
   const btn = (t, cls, fn, dis) => { const b = document.createElement("button"); b.textContent = t; b.className = cls || ""; b.onclick = fn; b.disabled = !!dis; bar.appendChild(b); };
   const p = players && players[cur], foe = players && players[1 - cur];
   if (two && phase === "setup") {
@@ -5949,7 +6012,7 @@ function updateUI() {
     if (w === null) st.textContent = `Both picked ${RPS[a]}. Go again!`; // and it does, by itself (see rpsAuto)
     else {
       const won = `${RPS[w ? b : a]} beats ${RPS[w ? a : b]}. ${players[w].name} wins`;
-      st.textContent = !rps.orders ? `${won}... but what does HQ say?` : `${rps.orders.text} ${players[rps.orders.first].name} shoots first.`;
+      st.textContent = !rps.orders ? `${won}... but what does HQ say?` : `${rps.orders.text} ${players[rps.orders.first].name}${drumstickOn() ? ` (the ${sideName(rps.orders.first)})` : ""} shoots first.`;
     }
   } else if (phase === "cover" || phase === "fold") {
     st.textContent = on && phase === "fold" ? "Shot away! Waiting to hear what it hit..." : "";
@@ -8058,7 +8121,7 @@ function partyPage(c, i, terrain, roasts, fort, soldiers, incoming, title) {
   paper(c, IH); drawTerrain(c, terrain);
   roasts.forEach(q => { const r = onPage(i, q); drawRoast(c, r.x, r.y); });
   if (fort) drawFort(c, fort, INK[i]);
-  soldiers.forEach(u => u && drawSoldier(c, u, INK[i]));
+  soldiers.forEach(u => u && drawSoldier(c, u, INK[i], 1, i));
   incoming.forEach((b, k) => { if (!b || b.off || b.res === "off") return; if (b.path) strokePath(c, b.path, INK[1 - i], .85); blot(c, b.x, b.y, INK[1 - i], k * 31 + 5); });
   return c; // (still translated and clipped: the caller restores)
 }
