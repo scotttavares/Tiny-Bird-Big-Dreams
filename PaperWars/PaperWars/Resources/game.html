@@ -3325,6 +3325,7 @@ const DRUMSTICK_SIDES = {pilgrim: "Pilgrims", turkey: "Turkey Troopers"};
 const drumstickOn = () => !!(opts && opts.campaign === "drumstick");
 const drumstickSide = army => army === 1 ? "turkey" : "pilgrim";
 const sideName = army => DRUMSTICK_SIDES[drumstickSide(army)];
+const winnerName = army => drumstickSide(army) === "turkey" ? "Turkeys" : sideName(army); // end titles: "Pilgrims win!" / "Turkeys win!"
 // What a soldier wears on his head: a namesake's own helmet or beret wins, then the Drumstick side's costume.
 function soldierCostume(u, army) {
   if (u.hat === "helmet" || u.hat === "beret") return u.hat;
@@ -4443,7 +4444,7 @@ function gameOver(winner, forfeit = false) {
   if (opts.campaign === "drumstick" && !players[winner].cpu) speak(bagPick("drumstickWin"), 2600);
   coachQ.length = 0; coach(winner === 0 ? "win" : "lose", 1600); // drop tips still waiting
   $("game").classList.add("hidden"); $("tent").classList.add("hidden"); $("over").classList.remove("hidden");
-  $("overTitle").textContent = drumstickOn() ? `${sideName(winner)} win` + (forfeit ? " by forfeit!" : "!") // Operation Drumstick: Pilgrims win!
+  $("overTitle").textContent = drumstickOn() ? `${winnerName(winner)} win` + (forfeit ? " by forfeit!" : "!") // Operation Drumstick: Pilgrims win!
     : onlineOn() ? (winner === onl.seat ? "You win" : `${players[winner].name} wins`) + (forfeit ? " by forfeit!" : "!")
     : vsCpu() ? (winner ? "The computer wins!" : "You win!") : `${players[winner].name} wins!`; setTimeout(() => sound("victory"), 900);
   [0, 1].forEach(i => { const c = $("cap" + i); c.textContent = `${players[i].name} (${inkName(INK[i])})` + (drumstickOn() ? ` · ${sideName(i)}` : ""); c.style.color = INK[i]; });
@@ -4767,7 +4768,7 @@ async function playReplay(highlights = false) {
     await sleep((res.medic ? 1200 : 0) + (cam ? 3600 : talk ? 3000 : res.type === "miss" || res.type === "scratch" ? 1000 : 1600));
   }
   if (!live()) return;
-  fx = {caption: drumstickOn() ? `${sideName(replay.winner)} win!` : replay.names[replay.winner] === "Computer" ? "The computer wins!" : `${N[replay.winner]} wins!`}; sound("victory");
+  fx = {caption: drumstickOn() ? `${winnerName(replay.winner)} win!` : replay.names[replay.winner] === "Computer" ? "The computer wins!" : `${N[replay.winner]} wins!`}; sound("victory");
   await sleep(2600);
   if (!live()) return;
   const medals = awards();
