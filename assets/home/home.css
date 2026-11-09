@@ -387,3 +387,12 @@ footer a{white-space:nowrap;display:inline-block;margin:4px 10px}
 .hero.dark .greet{color:#ffe9c7}
 .hero.dark .ask,.hero.dark .ask span{color:#f4ecff}
 @media (max-width:900px){.hero{padding-top:118px}.hero .greet{top:72px;font-size:22px}}
+/* reduced motion: a still bird sits on the night tree's branch */
+.team .perched{position:absolute;width:56px;height:56px;z-index:2;pointer-events:none;filter:drop-shadow(0 8px 16px rgba(0,0,0,.25))}
+.team .perched svg{width:100%;height:100%}
+.team .perched .wing{transform:scaleY(.4);transform-origin:30px 30px}
+#bird{transition:opacity .2s}
+/* logo: just the bird (no tile); it empties while the bird is out flying */
+.brand .mark{display:block;width:44px;height:44px;flex:none;margin:-4px -4px -4px -6px;transition:opacity .2s;filter:drop-shadow(0 3px 8px rgba(40,20,10,.25))}
+.brand .mark svg{width:100%;height:100%;display:block}
+@media (max-width:700px){.brand .mark{width:40px;height:40px}}

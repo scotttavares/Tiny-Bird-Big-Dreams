@@ -118,13 +118,20 @@
   }
 
   /* ---------- the bird you fly ---------- */
-  var bird = $("#bird"), mx = innerWidth * .5, my = innerHeight * .72, bx = mx, by = my, lastX = bx, landed = false;
+  // Over the hero the bird *is* the logo (it sits docked on the header icon). Scroll on and it
+  // lifts off and follows your mouse (or flies its own path on touch); at the studio it perches
+  // on the night tree's long branch.
+  var bird = $("#bird"), logoImg = $("#logo .mark"), mx = innerWidth * .5, my = innerHeight * .72, landed = false, tapT = -1e9, docked = true;
+  var lr0 = logoImg ? logoImg.getBoundingClientRect() : { left: 20, top: 20, width: 36, height: 36 };
+  var bx = lr0.left + lr0.width / 2, by = lr0.top + lr0.height / 2 + 12, lastX = bx;
   addEventListener("pointermove", function (e) { if (e.pointerType === "mouse") { mx = e.clientX; my = e.clientY; } });
   // The bird follows the mouse, so it must never block a click: it's pointer-events:none and
   // links/buttons under it get the click. A tap on the bird over empty sky still counts for the egg.
   addEventListener("pointerdown", function (e) {
     if (e.target.closest("a,button,input,textarea,select,label,.toy,.chips,.egg-card,.sheet")) return;
+    tapT = e.timeStamp;
     var r = bird.getBoundingClientRect();
+    if (docked) { mx = e.clientX; my = e.clientY; return; }
     if (e.clientX >= r.left - 20 && e.clientX <= r.right + 20 && e.clientY >= r.top - 20 && e.clientY <= r.bottom + 30) { flap(); eggTap(); return; }
     mx = e.clientX; my = e.clientY; flap();
   });
@@ -174,18 +181,34 @@
     }
     if (!RM) {
       var nr = nest.getBoundingClientRect(), near = nr.top < innerHeight * .7 && nr.bottom > 60;
-      var tx = mx, ty = my; if (near) { tx = nr.left + nr.width * .5; ty = nr.top + nr.height * .55; }
+      var home = scrollY < innerHeight * .35, tx = mx, ty = my;
+      if (TOUCH && t - tapT > 2500) { // no mouse: a lazy loop down the right side as you scroll
+        tx = innerWidth * .78 + Math.sin(scrollY / 260) * innerWidth * .1; ty = innerHeight * .32 + Math.cos(scrollY / 340) * innerHeight * .1;
+      }
+      if (home && logoImg) { var lr = logoImg.getBoundingClientRect(); tx = lr.left + lr.width / 2; ty = lr.top + lr.height / 2 + 12; near = false; }
+      else if (near) { tx = nr.left + nr.width * .5; ty = nr.top + nr.height * .55; }
       if (near !== landed) { landed = near; bird.classList.toggle("landed", near); if (near) tone(660, .2); }
-      bx += (tx - bx) * .1; by += (ty - by) * .1 + (landed ? 0 : Math.sin(t / 260) * .5);
+      bx += (tx - bx) * .1; by += (ty - by) * .1 + (landed || home ? 0 : Math.sin(t / 260) * .5);
+      var dd = Math.hypot(tx - bx, ty - by), k2 = home ? Math.min(1, dd / 90) : 1; docked = home && dd < 30;
+      bird.style.opacity = k2.toFixed(2);
+      if (logoImg) logoImg.style.opacity = (1 - k2).toFixed(2); // only ever one bird: the logo empties while it's away
       var vx = bx - lastX; lastX = bx;
       var face = vx < -.3 ? 1 : vx > .3 ? -1 : (+bird.dataset.f || 1); bird.dataset.f = face;
-      bird.style.transform = "translate(" + (bx - 28) + "px," + (by - 40) + "px) scaleX(" + face + ") rotate(" + Math.max(-25, Math.min(25, -vx * face * 1.6)) + "deg)";
+      bird.style.transform = "translate(" + (bx - 28) + "px," + (by - 40) + "px) scale(" + (.78 + .22 * k2).toFixed(3) + ") scaleX(" + face + ") rotate(" + Math.max(-25, Math.min(25, -vx * face * 1.6)) + "deg)";
       for (var j = 0; j < sceneImgs.length; j++) {
         var r = sceneImgs[j].parentNode.getBoundingClientRect();
         if (r.bottom > 0 && r.top < innerHeight) sceneImgs[j].style.setProperty("--py", ((r.top + r.height / 2 - innerHeight / 2) * -.05) + "px");
       }
     }
     if (!RM && !document.hidden) requestAnimationFrame(loop); else looping = false;
+  }
+  if (RM && nest) { // reduced motion: the bird doesn't fly; it is simply sitting on the branch
+    var team = $(".team"), still = document.createElement("span"); still.className = "perched"; still.setAttribute("aria-hidden", "true");
+    still.innerHTML = bird.innerHTML; team.appendChild(still);
+    var place = function () { var tr = team.getBoundingClientRect(), r = nest.getBoundingClientRect(); still.style.left = (r.left - tr.left + r.width / 2 - 28) + "px"; still.style.top = (r.top - tr.top + r.height * .55 - 40) + "px"; };
+    place(); addEventListener("resize", place); addEventListener("load", place);
+    var logoMark = $("#logo .mark"), sync = function () { var r = nest.getBoundingClientRect(); if (logoMark) logoMark.style.opacity = r.top < innerHeight && r.bottom > 0 ? "0" : "1"; };
+    addEventListener("scroll", sync, { passive: true }); sync(); // reduced motion: one bird, either in the logo or on the branch
   }
   var looping = true;
   requestAnimationFrame(loop);
