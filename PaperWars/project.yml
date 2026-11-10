@@ -1,0 +1,87 @@
+name: PaperWars
+
+options:
+  bundleIdPrefix: com.tinybirdbigdreams
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    MARKETING_VERSION: "1.1"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    GCC_TREAT_WARNINGS_AS_ERRORS: NO
+    # scripts/ci.sh enforces the zero-warnings bar by reading the build log.
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: NO
+
+targets:
+  PaperWars:
+    type: application
+    platform: iOS
+    sources:
+      - path: PaperWars
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.tinybirdbigdreams.paperwars
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    entitlements:
+      path: PaperWars/Resources/PaperWars.entitlements
+      properties:
+        # The player's settings, inks, stats and medals live in their own iCloud key-value store.
+        com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)$(CFBundleIdentifier)
+    info:
+      path: PaperWars/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Paper Wars
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen:
+          UIColorName: PaperColor
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        # The share sheet's "Save Video" puts a battle replay in Photos (add only, nothing is read).
+        NSPhotoLibraryAddUsageDescription: Paper Wars saves your battle replay videos to Photos when you choose Save Video.
+        UIStatusBarHidden: true
+        UIViewControllerBasedStatusBarAppearance: false
+        # Portrait both ways: in tent mode the far half is upside down for the other player.
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        ITSAppUsesNonExemptEncryption: false
+
+  PaperWarsTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: PaperWarsTests
+    dependencies:
+      - target: PaperWars
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.tinybirdbigdreams.paperwars.tests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  PaperWars:
+    build:
+      targets:
+        PaperWars: all
+        PaperWarsTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - PaperWarsTests

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Paper Wars: a pencil war on notebook paper — Tiny Bird, Big Dreams</title>
+<meta name="description" content="Paper Wars is a two-player pencil war on notebook paper. Hide your stick-figure army, fire in secret and scribble out the enemy. Play the web version now; coming to iPhone Duo." />
+<meta property="og:title" content="Paper Wars" />
+<meta property="og:description" content="A pencil war on notebook paper. Hide your army, fire in secret, scribble out the enemy. Play it free in your browser." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://www.tinybirdbigdreams.com/paperwars" />
+<meta property="og:image" content="https://www.tinybirdbigdreams.com/assets/og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="canonical" href="https://www.tinybirdbigdreams.com/paperwars" />
+<link rel="icon" href="/favicon.ico?v=3" sizes="any" /><link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=3" /><link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+<meta name="theme-color" content="#f8f4e8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin" />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&display=swap" rel="stylesheet" />
+<style>
+:root{--paper:#faf6ea;--line:#c9d6ea;--margin:#e3a0a0;--ink:#1f4fa8;--green:#1e7a46;--red:#b3261e;--pencil:#55524b;--text:#2b2a27}
+*{box-sizing:border-box}
+html{background:#1b1b1b}
+body{margin:0;color:var(--text);font:20px/1.45 "Patrick Hand",system-ui,sans-serif;
+  background:var(--paper) repeating-linear-gradient(to bottom,transparent 0 31px,var(--line) 31px 32px);background-attachment:local}
+.sheet{position:relative;max-width:1080px;margin:0 auto;padding:0 20px 40px 20px}
+.sheet::before{content:"";position:fixed;top:0;bottom:0;left:max(18px,calc(50% - 560px));width:2px;background:var(--margin);opacity:.7;pointer-events:none}
+nav{display:flex;justify-content:space-between;align-items:center;padding:14px 0 0 24px;font-size:18px}
+nav a{color:var(--pencil)}
+a{color:var(--ink)}
+.hero{display:grid;grid-template-columns:1fr minmax(320px,420px);gap:40px;align-items:start;padding:30px 0 10px 24px}
+h1{font:700 clamp(64px,11vw,120px)/.95 Caveat,cursive;color:var(--ink);margin:10px 0 6px;transform:rotate(-2deg)}
+.tag{font:700 clamp(28px,4vw,38px)/1.1 Caveat,cursive;color:var(--red);margin:0 0 18px}
+.lead{font-size:22px;max-width:30em;margin:0 0 22px}
+.box{display:inline-block;border:3px solid currentColor;border-radius:255px 14px 225px 16px/16px 225px 14px 255px;padding:2px 18px}
+.play{font:700 34px Caveat,cursive;color:var(--red);text-decoration:none;transform:rotate(-3deg);display:inline-block;transition:transform .15s}
+.play:hover{transform:rotate(-3deg) scale(1.06)}
+.note{font-size:17px;color:var(--pencil);margin-top:14px}
+.game{width:100%;aspect-ratio:9/17;max-height:820px;border:0;border-radius:18px;box-shadow:0 14px 40px #0004;background:#1b1b1b}
+h2{font:700 44px/1 Caveat,cursive;color:var(--ink);margin:46px 0 14px 24px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:22px;padding-left:24px}
+.card{background:#fffdf7;padding:16px 18px 18px;box-shadow:0 3px 10px #0002;transform:rotate(var(--r,0deg))}
+.card:nth-child(2){--r:1.2deg}.card:nth-child(3){--r:-1deg}.card:nth-child(4){--r:.8deg}.card:nth-child(5){--r:-1.3deg}.card:nth-child(6){--r:1deg}
+.card h3{font:700 30px/1.05 Caveat,cursive;margin:0 0 6px;color:var(--green)}
+.card p{margin:0;font-size:19px}
+.duo{padding-left:24px;max-width:46em}
+.duo p{margin:0 0 12px}
+footer{padding:40px 0 10px 24px;font-size:17px;color:var(--pencil)}
+@media (max-width:820px){.hero{grid-template-columns:1fr;gap:20px}.frame{display:none}}
+@media (min-width:821px){.mobile-only{display:none}}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+<nav aria-label="Tiny Bird, Big Dreams">
+  <a href="/">Tiny Bird, Big Dreams</a>
+  <a href="/apps">All apps</a>
+</nav>
+
+<main>
+  <section class="hero">
+    <div>
+      <h1>Paper Wars</h1>
+      <p class="tag">A pencil war on notebook paper.</p>
+      <p class="lead">Two players. Two stick-figure armies hidden on lined paper. Take turns firing in secret, spot the enemy with ink bleed, and scribble them out before they get you. Every soldier has a name, a big mouth and a very nervous stomach.</p>
+      <a class="play box" href="/play/paperwars/">Play it now!</a>
+      <p class="note">Free in your browser. Play a friend on one screen, or take on the computer.<span class="mobile-only"> Best with the sound on.</span></p>
+    </div>
+    <div class="frame">
+      <iframe class="game" src="/play/paperwars/" title="Paper Wars, playable" allow="autoplay"></iframe>
+      <p class="note">Sound on. Tap the orders to begin. <a href="/play/paperwars/">Open full screen</a></p>
+    </div>
+  </section>
+
+  <h2>How a war goes</h2>
+  <div class="cards">
+    <div class="card"><h3>Hide your army</h3><p>Tap to place five soldiers and a fort on your half of the page. Rocks, mountains and water change every map.</p></div>
+    <div class="card"><h3>Fire in secret</h3><p>Place a dot where you think they are, then fire. A hit scribbles a soldier out in red pen. A near miss can scare one so badly he toots.</p></div>
+    <div class="card"><h3>Ink bleed</h3><p>Every shot bleeds a little, so a miss can still spot enemies nearby. Hide behind a boulder and the ink can't reach you.</p></div>
+    <div class="card"><h3>Machine gun</h3><p>A couple of times a game, pick a soldier and spray a dashed line of bullets clear to the edge of the paper.</p></div>
+    <div class="card"><h3>Reinforcements</h3><p>Miss too often and the other side gets a fresh soldier, flown in by paper plane and parachuted onto the page.</p></div>
+    <div class="card"><h3>Medals and replays</h3><p>The match ends with a medal ceremony, gold trophies for the silliest moments, and a highlight video with a kill cam to share.</p></div>
+  </div>
+
+  <h2>Coming to iPhone Duo</h2>
+  <div class="duo">
+    <p>Paper Wars is being built for iPhone Duo. Stand the phone up like a tent between two players and each one sees only their own half of the page: no peeking, no hand-offs. The web version is the prototype we play-test with, so it may change as we go.</p>
+    <p>Made by <a href="/">Tiny Bird, Big Dreams</a>, a small independent studio.</p>
+  </div>
+</main>
+
+<footer>
+  <a href="/">Home</a> · <a href="/apps">Apps</a> · <a href="/paperwars-support">Support</a> · <a href="/paperwars-privacy">Privacy</a>
+  <br />The web version stores nothing about you; your ink colours and settings stay in your own browser.
+</footer>
+
+</div>
+<script src="/assets/consent.js" defer></script>
+</body>
+</html>

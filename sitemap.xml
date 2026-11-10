@@ -9,10 +9,31 @@
   </url>
 
   <url>
-    <loc>https://www.tinybirdbigdreams.com/apps.html</loc>
+    <loc>https://www.tinybirdbigdreams.com/apps</loc>
     <lastmod>2026-06-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://www.tinybirdbigdreams.com/paperwars</loc>
+    <lastmod>2026-11-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://www.tinybirdbigdreams.com/fieldguide</loc>
+    <lastmod>2026-11-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://www.tinybirdbigdreams.com/fieldguide-support</loc>
+    <lastmod>2026-11-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
   </url>
 
   <url>
@@ -36,4 +57,13 @@
     <priority>0.3</priority>
   </url>
 
+  <url>
+    <loc>https://www.tinybirdbigdreams.com/orbit</loc>
+  </url>
+  <url>
+    <loc>https://www.tinybirdbigdreams.com/orbit-support</loc>
+  </url>
+  <url>
+    <loc>https://www.tinybirdbigdreams.com/paperwars-support</loc>
+  </url>
 </urlset>

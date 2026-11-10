@@ -1,0 +1,4 @@
+build/
+PaperWars.xcodeproj/
+*.xcresult
+DerivedData/

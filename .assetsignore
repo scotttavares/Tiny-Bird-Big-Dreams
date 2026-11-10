@@ -12,3 +12,10 @@ CNAME
 pages
 css
 js
+/FieldGuide
+/PaperWars
+/test
+/docs
+/package.json
+/.superpowers
+/.claude

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Paper Wars — Privacy</title>
+<meta name="description" content="How Paper Wars: Fold & Fire handles your game. No accounts, ads, analytics or tracking." />
+<meta property="og:title" content="Paper Wars — Privacy" />
+<meta property="og:url" content="https://www.tinybirdbigdreams.com/paperwars-privacy" />
+<link rel="canonical" href="https://www.tinybirdbigdreams.com/paperwars-privacy" />
+<link rel="icon" href="/favicon.ico?v=3" sizes="any" /><link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=3" /><link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+<meta name="theme-color" content="#f8f4e8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin" />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&display=swap" rel="stylesheet" />
+<style>
+:root{--paper:#faf6ea;--line:#c9d6ea;--margin:#e3a0a0;--ink:#1f4fa8;--green:#1e7a46;--red:#b3261e;--pencil:#55524b;--text:#2b2a27}
+*{box-sizing:border-box}
+html{background:#1b1b1b}
+body{margin:0;color:var(--text);font:20px/1.45 "Patrick Hand",system-ui,sans-serif;
+  background:var(--paper) repeating-linear-gradient(to bottom,transparent 0 31px,var(--line) 31px 32px);background-attachment:local}
+.sheet{position:relative;max-width:1080px;margin:0 auto;padding:0 20px 40px 20px}
+.sheet::before{content:"";position:fixed;top:0;bottom:0;left:max(18px,calc(50% - 560px));width:2px;background:var(--margin);opacity:.7;pointer-events:none}
+nav{display:flex;justify-content:space-between;align-items:center;padding:14px 0 0 24px;font-size:18px}
+nav a{color:var(--pencil)}
+a{color:var(--ink)}
+.hero{display:grid;grid-template-columns:1fr minmax(320px,420px);gap:40px;align-items:start;padding:30px 0 10px 24px}
+h1{font:700 clamp(64px,11vw,120px)/.95 Caveat,cursive;color:var(--ink);margin:10px 0 6px;transform:rotate(-2deg)}
+.tag{font:700 clamp(28px,4vw,38px)/1.1 Caveat,cursive;color:var(--red);margin:0 0 18px}
+.lead{font-size:22px;max-width:30em;margin:0 0 22px}
+.box{display:inline-block;border:3px solid currentColor;border-radius:255px 14px 225px 16px/16px 225px 14px 255px;padding:2px 18px}
+.play{font:700 34px Caveat,cursive;color:var(--red);text-decoration:none;transform:rotate(-3deg);display:inline-block;transition:transform .15s}
+.play:hover{transform:rotate(-3deg) scale(1.06)}
+.note{font-size:17px;color:var(--pencil);margin-top:14px}
+.game{width:100%;aspect-ratio:9/17;max-height:820px;border:0;border-radius:18px;box-shadow:0 14px 40px #0004;background:#1b1b1b}
+h2{font:700 44px/1 Caveat,cursive;color:var(--ink);margin:46px 0 14px 24px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:22px;padding-left:24px}
+.card{background:#fffdf7;padding:16px 18px 18px;box-shadow:0 3px 10px #0002;transform:rotate(var(--r,0deg))}
+.card:nth-child(2){--r:1.2deg}.card:nth-child(3){--r:-1deg}.card:nth-child(4){--r:.8deg}.card:nth-child(5){--r:-1.3deg}.card:nth-child(6){--r:1deg}
+.card h3{font:700 30px/1.05 Caveat,cursive;margin:0 0 6px;color:var(--green)}
+.card p{margin:0;font-size:19px}
+.duo{padding-left:24px;max-width:46em}
+.duo p{margin:0 0 12px}
+footer{padding:40px 0 10px 24px;font-size:17px;color:var(--pencil)}
+@media (max-width:820px){.hero{grid-template-columns:1fr;gap:20px}.frame{display:none}}
+@media (min-width:821px){.mobile-only{display:none}}
+</style>
+<style>
+.legal{max-width:44em;padding:20px 0 0 24px}
+.legal h1{font-size:clamp(56px,9vw,90px)}
+.legal h2{margin:30px 0 8px 0;font-size:36px}
+.legal p,.legal li{font-size:20px}
+.legal .updated{color:var(--pencil);font-size:17px}
+.legal details{background:#fffdf7;box-shadow:0 3px 10px #0002;padding:10px 16px;margin:0 0 14px}
+.legal summary{font:700 26px/1.2 Caveat,cursive;color:var(--green);cursor:pointer}
+</style>
+</head>
+<body>
+<div class="sheet">
+<nav aria-label="Paper Wars">
+  <a href="/paperwars">&larr; Paper Wars</a>
+  <span><a href="/paperwars-support">Support</a> · <a href="/paperwars-privacy">Privacy</a></span>
+</nav>
+<main class="legal">
+  <h1>Privacy</h1>
+  <p class="updated">Last updated: November 2026</p>
+  <p>Paper Wars: Fold &amp; Fire is made by Tiny Bird, Big Dreams. The game has no accounts, no ads, no analytics and no tracking. We never receive anything about you or your games.</p>
+  <h2>What the game keeps</h2>
+  <p>Your service record (wins, losses, medals, rank and skill badges), your pen colours and your settings are stored on your iPhone. If you're signed in to iCloud, the app also keeps a copy in your own iCloud storage under your Apple account, so your record follows you to a new phone. We can't see it.</p>
+  <h2>Permissions</h2>
+  <p>The app doesn't ask for your camera, microphone, photos, contacts or location. On iPhone Duo it reads the hinge angle so it knows when the phone is standing like a tent; that never leaves the phone.</p>
+  <h2>Full Arsenal purchase</h2>
+  <p>The Full Arsenal upgrade is bought through the App Store. Apple handles the payment; we only learn from Apple whether this Apple ID owns it, so it can unlock. With Family Sharing, your family's purchase counts too.</p>
+  <h2>The web version</h2>
+  <p>The free web version at tinybirdbigdreams.com stores your settings and record only in your own browser.</p>
+  <h2>Children</h2>
+  <p>Paper Wars collects no personal information from anyone, including children.</p>
+  <h2>Changes</h2>
+  <p>If this policy changes, we'll update this page and its date.</p>
+  <h2>Contact</h2>
+  <p>Questions? Visit <a href="/paperwars-support">Paper Wars Support</a>.</p>
+</main>
+<footer>
+  <a href="/paperwars">Paper Wars</a> · <a href="/paperwars-support">Support</a> · <a href="/paperwars-privacy">Privacy</a> · <a href="/">Tiny Bird, Big Dreams</a>
+</footer>
+</div>
+<script src="/assets/consent.js" defer></script>
+</body>
+</html>
