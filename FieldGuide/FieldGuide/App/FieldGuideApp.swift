@@ -4,6 +4,7 @@ import SwiftUI
 @main
 struct FieldGuideApp: App {
     @State private var postureProvider = SystemPostureProvider()
+    @State private var appLock = AppLock()
     private let container: ModelContainer
 
     init() {
@@ -29,6 +30,7 @@ struct FieldGuideApp: App {
     var body: some Scene {
         WindowGroup {
             RootView(postureProvider: postureProvider)
+                .environment(appLock)
         }
         .modelContainer(container)
     }

@@ -20,6 +20,8 @@ struct WorkspaceHeader: View {
     @State private var isShowingGestures = false
     @State private var isShowingLibrary = false
     @State private var isShowingAppIcons = false
+    @State private var isShowingLock = false
+    @Environment(AppLock.self) private var appLock
     @State private var infoPage: Page?
     @State private var sharedFile: SharedFile?
     @State private var replayPage: ExportPage?
@@ -48,6 +50,9 @@ struct WorkspaceHeader: View {
         }
         .sheet(isPresented: $isShowingAppIcons) {
             AppIconPickerSheet()
+        }
+        .sheet(isPresented: $isShowingLock) {
+            AppLockSheet(lock: appLock)
         }
         .sheet(item: $infoPage) { page in
             PageInfoSheet(model: model, page: page)
@@ -299,6 +304,7 @@ struct WorkspaceHeader: View {
             Button("Show Sketch", systemImage: "triangle") { postureProvider.override = .tent }
             ExportMenuItems(model: model, sharedFile: $sharedFile)
             Button("App Icon", systemImage: "app.badge") { isShowingAppIcons = true }
+            Button("Privacy Lock", systemImage: AppLock.methodSymbol) { isShowingLock = true }
             Section("Layout") {
                 Button {
                     postureProvider.override = nil
