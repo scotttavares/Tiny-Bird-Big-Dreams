@@ -1,0 +1,76 @@
+name: GameHost
+
+options:
+  bundleIdPrefix: com.tinybirdbigdreams
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    GCC_TREAT_WARNINGS_AS_ERRORS: NO
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: NO
+
+targets:
+  GameHost:
+    type: application
+    platform: iOS
+    sources:
+      - path: GameHost
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.tinybirdbigdreams.gamehost
+        TARGETED_DEVICE_FAMILY: "1,2"
+    info:
+      path: GameHost/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Game Host
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+          - UIInterfaceOrientationPortraitUpsideDown
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        # Only HTTPS/system crypto: no export-compliance questions on each TestFlight upload.
+        ITSAppUsesNonExemptEncryption: false
+
+  GameHostTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: GameHostTests
+    dependencies:
+      - target: GameHost
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.tinybirdbigdreams.gamehost.tests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  GameHost:
+    build:
+      targets:
+        GameHost: all
+        GameHostTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - GameHostTests
