@@ -80,6 +80,9 @@ button:disabled{opacity:.4;cursor:default}
 #story small{font:700 13px/1 "Special Elite",monospace;letter-spacing:.3em;color:#b3261e}
 #story h3{font:700 30px/1.05 Caveat,cursive;color:#1f4fa8;margin:8px 0 6px}
 #story p{font:19px/1.4 "Patrick Hand",sans-serif;margin:0 0 10px}
+#story .facts{list-style:none;margin:0 0 10px;padding:0;font:19px/1.35 "Patrick Hand",sans-serif}
+#story .facts li{display:flex;gap:10px;align-items:flex-start;margin:0 0 8px}
+#story .factIcon{flex:0 0 auto;font-size:24px;line-height:1.1;width:30px;text-align:center}
 #story .storyNote{font-size:16px;color:#6d6a62}
 #story .stampbtn{font-size:22px;padding:6px 14px 4px;margin-top:4px}
 /* 1.1 (user, 2026-11-06: the Campaigns pill "was hard to see"): a filled blue button; True story and call sign stay secondary. */
@@ -400,7 +403,7 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
 <div id="coach" class="coach hidden"><b>Drill Sergeant</b><span id="coachText"></span></div>
 
 <div id="story" class="hidden" role="dialog" aria-modal="true" aria-labelledby="storyTitle">
-  <div class="storyCard"><small>TRUE STORY</small><h3 id="storyTitle"></h3><p id="storyText"></p><p class="storyNote" id="storyNote"></p>
+  <div class="storyCard"><small>FUN FACTS</small><h3 id="storyTitle"></h3><ul id="storyText" class="facts"></ul><p class="storyNote" id="storyNote"></p>
   <button type="button" id="storyClose" class="stampbtn">DISMISSED!</button></div>
 </div>
 <section id="campaigns" class="menu hidden">
@@ -413,7 +416,7 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
   </div>
 </section>
 <section id="menu" class="menu" data-campaign="regular">
-  <div class="campbar"><button type="button" id="campaignsBtn" class="campback">&#9664; Campaigns</button><button type="button" id="storyBtn" class="campback">&#9733; True story</button><button type="button" id="callsignBtn" class="campback">&#9998; Your call sign</button></div>
+  <div class="campbar"><button type="button" id="campaignsBtn" class="campback">&#9664; Campaigns</button><button type="button" id="storyBtn" class="campback">&#9733; Fun facts</button><button type="button" id="callsignBtn" class="campback">&#9998; Your call sign</button></div>
   <h3 class="mtitle">New mission<small id="campName"></small></h3>
   <h4>Who's the enemy?</h4>
   <div class="tiles two">
@@ -6502,18 +6505,26 @@ function openCampaign(id) {
 }
 // True stories behind the holiday campaigns (user, 2026-11-06: "some real truth to it"). Checked against sources:
 // National WWII Museum and Task & Purpose (Thanksgiving 1944); Wikipedia and Yokota Air Base (Operation Christmas Drop).
+// 1.1 (user, 2026-11-13: "add emoji or something, make it fun facts"): a short emoji list. The 1944 turkey push had no code name.
 const TRUE_STORIES = {
   drumstick: {title: "Thanksgiving, 1944",
-    text: "In November 1944, the U.S. Army got hot turkey dinners to its soldiers all across Europe. Even men on the front line in the Hürtgen Forest got turkey, and ate it out of their mess kits.",
-    note: "“Operation Drumstick” is our own made-up name. The turkey dinners were real."},
+    facts: [["🦃", "In November 1944, the U.S. Army set out to give every soldier in Europe a turkey dinner."],
+      ["🚢", "One ship, the SS Great Republic, carried 1,604 tons of frozen turkey from New York."],
+      ["🌲", "Even soldiers on the front line in the Hürtgen Forest got turkey, eaten out of their mess kits."],
+      ["⏰", "Some dinners showed up a day or two late, but nearly everyone got their turkey."]],
+    note: "🤫 It never had a code name. “Operation Drumstick” is our own made-up name, but the turkey was real."},
   mistletoe: {title: "Operation Christmas Drop",
-    text: "In 1952, a bomber crew flying from Guam saw islanders waving up at them from a tiny Pacific atoll, so they dropped them supplies by parachute. That was the start of Operation Christmas Drop: every December since, Air Force crews have dropped food, supplies and toys to islands across Micronesia.",
-    note: "Operation Christmas Drop is real, and it's the longest-running airdrop mission in the world."},
+    facts: [["✈️", "In 1952, a bomber crew flying from Guam saw islanders waving up at them from a tiny Pacific atoll."],
+      ["🪂", "So they packed a box with supplies and dropped it to them by parachute."],
+      ["🎁", "Every December since, Air Force crews have dropped food, supplies and toys to islands across Micronesia."],
+      ["🏆", "It's the longest-running airdrop mission in the world."]],
+    note: "✅ Operation Christmas Drop is the real name of a real mission."},
 };
 const STORY_SEEN = "paperWarsSeenStory";
 function showStory(id) {
   const st = TRUE_STORIES[id]; if (!st) return;
-  $("storyTitle").textContent = st.title; $("storyText").textContent = st.text; $("storyNote").textContent = st.note;
+  $("storyTitle").textContent = st.title; $("storyNote").textContent = st.note;
+  $("storyText").replaceChildren(...st.facts.map(([e, t]) => { const li = document.createElement("li"); const i = document.createElement("span"); i.className = "factIcon"; i.setAttribute("aria-hidden", "true"); i.textContent = e; li.append(i, document.createTextNode(t)); return li; }));
   $("story").classList.remove("hidden");
 }
 function storyOnce(id) {
