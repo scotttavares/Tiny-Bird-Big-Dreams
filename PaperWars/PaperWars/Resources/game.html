@@ -7401,9 +7401,11 @@ function lobbySpot(pid, seat, i) {
 function renderLobby() {
   if (!lobbyOpen) return;
   const me = lobbyMe(), host = lobbyHost(), amHost = net.me().isHost;
-  const others = [me, ...net.peers().map(p => p.pid)], watch = host ? lob.spectators : others; // nobody hosting yet: everyone here just waits
+  // nobody hosting yet: you're shown in Seat 1, ready to invite someone to fight (user, 2026-11-13: starting under
+  // Watching looked like you'd only be a spectator); anyone else here waits under Watching
+  const others = net.peers().map(p => p.pid), watch = host ? lob.spectators : others, seatList = host ? lob.seats : [me];
   const seats = $("lobbySeats"), spots = $("lobbyWatch");
-  seats.replaceChildren(...[0, 1].map(i => lobbySpot(host ? lob.seats[i] : null, true, i)));
+  seats.replaceChildren(...[0, 1].map(i => lobbySpot(seatList[i], true, i)));
   spots.replaceChildren(...[0, 1, ...watch.slice(2).map((p, i) => i + 2)].map(i => lobbySpot(watch[i], false, i)));
   const hp = host && lobbyPerson(host);
   $("lobbyStatus").textContent = lob.note ? lob.note : host && lob.wait.has(host) ? "The host lost the connection. Waiting for them to come back…"
