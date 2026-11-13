@@ -505,6 +505,8 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
     <div class="row"><canvas class="ico" data-ico="chute"></canvas><span>Reinforcements: <b id="reinforceVal">3</b><small>Misses in a row until help drops in</small></span><input type="range" id="optReinforce" min="0" max="6" value="3"></div>
     <div class="row"><canvas class="ico" data-ico="flag"></canvas><span>Fort must fall<small>Or just wipe out the soldiers</small></span><input type="checkbox" id="optFortWin"></div>
     <div class="row"><canvas class="ico" data-ico="flag"></canvas><span>Bonus turn for the brass<small>Fire again after taking out a namesake</small></span><input type="checkbox" id="optBrassBonus"></div>
+    <div class="row"><canvas class="ico" data-ico="fire"></canvas><span>Hit, fire again<small>Take out a soldier, take another shot</small></span>
+      <select id="optHitAgain"><option value="0">Off</option><option value="3">Up to 3 in a row</option><option value="99">No limit</option></select></div>
     <div class="row"><canvas class="ico" data-ico="bleed"></canvas><span>Ink bleed: <b id="revealVal">80</b><small>Shots reveal nearby enemies</small></span><input type="range" id="optReveal" min="0" max="120" step="5" value="80"></div>
     <div class="row"><canvas class="ico" data-ico="voice"></canvas><span>Soldier voices<small>Sound effects stay on</small></span><input type="checkbox" id="optVoices" checked></div>
     <div class="row"><canvas class="ico" data-ico="whoosh"></canvas><span>Near-miss hint<small>"Whoosh, close!"</small></span><input type="checkbox" id="optNear" checked></div>
@@ -679,6 +681,7 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
       <label data-paid><input type="checkbox" data-lopt="fortWin"><span>Fort must fall<small>Or just wipe out the soldiers</small></span></label>
       <label data-paid><input type="checkbox" data-lopt="reinforce"><span>Reinforcements<small>Help drops in after misses in a row</small></span></label>
       <label><input type="checkbox" data-lopt="brassBonus"><span>Bonus turn for the brass<small>Fire again after taking out a namesake</small></span></label>
+      <label><span>Hit, fire again<small>Take out a soldier, take another shot</small></span><select data-lopt="hitAgain"><option value="0">Off</option><option value="3">Up to 3 in a row</option><option value="99">No limit</option></select></label>
       <label><span>Turn timer<small>Seconds per shot</small></span><select data-lopt="timer"><option value="0">Off</option><option value="10">10 s</option><option value="15">15 s</option><option value="20">20 s</option><option value="30">30 s</option><option value="60">60 s</option></select></label>
     </div>
   </div>
@@ -3980,7 +3983,7 @@ function newMatch(preset) {
   opts = preset ? {...preset} : {
     fireBy: document.querySelector("input[name=fireBy]:checked").value, flings: +$("optFlings").value, fort: $("optFort").checked,
     fortWin: $("optFortWin").checked && $("optFort").checked, brassBonus: $("optBrassBonus").checked, near: $("optNear").checked, size: +$("optSize").value,
-    reveal: +$("optReveal").value, reinforce: +$("optReinforce").value, timer: +$("optTimer").value,
+    reveal: +$("optReveal").value, reinforce: +$("optReinforce").value, timer: +$("optTimer").value, hitAgain: +$("optHitAgain").value,
     foe: document.querySelector("input[name=foe]:checked").value, level: document.querySelector("input[name=level]:checked").value, bootcamp: false, map: $("optMap").value,
     campaign: currentCampaign(),
   };
@@ -4001,7 +4004,7 @@ function newMatch(preset) {
   const cs = callsign(); // every game has a namesake per side (see "call signs")
   players[0].namesake = {name: callsignText(cs), ...cs.soldier};
   players[1].namesake = {name: opts.foe === "cpu" ? pickOf(ROBOT_CALLSIGNS) : guestCallsignText()};
-  pending = flick = dotAim = lastResult = null; startedAt = Date.now(); replayRun++; matchId++;
+  pending = flick = dotAim = lastResult = null; inRow = 1; startedAt = Date.now(); replayRun++; matchId++;
   if (opts.online) onlinePlayers(); // call signs, namesakes, and the other phone's army as a stand-in
   players[0].terrain = opts.online ? seeded(mulberry32((onl.seed ^ 0x2545f491) | 0), () => generateMap(opts.map)) : generateMap(opts.map);
   players[1].terrain = mirrorMap(players[0].terrain);
@@ -4429,10 +4432,15 @@ function shotText(res, who) {
 }
 // "Bonus turn for the brass" (More orders, off unless chosen): whoever takes out a namesake fires again.
 const brassBonusOn = () => !!(opts.brassBonus && lastResult && lastResult.namesake);
+// "Hit, fire again" (More orders, user 2026-11-13): taking out a soldier, with a dot or a machine-gun burst, earns
+// another shot. Fort hits don't. opts.hitAgain is how many shots in a row one player may take (3), 99 for no limit, 0 off.
+let inRow = 1; // shots the current shooter has taken in a row
+const hitAgainOn = () => !!(opts.hitAgain && lastResult && lastResult.type === "soldier" && inRow < opts.hitAgain);
+const bonusTurnOn = () => brassBonusOn() || hitAgainOn();
 function next() {
   if (armyGone(players[1 - cur])) return gameOver(cur);
-  if (brassBonusOn()) { lastResult = null; return onlineOn() ? onlineBeginTurn() : players[cur].cpu ? cpuTurn() : go("aim"); } // same shooter again: no hand-off
-  const prev = cur; cur = 1 - cur;
+  if (bonusTurnOn()) { inRow++; lastResult = null; return onlineOn() ? onlineBeginTurn() : players[cur].cpu ? cpuTurn() : go("aim"); } // same shooter again: no hand-off
+  const prev = cur; cur = 1 - cur; inRow = 1;
   if (onlineOn()) { onl.handoffs++; return onlineBeginTurn(); }
   if (tentOn()) return go("aim");
   if (vsCpu()) return players[cur].cpu ? cpuTurn() : go("aim");
@@ -6004,8 +6012,8 @@ function updateUI() {
   } else if (phase === "result") {
     st.textContent = shotText(lastResult, cur) + (lastResult.spotted ? ` Ink bleed spotted ${lastResult.spotted} new target${lastResult.spotted > 1 ? "s" : ""}!` : "")
       + (lastResult.reinforced ? ` That's ${opts.reinforce} misses in a row: the enemy gets reinforcements!` : "")
-      + (brassBonusOn() && !armyGone(foe) ? " Bonus turn for the brass: fire again!" : "");
-    if (!foe.cpu && !two) btn(armyGone(foe) ? "See the battlefield" : brassBonusOn() ? "Fire again" : `Pass to ${foe.name}`, "primary", next);
+      + (armyGone(foe) ? "" : brassBonusOn() ? " Bonus turn for the brass: fire again!" : hitAgainOn() ? " Hit! Fire again!" : "");
+    if (!foe.cpu && !two) btn(armyGone(foe) ? "See the battlefield" : bonusTurnOn() ? "Fire again" : `Pass to ${foe.name}`, "primary", next);
   } else if (phase === "rps") {
     st.textContent = `${p.name}: Rock, Paper or Scissors?`;
   } else if (phase === "rpsReveal") {
@@ -6845,7 +6853,7 @@ const readSettings = () => { try { const s = JSON.parse(localStorage.getItem(SET
 function saveSettings() {
   const radio = n => (document.querySelector(`input[name=${n}]:checked`) || {}).value;
   const s = {fort: $("optFort").checked, fortWin: $("optFortWin").checked, brassBonus: $("optBrassBonus").checked, near: $("optNear").checked, fireBy: radio("fireBy"),
-    flings: +$("optFlings").value, size: +$("optSize").value, reveal: +$("optReveal").value, timer: +$("optTimer").value,
+    flings: +$("optFlings").value, size: +$("optSize").value, reveal: +$("optReveal").value, timer: +$("optTimer").value, hitAgain: +$("optHitAgain").value,
     foe: radio("foe"), level: radio("level"), map: $("optMap").value, campaign: currentCampaign()};
   const prev = readSettings(); // Full Arsenal choices the free game can't show are kept as they were
   if (MAPS[s.map] && MAPS[s.map].campaign) s.map = prev.map || "random"; // a campaign's own map never replaces your usual battlefield
@@ -6863,6 +6871,7 @@ function applySettings(s, arsenalOnly = false) {
     pick("fireBy", s.fireBy); pick("foe", s.foe);
     set("optFlings", s.flings, "flingVal"); set("optSize", s.size, "sizeVal"); set("optReveal", s.reveal, "revealVal");
     if (s.timer != null && [...$("optTimer").options].some(o => +o.value === +s.timer)) $("optTimer").value = s.timer;
+    if (s.hitAgain != null && [...$("optHitAgain").options].some(o => +o.value === +s.hitAgain)) $("optHitAgain").value = s.hitAgain;
     if (!ARSENAL.levels.includes(s.level)) pick("level", s.level);
     if (s.map && !ARSENAL.maps.includes(s.map) && [...$("optMap").options].some(o => o.value === s.map)) { $("optMap").value = s.map; markMap(); }
   }
@@ -7351,7 +7360,7 @@ function lobbyClean(s, paid) {
   const int = (v, lo, hi, d) => Number.isInteger(v) && v >= lo && v <= hi ? v : d, bool = (v, d) => typeof v === "boolean" ? v : d;
   const o = {campaign: CAMPAIGNS[s.campaign] ? s.campaign : "regular", map: s.map === "random" || (MAPS[s.map] && !MAPS[s.map].campaign) ? s.map : "random",
     fortOn: bool(s.fortOn, true), fortWin: bool(s.fortWin, false), reinforce: int(s.reinforce, 0, 6, 3), brassBonus: bool(s.brassBonus, false),
-    timer: LOBBY_TIMERS.includes(s.timer) ? s.timer : 0, flings: int(s.flings, 0, 5, 2), reveal: int(s.reveal, 0, 120, 80)};
+    timer: LOBBY_TIMERS.includes(s.timer) ? s.timer : 0, hitAgain: [0, 3, 99].includes(s.hitAgain) ? s.hitAgain : 0, flings: int(s.flings, 0, 5, 2), reveal: int(s.reveal, 0, 120, 80)};
   if (!paid) { if (ARSENAL.maps.includes(o.map)) o.map = "random"; o.reinforce = 0; o.fortWin = false; }
   if (!o.fortOn) o.fortWin = false;
   if (o.campaign === "drumstick") o.map = "harvest"; // Drumstick has its own battlefield
@@ -7432,7 +7441,7 @@ function renderLobby() {
   document.querySelectorAll("#lobby [data-lopt]").forEach(el => {
     const k = el.dataset.lopt, label = el.closest("label"), locked = label.hasAttribute("data-paid") && !paid;
     label.classList.toggle("locked", locked); el.disabled = !amHost || locked || (k === "fortWin" && !s.fortOn);
-    if (k === "timer") el.value = s.timer; else if (k === "reinforce") el.checked = s.reinforce > 0; else el.checked = s[k];
+    if (k === "timer" || k === "hitAgain") el.value = s[k]; else if (k === "reinforce") el.checked = s.reinforce > 0; else el.checked = s[k];
   });
   $("lobbyFree").textContent = host && lob.seats.length && !paid ? "Free battlefields and orders this time: everyone fighting needs the Full Arsenal for the rest." : "";
 }
@@ -7514,7 +7523,7 @@ $("lobby").addEventListener("click", e => {
 $("lobbyOrders").addEventListener("change", e => {
   const el = e.target.closest("[data-lopt]"); if (!el || !net.me().isHost) return;
   const k = el.dataset.lopt;
-  lob.settings = {...lob.settings, [k]: k === "timer" ? +el.value : k === "reinforce" ? (el.checked ? 3 : 0) : el.checked};
+  lob.settings = {...lob.settings, [k]: k === "timer" || k === "hitAgain" ? +el.value : k === "reinforce" ? (el.checked ? 3 : 0) : el.checked};
   lobbySync();
 });
 const lobbyAsk = join => { const h = lobbyHost(); if (h && !net.me().isHost) { sound("click"); net.send({t: "queue", pid: lobbyMe(), join}, [h]); } };
@@ -7624,13 +7633,13 @@ function onlineBegin(start, seat) {
   const s = start.settings, them = 1 - seat, paid = lobbyPaid(start.seats);
   const map = s.campaign === "drumstick" ? "harvest" : matchMap(s.map, start.seed | 0, paid); // (lobbyStartMsg already re-checked what this phone may play)
   const person = pid => lobbyPerson(pid);
-  onl = {matchId: start.matchId, seats: start.seats.slice(), seat, them, seed: start.seed | 0, first: null, handoffs: 0, bonusMax: s.brassBonus ? 2 : 0,
+  onl = {matchId: start.matchId, seats: start.seats.slice(), seat, them, seed: start.seed | 0, first: null, handoffs: 0, bonusMax: (s.brassBonus ? 2 : 0) + (s.hitAgain ? 30 : 0),
     names: start.seats.map(pid => { const p = person(pid); return p ? lobbyName(p) : "A friend"; }), oppSoldier: (person(start.seats[them]) || {}).soldier || {},
     hidden: [false, false], sentHidden: false, picks: {}, myPick: null, lastShot: null, lastResult: null, awaiting: 0, turn: 0, turnStart: 0, hideEnds: 0,
     lastStand: new Set(), lastStandAt: null, over: null, overSent: false, overMsg: null, revealMsg: null, theirReveal: null, finished: false, waitEnds: 0, timers: {},
     heard: performance.now(), waitSince: 0, silentWait: false}; // the watchdog: when the opponent last said anything, since when this phone waits on them
   newMatch({fireBy: (document.querySelector("input[name=fireBy]:checked") || {value: "tap"}).value, flings: s.flings, fort: !!s.fortOn, fortWin: !!s.fortWin,
-    brassBonus: !!s.brassBonus, near: true, size: 46, reveal: s.reveal, reinforce: s.reinforce ? 3 : 0, reinforceMax: 1, timer: s.timer, foe: "human",
+    brassBonus: !!s.brassBonus, hitAgain: s.hitAgain | 0, near: true, size: 46, reveal: s.reveal, reinforce: s.reinforce ? 3 : 0, reinforceMax: 1, timer: s.timer, foe: "human",
     level: "sergeant", bootcamp: false, map, campaign: s.campaign, online: {seat, matchId: start.matchId}});
 }
 // Called from newMatch: call signs on both seats, my namesake, and the other army as a stand-in.
@@ -7725,8 +7734,8 @@ function onlineTurkeys(n) {
   }
 }
 // Shot n: who fires it. Stateless per n (it runs before the ordering buffer): the agreed first shooter and the number of
-// hand-offs before it, which every shot and result carries (t). Without the bonus-turn rule t is always n - 1; with it a
-// shot may skip up to two hand-offs (one namesake per side). The game checks t against its own count when the shot lands.
+// hand-offs before it, which every shot and result carries (t). Without a bonus-turn rule t is always n - 1; with Bonus
+// turn for the brass a shot may skip up to two hand-offs (one namesake per side), with Hit, fire again one per soldier taken out. The game checks t against its own count when the shot lands.
 function onlineTurnCheck(d) {
   if (d.t !== "shot" && d.t !== "result") return true;
   if (!onl || d.m !== onl.matchId || onl.first == null) return true; // nothing to judge by yet
