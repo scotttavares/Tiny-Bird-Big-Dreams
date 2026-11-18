@@ -52,6 +52,8 @@ enum GameBridge {
         case invite
         case send(to: [String], data: String)
         case leave
+        /// Show the on-device Game Center log (`GameCenterLog`).
+        case log
 
         /// Game Center real-time matches here are 2 players plus up to 2 spectators.
         static let playerRange = 2...4
@@ -70,6 +72,7 @@ enum GameBridge {
                 guard !ids.isEmpty, ids.count == list.count else { return nil }
                 self = .send(to: ids, data: data)
             case "leave": self = .leave
+            case "log": self = .log
             default: return nil
             }
         }

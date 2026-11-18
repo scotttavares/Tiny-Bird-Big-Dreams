@@ -655,6 +655,7 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
   <div id="onlineHelp" class="hidden"><h4 id="onlineHelpTitle"></h4><ol class="csHelp" id="onlineSteps"></ol>
     <p class="csHelp">Everything else in Paper Wars works without it.</p></div>
   <div class="bar"><button type="button" class="primary" id="onlineBack">Back to HQ</button></div>
+  <div class="bar small"><button type="button" class="gcLogBtn">Game Center log</button></div>
 </div></section>
 
 <section id="lobby" class="hidden"><div class="menu cabpage">
@@ -690,6 +691,7 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
   </div>
   <div class="go"><button class="stampbtn" id="lobbyStart">START BATTLE</button></div>
   <div class="bar"><button type="button" id="lobbyLeave">Leave the lobby</button></div>
+  <div class="bar small"><button type="button" class="gcLogBtn">Game Center log</button></div>
 </div></section>
 
 <!-- Watching friends battle (spectators): both pages side by side, only what both players know. -->
@@ -7346,6 +7348,8 @@ net.on("auth", e => {
 $("onlineRow").classList.toggle("hidden", !net.available()); // the app's bridge (or a test room); never the website
 $("onlineBtn").onclick = () => { sound("click"); showOnline(); };
 $("onlineBack").onclick = () => { onlineOpen = false; $("online").classList.add("hidden"); };
+// 1.1 (user, 2026-11-18): a failed invite can't be traced from the outside, so the app keeps a Game Center log; this opens it.
+document.querySelectorAll(".gcLogBtn").forEach(b => b.onclick = () => { try { webkit.messageHandlers.paperWars.postMessage({type: "gc", op: "log"}); } catch (e) {} });
 
 // ---------- the lobby ----------
 // The host's phone is the one source of truth: it seats people, picks the battle orders, removes people and starts.

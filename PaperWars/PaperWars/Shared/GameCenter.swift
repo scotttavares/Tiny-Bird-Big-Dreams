@@ -78,6 +78,88 @@ enum GameCenterHop {
     }
 }
 
+/// A short on-device diary of what Game Center did (sign-in, invites, screens shown, errors), so a failed invite can be
+/// traced: the page's "Game Center log" button shows it. Kept across launches (an invite can cold-launch the app), never sent anywhere.
+@MainActor
+enum GameCenterLog {
+    private static let key = "gameCenterLog"
+    private static let limit = 300
+    private static var lines: [String] = UserDefaults.standard.stringArray(forKey: key) ?? []
+
+    static func add(_ text: String) {
+        let stamp = Date.now.formatted(.dateTime.month(.abbreviated).day().hour().minute().second())
+        lines.append("\(stamp)  \(text)")
+        if lines.count > limit { lines.removeFirst(lines.count - limit) }
+        UserDefaults.standard.set(lines, forKey: key)
+    }
+
+    static var text: String { lines.isEmpty ? "Nothing logged yet." : lines.joined(separator: "\n") }
+
+    static func clear() {
+        lines = []
+        UserDefaults.standard.removeObject(forKey: key)
+    }
+
+    /// An error as "domain code: message", e.g. "GKErrorDomain 3: The requested operation could not be completed".
+    nonisolated static func describe(_ error: (any Error)?) -> String {
+        guard let error else { return "no error" }
+        let ns = error as NSError
+        return "\(ns.domain) \(ns.code): \(ns.localizedDescription)"
+    }
+}
+
+/// Shows the Game Center log with Copy and Clear, so it can be pasted into a message.
+@MainActor
+final class GameCenterLogController: UIViewController {
+    private let textView = UITextView()
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        title = "Game Center log"
+        view.backgroundColor = .systemBackground
+        textView.isEditable = false
+        textView.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
+        textView.text = GameCenterLog.text
+        textView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(textView)
+        NSLayoutConstraint.activate([
+            textView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            textView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            textView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 8),
+            textView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -8),
+        ])
+        navigationItem.rightBarButtonItem = UIBarButtonItem(systemItem: .done, primaryAction: UIAction { [weak self] _ in
+            self?.dismiss(animated: true)
+        })
+        navigationItem.leftBarButtonItems = [
+            UIBarButtonItem(title: "Copy", primaryAction: UIAction { _ in UIPasteboard.general.string = GameCenterLog.text }),
+            UIBarButtonItem(title: "Clear", primaryAction: UIAction { [weak self] _ in
+                GameCenterLog.clear()
+                self?.textView.text = GameCenterLog.text
+            }),
+        ]
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        textView.scrollRangeToVisible(NSRange(location: (textView.text as NSString).length, length: 0))
+    }
+}
+
+extension GameBridge.GameCenterOp {
+    /// For the log: the op without its data.
+    var logName: String {
+        switch self {
+        case .auth: "sign in"
+        case .host(let maxPlayers): "host (up to \(maxPlayers))"
+        case .invite: "invite"
+        case .send: "send"
+        case .leave: "leave"
+        case .log: "show log"
+        }
+    }
+}
+
 /// Game Center for two-phone multiplayer: signs the player in, opens Apple's invite screen (friends only, no strangers),
 /// keeps the real-time `GKMatch`, sends the page's messages to the people it names (reliable mode) and hands
 /// everything that arrives back to the page as `gcEvent` scripts. No server of ours and nothing stored.
@@ -93,9 +175,20 @@ final class GameCenter {
         case ready
         case needsSignIn(UIViewController)
         case failed(String)
+
+        var logName: String {
+            switch self {
+            case .unknown: "not known yet"
+            case .ready: "signed in"
+            case .needsSignIn: "needs sign-in"
+            case .failed(let reason): "can't use Game Center (\(reason))"
+            }
+        }
     }
 
-    private var status = Status.unknown
+    private var status = Status.unknown {
+        didSet { GameCenterLog.add("status: \(status.logName)") }
+    }
     private var started = false
     private var registered = false
     /// The page asked to sign in ("Play friends online"); until then sign-in results aren't pushed to it.
@@ -111,6 +204,9 @@ final class GameCenter {
 
     init() {
         relay.owner = self
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "?", build = info?["CFBundleVersion"] as? String ?? "?"
+        GameCenterLog.add("app launched, \(version) (\(build)), \(UIDevice.current.model) iOS \(UIDevice.current.systemVersion)")
     }
 
     /// Signs in at launch (Game Center shows its "Welcome back" banner), so invites from friends can arrive.
@@ -118,6 +214,7 @@ final class GameCenter {
     func start() {
         guard !started else { return }
         started = true
+        GameCenterLog.add("sign-in started")
         // GameKit may call this off the main thread, so it isn't main-actor isolated; it hops over.
         GKLocalPlayer.local.authenticateHandler = { @Sendable [weak self] controller, error in
             let carried = Carry(value: controller), owner = self
@@ -126,6 +223,10 @@ final class GameCenter {
     }
 
     func handle(_ op: GameBridge.GameCenterOp) {
+        switch op {
+        case .send, .log: break
+        default: GameCenterLog.add("page asked: \(op.logName)")
+        }
         switch op {
         case .auth:
             start()
@@ -141,6 +242,8 @@ final class GameCenter {
             send(data, to: to)
         case .leave:
             leave()
+        case .log:
+            show(UINavigationController(rootViewController: GameCenterLogController()), label: "log")
         }
     }
 
@@ -158,13 +261,14 @@ final class GameCenter {
     // MARK: Sign-in
 
     private func authChanged(_ controller: UIViewController?, _ error: (any Error)?) {
+        let local = GKLocalPlayer.local
+        GameCenterLog.add("sign-in callback: \(controller != nil ? "Apple's sign-in screen needed" : "no screen"), authenticated \(local.isAuthenticated), alias \(local.isAuthenticated ? local.alias : "-"), multiplayer restricted \(local.isMultiplayerGamingRestricted), \(GameCenterLog.describe(error))")
         if let controller {
             status = .needsSignIn(controller)
             signInChanged()
             if pageAsked, controller.presentingViewController == nil { show(controller) }
             return
         }
-        let local = GKLocalPlayer.local
         if local.isAuthenticated {
             status = local.isMultiplayerGamingRestricted ? .failed("restricted") : .ready
         } else {
@@ -176,6 +280,7 @@ final class GameCenter {
             if !registered {
                 registered = true
                 local.register(relay) // invites from friends arrive through the relay
+                GameCenterLog.add("listening for invites")
             }
         }
         if pageAsked { tellAuth() }
@@ -232,12 +337,13 @@ final class GameCenter {
     /// how someone who dropped out of a 3–4 person match is brought back.
     private func openMatchmaker(_ op: GameBridge.GameCenterOp) {
         let plan = GameCenterMatchmaking.plan(for: op, hasMatch: match != nil)
-        guard plan != .ignore else { return }
+        guard plan != .ignore else { GameCenterLog.add("invite screen: nothing to do (no match yet)"); return }
         guard case .ready = status else {
+            GameCenterLog.add("invite screen: not signed in yet, \(status.logName)")
             if case .failed = status { emit(.matchmaker(ok: false, reason: "signed-out")) } else { queued = op }
             return
         }
-        guard matchmaker == nil else { return }
+        guard matchmaker == nil else { GameCenterLog.add("invite screen: one is already open"); return }
         let request = GKMatchRequest()
         request.minPlayers = GameBridge.GameCenterOp.playerRange.lowerBound
         if case .start(let maxPlayers) = plan {
@@ -246,6 +352,7 @@ final class GameCenter {
             request.maxPlayers = GameBridge.GameCenterOp.playerRange.upperBound
         }
         guard let controller = GKMatchmakerViewController(matchRequest: request) else {
+            GameCenterLog.add("invite screen: GameKit couldn't make one")
             emit(.matchmaker(ok: false, reason: "failed"))
             return
         }
@@ -253,18 +360,27 @@ final class GameCenter {
         controller.matchmakerDelegate = relay
         if plan == .addPeople, let match { controller.addPlayers(to: match) }
         matchmaker = controller
-        show(controller)
+        GameCenterLog.add("invite screen: opening, \(request.minPlayers)-\(request.maxPlayers) players, \(plan == .addPeople ? "adding to the match" : "new match")")
+        show(controller, label: "invite screen")
     }
 
-    fileprivate func accept(_ invite: GKInvite) {
-        guard let controller = GKMatchmakerViewController(invite: invite) else { return }
+    fileprivate func accept(_ invite: GKInvite, sender: String) {
+        GameCenterLog.add("invite accepted from \(sender), \(status.logName)")
+        guard let controller = GKMatchmakerViewController(invite: invite) else {
+            GameCenterLog.add("join screen: GameKit couldn't make one for this invite")
+            return
+        }
         controller.matchmakerDelegate = relay
-        matchmaker?.dismiss(animated: false)
+        if let old = matchmaker {
+            GameCenterLog.add("join screen: closing the invite screen that was open")
+            old.dismiss(animated: false)
+        }
         matchmaker = controller
-        show(controller)
+        show(controller, label: "join screen")
     }
 
     fileprivate func matchmakerFinished(_ found: GKMatch?, reason: String = "cancelled") {
+        GameCenterLog.add(found.map { "match found, \($0.players.count) other player(s), waiting for \($0.expectedPlayerCount) more" } ?? "invite/join screen closed: \(reason)")
         matchmaker?.dismiss(animated: true)
         matchmaker = nil
         guard let found else {
@@ -283,19 +399,51 @@ final class GameCenter {
         }
     }
 
-    /// Shows a Game Center screen over the game; at a cold launch from an invite the game may not be on screen yet.
-    private func show(_ controller: UIViewController, tries: Int = 10) {
-        guard var top = presenter?() else {
-            guard tries > 0 else { return }
+    /// Shows a Game Center screen over the game. At a cold launch from an invite the game may not be on screen yet, and
+    /// another screen (one being dismissed, the sign-in sheet) may be mid-animation, when UIKit drops `present` without a
+    /// word; so it waits and tries again until the screen is really up, for about 10 seconds, logging each step. If it
+    /// never comes up, an invite or join screen is let go (so the next tap can open one) and the page hears "failed".
+    private func show(_ controller: UIViewController, label: String = "sign-in screen", tries: Int = 20) {
+        guard controller.presentingViewController == nil else { return } // already up
+        let first = tries == 20
+        let again: @MainActor () -> Void = { [weak self] in
+            guard tries > 0 else {
+                GameCenterLog.add("\(label): gave up, it never came up")
+                guard let self, self.matchmaker === controller else { return }
+                self.matchmaker = nil
+                self.emit(.matchmaker(ok: false, reason: "failed"))
+                return
+            }
             Task { @MainActor [weak self] in
                 try? await Task.sleep(for: .milliseconds(500))
-                self?.show(controller, tries: tries - 1)
+                self?.show(controller, label: label, tries: tries - 1)
             }
+        }
+        guard var top = presenter?() else {
+            if first { GameCenterLog.add("\(label): the game isn't on screen yet, waiting") }
+            again()
             return
         }
-        while let shown = top.presentedViewController { top = shown }
+        while let shown = top.presentedViewController, !shown.isBeingDismissed { top = shown }
         guard top !== controller else { return }
-        top.present(controller, animated: true)
+        if top.isBeingPresented || top.isBeingDismissed || top.presentedViewController != nil {
+            if first { GameCenterLog.add("\(label): another screen is moving (\(type(of: top))), waiting") }
+            again()
+            return
+        }
+        GameCenterLog.add("\(label): showing over \(type(of: top))")
+        let flag = ShownFlag()
+        top.present(controller, animated: true) {
+            flag.on = true
+            GameCenterLog.add("\(label): on screen")
+        }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(1500))
+            // not up and never was (closed again by the player is fine)
+            guard !flag.on, controller.presentingViewController == nil else { return }
+            GameCenterLog.add("\(label): didn't come up, trying again")
+            again()
+        }
     }
 
     // MARK: The match
@@ -318,11 +466,13 @@ final class GameCenter {
     }
 
     fileprivate func playerChanged(_ person: GameBridge.GameCenterPerson, connected: Bool, in matchID: ObjectIdentifier) {
+        GameCenterLog.add("\(person.alias) \(connected ? "connected" : "disconnected")")
         guard isCurrent(matchID) else { return }
         (connected ? roster.connected(person) : roster.disconnected(person.gamePlayerID)).forEach(emit)
     }
 
-    fileprivate func matchFailed(_ matchID: ObjectIdentifier) {
+    fileprivate func matchFailed(_ matchID: ObjectIdentifier, _ error: String) {
+        GameCenterLog.add("match failed: \(error)")
         guard isCurrent(matchID) else { return }
         for person in roster.people { roster.disconnected(person.gamePlayerID).forEach(emit) }
         dropMatch()
@@ -343,6 +493,12 @@ final class GameCenter {
     }
 }
 
+/// Set once a screen has finished coming up, so a screen the player has already closed isn't shown again.
+@MainActor
+private final class ShownFlag {
+    var on = false
+}
+
 /// Carries a GameKit object from a GameKit callback to the main actor, where it's used.
 private struct Carry<Value>: @unchecked Sendable {
     let value: Value
@@ -360,8 +516,11 @@ nonisolated private final class GameCenterRelay: NSObject, GKMatchDelegate, GKMa
     }
 
     func matchmakerViewController(_ viewController: GKMatchmakerViewController, didFailWithError error: any Error) {
-        let owner = self.owner
-        GameCenterHop.toMain { owner?.matchmakerFinished(nil, reason: "failed") }
+        let owner = self.owner, text = GameCenterLog.describe(error)
+        GameCenterHop.toMain {
+            GameCenterLog.add("invite/join screen error: \(text)")
+            owner?.matchmakerFinished(nil, reason: "failed")
+        }
     }
 
     func matchmakerViewController(_ viewController: GKMatchmakerViewController, didFind match: GKMatch) {
@@ -388,8 +547,8 @@ nonisolated private final class GameCenterRelay: NSObject, GKMatchDelegate, GKMa
     }
 
     func match(_ match: GKMatch, didFailWithError error: (any Error)?) {
-        let owner = self.owner, id = ObjectIdentifier(match)
-        GameCenterHop.toMain { owner?.matchFailed(id) }
+        let owner = self.owner, id = ObjectIdentifier(match), text = GameCenterLog.describe(error)
+        GameCenterHop.toMain { owner?.matchFailed(id, text) }
     }
 
     /// Two-person matches only (GameKit's rule): ask Game Center to bring a dropped player back into this same match.
@@ -400,7 +559,13 @@ nonisolated private final class GameCenterRelay: NSObject, GKMatchDelegate, GKMa
 
     // GKInviteEventListener (through GKLocalPlayerListener): a friend's invite was accepted on this phone.
     func player(_ player: GKPlayer, didAccept invite: GKInvite) {
-        let owner = self.owner, carried = Carry(value: invite)
-        GameCenterHop.toMain { owner?.accept(carried.value) }
+        let owner = self.owner, carried = Carry(value: invite), sender = invite.sender.alias
+        GameCenterHop.toMain { owner?.accept(carried.value, sender: sender) }
+    }
+
+    // Started from the Game Center app ("Play with friends"), not from an invite: only logged, to see whether it happens.
+    func player(_ player: GKPlayer, didRequestMatchWithRecipients recipientPlayers: [GKPlayer]) {
+        let count = recipientPlayers.count
+        GameCenterHop.toMain { GameCenterLog.add("Game Center asked for a match with \(count) player(s) (not handled)") }
     }
 }
