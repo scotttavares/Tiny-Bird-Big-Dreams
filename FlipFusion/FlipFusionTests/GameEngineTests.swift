@@ -44,10 +44,42 @@ struct GameEngineTests {
         #expect(result.ghosts.count == 1)
     }
 
-    @Test func aTileMergesOnlyOncePerSlide() {
+    @Test func threeEqualTilesMergeAtOnce() {
+        let result = GameEngine.slide(tiles([[2, 2, 2, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), .left)
+        #expect(grid(result.tiles)[0] == [8, 0, 0, 0])
+        // 2+2 scores 4, and the third tile doubles it again for 8 more.
+        #expect(result.gained == 12)
+        #expect(result.supers.values.sorted() == [3])
+        #expect(result.ghosts.count == 2)
+    }
+
+    @Test func fourEqualTilesMakeOneBigTile() {
         let result = GameEngine.slide(tiles([[2, 2, 2, 2], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), .left)
-        #expect(grid(result.tiles)[0] == [4, 4, 0, 0])
-        #expect(result.gained == 8)
+        #expect(grid(result.tiles)[0] == [16, 0, 0, 0])
+        #expect(result.gained == 4 + 8 + 16)
+        #expect(result.supers.values.sorted() == [4])
+    }
+
+    @Test func aMergedTileDoesNotMergeAgainInTheSameSlide() {
+        // The 4 made from the two 2s does not go on to merge with the 4 beside it.
+        let result = GameEngine.slide(tiles([[2, 2, 4, 4], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), .left)
+        #expect(grid(result.tiles)[0] == [4, 8, 0, 0])
+        #expect(result.gained == 12)
+        #expect(result.supers.isEmpty)
+        let other = GameEngine.slide(tiles([[4, 2, 2, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), .left)
+        #expect(grid(other.tiles)[0] == [4, 4, 0, 0])
+    }
+
+    @Test func aBombCaughtInABlastGoesOffToo() {
+        var start = tiles([[2, 2, 0, 0], [8, 0, 0, 0], [0, 16, 0, 0], [0, 0, 0, 0]])
+        start[0].kind = .bomb
+        start[2].kind = .bomb
+        let result = GameEngine.slide(start, .left)
+        // The first bomb merges in the corner and catches the bomb 8 below it. That one
+        // goes off in turn, taking the new 4 above it and the 16 below it.
+        #expect(result.tiles.isEmpty)
+        #expect(result.effects.count == 2)
+        #expect(result.gained == 4 + 8 + 4 + 16)
     }
 
     @Test func slideRightAndUpAndDown() {
@@ -109,7 +141,8 @@ struct GameEngineTests {
             let total = state.tiles.map(\.value).reduce(0, +)
             let turned = GameEngine.rotateClockwise(state.tiles)
             let settled = GameEngine.settle(turned).last?.tiles ?? turned
-            #expect(settled.map(\.value).reduce(0, +) == total)
+            // A super combo adds value; nothing ever takes it away.
+            #expect(settled.map(\.value).reduce(0, +) >= total)
             #expect(Set(settled.map { Cell(row: $0.row, col: $0.col) }).count == settled.count)
             // Nothing floats: every tile rests on the floor or on another tile.
             let cells = Set(settled.map { Cell(row: $0.row, col: $0.col) })

@@ -7,6 +7,17 @@ final class SoundPlayer {
     enum Sound: String, CaseIterable {
         case slide, merge1, merge2, merge3, merge4, merge5, merge6
         case rotate, chain, tick, over, start, boom, bonus, powerup, fever, mode
+        case combo, hurry
+    }
+
+    /// The background tunes. Each loops until another takes over.
+    enum Track: String, CaseIterable {
+        /// The timed game.
+        case timed = "music"
+        /// The endless game: slower and mellower.
+        case endless = "music-endless"
+        /// Double points and the last seconds of a timed game: fast.
+        case rush = "music-rush"
     }
 
     /// A few copies of each sound, so the same one can overlap itself.
@@ -34,12 +45,13 @@ final class SoundPlayer {
             voices[sound] = players
         }
 
-        if let url = Bundle.main.url(forResource: "music", withExtension: "wav"),
-           let player = try? AVAudioPlayer(contentsOf: url) {
+        for track in Track.allCases {
+            guard let url = Bundle.main.url(forResource: track.rawValue, withExtension: "wav"),
+                  let player = try? AVAudioPlayer(contentsOf: url) else { continue }
             player.numberOfLoops = -1
-            player.volume = 0.28
+            player.volume = track == .rush ? 0.32 : 0.28
             player.prepareToPlay()
-            music = player
+            tracks[track] = player
         }
         refreshMusic()
     }
@@ -47,13 +59,25 @@ final class SoundPlayer {
     /// The settings key for the music switch in the menu. Music is on until turned off.
     nonisolated static let musicKey = "ff.musicOn"
 
-    /// The background loop.
-    private var music: AVAudioPlayer?
+    private var tracks: [Track: AVAudioPlayer] = [:]
+    private var track = Track.timed
+
+    /// Changes the tune. The one left behind keeps its place for next time; the
+    /// rush always starts from its beginning.
+    func setTrack(_ newTrack: Track) {
+        guard newTrack != track else { return }
+        tracks[track]?.pause()
+        track = newTrack
+        if newTrack == .rush {
+            tracks[newTrack]?.currentTime = 0
+        }
+        refreshMusic()
+    }
 
     /// Starts or stops the music to match the switch in the menu. Call it when the
     /// switch changes and when the app comes back to the screen.
     func refreshMusic() {
-        guard let music else { return }
+        guard let music = tracks[track] else { return }
         let wanted = UserDefaults.standard.object(forKey: Self.musicKey) as? Bool ?? true
         if wanted, !music.isPlaying {
             music.play()
@@ -64,7 +88,7 @@ final class SoundPlayer {
 
     /// Quietens the music while the app is away from the screen.
     func pauseMusic() {
-        music?.pause()
+        tracks[track]?.pause()
     }
 
     /// The settings key for the sound switch in the menu. Sound is on until turned off.

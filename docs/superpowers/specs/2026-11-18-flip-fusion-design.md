@@ -102,3 +102,17 @@ The owner showed two App Store listings (a colour-block puzzle and a one-minute 
 - **Juice:** points float up out of each merge on the board; the board shakes on bombs, chains and sweeps.
 - **Music:** a 30-second arcade loop composed in `FlipFusion/scripts/make-music.py`, with a Music switch in the menu.
 - To make room for the booster bar the tagline and dots sit closer to the board than in the mockup.
+
+## Super combos, more bombs, animations, gems and themes (2026-11-18)
+
+After playing build 19 the owner asked for more excitement (shakes, bombs), more music, an explanation of the three dots, merges of more than two tiles, animations in the spirit of a well-known match-3 game, and themes bought with gems or won in play. Nothing of that game's is copied (no art, names, characters or words); what was taken is the general idea of a lively, rewarding puzzle screen.
+
+- **Super combos.** Equal tiles that meet in one slide all merge: two 2s make a 4, three make an 8, four make a 16 ("mega combo"). The tile they make does not merge again in that slide. This applies to swipes and to gravity after a rotation.
+- **Bombs.** 12 in 100 new tiles are bombs (was 7). A bomb caught in a blast goes off too. A fourth booster, **Bombs** (200 coins after three free uses), turns up to three ordinary tiles into bombs.
+- **Shakes and flashes.** Three strengths of shake: a nudge for a merge that makes 64 or more, a jolt for super combos, chains and sweeps, a blast for bombs. Bombs and super combos flash the board white. Special tiles throb.
+- **Animations.** Big words bounce in over the board ("Boom!", "Chain x2!", "Super combo!", "MEGA COMBO!", "Nice!", "Unstoppable!", "10 seconds!"); confetti on super combos, chains and a new best score; buttons squash when pressed; the game-over card springs in.
+- **Music.** Three tunes from `scripts/make-music.py`: the timed game (45 seconds), the endless game (slower), and a fast one that takes over during double points and the last 20 seconds of a timed game.
+- **Mode buttons.** The three dots are gone (the third did nothing and none were labelled). Two labelled buttons, "2 Minutes" and "Endless", sit under the tagline. The arrow's trail now stops at the board's bottom-right corner so it no longer runs through the boosters.
+- **Gems**, shown beside the coins: 1 for a super combo, 3 for a mega combo, 1 for a chain, and at the end of a game 1 per 500 points plus 2 for a new best.
+- **Themes** in the menu (`Game/Skin.swift`, colours worked out in `UI/Theme.swift`): Neon (free), Sunset (15 gems), Ocean (30), Bubblegum (50), Gold Rush (won by scoring 2,000 in one game), Galaxy (won by a mega combo).
+- **Not built:** buying gems with real money. That needs in-app purchase products in App Store Connect, a signed Paid Apps agreement with bank and tax details, prices chosen by the owner, and StoreKit code.

@@ -48,16 +48,19 @@ struct MergeBurst: View {
     let size: CGFloat
     /// A bomb's blast reaches the cells around it.
     var isBlast = false
+    /// A super combo throws its sparks further.
+    var isSuper = false
     /// Points to float up out of the burst (0 shows none).
     var points = 0
 
     @State private var progress: CGFloat = 0
 
     var body: some View {
-        let ringGrowth: CGFloat = isBlast ? 2.1 : 0.5
-        let reach: CGFloat = isBlast ? size * 1.7 : size * 0.8
-        let sparks = isBlast ? 14 : 8
-        let sparkSize: CGFloat = isBlast ? size * 0.22 : size * 0.15
+        let isBig = isBlast || isSuper
+        let ringGrowth: CGFloat = isBlast ? 2.1 : (isSuper ? 1.3 : 0.5)
+        let reach: CGFloat = isBlast ? size * 1.7 : (isSuper ? size * 1.4 : size * 0.8)
+        let sparks = isBig ? 14 : 8
+        let sparkSize: CGFloat = isBig ? size * 0.22 : size * 0.15
 
         ZStack {
             RoundedRectangle(cornerRadius: size * 0.2, style: .continuous)
@@ -78,8 +81,8 @@ struct MergeBurst: View {
 
             if points > 0 {
                 Text("+\(points)")
-                    .font(.system(size: size * 0.42, weight: .black, design: .rounded))
-                    .foregroundStyle(Color.white)
+                    .font(.system(size: size * (isSuper ? 0.6 : 0.42), weight: .black, design: .rounded))
+                    .foregroundStyle(isSuper ? Color(hex: 0xFFE26A) : Color.white)
                     .shadow(color: color, radius: 6)
                     .shadow(color: Color.black.opacity(0.5), radius: 1, x: 0, y: 1)
                     .fixedSize()
@@ -100,19 +103,230 @@ struct MergeBurst: View {
     }
 }
 
-/// A quick side-to-side shake. Animate `animatableData` from one whole number to
-/// the next and the view shakes once and comes back to rest.
+/// A quick shake. Animate `animatableData` from one whole number to the next and the
+/// view shakes once and comes back to rest. `power` 1 is a nudge from side to side;
+/// 2 and 3 are harder and rattle up and down as well.
 struct Shake: GeometryEffect {
+    var power: Int = 1
     var animatableData: CGFloat
 
     func effectValue(size: CGSize) -> ProjectionTransform {
-        ProjectionTransform(CGAffineTransform(translationX: 7 * sin(animatableData * .pi * 6), y: 0))
+        let reach = CGFloat(3 + 4 * power)
+        let x = reach * sin(animatableData * .pi * 6)
+        let y = power > 1 ? reach * 0.5 * sin(animatableData * .pi * 8) : 0
+        return ProjectionTransform(CGAffineTransform(translationX: x, y: y))
     }
 }
 
-/// The player's coins, top-left of the screen.
+/// A big word that bounces in over the board, then floats up and fades.
+struct Callout: View {
+    let text: String
+    let scale: CGFloat
+
+    /// 0 not yet shown, 1 bounced in, 2 floating away.
+    @State private var stage = 0
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 40 * scale, weight: .black, design: .rounded))
+            .foregroundStyle(
+                LinearGradient(colors: [Color.white, Color(hex: 0xFFE26A)], startPoint: .top, endPoint: .bottom)
+            )
+            .shadow(color: Theme.fusion[0], radius: 10 * scale)
+            .shadow(color: Color.black.opacity(0.6), radius: 2, x: 0, y: 2)
+            .multilineTextAlignment(.center)
+            .lineLimit(2)
+            .minimumScaleFactor(0.6)
+            .frame(maxWidth: 300 * scale)
+            .rotationEffect(.degrees(stage == 0 ? -14 : -4))
+            .scaleEffect(stage == 0 ? 0.2 : (stage == 1 ? 1 : 1.25))
+            .offset(y: stage == 2 ? -50 * scale : 0)
+            .opacity(stage == 1 ? 1 : 0)
+            .task {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.45)) {
+                    stage = 1
+                }
+                try? await Task.sleep(for: .milliseconds(900))
+                withAnimation(.easeIn(duration: 0.35)) {
+                    stage = 2
+                }
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
+/// A white flash over the board.
+struct Flash: View {
+    let side: CGFloat
+
+    @State private var faded = false
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: side * 0.07, style: .continuous)
+            .fill(Color.white)
+            .opacity(faded ? 0 : 0.55)
+            .onAppear {
+                withAnimation(.easeOut(duration: 0.4)) {
+                    faded = true
+                }
+            }
+    }
+}
+
+/// Coloured paper thrown out from the middle of the board.
+struct Confetti: View {
+    let side: CGFloat
+
+    @State private var progress: CGFloat = 0
+
+    private static let colors: [Color] = [
+        Color(hex: 0xFF8AD8), Color(hex: 0xFFE26A), Color(hex: 0x86F2BC),
+        Color(hex: 0x8FF0FF), Color(hex: 0xC08CFF), Color(hex: 0xFF9F2E),
+    ]
+
+    var body: some View {
+        let width = side * 0.035
+
+        ZStack {
+            ForEach(0..<30, id: \.self) { index in
+                // The golden angle spreads the pieces evenly without a random source.
+                let angle = Double(index) * 2.399963
+                let reach = side * (0.35 + 0.04 * CGFloat((index * 37) % 10))
+                let spin = 360.0 + Double((index * 47) % 360)
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(Self.colors[index % Self.colors.count])
+                    .frame(width: width, height: width * 1.8)
+                    .rotationEffect(.degrees(Double(progress) * spin))
+                    .offset(
+                        x: CGFloat(cos(angle)) * reach * progress,
+                        y: CGFloat(sin(angle)) * reach * progress + side * 0.3 * progress
+                    )
+            }
+        }
+        .opacity(Double(1 - progress))
+        .onAppear {
+            withAnimation(.easeOut(duration: 1.1)) {
+                progress = 1
+            }
+        }
+    }
+}
+
+/// The flashes and confetti that play over the board.
+struct Celebration: View {
+    let store: GameStore
+    let side: CGFloat
+
+    @State private var confettiID = 0
+
+    var body: some View {
+        ZStack {
+            if store.flashEvent > 0 {
+                Flash(side: side)
+                    .id(store.flashEvent)
+            }
+            if confettiID > 0 {
+                Confetti(side: side)
+                    .id(confettiID)
+            }
+        }
+        .frame(width: side, height: side)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+        .onChange(of: store.superEvent) { _, _ in
+            confettiID += 1
+        }
+        .onChange(of: store.comboEvent) { _, _ in
+            confettiID += 1
+        }
+        .onChange(of: store.isGameOver) { _, isOver in
+            // A new best score gets a send-off.
+            if isOver, store.state.score > 0, store.state.score >= store.best {
+                confettiID += 1
+            }
+        }
+    }
+}
+
+/// A button that squashes when pressed and springs back.
+struct BounceButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.86 : 1)
+            .animation(.spring(response: 0.25, dampingFraction: 0.5), value: configuration.isPressed)
+    }
+}
+
+/// The two ways to play, as two labelled buttons under the tagline.
+struct ModeSwitch: View {
+    let scale: CGFloat
+    let mode: GameStore.Mode
+    let onPick: (GameStore.Mode) -> Void
+
+    var body: some View {
+        HStack(spacing: 8 * scale) {
+            option(.timed, symbol: "timer", title: "2 Minutes")
+            option(.endless, symbol: "infinity", title: "Endless")
+        }
+    }
+
+    private func option(_ target: GameStore.Mode, symbol: String, title: String) -> some View {
+        let isOn = mode == target
+        return Button {
+            onPick(target)
+        } label: {
+            HStack(spacing: 5 * scale) {
+                Image(systemName: symbol)
+                    .font(.system(size: 12 * scale, weight: .heavy))
+                Text(title)
+                    .font(.system(size: 14 * scale, weight: .heavy, design: .rounded))
+            }
+            .foregroundStyle(isOn ? Color.white : Theme.label)
+            .padding(.horizontal, 14 * scale)
+            .frame(height: 34 * scale)
+            .background(
+                Capsule().fill(
+                    LinearGradient(colors: [Theme.pillTop, Theme.pillBottom], startPoint: .top, endPoint: .bottom)
+                )
+                .opacity(isOn ? 1 : 0)
+            )
+            .background(Capsule().fill(Theme.glassFill))
+            .overlay(Capsule().strokeBorder(isOn ? Theme.pillStroke : Theme.glassStroke, lineWidth: 1.5))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(BounceButtonStyle())
+        .accessibilityLabel(Text(title + " game" + (isOn ? ", selected" : "")))
+    }
+}
+
+/// The taps and thumps the phone makes as the game is played.
+struct GameHaptics: ViewModifier {
+    let store: GameStore
+
+    @AppStorage("ff.hapticsOn") private var hapticsOn = true
+
+    func body(content: Content) -> some View {
+        content
+            .sensoryFeedback(trigger: store.mergePulse) { _, _ in
+                hapticsOn ? .impact(weight: .light) : nil
+            }
+            .sensoryFeedback(trigger: store.rotatePulse) { _, _ in
+                hapticsOn ? .impact(weight: .heavy) : nil
+            }
+            .sensoryFeedback(trigger: store.shakeEvent) { _, _ in
+                hapticsOn ? .impact(weight: .heavy, intensity: 1) : nil
+            }
+            .sensoryFeedback(trigger: store.superEvent) { _, _ in
+                hapticsOn ? .success : nil
+            }
+    }
+}
+
+/// The player's coins and gems, top-left of the screen.
 struct CoinCounter: View {
     let coins: Int
+    let gems: Int
 
     var body: some View {
         HStack(spacing: 6) {
@@ -125,13 +339,22 @@ struct CoinCounter: View {
                 .foregroundStyle(Color.white)
                 .contentTransition(.numericText())
                 .animation(.easeOut(duration: 0.2), value: coins)
+            Image(systemName: "diamond.fill")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(LinearGradient(colors: [Color(hex: 0x8FF0FF), Color(hex: 0xC08CFF)], startPoint: .top, endPoint: .bottom))
+                .padding(.leading, 5)
+            Text(gems.formatted(.number.grouping(.automatic)))
+                .font(.system(size: 15, weight: .heavy, design: .rounded))
+                .foregroundStyle(Color.white)
+                .contentTransition(.numericText())
+                .animation(.easeOut(duration: 0.2), value: gems)
         }
         .padding(.horizontal, 11)
         .frame(height: 38)
         .background(Capsule().fill(Theme.glassFill))
         .overlay(Capsule().strokeBorder(Theme.glassStroke, lineWidth: 1))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("\(coins) coins"))
+        .accessibilityLabel(Text("\(coins) coins, \(gems) gems"))
     }
 }
 
@@ -168,7 +391,8 @@ struct BoosterBar: View {
         switch booster {
         case .flip: return "arrow.clockwise"
         case .sweep: return "wind"
-        case .fever: return "flame.fill"
+        case .fever: return "star.fill"
+        case .arm: return "flame.fill"
         }
     }
 
@@ -177,6 +401,7 @@ struct BoosterBar: View {
         case .flip: return "Flip"
         case .sweep: return "Sweep"
         case .fever: return "Double"
+        case .arm: return "Bombs"
         }
     }
 
@@ -185,11 +410,12 @@ struct BoosterBar: View {
         case .flip: return [Color(hex: 0xC08CFF), Color(hex: 0x6C4BFF)]
         case .sweep: return [Color(hex: 0x86F2BC), Color(hex: 0x1FA5A0)]
         case .fever: return [Color(hex: 0xFF8AD8), Color(hex: 0xE0409F)]
+        case .arm: return [Color(hex: 0xFFC14A), Color(hex: 0xE8582F)]
         }
     }
 
     var body: some View {
-        HStack(spacing: 22 * scale) {
+        HStack(spacing: 18 * scale) {
             ForEach(GameStore.Booster.allCases, id: \.self) { booster in
                 let count = store.boosterCounts[booster] ?? 0
                 let usable = store.canAfford(booster) && !store.isGameOver
@@ -227,7 +453,7 @@ struct BoosterBar: View {
                     }
                     .opacity(usable ? 1 : 0.45)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(BounceButtonStyle())
                 .accessibilityLabel(Text(
                     count > 0
                         ? "\(Self.name(booster)) booster, \(count) left"
@@ -267,6 +493,8 @@ struct GameBanners: ViewModifier {
     let store: GameStore
     /// Shows a message for a number of seconds.
     let show: (String, Double) -> Void
+    /// Bounces a big word in over the board.
+    let callout: (String) -> Void
 
     /// Each special tile is explained the first time it turns up.
     @AppStorage("ff.seenClockTile") private var seenClockTile = false
@@ -275,17 +503,37 @@ struct GameBanners: ViewModifier {
     func body(content: Content) -> some View {
         content
             .onChange(of: store.comboEvent) { _, _ in
+                callout("Chain x\(store.lastCombo)!")
                 if store.isFever {
-                    show("Chain x\(store.lastCombo)! Double points", 1.8)
-                } else {
-                    show("Chain x\(store.lastCombo)!", 1.1)
+                    show("Double points!", 1.6)
                 }
             }
             .onChange(of: store.timeBonusEvent) { _, _ in
                 show("+\(Int(GameStore.timeBonus)) seconds", 1.1)
             }
             .onChange(of: store.bombEvent) { _, _ in
-                show("Boom!", 1.1)
+                callout(store.lastBombCount > 1 ? "Chain reaction!" : "Boom!")
+            }
+            .onChange(of: store.superEvent) { _, _ in
+                callout(store.lastSuperCount >= 4 ? "MEGA COMBO!" : "Super combo!")
+            }
+            .onChange(of: store.streak) { _, streak in
+                if streak == 2 {
+                    callout("Nice!")
+                } else if streak == GameStore.maxStreak {
+                    callout("Unstoppable!")
+                }
+            }
+            .onChange(of: store.wholeSecondsLeft) { _, seconds in
+                if seconds == 10, store.isTimerRunning {
+                    callout("10 seconds!")
+                }
+            }
+            .onChange(of: store.gemEvent) { _, _ in
+                show(store.lastGemGain == 1 ? "+1 gem" : "+\(store.lastGemGain) gems", 1.2)
+            }
+            .onChange(of: store.unlockEvent) { _, _ in
+                callout("New theme: \(store.lastUnlockedSkin)!")
             }
             .onChange(of: store.specialSpawnEvent) { _, _ in
                 if store.lastSpecialKind == .time, !seenClockTile {
@@ -301,12 +549,13 @@ struct GameBanners: ViewModifier {
                 case .flip: show("Flip!", 1.0)
                 case .sweep: show("Swept \(store.lastSweepCount) tiles", 1.2)
                 case .fever: show("Double points!", 1.4)
+                case .arm: show("\(store.lastArmCount) tiles armed", 1.2)
                 }
             }
             .onChange(of: store.boosterDeniedEvent) { _, _ in
                 let booster = store.lastBooster
                 if store.canAfford(booster) {
-                    show("No 2s or 4s to sweep", 1.6)
+                    show(booster == .arm ? "No tiles to arm" : "No 2s or 4s to sweep", 1.6)
                 } else {
                     show("\(BoosterBar.name(booster)) costs \(booster.price) coins", 1.8)
                 }
@@ -336,7 +585,15 @@ struct GameSounds: ViewModifier {
             .onChange(of: store.boosterEvent) { _, _ in
                 if store.lastBooster == .sweep {
                     sounds.play(.boom, volume: 0.7)
+                } else if store.lastBooster == .arm {
+                    sounds.play(.powerup)
                 }
+            }
+            .onChange(of: store.superEvent) { _, _ in
+                sounds.play(.combo)
+            }
+            .onChange(of: store.unlockEvent) { _, _ in
+                sounds.play(.fever)
             }
             .onChange(of: store.boosterDeniedEvent) { _, _ in
                 sounds.play(.tick)
@@ -357,7 +614,9 @@ struct GameSounds: ViewModifier {
                 sounds.play(.bonus)
             }
             .onChange(of: store.wholeSecondsLeft) { _, seconds in
-                if seconds >= 1, seconds <= 10, store.isTimerRunning {
+                if seconds == 10, store.isTimerRunning {
+                    sounds.play(.hurry)
+                } else if seconds >= 1, seconds < 10, store.isTimerRunning {
                     sounds.play(.tick, volume: 0.7)
                 }
             }

@@ -316,6 +316,94 @@ struct GameStoreTests {
         #expect(store.boosterDeniedEvent == 1)
     }
 
+    @Test func aSuperComboWinsAGemAndShakesTheBoard() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[2, 2, 2, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 2, nextID: 10), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        store.swipe(.left)
+        #expect(store.state.score == 12)
+        #expect(store.superEvent == 1)
+        #expect(store.lastSuperCount == 3)
+        #expect(store.gems == GameStore.gemsForSuper)
+        #expect(store.shakeEvent == 1)
+        #expect(store.shakePower == 2)
+        #expect(store.flashEvent == 1)
+        #expect(store.bursts.contains { $0.isSuper })
+        // Gems are remembered.
+        #expect(GameStore(defaults: defaults, animated: false).gems == GameStore.gemsForSuper)
+    }
+
+    @Test func aMegaComboUnlocksTheGalaxyTheme() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[4, 4, 4, 4], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 2, nextID: 10), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        let galaxy = Skin.named("galaxy")
+        #expect(!store.owns(galaxy))
+        store.swipe(.left)
+        #expect(store.lastSuperCount == 4)
+        #expect(store.gems == GameStore.gemsForMega)
+        #expect(store.owns(galaxy))
+        #expect(store.unlockEvent == 1)
+        #expect(GameStore(defaults: defaults, animated: false).owns(galaxy))
+    }
+
+    @Test func aThemeIsBoughtWithGems() {
+        let defaults = freshDefaults()
+        defaults.set(20, forKey: "ff.gems")
+        let store = GameStore(defaults: defaults, animated: false)
+        let sunset = Skin.named("sunset")
+        #expect(store.owns(Skin.named("neon")))
+        #expect(!store.owns(sunset))
+        #expect(store.buy(sunset))
+        #expect(store.gems == 5)
+        #expect(store.owns(sunset))
+        // Not twice, not without the gems, and not a theme that has to be won.
+        #expect(!store.buy(sunset))
+        #expect(!store.buy(Skin.named("ocean")))
+        #expect(!store.buy(Skin.named("gold")))
+        #expect(store.gems == 5)
+        #expect(GameStore(defaults: defaults, animated: false).owns(sunset))
+    }
+
+    @Test func aBigScoreUnlocksTheGoldTheme() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[8, 8, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 1990, movesUntilRotation: 2, nextID: 10), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        let gold = Skin.named("gold")
+        #expect(!store.owns(gold))
+        store.swipe(.left)
+        #expect(store.state.score == 2006)
+        #expect(store.owns(gold))
+        #expect(store.lastUnlockedSkin == "Gold Rush")
+    }
+
+    @Test func theBombsBoosterArmsThreeTiles() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[2, 4, 8, 16], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 2, nextID: 10), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.useBooster(.arm))
+        #expect(store.state.tiles.filter { $0.kind == .bomb }.count == GameStore.armedTiles)
+        #expect(store.lastArmCount == GameStore.armedTiles)
+        #expect(store.boosterCounts[.arm] == GameStore.freeBoosters - 1)
+        #expect(store.state.movesUntilRotation == 2)
+    }
+
+    @Test func aFinishedGamePaysGemsOnce() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 996, movesUntilRotation: 2, nextID: 10), to: defaults)
+        defaults.set(5000, forKey: "ff.best")
+        let store = GameStore(defaults: defaults, animated: false)
+        store.swipe(.left)
+        #expect(store.state.score == 1000)
+        #expect(store.gems == 0)
+        store.tick(GameStore.roundSeconds + 1)
+        #expect(store.isGameOver)
+        // 1,000 points is two gems; no new best, so nothing more.
+        #expect(store.gems == 1000 / GameStore.pointsPerGem)
+        store.tick(5)
+        #expect(store.gems == 1000 / GameStore.pointsPerGem)
+    }
+
     @Test func aDeadBoardIsGameOverAndIgnoresSwipes() {
         let defaults = freshDefaults()
         let dead = GameState(tiles: tiles([[2, 4, 2, 4], [4, 2, 4, 2], [2, 4, 2, 4], [4, 2, 4, 2]]), score: 100, movesUntilRotation: 1, nextID: 20)

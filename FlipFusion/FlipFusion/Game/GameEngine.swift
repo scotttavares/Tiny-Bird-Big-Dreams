@@ -7,8 +7,9 @@ enum GameEngine {
 
     // MARK: Sliding
 
-    /// Slides every tile as far as it goes in `dir`. Two equal tiles that meet merge into
-    /// their sum, and a tile merges at most once per slide.
+    /// Slides every tile as far as it goes in `dir`. Equal tiles that meet merge, and the
+    /// result doubles for each tile that joins: two 2s make a 4, three make an 8 and four
+    /// make a 16 (a "super combo"). The tile they make does not merge again in that slide.
     static func slide(_ tiles: [Tile], _ dir: Direction) -> StepResult {
         var kept: [Tile] = []
         var ghosts: [Tile] = []
@@ -17,6 +18,7 @@ enum GameEngine {
         var gained = 0
         var changed = false
         var effects: [TileEffect] = []
+        var supers: [Int: Int] = [:]
 
         for line in 0..<size {
             // The tiles of this line, nearest the wall they are sliding toward first.
@@ -25,10 +27,12 @@ enum GameEngine {
                 .sorted { distanceFromWall(of: $0, dir) < distanceFromWall(of: $1, dir) }
 
             var placed: [Tile] = []
-            var lastCanMerge = false
+            // The value of the tiles gathered into the last placed tile, and how many.
+            var runValue = 0
+            var runCount = 0
 
             for tile in lineTiles {
-                if lastCanMerge, let last = placed.last, last.value == tile.value {
+                if runCount > 0, let last = placed.last, runValue == tile.value {
                     var survivor = last
                     survivor.value *= 2
                     // A special tile does its thing when it merges; the result is ordinary.
@@ -44,7 +48,10 @@ enum GameEngine {
                     ghost.row = survivor.row
                     ghost.col = survivor.col
                     ghosts.append(ghost)
-                    lastCanMerge = false
+                    runCount += 1
+                    if runCount >= 3 {
+                        supers[survivor.id] = runCount
+                    }
                     changed = true
                 } else {
                     let cell = cellFor(line: line, distance: placed.count, dir)
@@ -55,15 +62,21 @@ enum GameEngine {
                     moved.row = cell.row
                     moved.col = cell.col
                     placed.append(moved)
-                    lastCanMerge = true
+                    runValue = tile.value
+                    runCount = 1
                 }
             }
             kept.append(contentsOf: placed)
         }
 
         // Each bomb clears the eight cells around the cell it merged in. The cleared
-        // tiles score their own value and are drawn until the slide ends.
-        for effect in effects where effect.kind == .bomb {
+        // tiles score their own value and are drawn until the slide ends. A bomb tile
+        // caught in a blast goes off too: a chain reaction.
+        var blasts = effects.filter { $0.kind == .bomb }
+        var next = 0
+        while next < blasts.count {
+            let effect = blasts[next]
+            next += 1
             let blasted = kept.filter { tile in
                 abs(tile.row - effect.row) <= 1 && abs(tile.col - effect.col) <= 1
                     && !(tile.row == effect.row && tile.col == effect.col)
@@ -72,7 +85,13 @@ enum GameEngine {
                 gained += tile.value
                 removedIDs.insert(tile.id)
                 mergedIDs.remove(tile.id)
+                supers[tile.id] = nil
                 ghosts.append(tile)
+                if tile.kind == .bomb {
+                    let chained = TileEffect(kind: .bomb, row: tile.row, col: tile.col)
+                    effects.append(chained)
+                    blasts.append(chained)
+                }
             }
             let blastedIDs = Set(blasted.map(\.id))
             kept.removeAll { blastedIDs.contains($0.id) }
@@ -85,7 +104,8 @@ enum GameEngine {
             removedIDs: removedIDs,
             gained: gained,
             changed: changed,
-            effects: effects
+            effects: effects,
+            supers: supers
         )
     }
 
@@ -162,7 +182,7 @@ enum GameEngine {
 
     /// Out of every 100 new tiles, how many are clock tiles and how many are bombs.
     static let timeTilesPerHundred = 5
-    static let bombTilesPerHundred = 7
+    static let bombTilesPerHundred = 12
 
     /// Adds a new tile (a 2 nine times in ten, otherwise a 4) in a random empty cell.
     /// Now and then it is a clock tile or a bomb. Returns nil when the board is full.

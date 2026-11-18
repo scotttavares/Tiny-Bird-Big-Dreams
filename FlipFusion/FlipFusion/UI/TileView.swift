@@ -7,6 +7,8 @@ struct TileView: View {
     let size: CGFloat
 
     @State private var appeared = false
+    /// Special tiles throb so they catch the eye.
+    @State private var throb = false
 
     /// The corner badge and rim colour of a special tile.
     private var badge: (symbol: String, tint: Color, name: String)? {
@@ -78,6 +80,7 @@ struct TileView: View {
                     .overlay(Circle().strokeBorder(badge.tint, lineWidth: 1.5))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                     .offset(x: size * 0.08, y: -size * 0.08)
+                    .scaleEffect(throb ? 1.22 : 1)
             }
         }
         .frame(width: size, height: size)
@@ -87,6 +90,15 @@ struct TileView: View {
         .onAppear {
             withAnimation(.spring(response: 0.28, dampingFraction: 0.62)) {
                 appeared = true
+            }
+        }
+        .onChange(of: kind, initial: true) { _, newKind in
+            if newKind == .normal {
+                throb = false
+            } else {
+                withAnimation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true)) {
+                    throb = true
+                }
             }
         }
         .accessibilityElement()

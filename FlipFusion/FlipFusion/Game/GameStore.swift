@@ -67,6 +67,8 @@ final class GameStore {
         let col: Int
         let value: Int
         var isBlast = false
+        /// A super combo: three or four tiles merged here at once.
+        var isSuper = false
         /// Points to float up from the cell (0 shows nothing).
         var points = 0
     }
@@ -84,15 +86,23 @@ final class GameStore {
         case sweep
         /// Starts double points.
         case fever
+        /// Turns up to three ordinary tiles into bombs.
+        case arm
 
         var price: Int {
             switch self {
             case .flip: return 150
             case .sweep: return 250
             case .fever: return 200
+            case .arm: return 200
             }
         }
     }
+
+    /// How many tiles the bombs booster arms.
+    static let armedTiles = 3
+    /// A merge that makes a tile this big (or bigger) shakes the board.
+    static let bigMerge = 64
 
     static let freeBoosters = 3
     /// Points needed to earn one coin.
@@ -113,6 +123,83 @@ final class GameStore {
     private(set) var lastBooster = Booster.flip
     /// How many tiles the last sweep cleared.
     private(set) var lastSweepCount = 0
+    /// How hard the latest shake is: 1 a nudge, 2 a jolt, 3 a blast.
+    private(set) var shakePower = 1
+    /// Goes up when the board should flash white (bombs and super combos).
+    private(set) var flashEvent = 0
+    /// Goes up on a super combo; `lastSuperCount` is how many tiles merged at once.
+    private(set) var superEvent = 0
+    private(set) var lastSuperCount = 0
+    /// How many bombs went off in the latest blast (more than one is a chain reaction).
+    private(set) var lastBombCount = 0
+    /// How many tiles the last bombs booster armed.
+    private(set) var lastArmCount = 0
+
+    // MARK: Gems and themes
+
+    /// Gems are the rare prize: super combos, chains, big scores and new bests earn
+    /// them, and they buy themes. Shared by both game modes.
+    private(set) var gems: Int
+    /// The ids of the themes the player has.
+    private(set) var ownedSkins: Set<String>
+    /// Goes up when gems are earned; `lastGemGain` is how many.
+    private(set) var gemEvent = 0
+    private(set) var lastGemGain = 0
+    /// Goes up when play unlocks a theme; `lastUnlockedSkin` is its name.
+    private(set) var unlockEvent = 0
+    private(set) var lastUnlockedSkin = ""
+
+    /// Gems for a super combo of three tiles, of four, and for a chain.
+    static let gemsForSuper = 1
+    static let gemsForMega = 3
+    static let gemsForChain = 1
+    /// At the end of a game: one gem for every this many points, and more for a new best.
+    static let pointsPerGem = 500
+    static let gemsForBest = 2
+
+    /// True when the theme is the player's to use.
+    func owns(_ skin: Skin) -> Bool {
+        skin.unlock == .free || ownedSkins.contains(skin.id)
+    }
+
+    /// Buys a theme with gems. Returns false (and changes nothing) when it is not
+    /// for sale, is already owned, or costs more gems than the player has.
+    @discardableResult
+    func buy(_ skin: Skin) -> Bool {
+        guard case .gems(let price) = skin.unlock, !owns(skin), gems >= price else { return false }
+        gems -= price
+        ownedSkins.insert(skin.id)
+        save()
+        return true
+    }
+
+    private func earnGems(_ count: Int) {
+        guard count > 0 else { return }
+        gems += count
+        lastGemGain = count
+        gemEvent += 1
+    }
+
+    /// Hands over any theme that play has just earned.
+    private func unlockSkins(where earned: (Skin.Unlock) -> Bool) {
+        for skin in Skin.all where !owns(skin) && earned(skin.unlock) {
+            ownedSkins.insert(skin.id)
+            lastUnlockedSkin = skin.name
+            unlockEvent += 1
+        }
+    }
+
+    /// The best score when this game began (or was reopened): beating it earns gems.
+    @ObservationIgnored private var bestAtStart = 0
+
+    /// The prizes handed out once, when a game ends.
+    private func rewardFinishedGame() {
+        var prize = state.score / Self.pointsPerGem
+        if state.score > bestAtStart, state.score > 0 {
+            prize += Self.gemsForBest
+        }
+        earnGems(prize)
+    }
 
     @ObservationIgnored private var streakLeft: Double = 0
     @ObservationIgnored private var coinBank = 0
@@ -143,6 +230,8 @@ final class GameStore {
         static let time = "ff.time"
         static let mode = "ff.mode"
         static let coins = "ff.coins"
+        static let gems = "ff.gems"
+        static let skins = "ff.skins"
 
         static func booster(_ booster: Booster) -> String {
             "ff.booster." + booster.rawValue
@@ -209,12 +298,15 @@ final class GameStore {
             counts[booster] = max(0, saved ?? GameStore.freeBoosters)
         }
         self.boosterCounts = counts
+        self.gems = max(0, defaults.integer(forKey: Key.gems))
+        self.ownedSkins = Set(defaults.stringArray(forKey: Key.skins) ?? [])
 
         let mode = Mode(rawValue: defaults.string(forKey: Key.mode) ?? "") ?? .timed
         let loaded = GameStore.load(mode, from: defaults)
         self.mode = mode
         self.state = loaded.state
         self.best = loaded.best
+        self.bestAtStart = loaded.best
         self.secondsLeft = loaded.seconds
         self.wholeSecondsLeft = Int(loaded.seconds.rounded(.up))
         self.isGameOver = !GameEngine.hasMove(loaded.state.tiles) || (mode == .timed && loaded.seconds <= 0)
@@ -230,6 +322,7 @@ final class GameStore {
         let loaded = GameStore.load(newMode, from: defaults)
         state = loaded.state
         best = loaded.best
+        bestAtStart = loaded.best
         secondsLeft = loaded.seconds
         wholeSecondsLeft = Int(loaded.seconds.rounded(.up))
         ghosts = []
@@ -269,6 +362,11 @@ final class GameStore {
             boosterDeniedEvent += 1
             return false
         }
+        if booster == .arm, !state.tiles.contains(where: { $0.kind == .normal }) {
+            lastBooster = booster
+            boosterDeniedEvent += 1
+            return false
+        }
 
         if let count = boosterCounts[booster], count > 0 {
             boosterCounts[booster] = count - 1
@@ -302,7 +400,7 @@ final class GameStore {
                 bursts.append(Burst(id: nextBurstID, row: tile.row, col: tile.col, value: tile.value))
             }
             addPoints(swept.map(\.value).reduce(0, +))
-            shakeEvent += 1
+            shake(2)
             // Never leave an empty board: there would be nothing to swipe.
             while state.tiles.count < 2 {
                 spawnTile()
@@ -313,8 +411,25 @@ final class GameStore {
             feverLeft = Self.feverSeconds
             feverEvent += 1
             save()
+        case .arm:
+            let chosen = state.tiles.filter { $0.kind == .normal }.shuffled(using: &rng).prefix(Self.armedTiles)
+            let ids = Set(chosen.map(\.id))
+            for index in state.tiles.indices where ids.contains(state.tiles[index].id) {
+                state.tiles[index].kind = .bomb
+                let tile = state.tiles[index]
+                nextBurstID += 1
+                bursts.append(Burst(id: nextBurstID, row: tile.row, col: tile.col, value: 64))
+            }
+            lastArmCount = ids.count
+            shake(1)
+            save()
         }
         return true
+    }
+
+    private func shake(_ power: Int) {
+        shakePower = power
+        shakeEvent += 1
     }
 
     /// The tiles to draw: the live ones plus any being merged away this step.
@@ -360,6 +475,7 @@ final class GameStore {
         GameEngine.spawn(in: &fresh, using: &rng, allowTime: mode == .timed)
         GameEngine.spawn(in: &fresh, using: &rng, allowTime: mode == .timed)
         state = fresh
+        bestAtStart = best
         ghosts = []
         poppedIDs = []
         lastCombo = 0
@@ -404,6 +520,7 @@ final class GameStore {
         if secondsLeft <= 0, !isAnimating {
             isTimerRunning = false
             isGameOver = true
+            rewardFinishedGame()
             save()
         }
     }
@@ -516,6 +633,13 @@ final class GameStore {
         coinBank += points
         coins += coinBank / Self.pointsPerCoin
         coinBank %= Self.pointsPerCoin
+        let score = state.score
+        unlockSkins { unlock in
+            if case .score(let target) = unlock {
+                return score >= target
+            }
+            return false
+        }
     }
 
     /// Puts a slide or a gravity pass on the board and adds its points.
@@ -533,6 +657,9 @@ final class GameStore {
         }
         let multiplier = scoreMultiplier
         addPoints(result.gained)
+        // The hardest thing that happened in this step decides how the board shakes.
+        var power = 0
+        var bombs = 0
         for effect in result.effects {
             switch effect.kind {
             case .time:
@@ -542,24 +669,52 @@ final class GameStore {
             case .bomb:
                 nextBurstID += 1
                 bursts.append(Burst(id: nextBurstID, row: effect.row, col: effect.col, value: 64, isBlast: true))
-                bombEvent += 1
-                shakeEvent += 1
+                bombs += 1
             case .normal:
                 break
             }
+        }
+        if bombs > 0 {
+            lastBombCount = bombs
+            bombEvent += 1
+            flashEvent += 1
+            power = 3
         }
         if !result.mergedIDs.isEmpty {
             let merged = result.tiles.filter { result.mergedIDs.contains($0.id) }
             lastMergeValue = merged.map(\.value).max() ?? 0
             for tile in merged {
                 nextBurstID += 1
-                bursts.append(Burst(id: nextBurstID, row: tile.row, col: tile.col, value: tile.value, points: tile.value * multiplier))
+                bursts.append(Burst(
+                    id: nextBurstID,
+                    row: tile.row,
+                    col: tile.col,
+                    value: tile.value,
+                    isSuper: result.supers[tile.id] != nil,
+                    points: tile.value * multiplier
+                ))
             }
             mergePulse += 1
+            if lastMergeValue >= Self.bigMerge {
+                power = max(power, 1)
+            }
             if !hasMergedOnce {
                 hasMergedOnce = true
                 defaults.set(true, forKey: Key.merged)
             }
+        }
+        if let biggest = result.supers.values.max() {
+            lastSuperCount = biggest
+            superEvent += 1
+            earnGems(biggest >= 4 ? Self.gemsForMega : Self.gemsForSuper)
+            if biggest >= 4 {
+                unlockSkins { $0 == .megaCombo }
+            }
+            flashEvent += 1
+            power = max(power, 2)
+        }
+        if power > 0 {
+            shake(power)
         }
     }
 
@@ -582,7 +737,8 @@ final class GameStore {
         }
         if lastCombo >= 2 {
             comboEvent += 1
-            shakeEvent += 1
+            earnGems(Self.gemsForChain)
+            shake(2)
             // A chain is rewarded with a power-up tile: a clock or a bomb in the timed
             // game, always a bomb in the endless one.
             let coin = Bool.random(using: &rng)
@@ -597,9 +753,13 @@ final class GameStore {
     }
 
     private func finishMove() {
+        let wasOver = isGameOver
         isGameOver = !GameEngine.hasMove(state.tiles) || isTimeUp
         if isGameOver {
             isTimerRunning = false
+            if !wasOver {
+                rewardFinishedGame()
+            }
         }
         save()
     }
@@ -619,6 +779,8 @@ final class GameStore {
             defaults.set(secondsLeft, forKey: Key.time)
         }
         defaults.set(coins, forKey: Key.coins)
+        defaults.set(gems, forKey: Key.gems)
+        defaults.set(ownedSkins.sorted(), forKey: Key.skins)
         for (booster, count) in boosterCounts {
             defaults.set(count, forKey: Key.booster(booster))
         }

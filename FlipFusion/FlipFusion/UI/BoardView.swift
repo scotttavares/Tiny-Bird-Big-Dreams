@@ -59,14 +59,14 @@ struct BoardView: View {
                 let point = origin(row: tile.row, col: tile.col)
                 TileView(value: tile.value, kind: tile.kind, size: cell)
                     .rotationEffect(.degrees(-store.boardAngle))
-                    .scaleEffect(store.poppedIDs.contains(tile.id) ? 1.14 : 1)
+                    .scaleEffect(store.poppedIDs.contains(tile.id) ? 1.24 : 1)
                     .offset(x: point.x, y: point.y)
                     .zIndex(store.isGhost(tile) ? 1 : 2)
             }
 
             ForEach(store.bursts) { burst in
                 let point = origin(row: burst.row, col: burst.col)
-                MergeBurst(color: Theme.tile(burst.value).top, size: cell, isBlast: burst.isBlast, points: burst.points)
+                MergeBurst(color: Theme.tile(burst.value).top, size: cell, isBlast: burst.isBlast, isSuper: burst.isSuper, points: burst.points)
                     .offset(x: point.x, y: point.y)
                     .zIndex(4)
             }

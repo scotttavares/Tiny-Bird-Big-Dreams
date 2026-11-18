@@ -131,4 +131,13 @@ write("mode", join([bell(f, 0.12, decay=18.0) for f in (659.25, 987.77)], overla
 # A clock tile: three quick bright notes.
 write("bonus", join([bell(f, 0.22, decay=10.0) for f in (880.0, 1108.73, 1318.5)], overlap=0.15))
 
+# A super combo (three or four tiles merging at once): a fast run up into a big chord.
+write("combo", join(
+    [bell(f, 0.09, decay=16.0) for f in (523.25, 659.25, 783.99, 1046.5, 1318.5)]
+    + [chord((1046.5, 1318.5, 1568.0, 2093.0), 0.7)],
+    overlap=0.03))
+
+# Ten seconds left: two urgent notes.
+write("hurry", join([bell(f, 0.14, decay=12.0) for f in (987.77, 1318.5, 987.77, 1318.5)], overlap=0.02))
+
 print("Wrote sounds to", os.path.normpath(OUT))

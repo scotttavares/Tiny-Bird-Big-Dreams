@@ -1,15 +1,18 @@
 import SwiftUI
 
 /// The one screen of the game, laid out to match the mockup:
-/// logo, score cards, rotation pill, board with its arrow, tagline, page dots.
+/// logo, score cards, rotation pill, board with its arrow, boosters, tagline, mode buttons.
 struct GameScreen: View {
     let sounds: SoundPlayer
     /// False while the opening animation is still covering the game.
     let isIntroOver: Bool
     let onReplayIntro: () -> Void
 
-    @AppStorage("ff.hapticsOn") private var hapticsOn = true
     @State private var store = GameStore()
+    /// The theme in use. Changing it redraws everything that takes its colours from it.
+    @AppStorage(Skin.key) private var skinID = "neon"
+    @State private var calloutText: String?
+    @State private var calloutID = 0
     @State private var showHelp = false
     /// "How to play" opens by itself the first time the game is seen.
     @AppStorage("ff.seenHelp") private var seenHelp = false
@@ -71,9 +74,17 @@ struct GameScreen: View {
                         isImminent: store.state.movesUntilRotation == 1 && !store.isGameOver
                     )
 
+                    Celebration(store: store, side: side)
+
                     if let toast {
                         ToastView(text: toast, scale: scale)
                             .transition(.scale(scale: 0.6).combined(with: .opacity))
+                    }
+
+                    if let calloutText {
+                        Callout(text: calloutText, scale: scale)
+                            .offset(y: -side * 0.24)
+                            .id(calloutID)
                     }
 
                     if store.isGameOver {
@@ -88,34 +99,35 @@ struct GameScreen: View {
                                 store.newGame()
                             }
                         }
-                        .transition(.opacity)
+                        .transition(.scale(scale: 0.8).combined(with: .opacity))
                     }
                 }
                 .frame(width: side, height: side)
-                .modifier(Shake(animatableData: CGFloat(store.shakeEvent)))
-                .animation(.linear(duration: 0.35), value: store.shakeEvent)
+                .modifier(Shake(power: store.shakePower, animatableData: CGFloat(store.shakeEvent)))
+                .animation(.linear(duration: 0.4), value: store.shakeEvent)
                 .padding(.top, 14 * scale)
 
                 BoosterBar(store: store, scale: scale) { booster in
                     store.useBooster(booster)
                 }
-                .padding(.top, 20 * scale)
+                .padding(.top, 22 * scale)
 
                 Text("Swipe. Merge. Rotate.")
                     .font(.system(size: 21 * scale, weight: .semibold, design: .rounded))
                     .foregroundStyle(Theme.tagline)
-                    .padding(.top, 16 * scale)
+                    .padding(.top, 12 * scale)
 
-                PageDots(scale: scale, selected: store.mode == .timed ? 0 : 1) { index in
-                    pickMode(index)
+                ModeSwitch(scale: scale, mode: store.mode) { mode in
+                    pickMode(mode)
                 }
-                .padding(.top, 20 * scale)
+                .padding(.top, 12 * scale)
 
                 Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .id(skinID)
         }
-        .background(BackgroundView().ignoresSafeArea())
+        .background(BackgroundView().id(skinID).ignoresSafeArea())
         .contentShape(Rectangle())
         .gesture(
             DragGesture(minimumDistance: 16)
@@ -128,19 +140,25 @@ struct GameScreen: View {
                     }
                 }
         )
-        .animation(.easeOut(duration: 0.25), value: store.isGameOver)
-        .sensoryFeedback(trigger: store.mergePulse) { _, _ in
-            hapticsOn ? .impact(weight: .light) : nil
-        }
-        .sensoryFeedback(trigger: store.rotatePulse) { _, _ in
-            hapticsOn ? .impact(weight: .heavy) : nil
-        }
-        .modifier(GameBanners(store: store) { message, seconds in
-            show(message, seconds: seconds)
-        })
+        .animation(.spring(response: 0.35, dampingFraction: 0.7), value: store.isGameOver)
+        .modifier(GameHaptics(store: store))
+        .modifier(GameBanners(
+            store: store,
+            show: { message, seconds in
+                show(message, seconds: seconds)
+            },
+            callout: { word in
+                calloutText = word
+                calloutID += 1
+            }
+        ))
         .modifier(GameSounds(store: store, sounds: sounds))
+        .onChange(of: track, initial: true) { _, newTrack in
+            sounds.setTrack(newTrack)
+        }
         .overlay(alignment: .topLeading) {
-            CoinCounter(coins: store.coins)
+            CoinCounter(coins: store.coins, gems: store.gems)
+                .id(skinID)
                 .padding(.leading, 16)
                 .padding(.top, 6)
         }
@@ -157,7 +175,8 @@ struct GameScreen: View {
                     .padding(6)
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(BounceButtonStyle())
+            .id(skinID)
             .padding(.trailing, 10)
             .accessibilityLabel(Text("Menu"))
         }
@@ -218,22 +237,26 @@ struct GameScreen: View {
         showHelp = true
     }
 
-    /// A tap on one of the three dots under the tagline.
-    private func pickMode(_ index: Int) {
-        guard !store.isAnimating else { return }
-        switch index {
-        case 0:
-            withAnimation(.easeInOut(duration: 0.25)) {
-                store.switchMode(.timed)
-            }
+    /// The tune that fits the moment: the fast one while points count double and in
+    /// the last seconds of a timed game, otherwise the tune of the game mode.
+    private var track: SoundPlayer.Track {
+        let lastSeconds = store.mode == .timed && store.isTimerRunning && store.wholeSecondsLeft <= 20
+        if !store.isGameOver, store.isFever || lastSeconds {
+            return .rush
+        }
+        return store.mode == .timed ? .timed : .endless
+    }
+
+    /// A tap on one of the two mode buttons under the tagline.
+    private func pickMode(_ mode: GameStore.Mode) {
+        guard !store.isAnimating, mode != store.mode else { return }
+        withAnimation(.easeInOut(duration: 0.25)) {
+            store.switchMode(mode)
+        }
+        if mode == .timed {
             show("Timed: 2 minutes on the clock", seconds: 2.2)
-        case 1:
-            withAnimation(.easeInOut(duration: 0.25)) {
-                store.switchMode(.endless)
-            }
+        } else {
             show("Endless: play until no moves are left", seconds: 2.6)
-        default:
-            show("More modes coming soon")
         }
     }
 
@@ -262,41 +285,6 @@ struct BackgroundView: View {
                 endRadius: 380
             )
         }
-    }
-}
-
-/// The three dots under the tagline pick the way to play: the first is the timed
-/// game, the second the endless one, and the third is a place for a mode still to come.
-struct PageDots: View {
-    let scale: CGFloat
-    /// Which dot is lit (0 or 1).
-    let selected: Int
-    let onTap: (Int) -> Void
-
-    private static let names = ["Timed game", "Endless game", "More modes coming soon"]
-
-    var body: some View {
-        // Padding plus spacing keeps the dots as close together as in the mockup.
-        HStack(spacing: 4 * scale) {
-            ForEach(0..<3, id: \.self) { index in
-                let isOn = index == selected
-                Button {
-                    onTap(index)
-                } label: {
-                    Circle()
-                        .fill(isOn ? Theme.dotOn : Theme.dotOff)
-                        .frame(width: 9 * scale, height: 9 * scale)
-                        .shadow(color: isOn ? Theme.dotOn.opacity(0.8) : Color.clear, radius: 4 * scale)
-                        // A fingertip-sized tap area around the small dot.
-                        .padding(.vertical, 16 * scale)
-                        .padding(.horizontal, 5 * scale)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text(Self.names[index] + (isOn ? ", selected" : "")))
-            }
-        }
-        .frame(height: 9 * scale)
     }
 }
 

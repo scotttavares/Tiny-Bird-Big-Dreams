@@ -54,7 +54,7 @@ struct RotationArrow: View {
         let startAngle = -70.0     // beside the right end of the pill
         let headAngle = -24.0      // arrowhead, upper right of the board
         let trailStart = -6.0
-        let trailEnd = 108.0       // under the board, left of centre
+        let trailEnd = 48.0        // the bottom-right corner, clear of the boosters
 
         // The shaft from the pill to the arrowhead.
         var shaft = Path()

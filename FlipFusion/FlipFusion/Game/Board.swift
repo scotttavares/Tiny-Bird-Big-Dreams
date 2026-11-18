@@ -70,6 +70,9 @@ struct StepResult: Equatable, Sendable {
     var changed: Bool
     /// What the special tiles that merged in this step did.
     var effects: [TileEffect] = []
+    /// Super combos: the id of each surviving tile that three or four tiles merged
+    /// into, and how many.
+    var supers: [Int: Int] = [:]
 }
 
 /// Everything needed to save and restore a game.
