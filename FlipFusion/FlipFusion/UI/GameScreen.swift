@@ -4,6 +4,8 @@ import SwiftUI
 /// logo, score cards, rotation pill, board with its arrow, tagline, page dots.
 struct GameScreen: View {
     @State private var store = GameStore()
+    @State private var sounds = SoundPlayer()
+    @Environment(\.scenePhase) private var scenePhase
     @State private var toast: String?
     @State private var toastID = 0
     @State private var confirmNewGame = false
@@ -28,6 +30,16 @@ struct GameScreen: View {
 
                 ScoreCards(score: store.state.score, best: store.best, scale: scale)
                     .frame(width: side)
+                    .overlay {
+                        TimerRing(store: store, scale: scale)
+                    }
+                    .overlay(alignment: .topLeading) {
+                        if store.gainEvent > 0 {
+                            GainPop(amount: store.lastGain, scale: scale)
+                                .frame(width: 122 * scale)
+                                .id(store.gainEvent)
+                        }
+                    }
                     .padding(.top, 14 * scale)
 
                 RotatePill(moves: store.state.movesUntilRotation, scale: scale)
@@ -48,6 +60,7 @@ struct GameScreen: View {
 
                     if store.isGameOver {
                         GameOverOverlay(
+                            title: store.isTimeUp ? "Time's Up" : "Game Over",
                             score: store.state.score,
                             isBest: store.state.score > 0 && store.state.score >= store.best,
                             side: side,
@@ -95,6 +108,22 @@ struct GameScreen: View {
         .sensoryFeedback(.impact(weight: .heavy), trigger: store.rotatePulse)
         .onChange(of: store.comboEvent) { _, _ in
             show("Chain x\(store.lastCombo)!")
+        }
+        .modifier(GameSounds(store: store, sounds: sounds))
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active {
+                store.pauseTimer()
+            }
+        }
+        .task {
+            // Runs the game clock from real elapsed time.
+            var last = Date()
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(100))
+                let now = Date()
+                store.tick(min(now.timeIntervalSince(last), 0.5))
+                last = now
+            }
         }
         .task(id: toastID) {
             guard toast != nil else { return }
@@ -195,8 +224,9 @@ struct ToastView: View {
     }
 }
 
-/// Covers the board when no move is left.
+/// Covers the board when time runs out or no move is left.
 struct GameOverOverlay: View {
+    let title: String
     let score: Int
     let isBest: Bool
     let side: CGFloat
@@ -209,7 +239,7 @@ struct GameOverOverlay: View {
                 .fill(Color(hex: 0x070A26, opacity: 0.86))
 
             VStack(spacing: 10 * scale) {
-                Text("Game Over")
+                Text(title)
                     .font(.system(size: 34 * scale, weight: .black, design: .rounded))
                     .foregroundStyle(
                         LinearGradient(colors: Theme.fusion, startPoint: .leading, endPoint: .trailing)

@@ -97,6 +97,64 @@ struct GameStoreTests {
         #expect(GameEngine.isValid(store.state))
     }
 
+    @Test func theClockStartsOnTheFirstSwipe() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 2, nextID: 10), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.secondsLeft == GameStore.roundSeconds)
+        store.tick(5)
+        #expect(store.secondsLeft == GameStore.roundSeconds)
+        store.swipe(.left)
+        store.tick(5)
+        #expect(store.secondsLeft == GameStore.roundSeconds - 5)
+        #expect(store.wholeSecondsLeft == Int(GameStore.roundSeconds) - 5)
+    }
+
+    @Test func runningOutOfTimeEndsTheGame() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 2, nextID: 10), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        store.swipe(.left)
+        store.tick(GameStore.roundSeconds + 1)
+        #expect(store.secondsLeft == 0)
+        #expect(store.isTimeUp)
+        #expect(store.isGameOver)
+        let after = store.state
+        store.swipe(.right)
+        #expect(store.state == after)
+        // Still over after a relaunch, until a new game starts.
+        #expect(GameStore(defaults: defaults, animated: false).isGameOver)
+        store.newGame()
+        #expect(!store.isGameOver)
+        #expect(store.secondsLeft == GameStore.roundSeconds)
+    }
+
+    @Test func aPausedClockKeepsItsTimeAcrossARelaunch() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 2, nextID: 10), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        store.swipe(.left)
+        store.tick(30)
+        store.pauseTimer()
+        store.tick(30)
+        #expect(store.secondsLeft == GameStore.roundSeconds - 30)
+        let relaunched = GameStore(defaults: defaults, animated: false)
+        #expect(relaunched.secondsLeft == GameStore.roundSeconds - 30)
+        #expect(!relaunched.isTimerRunning)
+    }
+
+    @Test func aMergeLeavesABurstAndAScorePop() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[8, 8, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 2, nextID: 10), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        store.swipe(.left)
+        #expect(store.bursts.count == 1)
+        #expect(store.bursts.first?.value == 16)
+        #expect(store.lastMergeValue == 16)
+        #expect(store.lastGain == 16)
+        #expect(store.gainEvent == 1)
+    }
+
     @Test func aDeadBoardIsGameOverAndIgnoresSwipes() {
         let defaults = freshDefaults()
         let dead = GameState(tiles: tiles([[2, 4, 2, 4], [4, 2, 4, 2], [2, 4, 2, 4], [4, 2, 4, 2]]), score: 100, movesUntilRotation: 1, nextID: 20)

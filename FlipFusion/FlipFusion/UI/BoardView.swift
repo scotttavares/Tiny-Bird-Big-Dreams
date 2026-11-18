@@ -57,6 +57,13 @@ struct BoardView: View {
                     .zIndex(store.isGhost(tile) ? 1 : 2)
             }
 
+            ForEach(store.bursts) { burst in
+                let point = origin(row: burst.row, col: burst.col)
+                MergeBurst(color: Theme.tile(burst.value).top, size: cell)
+                    .offset(x: point.x, y: point.y)
+                    .zIndex(4)
+            }
+
             if let pair = hintPair {
                 let from = origin(row: pair.left.row, col: pair.left.col)
                 Image(systemName: "arrow.right")

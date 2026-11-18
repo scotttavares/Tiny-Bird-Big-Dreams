@@ -27,14 +27,43 @@ final class GameStore {
     /// True once the player has merged anything, ever. Hides the first-game hint.
     private(set) var hasMergedOnce: Bool
 
+    /// How long one game lasts.
+    static let roundSeconds: Double = 120
+    /// Time left in this game. The clock starts on the first swipe.
+    private(set) var secondsLeft: Double
+    /// `secondsLeft` rounded up, so views that only need whole seconds redraw once a second.
+    private(set) var wholeSecondsLeft: Int
+    private(set) var isTimerRunning = false
+    /// Goes up on every swipe that moves something (drives the swipe sound).
+    private(set) var slidePulse = 0
+    /// The biggest tile made by the latest merge (picks the merge sound).
+    private(set) var lastMergeValue = 0
+    /// Merges to sparkle on the board. Cleared at the start of the next move.
+    private(set) var bursts: [Burst] = []
+    /// Goes up each time points are scored; `lastGain` is how many.
+    private(set) var gainEvent = 0
+    private(set) var lastGain = 0
+
+    /// One merge to sparkle, at a board cell.
+    struct Burst: Identifiable, Equatable {
+        let id: Int
+        let row: Int
+        let col: Int
+        let value: Int
+    }
+
+    var isTimeUp: Bool { secondsLeft <= 0 }
+
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let animated: Bool
     @ObservationIgnored private var rng = SystemRandomNumberGenerator()
+    @ObservationIgnored private var nextBurstID = 0
 
     private enum Key {
         static let state = "ff.state"
         static let best = "ff.best"
         static let merged = "ff.merged"
+        static let time = "ff.time"
     }
 
     private enum Timing {
@@ -57,13 +86,21 @@ final class GameStore {
            GameEngine.isValid(saved) {
             restored = saved
         }
+        // A restored game keeps its clock; anything else starts with a full one.
+        var time = Self.roundSeconds
+        if restored != nil, let saved = defaults.object(forKey: Key.time) as? Double {
+            time = min(max(saved, 0), Self.roundSeconds)
+        }
+        self.secondsLeft = time
+        self.wholeSecondsLeft = Int(time.rounded(.up))
+
         if let restored {
             self.state = restored
         } else {
             var generator = SystemRandomNumberGenerator()
             self.state = GameEngine.newGame(using: &generator)
         }
-        self.isGameOver = !GameEngine.hasMove(state.tiles)
+        self.isGameOver = !GameEngine.hasMove(state.tiles) || time <= 0
         if state.score > best {
             best = state.score
         }
@@ -84,6 +121,10 @@ final class GameStore {
         guard !isAnimating, !isGameOver else { return }
         let result = GameEngine.slide(state.tiles, dir)
         guard result.changed else { return }
+
+        bursts.removeAll()
+        slidePulse += 1
+        isTimerRunning = true
 
         if animated {
             isAnimating = true
@@ -113,6 +154,35 @@ final class GameStore {
         lastCombo = 0
         boardAngle = 0
         isGameOver = false
+        bursts = []
+        secondsLeft = Self.roundSeconds
+        wholeSecondsLeft = Int(Self.roundSeconds)
+        isTimerRunning = false
+        save()
+    }
+
+    // MARK: The clock
+
+    /// Takes time off the clock. The screen calls this several times a second.
+    func tick(_ seconds: Double) {
+        guard isTimerRunning, !isGameOver, secondsLeft > 0, seconds > 0 else { return }
+        secondsLeft = max(0, secondsLeft - seconds)
+        let whole = Int(secondsLeft.rounded(.up))
+        if whole != wholeSecondsLeft {
+            wholeSecondsLeft = whole
+        }
+        // A move in flight finishes first; `finishMove` then ends the game.
+        if secondsLeft <= 0, !isAnimating {
+            isTimerRunning = false
+            isGameOver = true
+            save()
+        }
+    }
+
+    /// Stops the clock (the app left the screen). The next swipe starts it again.
+    func pauseTimer() {
+        guard isTimerRunning else { return }
+        isTimerRunning = false
         save()
     }
 
@@ -202,7 +272,17 @@ final class GameStore {
         if state.score > best {
             best = state.score
         }
+        if result.gained > 0 {
+            lastGain = result.gained
+            gainEvent += 1
+        }
         if !result.mergedIDs.isEmpty {
+            let merged = result.tiles.filter { result.mergedIDs.contains($0.id) }
+            lastMergeValue = merged.map(\.value).max() ?? 0
+            for tile in merged {
+                nextBurstID += 1
+                bursts.append(Burst(id: nextBurstID, row: tile.row, col: tile.col, value: tile.value))
+            }
             mergePulse += 1
             if !hasMergedOnce {
                 hasMergedOnce = true
@@ -220,7 +300,10 @@ final class GameStore {
     }
 
     private func finishMove() {
-        isGameOver = !GameEngine.hasMove(state.tiles)
+        isGameOver = !GameEngine.hasMove(state.tiles) || secondsLeft <= 0
+        if isGameOver {
+            isTimerRunning = false
+        }
         save()
     }
 
@@ -235,5 +318,6 @@ final class GameStore {
             defaults.set(data, forKey: Key.state)
         }
         defaults.set(best, forKey: Key.best)
+        defaults.set(secondsLeft, forKey: Key.time)
     }
 }

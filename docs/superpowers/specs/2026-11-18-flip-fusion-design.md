@@ -58,3 +58,11 @@ iPhone Duo features.
 `codemagic.yaml` copies the Paper Wars one. The owner tests on their iPhone through TestFlight.
 There is no Mac here: the code cannot be compiled locally, so the engine is kept free of UI
 imports and the first cloud build is the compile check.
+
+## Added after the first TestFlight build (2026-11-18)
+
+The first build felt endless: rotation and gravity keep clearing the board. The owner chose a timer.
+
+- **Timed games.** Each game lasts 2 minutes. The clock starts on the first swipe, stops when the app leaves the screen and starts again on the next swipe. A countdown ring sits between the Score and Best cards; it turns red and ticks for the last 10 seconds. At zero the board shows "Time's Up" with the score. A full board with no move still ends the game early.
+- **Sounds.** Swipe, merge (higher notes for bigger tiles), rotation, chain, last-seconds tick, game over, new game. Synthesised by `FlipFusion/scripts/make-sounds.py`; they follow the silent switch.
+- **Effects.** A ring and sparks on every merge, and "+points" floating up from the Score card.

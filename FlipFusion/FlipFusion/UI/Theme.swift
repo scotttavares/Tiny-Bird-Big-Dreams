@@ -34,6 +34,7 @@ enum Theme {
     static let tagline = Color(hex: 0xC9D2F5)
     static let counter = Color(hex: 0xFFD23F)
     static let crown = Color(hex: 0xFFC93C)
+    static let timerLow = Color(hex: 0xFF6B6B)
 
     // Pill
     static let pillTop = Color(hex: 0x4332C8)
