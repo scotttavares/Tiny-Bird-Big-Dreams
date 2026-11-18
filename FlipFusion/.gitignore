@@ -1,0 +1,4 @@
+build/
+FlipFusion.xcodeproj/
+*.xcresult
+DerivedData/

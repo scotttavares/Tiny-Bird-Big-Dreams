@@ -439,3 +439,94 @@ workflows:
       app_store_connect:
         auth: integration
         # Upload only: the build appears in TestFlight for Internal Testing.
+
+  # ---------------------------------------------------------------------------
+  # Flip Fusion: a native SwiftUI number-merging puzzle in FlipFusion/. The
+  # Xcode project is generated from FlipFusion/project.yml with XcodeGen.
+  #
+  # ONE-TIME SETUP: in App Store Connect, create the app with bundle id
+  # com.tinybirdbigdreams.flipfusion (the signing step below registers the
+  # bundle id on the first run, so run this workflow once, then create the app,
+  # then run it again: the upload needs the app record to exist).
+  # ---------------------------------------------------------------------------
+  flipfusion-testflight:
+    name: Flip Fusion iOS → TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    working_directory: FlipFusion
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: 'claude/*'
+          include: true
+          source: true
+    when:
+      changeset:
+        includes:
+          - 'FlipFusion/**'
+    integrations:
+      app_store_connect: Orbit ASC API key
+    environment:
+      groups:
+        - orbit_signing
+      vars:
+        BUNDLE_ID: "com.tinybirdbigdreams.flipfusion"
+        XCODE_PROJECT: "FlipFusion.xcodeproj"
+        XCODE_SCHEME: "FlipFusion"
+      # Apple only accepts uploads built with the current iOS SDK.
+      xcode: latest
+    scripts:
+      - name: Generate the Xcode project (XcodeGen)
+        script: |
+          command -v xcodegen >/dev/null || brew install xcodegen
+          xcodegen generate
+      - name: Run the unit tests (game rules and saving)
+        # A red test run is shown in the build log but does not stop the TestFlight upload.
+        ignore_failure: true
+        script: |
+          set -o pipefail
+          UDID="$(bash scripts/pick-simulator.sh phone)"
+          echo "Simulator: $UDID"
+          xcodebuild test \
+            -project "$XCODE_PROJECT" \
+            -scheme "$XCODE_SCHEME" \
+            -destination "id=$UDID" \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee /tmp/flipfusion-tests.log | grep -E "error:|✔|✘|Test run|Suite|passed|failed|BUILD|TEST" || true
+          grep -q "TEST SUCCEEDED" /tmp/flipfusion-tests.log
+      - name: Set up code signing (persistent cert from CERTIFICATE_PRIVATE_KEY)
+        script: |
+          set -e
+          if [ -z "$CERTIFICATE_PRIVATE_KEY" ]; then
+            echo "❌ CERTIFICATE_PRIVATE_KEY is not set (Secure var in group orbit_signing)."
+            exit 1
+          fi
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles --project "$XCODE_PROJECT"
+      - name: Build IPA
+        script: |
+          # Continue from TestFlight's latest Flip Fusion build when there is one;
+          # otherwise use Codemagic's own counter.
+          LATEST=$(app-store-connect apps list --bundle-id-identifier "$BUNDLE_ID" --strict-match-identifier 2>/dev/null | awk -F': ' '/^Id:/{print $2; exit}' | xargs -I{} app-store-connect get-latest-testflight-build-number {} 2>/dev/null | tail -1 | tr -dc '0-9')
+          BUILD=$(( ${LATEST:-0} + 1 ))
+          if [ "$BUILD" -le 1 ]; then BUILD=${PROJECT_BUILD_NUMBER:-${BUILD_NUMBER:-1}}; fi
+          echo "Build number: $BUILD (latest in TestFlight: ${LATEST:-none})"
+          xcode-project build-ipa \
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME" \
+            --archive-xcargs "CURRENT_PROJECT_VERSION=$BUILD"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - /tmp/flipfusion-tests.log
+      - build/ios/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Upload only: the build appears in TestFlight for Internal Testing.
+        submit_to_testflight: false
