@@ -14,6 +14,10 @@ final class SoundPlayer {
     private var nextVoice: [Sound: Int] = [:]
 
     init() {
+        // The unit tests launch the app in a simulator with no audio hardware, where
+        // setting up audio can stall for minutes. Tests need no sound.
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
+
         let session = AVAudioSession.sharedInstance()
         try? session.setCategory(.ambient)
         try? session.setActive(true)

@@ -489,11 +489,15 @@ workflows:
           set -o pipefail
           UDID="$(bash scripts/pick-simulator.sh phone)"
           echo "Simulator: $UDID"
+          # A stuck test run is stopped after 7 minutes instead of using up build minutes.
+          ( sleep 420; echo "Tests took too long: stopping them."; pkill -f "xcodebuild test" ) &
+          WATCHDOG=$!
           xcodebuild test \
             -project "$XCODE_PROJECT" \
             -scheme "$XCODE_SCHEME" \
             -destination "id=$UDID" \
             CODE_SIGNING_ALLOWED=NO 2>&1 | tee /tmp/flipfusion-tests.log | grep -E "error:|✔|✘|Test run|Suite|passed|failed|BUILD|TEST" || true
+          kill $WATCHDOG 2>/dev/null || true
           grep -q "TEST SUCCEEDED" /tmp/flipfusion-tests.log
       - name: Set up code signing (persistent cert from CERTIFICATE_PRIVATE_KEY)
         script: |
