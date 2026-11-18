@@ -85,3 +85,8 @@ After playing build 15 the owner asked for a second mode and said no power-ups s
 - The dots under the tagline switch mode. Each mode keeps its own game in progress and its own best score, so switching loses nothing. The third dot says "More modes coming soon".
 - **Chains drop a power-up.** A chain of 2 or more now also puts a power-up tile on the board (clock or bomb in Timed, bomb in Endless). Random power-up tiles are a little more common (5 clocks and 7 bombs per 100 new tiles).
 - **More sounds:** a sparkle when a power-up tile lands, a riser when double points starts, a heavier bomb, a click on mode change.
+
+## Intro and "How to play" (2026-11-18)
+
+- **Intro.** Each launch opens with a two-second animation: tiles 2, 4, 8 and 16 drop in as a cluster, the cluster makes the quarter turn, the tiles fuse in a burst, and the logo and tagline appear. A tap skips it. It was designed from the usual shape of puzzle-game openings (logo reveal built from the game's own pieces), not from any one game.
+- **How to play.** A "?" button in the top-right corner opens a sheet with the basics, the power-ups (shown with real tiles), the two modes, and a "Start a new game" button. It opens by itself the first time the game is seen. The clock stops while it is open.

@@ -3,8 +3,14 @@ import SwiftUI
 /// The one screen of the game, laid out to match the mockup:
 /// logo, score cards, rotation pill, board with its arrow, tagline, page dots.
 struct GameScreen: View {
+    let sounds: SoundPlayer
+    /// False while the opening animation is still covering the game.
+    let isIntroOver: Bool
+
     @State private var store = GameStore()
-    @State private var sounds = SoundPlayer()
+    @State private var showHelp = false
+    /// "How to play" opens by itself the first time the game is seen.
+    @AppStorage("ff.seenHelp") private var seenHelp = false
     @Environment(\.scenePhase) private var scenePhase
     @State private var toast: String?
     @State private var toastID = 0
@@ -133,6 +139,33 @@ struct GameScreen: View {
             }
         }
         .modifier(GameSounds(store: store, sounds: sounds))
+        .overlay(alignment: .topTrailing) {
+            Button {
+                openHelp()
+            } label: {
+                Image(systemName: "questionmark")
+                    .font(.system(size: 16, weight: .heavy))
+                    .foregroundStyle(Theme.tagline)
+                    .frame(width: 38, height: 38)
+                    .background(Circle().fill(Theme.glassFill))
+                    .overlay(Circle().strokeBorder(Theme.glassStroke, lineWidth: 1))
+                    .padding(6)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 10)
+            .accessibilityLabel(Text("How to play"))
+        }
+        .sheet(isPresented: $showHelp) {
+            HelpView {
+                store.newGame()
+            }
+        }
+        .onChange(of: isIntroOver, initial: true) { _, isOver in
+            if isOver, !seenHelp {
+                openHelp()
+            }
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active {
                 store.pauseTimer()
@@ -165,6 +198,13 @@ struct GameScreen: View {
             }
             Button("Keep Playing", role: .cancel) {}
         }
+    }
+
+    private func openHelp() {
+        seenHelp = true
+        // The clock waits while the rules are open; the next swipe starts it again.
+        store.pauseTimer()
+        showHelp = true
     }
 
     /// A tap on one of the three dots under the tagline.
