@@ -474,8 +474,9 @@ workflows:
         BUNDLE_ID: "com.tinybirdbigdreams.flipfusion"
         XCODE_PROJECT: "FlipFusion.xcodeproj"
         XCODE_SCHEME: "FlipFusion"
-      # Apple only accepts uploads built with the current iOS SDK.
-      xcode: latest
+      # Same Xcode as Paper Wars and Field Guide: builds asking for "latest" sat
+      # in the queue without ever getting a machine.
+      xcode: 27.1
     scripts:
       - name: Generate the Xcode project (XcodeGen)
         script: |
