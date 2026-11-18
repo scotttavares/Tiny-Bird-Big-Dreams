@@ -173,6 +173,19 @@ final class GameStore {
         return true
     }
 
+    /// Adds gems bought from the App Store. Each purchase counts once: the same
+    /// `purchaseID` a second time adds nothing and returns false.
+    @discardableResult
+    func addPurchasedGems(_ count: Int, purchaseID: String) -> Bool {
+        var seen = defaults.stringArray(forKey: Key.purchases) ?? []
+        guard count > 0, !seen.contains(purchaseID) else { return false }
+        seen.append(purchaseID)
+        defaults.set(Array(seen.suffix(200)), forKey: Key.purchases)
+        earnGems(count)
+        save()
+        return true
+    }
+
     private func earnGems(_ count: Int) {
         guard count > 0 else { return }
         gems += count
@@ -232,6 +245,7 @@ final class GameStore {
         static let coins = "ff.coins"
         static let gems = "ff.gems"
         static let skins = "ff.skins"
+        static let purchases = "ff.purchases"
 
         static func booster(_ booster: Booster) -> String {
             "ff.booster." + booster.rawValue

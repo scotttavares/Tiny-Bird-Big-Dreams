@@ -11,6 +11,8 @@ struct GameScreen: View {
     @State private var store = GameStore()
     /// The theme in use. Changing it redraws everything that takes its colours from it.
     @AppStorage(Skin.key) private var skinID = "neon"
+    /// The gem shop. Made once the screen is up, so it hears of purchases from launch.
+    @State private var shop: GemShop?
     @State private var calloutText: String?
     @State private var calloutID = 0
     @State private var showHelp = false
@@ -181,7 +183,7 @@ struct GameScreen: View {
             .accessibilityLabel(Text("Menu"))
         }
         .sheet(isPresented: $showHelp) {
-            HelpView(store: store, onReplayIntro: onReplayIntro)
+            HelpView(store: store, shop: shop, onReplayIntro: onReplayIntro)
         }
         .onChange(of: isIntroOver, initial: true) { _, isOver in
             if isOver, !seenHelp {
@@ -200,6 +202,11 @@ struct GameScreen: View {
         }
         .onChange(of: musicOn) { _, _ in
             sounds.refreshMusic()
+        }
+        .task {
+            if shop == nil {
+                shop = GemShop(store: store)
+            }
         }
         .task {
             // Runs the game clock from real elapsed time.

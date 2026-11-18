@@ -116,3 +116,7 @@ After playing build 19 the owner asked for more excitement (shakes, bombs), more
 - **Gems**, shown beside the coins: 1 for a super combo, 3 for a mega combo, 1 for a chain, and at the end of a game 1 per 500 points plus 2 for a new best.
 - **Themes** in the menu (`Game/Skin.swift`, colours worked out in `UI/Theme.swift`): Neon (free), Sunset (15 gems), Ocean (30), Bubblegum (50), Gold Rush (won by scoring 2,000 in one game), Galaxy (won by a mega combo).
 - **Not built:** buying gems with real money. That needs in-app purchase products in App Store Connect, a signed Paid Apps agreement with bank and tax details, prices chosen by the owner, and StoreKit code.
+
+## Buying gems (2026-11-18)
+
+The owner asked for gems to be on sale. `Game/GemShop.swift` (StoreKit 2) sells three consumable packs, with prices set in App Store Connect and chosen by the owner: 25 gems $0.99 (`…flipfusion.gems.small`), 60 gems $1.99 (`.gems.medium`), 150 gems $3.99 (`.gems.large`). The shop is the "Get more gems" section of the menu. Gems are handed over only for a purchase Apple has verified, and each purchase counts once (`GameStore.addPurchasedGems`). Gems live on the device only: there is no account, so they do not follow the player to a new phone. The paid themes cost 95 gems in all, so more things to spend gems on are needed before the larger packs make sense.

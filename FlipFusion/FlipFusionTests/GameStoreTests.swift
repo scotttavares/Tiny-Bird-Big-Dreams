@@ -404,6 +404,27 @@ struct GameStoreTests {
         #expect(store.gems == 1000 / GameStore.pointsPerGem)
     }
 
+    @Test func boughtGemsAreAddedOncePerPurchase() {
+        let defaults = freshDefaults()
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.addPurchasedGems(25, purchaseID: "1001"))
+        #expect(store.gems == 25)
+        // The App Store can report the same purchase again; it must not pay twice.
+        #expect(!store.addPurchasedGems(25, purchaseID: "1001"))
+        #expect(store.gems == 25)
+        #expect(store.addPurchasedGems(60, purchaseID: "1002"))
+        #expect(store.gems == 85)
+        let relaunched = GameStore(defaults: defaults, animated: false)
+        #expect(relaunched.gems == 85)
+        #expect(!relaunched.addPurchasedGems(25, purchaseID: "1001"))
+    }
+
+    @Test func everyGemPackHasItsOwnIdAndSomeGems() {
+        #expect(Set(GemShop.packs.map(\.id)).count == GemShop.packs.count)
+        #expect(GemShop.packs.allSatisfy { $0.gems > 0 })
+        #expect(GemShop.pack(for: "not.a.pack") == nil)
+    }
+
     @Test func aDeadBoardIsGameOverAndIgnoresSwipes() {
         let defaults = freshDefaults()
         let dead = GameState(tiles: tiles([[2, 4, 2, 4], [4, 2, 4, 2], [2, 4, 2, 4], [4, 2, 4, 2]]), score: 100, movesUntilRotation: 1, nextID: 20)

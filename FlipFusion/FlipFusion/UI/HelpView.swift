@@ -1,9 +1,11 @@
+import StoreKit
 import SwiftUI
 
 /// The menu: game mode, themes, settings and a new game at the top, then "How to
 /// play" (the rules, the boosters, the power-ups and the two modes), all on one sheet.
 struct HelpView: View {
     let store: GameStore
+    let shop: GemShop?
     let onReplayIntro: () -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -59,6 +61,12 @@ struct HelpView: View {
                         .font(.system(size: 15, weight: .medium, design: .rounded))
                         .foregroundStyle(Theme.label)
                         .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if let shop {
+                    section("Get more gems") {
+                        gemPacks(shop)
+                    }
                 }
 
                 section("Settings") {
@@ -179,6 +187,63 @@ struct HelpView: View {
             .font(.system(size: size, weight: .bold))
             .foregroundStyle(LinearGradient(colors: [Color(hex: 0x8FF0FF), Color(hex: 0xC08CFF)], startPoint: .top, endPoint: .bottom))
             .accessibilityHidden(true)
+    }
+
+    /// The packs of gems on sale, with the App Store's own prices.
+    @ViewBuilder
+    private func gemPacks(_ shop: GemShop) -> some View {
+        if shop.products.isEmpty {
+            Text(shop.isUnavailable ? "The gem shop is not available right now." : "Opening the gem shop…")
+                .font(.system(size: 15, weight: .medium, design: .rounded))
+                .foregroundStyle(Theme.label)
+            if shop.isUnavailable {
+                Button {
+                    Task {
+                        await shop.load()
+                    }
+                } label: {
+                    chip {
+                        Text("Try again")
+                    }
+                }
+                .buttonStyle(BounceButtonStyle())
+            }
+        } else {
+            ForEach(shop.products, id: \.id) { product in
+                let count = GemShop.pack(for: product.id)?.gems ?? 0
+                HStack(spacing: 12) {
+                    gem(size: 22)
+                        .frame(width: 44, height: 44)
+                        .background(Circle().fill(Theme.cellFill))
+                    Text("\(count) gems")
+                        .font(.system(size: 18, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Color.white)
+                    Spacer(minLength: 8)
+                    Button {
+                        Task {
+                            await shop.buy(product)
+                        }
+                    } label: {
+                        chip {
+                            Text(product.displayPrice)
+                        }
+                    }
+                    .buttonStyle(BounceButtonStyle())
+                    .disabled(shop.isBuying)
+                    .accessibilityLabel(Text("Buy \(count) gems for \(product.displayPrice)"))
+                }
+            }
+            Text("Gems are bought with real money through the App Store. They buy themes and cannot be exchanged or refunded for cash.")
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(Theme.label)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        if let notice = shop.notice {
+            Text(notice)
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundStyle(Theme.counter)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     /// Puts a theme on. The screen behind the menu redraws in its colours.
