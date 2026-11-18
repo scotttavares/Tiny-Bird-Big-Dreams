@@ -489,8 +489,9 @@ workflows:
           set -o pipefail
           UDID="$(bash scripts/pick-simulator.sh phone)"
           echo "Simulator: $UDID"
-          # A stuck test run is stopped after 7 minutes instead of using up build minutes.
-          ( sleep 420; echo "Tests took too long: stopping them."; pkill -f "xcodebuild test" ) &
+          # A stuck test run is stopped after 12 minutes instead of using up build minutes
+          # (a healthy run has taken up to 6).
+          ( sleep 720; echo "Tests took too long: stopping them."; pkill -f "xcodebuild test" ) &
           WATCHDOG=$!
           xcodebuild test \
             -project "$XCODE_PROJECT" \
