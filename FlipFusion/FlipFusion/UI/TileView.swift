@@ -3,9 +3,19 @@ import SwiftUI
 /// One glossy neon tile.
 struct TileView: View {
     let value: Int
+    var kind: TileKind = .normal
     let size: CGFloat
 
     @State private var appeared = false
+
+    /// The corner badge and rim colour of a special tile.
+    private var badge: (symbol: String, tint: Color, name: String)? {
+        switch kind {
+        case .normal: return nil
+        case .time: return ("clock.fill", Color(hex: 0x8FF0FF), "clock tile")
+        case .bomb: return ("flame.fill", Color(hex: 0xFFD23F), "bomb tile")
+        }
+    }
 
     private var fontSize: CGFloat {
         switch String(value).count {
@@ -57,6 +67,18 @@ struct TileView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
                 .padding(.horizontal, size * 0.06)
+
+            if let badge {
+                shape.strokeBorder(badge.tint, lineWidth: max(2, size * 0.055))
+                Image(systemName: badge.symbol)
+                    .font(.system(size: size * 0.2, weight: .bold))
+                    .foregroundStyle(badge.tint)
+                    .frame(width: size * 0.36, height: size * 0.36)
+                    .background(Circle().fill(Color(hex: 0x0B1342)))
+                    .overlay(Circle().strokeBorder(badge.tint, lineWidth: 1.5))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    .offset(x: size * 0.08, y: -size * 0.08)
+            }
         }
         .frame(width: size, height: size)
         .shadow(color: style.bottom.opacity(0.75), radius: size * 0.16, x: 0, y: 0)
@@ -68,6 +90,6 @@ struct TileView: View {
             }
         }
         .accessibilityElement()
-        .accessibilityLabel(Text(String(value)))
+        .accessibilityLabel(Text(badge.map { "\(value), \($0.name)" } ?? String(value)))
     }
 }

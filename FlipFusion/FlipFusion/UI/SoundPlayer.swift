@@ -6,7 +6,7 @@ import AVFoundation
 final class SoundPlayer {
     enum Sound: String, CaseIterable {
         case slide, merge1, merge2, merge3, merge4, merge5, merge6
-        case rotate, chain, tick, over, start
+        case rotate, chain, tick, over, start, boom, bonus
     }
 
     /// A few copies of each sound, so the same one can overlap itself.

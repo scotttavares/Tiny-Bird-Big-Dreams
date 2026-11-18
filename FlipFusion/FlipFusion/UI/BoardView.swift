@@ -35,8 +35,15 @@ struct BoardView: View {
         ZStack(alignment: .topLeading) {
             boardShape
                 .fill(Theme.boardFill)
-                .overlay(boardShape.strokeBorder(Theme.boardStroke, lineWidth: 1.5))
-                .shadow(color: Theme.boardGlow.opacity(0.55), radius: side * 0.06, x: 0, y: 0)
+                // The board glows pink while points count double.
+                .overlay(boardShape.strokeBorder(store.isFever ? Theme.fusion[0] : Theme.boardStroke, lineWidth: store.isFever ? 3 : 1.5))
+                .shadow(
+                    color: (store.isFever ? Theme.fusion[0] : Theme.boardGlow).opacity(store.isFever ? 0.9 : 0.55),
+                    radius: side * (store.isFever ? 0.09 : 0.06),
+                    x: 0,
+                    y: 0
+                )
+                .animation(.easeInOut(duration: 0.3), value: store.isFever)
 
             ForEach(0..<(GameEngine.size * GameEngine.size), id: \.self) { index in
                 let point = origin(row: index / GameEngine.size, col: index % GameEngine.size)
@@ -50,7 +57,7 @@ struct BoardView: View {
 
             ForEach(store.displayTiles) { tile in
                 let point = origin(row: tile.row, col: tile.col)
-                TileView(value: tile.value, size: cell)
+                TileView(value: tile.value, kind: tile.kind, size: cell)
                     .rotationEffect(.degrees(-store.boardAngle))
                     .scaleEffect(store.poppedIDs.contains(tile.id) ? 1.14 : 1)
                     .offset(x: point.x, y: point.y)
@@ -59,7 +66,7 @@ struct BoardView: View {
 
             ForEach(store.bursts) { burst in
                 let point = origin(row: burst.row, col: burst.col)
-                MergeBurst(color: Theme.tile(burst.value).top, size: cell)
+                MergeBurst(color: Theme.tile(burst.value).top, size: cell, isBlast: burst.isBlast)
                     .offset(x: point.x, y: point.y)
                     .zIndex(4)
             }

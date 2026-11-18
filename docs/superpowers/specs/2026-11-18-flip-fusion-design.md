@@ -66,3 +66,12 @@ The first build felt endless: rotation and gravity keep clearing the board. The 
 - **Timed games.** Each game lasts 2 minutes. The clock starts on the first swipe, stops when the app leaves the screen and starts again on the next swipe. A countdown ring sits between the Score and Best cards; it turns red and ticks for the last 10 seconds. At zero the board shows "Time's Up" with the score. A full board with no move still ends the game early.
 - **Sounds.** Swipe, merge (higher notes for bigger tiles), rotation, chain, last-seconds tick, game over, new game. Synthesised by `FlipFusion/scripts/make-sounds.py`; they follow the silent switch.
 - **Effects.** A ring and sparks on every merge, and "+points" floating up from the Score card.
+
+## Power-ups, starter set (2026-11-18)
+
+Chosen by the owner from a short list. All are triggered by play; no new buttons.
+
+- **Clock tile.** About 4 new tiles in 100 carry a clock badge. Merging one adds 10 seconds (the clock never goes above 2 minutes).
+- **Bomb tile.** About 5 in 100 carry a flame badge. Merging one clears the eight cells around it; each cleared tile scores its own value.
+- **Double points.** A chain of 2 or more after a rotation doubles every point for 10 seconds. The board glows pink and the Score card reads "SCORE x2". (The owner was told "3 or more"; 2 was used because a chain of 3 looked too rare to ever be seen. Change `GameStore.feverChain` to tune it.)
+- A special tile is an ordinary number tile with a badge; the merged result is ordinary. Each kind is explained in a short banner the first time it appears.

@@ -100,6 +100,12 @@ struct GameEngineTests {
             for _ in 0..<count {
                 GameEngine.spawn(in: &state, using: &rng)
             }
+            // Ordinary tiles only: a bomb is meant to remove value.
+            state.tiles = state.tiles.map { tile in
+                var plain = tile
+                plain.kind = .normal
+                return plain
+            }
             let total = state.tiles.map(\.value).reduce(0, +)
             let turned = GameEngine.rotateClockwise(state.tiles)
             let settled = GameEngine.settle(turned).last?.tiles ?? turned
@@ -111,6 +117,36 @@ struct GameEngineTests {
                 #expect(cells.contains(Cell(row: tile.row + 1, col: tile.col)))
             }
         }
+    }
+
+    @Test func aClockTileReportsItsMergeAndTurnsOrdinary() {
+        var start = tiles([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
+        start[1].kind = .time
+        let result = GameEngine.slide(start, .left)
+        #expect(result.effects == [TileEffect(kind: .time, row: 0, col: 0)])
+        #expect(result.tiles.count == 1)
+        #expect(result.tiles.first?.kind == .normal)
+        #expect(result.gained == 4)
+    }
+
+    @Test func aBombClearsTheTilesAroundIt() {
+        var start = tiles([[2, 2, 0, 32], [8, 16, 0, 0], [0, 0, 64, 0], [0, 0, 0, 0]])
+        start[0].kind = .bomb
+        let result = GameEngine.slide(start, .left)
+        // The bomb merges in the top-left corner. The 32 slides in beside it, and the 8
+        // and 16 sit below it: all three are cleared. The 64, two rows down, is out of reach.
+        #expect(grid(result.tiles) == [[4, 0, 0, 0], [0, 0, 0, 0], [64, 0, 0, 0], [0, 0, 0, 0]])
+        #expect(result.gained == 4 + 32 + 8 + 16)
+        #expect(result.effects == [TileEffect(kind: .bomb, row: 0, col: 0)])
+        // One tile merged away plus three cleared.
+        #expect(result.ghosts.count == 4)
+    }
+
+    @Test func gamesSavedBeforeSpecialTilesStillLoad() throws {
+        let old = Data(#"{"tiles":[{"id":1,"value":2,"row":0,"col":0}],"score":8,"movesUntilRotation":2,"nextID":2}"#.utf8)
+        let state = try JSONDecoder().decode(GameState.self, from: old)
+        #expect(state.tiles.first?.kind == .normal)
+        #expect(GameEngine.isValid(state))
     }
 
     @Test func hasMoveKnowsADeadBoard() {

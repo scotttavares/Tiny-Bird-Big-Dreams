@@ -5,10 +5,44 @@ enum Direction: Sendable, CaseIterable {
     case up, down, left, right
 }
 
+/// What is special about a tile. A special tile is an ordinary number tile that also
+/// does something when it merges.
+enum TileKind: String, Codable, Sendable {
+    case normal
+    /// Adds time to the clock when it merges.
+    case time
+    /// Clears the tiles around it when it merges.
+    case bomb
+}
+
 /// One numbered tile. Row 0 is the top row, column 0 is the left column.
 struct Tile: Identifiable, Equatable, Codable, Sendable {
     let id: Int
     var value: Int
+    var row: Int
+    var col: Int
+    var kind: TileKind = .normal
+
+    enum CodingKeys: String, CodingKey {
+        case id, value, row, col, kind
+    }
+}
+
+extension Tile {
+    /// Games saved before special tiles existed have no `kind`.
+    init(from decoder: any Decoder) throws {
+        let box = try decoder.container(keyedBy: CodingKeys.self)
+        id = try box.decode(Int.self, forKey: .id)
+        value = try box.decode(Int.self, forKey: .value)
+        row = try box.decode(Int.self, forKey: .row)
+        col = try box.decode(Int.self, forKey: .col)
+        kind = try box.decodeIfPresent(TileKind.self, forKey: .kind) ?? .normal
+    }
+}
+
+/// Something a special tile did during a slide, at the cell where it merged.
+struct TileEffect: Equatable, Sendable {
+    var kind: TileKind
     var row: Int
     var col: Int
 }
@@ -34,6 +68,8 @@ struct StepResult: Equatable, Sendable {
     var gained: Int
     /// False when nothing moved and nothing merged.
     var changed: Bool
+    /// What the special tiles that merged in this step did.
+    var effects: [TileEffect] = []
 }
 
 /// Everything needed to save and restore a game.

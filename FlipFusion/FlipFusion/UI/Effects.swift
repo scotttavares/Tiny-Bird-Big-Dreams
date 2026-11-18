@@ -38,24 +38,31 @@ struct TimerRing: View {
 struct MergeBurst: View {
     let color: Color
     let size: CGFloat
+    /// A bomb's blast reaches the cells around it.
+    var isBlast = false
 
     @State private var progress: CGFloat = 0
 
     var body: some View {
+        let ringGrowth: CGFloat = isBlast ? 2.1 : 0.5
+        let reach: CGFloat = isBlast ? size * 1.7 : size * 0.8
+        let sparks = isBlast ? 14 : 8
+        let sparkSize: CGFloat = isBlast ? size * 0.22 : size * 0.15
+
         ZStack {
             RoundedRectangle(cornerRadius: size * 0.2, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.9), lineWidth: 3)
-                .scaleEffect(1 + 0.5 * progress)
+                .strokeBorder(isBlast ? color : Color.white.opacity(0.9), lineWidth: isBlast ? 5 : 3)
+                .scaleEffect(1 + ringGrowth * progress)
 
-            ForEach(0..<8, id: \.self) { index in
-                let angle = CGFloat(index) / 8 * 2 * .pi
+            ForEach(0..<sparks, id: \.self) { index in
+                let angle = CGFloat(index) / CGFloat(sparks) * 2 * .pi
                 Circle()
                     .fill(color)
-                    .frame(width: size * 0.15, height: size * 0.15)
+                    .frame(width: sparkSize, height: sparkSize)
                     .shadow(color: color, radius: 3)
                     .offset(
-                        x: cos(angle) * size * 0.8 * progress,
-                        y: sin(angle) * size * 0.8 * progress
+                        x: cos(angle) * reach * progress,
+                        y: sin(angle) * reach * progress
                     )
             }
         }
@@ -114,6 +121,12 @@ struct GameSounds: ViewModifier {
             }
             .onChange(of: store.comboEvent) { _, _ in
                 sounds.play(.chain)
+            }
+            .onChange(of: store.bombEvent) { _, _ in
+                sounds.play(.boom)
+            }
+            .onChange(of: store.timeBonusEvent) { _, _ in
+                sounds.play(.bonus)
             }
             .onChange(of: store.wholeSecondsLeft) { _, seconds in
                 if seconds >= 1, seconds <= 10, store.isTimerRunning {

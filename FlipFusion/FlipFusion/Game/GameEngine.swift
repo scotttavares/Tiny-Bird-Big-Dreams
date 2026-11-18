@@ -16,6 +16,7 @@ enum GameEngine {
         var removedIDs: Set<Int> = []
         var gained = 0
         var changed = false
+        var effects: [TileEffect] = []
 
         for line in 0..<size {
             // The tiles of this line, nearest the wall they are sliding toward first.
@@ -30,6 +31,11 @@ enum GameEngine {
                 if lastCanMerge, let last = placed.last, last.value == tile.value {
                     var survivor = last
                     survivor.value *= 2
+                    // A special tile does its thing when it merges; the result is ordinary.
+                    for kind in [last.kind, tile.kind] where kind != .normal {
+                        effects.append(TileEffect(kind: kind, row: survivor.row, col: survivor.col))
+                    }
+                    survivor.kind = .normal
                     placed[placed.count - 1] = survivor
                     mergedIDs.insert(survivor.id)
                     removedIDs.insert(tile.id)
@@ -55,13 +61,31 @@ enum GameEngine {
             kept.append(contentsOf: placed)
         }
 
+        // Each bomb clears the eight cells around the cell it merged in. The cleared
+        // tiles score their own value and are drawn until the slide ends.
+        for effect in effects where effect.kind == .bomb {
+            let blasted = kept.filter { tile in
+                abs(tile.row - effect.row) <= 1 && abs(tile.col - effect.col) <= 1
+                    && !(tile.row == effect.row && tile.col == effect.col)
+            }
+            for tile in blasted {
+                gained += tile.value
+                removedIDs.insert(tile.id)
+                mergedIDs.remove(tile.id)
+                ghosts.append(tile)
+            }
+            let blastedIDs = Set(blasted.map(\.id))
+            kept.removeAll { blastedIDs.contains($0.id) }
+        }
+
         return StepResult(
             tiles: kept,
             ghosts: ghosts,
             mergedIDs: mergedIDs,
             removedIDs: removedIDs,
             gained: gained,
-            changed: changed
+            changed: changed,
+            effects: effects
         )
     }
 
@@ -136,14 +160,25 @@ enum GameEngine {
         return cells
     }
 
+    /// Out of every 100 new tiles, how many are clock tiles and how many are bombs.
+    static let timeTilesPerHundred = 4
+    static let bombTilesPerHundred = 5
+
     /// Adds a new tile (a 2 nine times in ten, otherwise a 4) in a random empty cell.
-    /// Returns nil when the board is full.
+    /// Now and then it is a clock tile or a bomb. Returns nil when the board is full.
     @discardableResult
     static func spawn<R: RandomNumberGenerator>(in state: inout GameState, using rng: inout R) -> Tile? {
         let empty = emptyCells(state.tiles)
         guard let cell = empty.randomElement(using: &rng) else { return nil }
         let value = Int.random(in: 0..<10, using: &rng) == 0 ? 4 : 2
-        let tile = Tile(id: state.nextID, value: value, row: cell.row, col: cell.col)
+        let roll = Int.random(in: 0..<100, using: &rng)
+        var kind = TileKind.normal
+        if roll < timeTilesPerHundred {
+            kind = .time
+        } else if roll < timeTilesPerHundred + bombTilesPerHundred {
+            kind = .bomb
+        }
+        let tile = Tile(id: state.nextID, value: value, row: cell.row, col: cell.col, kind: kind)
         state.nextID += 1
         state.tiles.append(tile)
         return tile

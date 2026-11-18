@@ -99,4 +99,23 @@ write("over", join([bell(f, 0.42, decay=6.0) for f in (392.0, 329.63, 261.63)], 
 # New game: two notes rising.
 write("start", join([bell(f, 0.28, decay=9.0) for f in (523.25, 783.99)], overlap=0.18))
 
+# A bomb tile: a low thump with a burst of noise.
+def boom(seconds):
+    random.seed(9)
+    out = []
+    low = 0.0
+    phase = 0.0
+    n = int(RATE * seconds)
+    for i in range(n):
+        t = i / n
+        phase += 2 * math.pi * (150 - 100 * t) / RATE
+        low += 0.25 * (random.uniform(-1, 1) - low)
+        out.append(math.exp(-6 * t) * (math.sin(phase) + 0.8 * low))
+    return out
+
+write("boom", boom(0.5))
+
+# A clock tile: three quick bright notes.
+write("bonus", join([bell(f, 0.22, decay=10.0) for f in (880.0, 1108.73, 1318.5)], overlap=0.15))
+
 print("Wrote sounds to", os.path.normpath(OUT))

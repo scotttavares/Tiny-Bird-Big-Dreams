@@ -47,15 +47,17 @@ struct LogoView: View {
 struct ScoreCards: View {
     let score: Int
     let best: Int
+    /// True while points count double.
+    var isFever = false
     let scale: CGFloat
 
     var body: some View {
         HStack(spacing: 0) {
             card {
                 VStack(spacing: 0) {
-                    Text("SCORE")
+                    Text(isFever ? "SCORE x2" : "SCORE")
                         .font(.system(size: 13 * scale, weight: .bold, design: .rounded))
-                        .foregroundStyle(Theme.label)
+                        .foregroundStyle(isFever ? Theme.counter : Theme.label)
                     Text(String(score))
                         .font(.system(size: 27 * scale, weight: .heavy, design: .rounded))
                         .foregroundStyle(Color.white)

@@ -155,6 +155,47 @@ struct GameStoreTests {
         #expect(store.gainEvent == 1)
     }
 
+    @Test func aClockTileAddsTime() {
+        let defaults = freshDefaults()
+        var start = tiles([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
+        start[0].kind = .time
+        save(GameState(tiles: start, score: 0, movesUntilRotation: 2, nextID: 10), to: defaults)
+        defaults.set(50.0, forKey: "ff.time")
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.secondsLeft == 50)
+        store.swipe(.left)
+        #expect(store.secondsLeft == 50 + GameStore.timeBonus)
+        #expect(store.timeBonusEvent == 1)
+    }
+
+    @Test func aBombScoresWhatItClears() {
+        let defaults = freshDefaults()
+        var start = tiles([[2, 2, 0, 0], [8, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
+        start[1].kind = .bomb
+        save(GameState(tiles: start, score: 0, movesUntilRotation: 2, nextID: 10), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        store.swipe(.left)
+        #expect(store.state.score == 4 + 8)
+        #expect(store.bombEvent == 1)
+        #expect(store.bursts.contains { $0.isBlast })
+        #expect(!store.state.tiles.contains { $0.value == 8 })
+    }
+
+    @Test func aChainStartsDoublePointsForAWhile() {
+        let defaults = freshDefaults()
+        // One move from a rotation. Swiping up lifts this row to the top; the quarter
+        // turn stands it up as the right-hand column (2, 2, 4, 16 from the top), and
+        // gravity then merges 2+2 and, in a second pass, 4+4: a chain of two.
+        let start = tiles([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [2, 2, 4, 16]])
+        save(GameState(tiles: start, score: 0, movesUntilRotation: 1, nextID: 10), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        store.swipe(.up)
+        #expect(store.lastCombo == 2)
+        #expect(store.isFever)
+        store.tick(GameStore.feverSeconds + 1)
+        #expect(!store.isFever)
+    }
+
     @Test func aDeadBoardIsGameOverAndIgnoresSwipes() {
         let defaults = freshDefaults()
         let dead = GameState(tiles: tiles([[2, 4, 2, 4], [4, 2, 4, 2], [2, 4, 2, 4], [4, 2, 4, 2]]), score: 100, movesUntilRotation: 1, nextID: 20)

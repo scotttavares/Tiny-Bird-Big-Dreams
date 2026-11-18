@@ -8,7 +8,11 @@ struct GameScreen: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var toast: String?
     @State private var toastID = 0
+    @State private var toastSeconds = 1.1
     @State private var confirmNewGame = false
+    /// Each special tile is explained the first time it turns up.
+    @AppStorage("ff.seenClockTile") private var seenClockTile = false
+    @AppStorage("ff.seenBombTile") private var seenBombTile = false
 
     var body: some View {
         GeometryReader { geo in
@@ -28,7 +32,7 @@ struct GameScreen: View {
                         confirmNewGame = true
                     }
 
-                ScoreCards(score: store.state.score, best: store.best, scale: scale)
+                ScoreCards(score: store.state.score, best: store.best, isFever: store.isFever, scale: scale)
                     .frame(width: side)
                     .overlay {
                         TimerRing(store: store, scale: scale)
@@ -107,7 +111,26 @@ struct GameScreen: View {
         .sensoryFeedback(.impact(weight: .light), trigger: store.mergePulse)
         .sensoryFeedback(.impact(weight: .heavy), trigger: store.rotatePulse)
         .onChange(of: store.comboEvent) { _, _ in
-            show("Chain x\(store.lastCombo)!")
+            if store.isFever {
+                show("Chain x\(store.lastCombo)! Double points", seconds: 1.8)
+            } else {
+                show("Chain x\(store.lastCombo)!")
+            }
+        }
+        .onChange(of: store.timeBonusEvent) { _, _ in
+            show("+\(Int(GameStore.timeBonus)) seconds")
+        }
+        .onChange(of: store.bombEvent) { _, _ in
+            show("Boom!")
+        }
+        .onChange(of: store.specialSpawnEvent) { _, _ in
+            if store.lastSpecialKind == .time, !seenClockTile {
+                seenClockTile = true
+                show("Clock tile: merge it for +\(Int(GameStore.timeBonus)) seconds", seconds: 3.2)
+            } else if store.lastSpecialKind == .bomb, !seenBombTile {
+                seenBombTile = true
+                show("Bomb tile: merge it to blast its neighbours", seconds: 3.2)
+            }
         }
         .modifier(GameSounds(store: store, sounds: sounds))
         .onChange(of: scenePhase) { _, phase in
@@ -128,7 +151,7 @@ struct GameScreen: View {
         .task(id: toastID) {
             guard toast != nil else { return }
             do {
-                try await Task.sleep(for: .milliseconds(1100))
+                try await Task.sleep(for: .milliseconds(Int(toastSeconds * 1000)))
             } catch {
                 return
             }
@@ -144,7 +167,8 @@ struct GameScreen: View {
         }
     }
 
-    private func show(_ message: String) {
+    private func show(_ message: String, seconds: Double = 1.1) {
+        toastSeconds = seconds
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
             toast = message
         }
@@ -212,8 +236,12 @@ struct ToastView: View {
         Text(text)
             .font(.system(size: 20 * scale, weight: .heavy, design: .rounded))
             .foregroundStyle(Color.white)
+            .multilineTextAlignment(.center)
+            .lineLimit(2)
+            .minimumScaleFactor(0.7)
             .padding(.horizontal, 20 * scale)
             .padding(.vertical, 11 * scale)
+            .frame(maxWidth: 300 * scale)
             .background(
                 Capsule().fill(
                     LinearGradient(colors: Theme.fusion, startPoint: .leading, endPoint: .trailing)

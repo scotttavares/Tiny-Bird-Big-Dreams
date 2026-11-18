@@ -44,13 +44,30 @@ final class GameStore {
     private(set) var gainEvent = 0
     private(set) var lastGain = 0
 
-    /// One merge to sparkle, at a board cell.
+    /// Seconds a clock tile adds, and how long double points last.
+    static let timeBonus: Double = 10
+    static let feverSeconds: Double = 10
+    /// A chain this long (or longer) starts double points.
+    static let feverChain = 2
+
+    /// True while every point scored counts double.
+    private(set) var isFever = false
+    /// Go up when a clock tile adds time, when a bomb goes off, and when a special tile arrives.
+    private(set) var timeBonusEvent = 0
+    private(set) var bombEvent = 0
+    private(set) var specialSpawnEvent = 0
+    private(set) var lastSpecialKind = TileKind.normal
+
+    /// One merge to sparkle, at a board cell. A blast is the bigger burst of a bomb.
     struct Burst: Identifiable, Equatable {
         let id: Int
         let row: Int
         let col: Int
         let value: Int
+        var isBlast = false
     }
+
+    @ObservationIgnored private var feverLeft: Double = 0
 
     var isTimeUp: Bool { secondsLeft <= 0 }
 
@@ -155,6 +172,8 @@ final class GameStore {
         boardAngle = 0
         isGameOver = false
         bursts = []
+        isFever = false
+        feverLeft = 0
         secondsLeft = Self.roundSeconds
         wholeSecondsLeft = Int(Self.roundSeconds)
         isTimerRunning = false
@@ -166,6 +185,12 @@ final class GameStore {
     /// Takes time off the clock. The screen calls this several times a second.
     func tick(_ seconds: Double) {
         guard isTimerRunning, !isGameOver, secondsLeft > 0, seconds > 0 else { return }
+        if isFever {
+            feverLeft -= seconds
+            if feverLeft <= 0 {
+                isFever = false
+            }
+        }
         secondsLeft = max(0, secondsLeft - seconds)
         let whole = Int(secondsLeft.rounded(.up))
         if whole != wholeSecondsLeft {
@@ -191,7 +216,7 @@ final class GameStore {
     private func playImmediately(_ result: StepResult) {
         apply(result)
         ghosts = []
-        GameEngine.spawn(in: &state, using: &rng)
+        spawnTile()
         state.movesUntilRotation -= 1
         if state.movesUntilRotation <= 0 {
             rotatePulse += 1
@@ -216,7 +241,7 @@ final class GameStore {
         withAnimation(.spring(response: 0.22, dampingFraction: 0.55)) {
             ghosts = []
             poppedIDs = result.mergedIDs
-            GameEngine.spawn(in: &state, using: &rng)
+            spawnTile()
             state.movesUntilRotation -= 1
         }
         await pause(Timing.pop)
@@ -268,13 +293,28 @@ final class GameStore {
     private func apply(_ result: StepResult) {
         state.tiles = result.tiles
         ghosts = result.ghosts
-        state.score += result.gained
+        let points = result.gained * (isFever ? 2 : 1)
+        state.score += points
         if state.score > best {
             best = state.score
         }
-        if result.gained > 0 {
-            lastGain = result.gained
+        if points > 0 {
+            lastGain = points
             gainEvent += 1
+        }
+        for effect in result.effects {
+            switch effect.kind {
+            case .time:
+                secondsLeft = min(Self.roundSeconds, secondsLeft + Self.timeBonus)
+                wholeSecondsLeft = Int(secondsLeft.rounded(.up))
+                timeBonusEvent += 1
+            case .bomb:
+                nextBurstID += 1
+                bursts.append(Burst(id: nextBurstID, row: effect.row, col: effect.col, value: 64, isBlast: true))
+                bombEvent += 1
+            case .normal:
+                break
+            }
         }
         if !result.mergedIDs.isEmpty {
             let merged = result.tiles.filter { result.mergedIDs.contains($0.id) }
@@ -291,8 +331,20 @@ final class GameStore {
         }
     }
 
+    /// Adds the new tile of a move, and notes it when it is a special one.
+    private func spawnTile() {
+        if let tile = GameEngine.spawn(in: &state, using: &rng), tile.kind != .normal {
+            lastSpecialKind = tile.kind
+            specialSpawnEvent += 1
+        }
+    }
+
     private func finishRotation(_ passes: [StepResult]) {
         lastCombo = passes.filter { !$0.mergedIDs.isEmpty }.count
+        if lastCombo >= Self.feverChain {
+            isFever = true
+            feverLeft = Self.feverSeconds
+        }
         if lastCombo >= 2 {
             comboEvent += 1
         }
