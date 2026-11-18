@@ -196,6 +196,61 @@ struct GameStoreTests {
         #expect(!store.isFever)
     }
 
+    @Test func aChainIsRewardedWithAPowerUpTile() {
+        let defaults = freshDefaults()
+        let start = tiles([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [2, 2, 4, 16]])
+        save(GameState(tiles: start, score: 0, movesUntilRotation: 1, nextID: 10), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        store.swipe(.up)
+        #expect(store.lastCombo == 2)
+        #expect(store.state.tiles.contains { $0.kind != .normal })
+        #expect(store.specialSpawnEvent >= 1)
+        #expect(store.feverEvent == 1)
+    }
+
+    @Test func eachModeKeepsItsOwnGameAndBestScore() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[4, 4, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 2, nextID: 10), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.mode == .timed)
+        store.swipe(.left)
+        let timedGame = store.state
+        #expect(store.best == 8)
+
+        store.switchMode(.endless)
+        #expect(store.mode == .endless)
+        #expect(store.state.score == 0)
+        #expect(store.best == 0)
+        #expect(store.state.tiles.count == 2)
+        #expect(!store.isTimerRunning)
+
+        // The mode is remembered, and so is the timed game left behind.
+        let relaunched = GameStore(defaults: defaults, animated: false)
+        #expect(relaunched.mode == .endless)
+        relaunched.switchMode(.timed)
+        #expect(relaunched.state == timedGame)
+        #expect(relaunched.best == 8)
+    }
+
+    @Test func theEndlessGameHasNoClockAndGetsAnExtraTileAfterARotation() {
+        let defaults = freshDefaults()
+        defaults.set("endless", forKey: "ff.mode")
+        // One lone tile, one move from a rotation: nothing can merge.
+        defaults.set(
+            try! JSONEncoder().encode(GameState(tiles: tiles([[0, 8, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 1, nextID: 10)),
+            forKey: "ff.endless.state"
+        )
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.mode == .endless)
+        store.swipe(.left)
+        // The 8, the usual new tile, and the endless game's extra one.
+        #expect(store.state.tiles.count == 3)
+        #expect(!store.state.tiles.contains { $0.kind == .time })
+        store.tick(GameStore.roundSeconds * 3)
+        #expect(!store.isGameOver)
+        #expect(!store.isTimeUp)
+    }
+
     @Test func aDeadBoardIsGameOverAndIgnoresSwipes() {
         let defaults = freshDefaults()
         let dead = GameState(tiles: tiles([[2, 4, 2, 4], [4, 2, 4, 2], [2, 4, 2, 4], [4, 2, 4, 2]]), score: 100, movesUntilRotation: 1, nextID: 20)

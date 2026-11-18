@@ -52,6 +52,8 @@ final class GameStore {
 
     /// True while every point scored counts double.
     private(set) var isFever = false
+    /// Goes up each time double points starts.
+    private(set) var feverEvent = 0
     /// Go up when a clock tile adds time, when a bomb goes off, and when a special tile arrives.
     private(set) var timeBonusEvent = 0
     private(set) var bombEvent = 0
@@ -69,7 +71,18 @@ final class GameStore {
 
     @ObservationIgnored private var feverLeft: Double = 0
 
-    var isTimeUp: Bool { secondsLeft <= 0 }
+    /// The two ways to play. Each keeps its own game in progress and its own best score.
+    enum Mode: String, Sendable {
+        /// Two minutes on the clock.
+        case timed
+        /// No clock: play until no move is left. An extra tile lands after every
+        /// rotation, so the board does fill up.
+        case endless
+    }
+
+    private(set) var mode: Mode
+
+    var isTimeUp: Bool { mode == .timed && secondsLeft <= 0 }
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let animated: Bool
@@ -77,10 +90,50 @@ final class GameStore {
     @ObservationIgnored private var nextBurstID = 0
 
     private enum Key {
-        static let state = "ff.state"
-        static let best = "ff.best"
         static let merged = "ff.merged"
         static let time = "ff.time"
+        static let mode = "ff.mode"
+
+        static func state(_ mode: Mode) -> String {
+            mode == .timed ? "ff.state" : "ff.endless.state"
+        }
+
+        static func best(_ mode: Mode) -> String {
+            mode == .timed ? "ff.best" : "ff.endless.best"
+        }
+    }
+
+    /// A game read back from storage (or a fresh one when nothing usable was saved).
+    private struct Loaded {
+        var state: GameState
+        var best: Int
+        var seconds: Double
+    }
+
+    private static func load(_ mode: Mode, from defaults: UserDefaults) -> Loaded {
+        var best = max(0, defaults.integer(forKey: Key.best(mode)))
+        var restored: GameState?
+        if let data = defaults.data(forKey: Key.state(mode)),
+           let saved = try? JSONDecoder().decode(GameState.self, from: data),
+           GameEngine.isValid(saved) {
+            restored = saved
+        }
+        // A restored timed game keeps its clock; anything else starts with a full one.
+        var seconds = roundSeconds
+        if mode == .timed, restored != nil, let saved = defaults.object(forKey: Key.time) as? Double {
+            seconds = min(max(saved, 0), roundSeconds)
+        }
+        var state: GameState
+        if let restored {
+            state = restored
+        } else {
+            var generator = SystemRandomNumberGenerator()
+            state = GameEngine.newGame(using: &generator)
+        }
+        if state.score > best {
+            best = state.score
+        }
+        return Loaded(state: state, best: best, seconds: seconds)
     }
 
     private enum Timing {
@@ -94,33 +147,40 @@ final class GameStore {
     init(defaults: UserDefaults = .standard, animated: Bool = true) {
         self.defaults = defaults
         self.animated = animated
-        self.best = max(0, defaults.integer(forKey: Key.best))
         self.hasMergedOnce = defaults.bool(forKey: Key.merged)
 
-        var restored: GameState?
-        if let data = defaults.data(forKey: Key.state),
-           let saved = try? JSONDecoder().decode(GameState.self, from: data),
-           GameEngine.isValid(saved) {
-            restored = saved
-        }
-        // A restored game keeps its clock; anything else starts with a full one.
-        var time = Self.roundSeconds
-        if restored != nil, let saved = defaults.object(forKey: Key.time) as? Double {
-            time = min(max(saved, 0), Self.roundSeconds)
-        }
-        self.secondsLeft = time
-        self.wholeSecondsLeft = Int(time.rounded(.up))
+        let mode = Mode(rawValue: defaults.string(forKey: Key.mode) ?? "") ?? .timed
+        let loaded = GameStore.load(mode, from: defaults)
+        self.mode = mode
+        self.state = loaded.state
+        self.best = loaded.best
+        self.secondsLeft = loaded.seconds
+        self.wholeSecondsLeft = Int(loaded.seconds.rounded(.up))
+        self.isGameOver = !GameEngine.hasMove(loaded.state.tiles) || (mode == .timed && loaded.seconds <= 0)
+    }
 
-        if let restored {
-            self.state = restored
-        } else {
-            var generator = SystemRandomNumberGenerator()
-            self.state = GameEngine.newGame(using: &generator)
-        }
-        self.isGameOver = !GameEngine.hasMove(state.tiles) || time <= 0
-        if state.score > best {
-            best = state.score
-        }
+    /// Changes the way to play. The game left behind is saved and waits for you.
+    func switchMode(_ newMode: Mode) {
+        guard !isAnimating, newMode != mode else { return }
+        save()
+        mode = newMode
+        defaults.set(newMode.rawValue, forKey: Key.mode)
+
+        let loaded = GameStore.load(newMode, from: defaults)
+        state = loaded.state
+        best = loaded.best
+        secondsLeft = loaded.seconds
+        wholeSecondsLeft = Int(loaded.seconds.rounded(.up))
+        ghosts = []
+        poppedIDs = []
+        bursts = []
+        lastCombo = 0
+        boardAngle = 0
+        isFever = false
+        feverLeft = 0
+        isTimerRunning = false
+        isGameOver = !GameEngine.hasMove(state.tiles) || isTimeUp
+        save()
     }
 
     /// The tiles to draw: the live ones plus any being merged away this step.
@@ -163,8 +223,8 @@ final class GameStore {
             movesUntilRotation: GameEngine.movesPerRotation,
             nextID: state.nextID
         )
-        GameEngine.spawn(in: &fresh, using: &rng)
-        GameEngine.spawn(in: &fresh, using: &rng)
+        GameEngine.spawn(in: &fresh, using: &rng, allowTime: mode == .timed)
+        GameEngine.spawn(in: &fresh, using: &rng, allowTime: mode == .timed)
         state = fresh
         ghosts = []
         poppedIDs = []
@@ -184,13 +244,15 @@ final class GameStore {
 
     /// Takes time off the clock. The screen calls this several times a second.
     func tick(_ seconds: Double) {
-        guard isTimerRunning, !isGameOver, secondsLeft > 0, seconds > 0 else { return }
+        guard isTimerRunning, !isGameOver, seconds > 0 else { return }
         if isFever {
             feverLeft -= seconds
             if feverLeft <= 0 {
                 isFever = false
             }
         }
+        // Only the timed game has a clock to run down.
+        guard mode == .timed, secondsLeft > 0 else { return }
         secondsLeft = max(0, secondsLeft - seconds)
         let whole = Int(secondsLeft.rounded(.up))
         if whole != wholeSecondsLeft {
@@ -332,8 +394,10 @@ final class GameStore {
     }
 
     /// Adds the new tile of a move, and notes it when it is a special one.
-    private func spawnTile() {
-        if let tile = GameEngine.spawn(in: &state, using: &rng), tile.kind != .normal {
+    /// Clock tiles only make sense when there is a clock, so the endless game has none.
+    private func spawnTile(forcing kind: TileKind? = nil) {
+        let tile = GameEngine.spawn(in: &state, using: &rng, allowTime: mode == .timed, forcedKind: kind)
+        if let tile, tile.kind != .normal {
             lastSpecialKind = tile.kind
             specialSpawnEvent += 1
         }
@@ -344,15 +408,25 @@ final class GameStore {
         if lastCombo >= Self.feverChain {
             isFever = true
             feverLeft = Self.feverSeconds
+            feverEvent += 1
         }
         if lastCombo >= 2 {
             comboEvent += 1
+            // A chain is rewarded with a power-up tile: a clock or a bomb in the timed
+            // game, always a bomb in the endless one.
+            let coin = Bool.random(using: &rng)
+            let reward: TileKind = (mode == .timed && coin) ? .time : .bomb
+            spawnTile(forcing: reward)
+        }
+        // The endless game gets an extra tile after every rotation, so the board fills.
+        if mode == .endless {
+            spawnTile()
         }
         state.movesUntilRotation = GameEngine.movesPerRotation
     }
 
     private func finishMove() {
-        isGameOver = !GameEngine.hasMove(state.tiles) || secondsLeft <= 0
+        isGameOver = !GameEngine.hasMove(state.tiles) || isTimeUp
         if isGameOver {
             isTimerRunning = false
         }
@@ -367,9 +441,11 @@ final class GameStore {
 
     private func save() {
         if let data = try? JSONEncoder().encode(state) {
-            defaults.set(data, forKey: Key.state)
+            defaults.set(data, forKey: Key.state(mode))
         }
-        defaults.set(best, forKey: Key.best)
-        defaults.set(secondsLeft, forKey: Key.time)
+        defaults.set(best, forKey: Key.best(mode))
+        if mode == .timed {
+            defaults.set(secondsLeft, forKey: Key.time)
+        }
     }
 }

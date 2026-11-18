@@ -161,22 +161,32 @@ enum GameEngine {
     }
 
     /// Out of every 100 new tiles, how many are clock tiles and how many are bombs.
-    static let timeTilesPerHundred = 4
-    static let bombTilesPerHundred = 5
+    static let timeTilesPerHundred = 5
+    static let bombTilesPerHundred = 7
 
     /// Adds a new tile (a 2 nine times in ten, otherwise a 4) in a random empty cell.
     /// Now and then it is a clock tile or a bomb. Returns nil when the board is full.
+    /// `allowTime: false` turns would-be clock tiles into ordinary ones; `forcedKind`
+    /// makes the new tile that kind whatever the dice say.
     @discardableResult
-    static func spawn<R: RandomNumberGenerator>(in state: inout GameState, using rng: inout R) -> Tile? {
+    static func spawn<R: RandomNumberGenerator>(
+        in state: inout GameState,
+        using rng: inout R,
+        allowTime: Bool = true,
+        forcedKind: TileKind? = nil
+    ) -> Tile? {
         let empty = emptyCells(state.tiles)
         guard let cell = empty.randomElement(using: &rng) else { return nil }
         let value = Int.random(in: 0..<10, using: &rng) == 0 ? 4 : 2
         let roll = Int.random(in: 0..<100, using: &rng)
         var kind = TileKind.normal
         if roll < timeTilesPerHundred {
-            kind = .time
+            kind = allowTime ? .time : .normal
         } else if roll < timeTilesPerHundred + bombTilesPerHundred {
             kind = .bomb
+        }
+        if let forcedKind {
+            kind = forcedKind
         }
         let tile = Tile(id: state.nextID, value: value, row: cell.row, col: cell.col, kind: kind)
         state.nextID += 1

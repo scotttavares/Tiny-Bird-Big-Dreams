@@ -75,3 +75,13 @@ Chosen by the owner from a short list. All are triggered by play; no new buttons
 - **Bomb tile.** About 5 in 100 carry a flame badge. Merging one clears the eight cells around it; each cleared tile scores its own value.
 - **Double points.** A chain of 2 or more after a rotation doubles every point for 10 seconds. The board glows pink and the Score card reads "SCORE x2". (The owner was told "3 or more"; 2 was used because a chain of 3 looked too rare to ever be seen. Change `GameStore.feverChain` to tune it.)
 - A special tile is an ordinary number tile with a badge; the merged result is ordinary. Each kind is explained in a short banner the first time it appears.
+
+## Two game modes and chain rewards (2026-11-18)
+
+After playing build 15 the owner asked for a second mode and said no power-ups showed up after combos.
+
+- **Timed** (first dot): the 2-minute game.
+- **Endless** (second dot): no clock; the ring shows an infinity sign. The game ends when no move is left. One extra tile lands after every rotation so the board does fill, and there are no clock tiles.
+- The dots under the tagline switch mode. Each mode keeps its own game in progress and its own best score, so switching loses nothing. The third dot says "More modes coming soon".
+- **Chains drop a power-up.** A chain of 2 or more now also puts a power-up tile on the board (clock or bomb in Timed, bomb in Endless). Random power-up tiles are a little more common (5 clocks and 7 bombs per 100 new tiles).
+- **More sounds:** a sparkle when a power-up tile lands, a riser when double points starts, a heavier bomb, a click on mode change.

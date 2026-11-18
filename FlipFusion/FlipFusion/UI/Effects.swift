@@ -6,11 +6,12 @@ struct TimerRing: View {
     let scale: CGFloat
 
     var body: some View {
+        let isEndless = store.mode == .endless
         let left = store.secondsLeft
-        let fraction = CGFloat(max(0, min(1, left / GameStore.roundSeconds)))
+        let fraction: CGFloat = isEndless ? 1 : CGFloat(max(0, min(1, left / GameStore.roundSeconds)))
         let whole = Int(left.rounded(.up))
-        let isLow = left <= 10
-        let tint: Color = isLow ? Theme.timerLow : Theme.dotOn
+        let isLow = !isEndless && left <= 10
+        let tint: Color = isEndless ? Theme.arrowLight : (isLow ? Theme.timerLow : Theme.dotOn)
         let beat = isLow && store.isTimerRunning && whole % 2 == 0
 
         ZStack {
@@ -21,16 +22,23 @@ struct TimerRing: View {
                 .stroke(tint, style: StrokeStyle(lineWidth: 4 * scale, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .shadow(color: tint.opacity(0.8), radius: 4 * scale)
-            Text(String(format: "%d:%02d", whole / 60, whole % 60))
-                .font(.system(size: 15 * scale, weight: .heavy, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(isLow ? tint : Color.white)
+            if isEndless {
+                // No clock in the endless game.
+                Image(systemName: "infinity")
+                    .font(.system(size: 19 * scale, weight: .heavy))
+                    .foregroundStyle(Color.white)
+            } else {
+                Text(String(format: "%d:%02d", whole / 60, whole % 60))
+                    .font(.system(size: 15 * scale, weight: .heavy, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(isLow ? tint : Color.white)
+            }
         }
         .frame(width: 54 * scale, height: 54 * scale)
         .scaleEffect(beat ? 1.1 : 1)
         .animation(.easeInOut(duration: 0.3), value: whole)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("\(whole) seconds left"))
+        .accessibilityLabel(Text(isEndless ? "Endless game, no clock" : "\(whole) seconds left"))
     }
 }
 
@@ -121,6 +129,15 @@ struct GameSounds: ViewModifier {
             }
             .onChange(of: store.comboEvent) { _, _ in
                 sounds.play(.chain)
+            }
+            .onChange(of: store.feverEvent) { _, _ in
+                sounds.play(.fever, volume: 0.9)
+            }
+            .onChange(of: store.specialSpawnEvent) { _, _ in
+                sounds.play(.powerup, volume: 0.8)
+            }
+            .onChange(of: store.mode) { _, _ in
+                sounds.play(.mode, volume: 0.8)
             }
             .onChange(of: store.bombEvent) { _, _ in
                 sounds.play(.boom)

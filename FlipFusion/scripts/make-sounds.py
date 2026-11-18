@@ -113,7 +113,20 @@ def boom(seconds):
         out.append(math.exp(-6 * t) * (math.sin(phase) + 0.8 * low))
     return out
 
-write("boom", boom(0.5))
+write("boom", join([boom(0.6), sweep(900, 120, 0.25, decay=4.0)], overlap=0.6))
+
+# A power-up tile lands on the board: a quick sparkle running upward.
+write("powerup", join([bell(f, 0.16, decay=14.0) for f in (1046.5, 1318.5, 1568.0, 2093.0)], overlap=0.11))
+
+# Double points begins: a rising sweep into a bright chord.
+def chord(freqs, seconds):
+    notes = [bell(f, seconds, decay=5.0) for f in freqs]
+    return [sum(n[i] for n in notes) for i in range(len(notes[0]))]
+
+write("fever", join([sweep(300, 1200, 0.28), chord((783.99, 987.77, 1174.66, 1568.0), 0.55)], overlap=0.05))
+
+# Changing game mode: a soft two-note click.
+write("mode", join([bell(f, 0.12, decay=18.0) for f in (659.25, 987.77)], overlap=0.06))
 
 # A clock tile: three quick bright notes.
 write("bonus", join([bell(f, 0.22, decay=10.0) for f in (880.0, 1108.73, 1318.5)], overlap=0.15))

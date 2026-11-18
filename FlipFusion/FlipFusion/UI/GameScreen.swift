@@ -85,8 +85,8 @@ struct GameScreen: View {
                     .foregroundStyle(Theme.tagline)
                     .padding(.top, 46 * scale)
 
-                PageDots(scale: scale) {
-                    show("More themes coming soon")
+                PageDots(scale: scale, selected: store.mode == .timed ? 0 : 1) { index in
+                    pickMode(index)
                 }
                 .padding(.top, 30 * scale)
 
@@ -167,6 +167,25 @@ struct GameScreen: View {
         }
     }
 
+    /// A tap on one of the three dots under the tagline.
+    private func pickMode(_ index: Int) {
+        guard !store.isAnimating else { return }
+        switch index {
+        case 0:
+            withAnimation(.easeInOut(duration: 0.25)) {
+                store.switchMode(.timed)
+            }
+            show("Timed: 2 minutes on the clock", seconds: 2.2)
+        case 1:
+            withAnimation(.easeInOut(duration: 0.25)) {
+                store.switchMode(.endless)
+            }
+            show("Endless: play until no moves are left", seconds: 2.6)
+        default:
+            show("More modes coming soon")
+        }
+    }
+
     private func show(_ message: String, seconds: Double = 1.1) {
         toastSeconds = seconds
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -195,32 +214,35 @@ struct BackgroundView: View {
     }
 }
 
-/// The three dots under the tagline. The first is the Neon theme in use; the others
-/// are places for themes still to come.
+/// The three dots under the tagline pick the way to play: the first is the timed
+/// game, the second the endless one, and the third is a place for a mode still to come.
 struct PageDots: View {
     let scale: CGFloat
-    let onLockedTap: () -> Void
+    /// Which dot is lit (0 or 1).
+    let selected: Int
+    let onTap: (Int) -> Void
+
+    private static let names = ["Timed game", "Endless game", "More modes coming soon"]
 
     var body: some View {
-        HStack(spacing: 12 * scale) {
-            Circle()
-                .fill(Theme.dotOn)
-                .frame(width: 9 * scale, height: 9 * scale)
-                .shadow(color: Theme.dotOn.opacity(0.8), radius: 4 * scale)
-                .accessibilityLabel(Text("Neon theme, selected"))
-
-            ForEach(0..<2, id: \.self) { _ in
-                Button(action: onLockedTap) {
+        // Padding plus spacing keeps the dots as close together as in the mockup.
+        HStack(spacing: 4 * scale) {
+            ForEach(0..<3, id: \.self) { index in
+                let isOn = index == selected
+                Button {
+                    onTap(index)
+                } label: {
                     Circle()
-                        .fill(Theme.dotOff)
+                        .fill(isOn ? Theme.dotOn : Theme.dotOff)
                         .frame(width: 9 * scale, height: 9 * scale)
+                        .shadow(color: isOn ? Theme.dotOn.opacity(0.8) : Color.clear, radius: 4 * scale)
                         // A fingertip-sized tap area around the small dot.
-                        .padding(.vertical, 14 * scale)
-                        .padding(.horizontal, 2 * scale)
+                        .padding(.vertical, 16 * scale)
+                        .padding(.horizontal, 5 * scale)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(Text("More themes coming soon"))
+                .accessibilityLabel(Text(Self.names[index] + (isOn ? ", selected" : "")))
             }
         }
         .frame(height: 9 * scale)
