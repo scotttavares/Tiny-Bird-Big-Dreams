@@ -1,0 +1,80 @@
+name: MoodMagnets
+
+options:
+  bundleIdPrefix: com.tinybirdbigdreams
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    GCC_TREAT_WARNINGS_AS_ERRORS: NO
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: NO
+
+targets:
+  MoodMagnets:
+    type: application
+    platform: iOS
+    sources:
+      - path: MoodMagnets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.tinybirdbigdreams.moodmagnets
+        PRODUCT_NAME: MoodMagnets
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    info:
+      path: MoodMagnets/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Mood Magnets
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSApplicationCategoryType: public.app-category.puzzle-games
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UIRequiresFullScreen: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        # No custom crypto: skips the export-compliance question on every TestFlight upload.
+        ITSAppUsesNonExemptEncryption: false
+
+  MoodMagnetsTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: MoodMagnetsTests
+    dependencies:
+      - target: MoodMagnets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.tinybirdbigdreams.moodmagnets.tests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  MoodMagnets:
+    build:
+      targets:
+        MoodMagnets: all
+        MoodMagnetsTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - MoodMagnetsTests

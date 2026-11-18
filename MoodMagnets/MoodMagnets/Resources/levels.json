@@ -1,0 +1,879 @@
+{
+ "version": 1,
+ "levels": [
+  {
+   "id": 1,
+   "name": "Say Cheese",
+   "par": 1,
+   "palette": [
+    "happy"
+   ],
+   "hint": "Choose a mood below, then tap a jelly to give it that mood. This nest wants a Happy jelly.",
+   "segments": [
+    {
+     "a": [
+      0,
+      40
+     ],
+     "b": [
+      400,
+      40
+     ],
+     "r": 8
+    }
+   ],
+   "jellies": [
+    {
+     "id": "pip",
+     "pos": [
+      200,
+      74
+     ],
+     "mood": "nervous",
+     "swappable": true,
+     "r": 26
+    }
+   ],
+   "nests": [
+    {
+     "rect": [
+      130,
+      40,
+      140,
+      70
+     ],
+     "mood": "happy",
+     "count": 1
+    }
+   ],
+   "solution": [
+    {
+     "t": 0,
+     "target": "pip",
+     "mood": "happy"
+    }
+   ],
+   "pegs": [],
+   "size": [
+    400,
+    720
+   ]
+  },
+  {
+   "id": 2,
+   "name": "Hug It Out",
+   "par": 1,
+   "palette": [
+    "happy",
+    "nervous"
+   ],
+   "hint": "Happy jellies pull Nervous ones close. A long enough hug cheers a Nervous jelly up.",
+   "segments": [
+    {
+     "a": [
+      0,
+      40
+     ],
+     "b": [
+      400,
+      40
+     ],
+     "r": 8
+    }
+   ],
+   "jellies": [
+    {
+     "id": "sunny",
+     "pos": [
+      150,
+      74
+     ],
+     "mood": "happy",
+     "swappable": false,
+     "r": 26
+    },
+    {
+     "id": "wib",
+     "pos": [
+      270,
+      74
+     ],
+     "mood": "grumpy",
+     "swappable": true,
+     "r": 26
+    }
+   ],
+   "nests": [
+    {
+     "rect": [
+      100,
+      40,
+      70,
+      70
+     ],
+     "mood": "happy",
+     "count": 1
+    },
+    {
+     "rect": [
+      170,
+      40,
+      70,
+      70
+     ],
+     "mood": "happy",
+     "count": 1
+    }
+   ],
+   "solution": [
+    {
+     "t": 0,
+     "target": "wib",
+     "mood": "nervous"
+    }
+   ],
+   "pegs": [],
+   "size": [
+    400,
+    720
+   ]
+  },
+  {
+   "id": 3,
+   "name": "Grumpy Shove",
+   "par": 1,
+   "palette": [
+    "happy",
+    "grumpy"
+   ],
+   "hint": "Grumpy jellies push everyone away. Nervous jellies are pushed hardest.",
+   "segments": [
+    {
+     "a": [
+      0,
+      40
+     ],
+     "b": [
+      400,
+      40
+     ],
+     "r": 8
+    },
+    {
+     "a": [
+      0,
+      300
+     ],
+     "b": [
+      200,
+      300
+     ],
+     "r": 8
+    }
+   ],
+   "jellies": [
+    {
+     "id": "dot",
+     "pos": [
+      150,
+      334
+     ],
+     "mood": "nervous",
+     "swappable": false,
+     "r": 26
+    },
+    {
+     "id": "mug",
+     "pos": [
+      60,
+      334
+     ],
+     "mood": "nervous",
+     "swappable": true,
+     "r": 26
+    }
+   ],
+   "nests": [
+    {
+     "rect": [
+      220,
+      40,
+      180,
+      70
+     ],
+     "mood": "nervous",
+     "count": 1
+    }
+   ],
+   "solution": [
+    {
+     "t": 0,
+     "target": "mug",
+     "mood": "grumpy"
+    }
+   ],
+   "pegs": [],
+   "size": [
+    400,
+    720
+   ]
+  },
+  {
+   "id": 4,
+   "name": "Domino Hugs",
+   "par": 1,
+   "palette": [
+    "happy",
+    "grumpy"
+   ],
+   "hint": "Cheer one jelly up and watch the happiness travel down the line.",
+   "segments": [
+    {
+     "a": [
+      0,
+      40
+     ],
+     "b": [
+      400,
+      40
+     ],
+     "r": 8
+    }
+   ],
+   "jellies": [
+    {
+     "id": "a",
+     "pos": [
+      40,
+      74
+     ],
+     "mood": "grumpy",
+     "swappable": true,
+     "r": 26
+    },
+    {
+     "id": "b",
+     "pos": [
+      105,
+      74
+     ],
+     "mood": "nervous",
+     "swappable": false,
+     "r": 26
+    },
+    {
+     "id": "c",
+     "pos": [
+      170,
+      74
+     ],
+     "mood": "nervous",
+     "swappable": false,
+     "r": 26
+    },
+    {
+     "id": "d",
+     "pos": [
+      235,
+      74
+     ],
+     "mood": "nervous",
+     "swappable": false,
+     "r": 26
+    }
+   ],
+   "nests": [
+    {
+     "rect": [
+      0,
+      40,
+      90,
+      70
+     ],
+     "mood": "happy",
+     "count": 1
+    },
+    {
+     "rect": [
+      140,
+      40,
+      260,
+      70
+     ],
+     "mood": "happy",
+     "count": 1
+    }
+   ],
+   "solution": [
+    {
+     "t": 0,
+     "target": "a",
+     "mood": "happy"
+    }
+   ],
+   "pegs": [],
+   "size": [
+    400,
+    720
+   ]
+  },
+  {
+   "id": 5,
+   "name": "Scaredy Hop",
+   "par": 1,
+   "palette": [
+    "happy",
+    "nervous"
+   ],
+   "hint": "A Nervous jelly that bumps into anything Grumpy jumps away in fright.",
+   "segments": [
+    {
+     "a": [
+      0,
+      40
+     ],
+     "b": [
+      400,
+      40
+     ],
+     "r": 8
+    },
+    {
+     "a": [
+      230,
+      40
+     ],
+     "b": [
+      230,
+      140
+     ],
+     "r": 8
+    }
+   ],
+   "pegs": [
+    {
+     "id": "grr",
+     "pos": [
+      80,
+      48
+     ],
+     "mood": "grumpy",
+     "swappable": false,
+     "r": 18,
+     "rangeScale": 1.0
+    }
+   ],
+   "jellies": [
+    {
+     "id": "hop",
+     "pos": [
+      114,
+      74
+     ],
+     "mood": "happy",
+     "swappable": true,
+     "r": 26
+    }
+   ],
+   "nests": [
+    {
+     "rect": [
+      250,
+      40,
+      150,
+      70
+     ],
+     "mood": "nervous",
+     "count": 1
+    }
+   ],
+   "solution": [
+    {
+     "t": 0,
+     "target": "hop",
+     "mood": "nervous"
+    }
+   ],
+   "size": [
+    400,
+    720
+   ]
+  },
+  {
+   "id": 6,
+   "name": "Springy Pad",
+   "par": 1,
+   "palette": [
+    "happy",
+    "grumpy"
+   ],
+   "hint": "Bouncy pads fling jellies high. Give someone a push.",
+   "segments": [
+    {
+     "a": [
+      0,
+      40
+     ],
+     "b": [
+      400,
+      40
+     ],
+     "r": 8
+    },
+    {
+     "a": [
+      0,
+      220
+     ],
+     "b": [
+      100,
+      220
+     ],
+     "r": 8
+    },
+    {
+     "a": [
+      160,
+      60
+     ],
+     "b": [
+      300,
+      60
+     ],
+     "r": 8,
+     "bouncy": true
+    },
+    {
+     "a": [
+      320,
+      40
+     ],
+     "b": [
+      320,
+      170
+     ],
+     "r": 8
+    }
+   ],
+   "jellies": [
+    {
+     "id": "fizz",
+     "pos": [
+      75,
+      254
+     ],
+     "mood": "nervous",
+     "swappable": false,
+     "r": 26
+    },
+    {
+     "id": "mo",
+     "pos": [
+      24,
+      252
+     ],
+     "mood": "nervous",
+     "swappable": true,
+     "r": 24
+    }
+   ],
+   "nests": [
+    {
+     "rect": [
+      328,
+      40,
+      72,
+      70
+     ],
+     "mood": "nervous",
+     "count": 1
+    }
+   ],
+   "solution": [
+    {
+     "t": 0,
+     "target": "mo",
+     "mood": "grumpy"
+    }
+   ],
+   "pegs": [],
+   "size": [
+    400,
+    720
+   ]
+  },
+  {
+   "id": 7,
+   "name": "Mood Stones",
+   "par": 1,
+   "palette": [
+    "happy",
+    "grumpy"
+   ],
+   "hint": "Stones with a ring can change mood too. A Happy stone gives the best hugs.",
+   "segments": [
+    {
+     "a": [
+      0,
+      40
+     ],
+     "b": [
+      400,
+      40
+     ],
+     "r": 8
+    }
+   ],
+   "pegs": [
+    {
+     "id": "stone",
+     "pos": [
+      200,
+      130
+     ],
+     "mood": "grumpy",
+     "swappable": true,
+     "r": 18,
+     "rangeScale": 1.0
+    }
+   ],
+   "jellies": [
+    {
+     "id": "tum",
+     "pos": [
+      290,
+      74
+     ],
+     "mood": "nervous",
+     "swappable": false,
+     "r": 26
+    }
+   ],
+   "nests": [
+    {
+     "rect": [
+      140,
+      40,
+      120,
+      70
+     ],
+     "mood": "happy",
+     "count": 1
+    }
+   ],
+   "solution": [
+    {
+     "t": 0,
+     "target": "stone",
+     "mood": "happy"
+    }
+   ],
+   "size": [
+    400,
+    720
+   ]
+  },
+  {
+   "id": 8,
+   "name": "Hop and Cheer",
+   "par": 2,
+   "palette": [
+    "happy",
+    "nervous"
+   ],
+   "hint": "Two moods, one jelly. Scare it up, then cheer it up.",
+   "segments": [
+    {
+     "a": [
+      0,
+      40
+     ],
+     "b": [
+      400,
+      40
+     ],
+     "r": 8
+    },
+    {
+     "a": [
+      250,
+      200
+     ],
+     "b": [
+      400,
+      200
+     ],
+     "r": 8
+    },
+    {
+     "a": [
+      250,
+      200
+     ],
+     "b": [
+      250,
+      40
+     ],
+     "r": 8
+    }
+   ],
+   "pegs": [
+    {
+     "id": "grr",
+     "pos": [
+      60,
+      48
+     ],
+     "mood": "grumpy",
+     "swappable": false,
+     "r": 18,
+     "rangeScale": 1.0
+    }
+   ],
+   "jellies": [
+    {
+     "id": "bop",
+     "pos": [
+      94,
+      74
+     ],
+     "mood": "happy",
+     "swappable": true,
+     "r": 26
+    }
+   ],
+   "nests": [
+    {
+     "rect": [
+      270,
+      200,
+      130,
+      70
+     ],
+     "mood": "happy",
+     "count": 1
+    }
+   ],
+   "solution": [
+    {
+     "t": 0,
+     "target": "bop",
+     "mood": "nervous"
+    },
+    {
+     "t": 1.5,
+     "target": "bop",
+     "mood": "happy"
+    }
+   ],
+   "size": [
+    400,
+    720
+   ]
+  },
+  {
+   "id": 9,
+   "name": "Shelf Party",
+   "par": 2,
+   "palette": [
+    "happy",
+    "grumpy",
+    "nervous"
+   ],
+   "hint": "Clear the shelf, then get the party started on the floor.",
+   "segments": [
+    {
+     "a": [
+      0,
+      40
+     ],
+     "b": [
+      400,
+      40
+     ],
+     "r": 8
+    },
+    {
+     "a": [
+      0,
+      260
+     ],
+     "b": [
+      170,
+      260
+     ],
+     "r": 8
+    }
+   ],
+   "pegs": [
+    {
+     "id": "stone",
+     "pos": [
+      25,
+      310
+     ],
+     "mood": "nervous",
+     "swappable": true,
+     "r": 18,
+     "rangeScale": 1.0
+    }
+   ],
+   "jellies": [
+    {
+     "id": "ziggy",
+     "pos": [
+      70,
+      294
+     ],
+     "mood": "nervous",
+     "swappable": true,
+     "r": 26
+    },
+    {
+     "id": "zag",
+     "pos": [
+      130,
+      294
+     ],
+     "mood": "nervous",
+     "swappable": false,
+     "r": 26
+    }
+   ],
+   "nests": [
+    {
+     "rect": [
+      190,
+      40,
+      210,
+      70
+     ],
+     "mood": "happy",
+     "count": 2
+    }
+   ],
+   "solution": [
+    {
+     "t": 0,
+     "target": "stone",
+     "mood": "grumpy"
+    },
+    {
+     "t": 2.5,
+     "target": "ziggy",
+     "mood": "happy"
+    }
+   ],
+   "size": [
+    400,
+    720
+   ]
+  },
+  {
+   "id": 10,
+   "name": "The Valley",
+   "par": 2,
+   "palette": [
+    "happy",
+    "grumpy",
+    "nervous"
+   ],
+   "hint": "Two sides, one gap. Sometimes it's the moods that need to swap, not the jellies.",
+   "segments": [
+    {
+     "a": [
+      0,
+      200
+     ],
+     "b": [
+      160,
+      200
+     ],
+     "r": 8
+    },
+    {
+     "a": [
+      230,
+      200
+     ],
+     "b": [
+      400,
+      200
+     ],
+     "r": 8
+    }
+   ],
+   "jellies": [
+    {
+     "id": "sol",
+     "pos": [
+      80,
+      234
+     ],
+     "mood": "happy",
+     "swappable": true,
+     "r": 26
+    },
+    {
+     "id": "nim",
+     "pos": [
+      300,
+      234
+     ],
+     "mood": "nervous",
+     "swappable": false,
+     "r": 26
+    },
+    {
+     "id": "kip",
+     "pos": [
+      374,
+      234
+     ],
+     "mood": "nervous",
+     "swappable": true,
+     "r": 26
+    }
+   ],
+   "nests": [
+    {
+     "rect": [
+      0,
+      200,
+      160,
+      70
+     ],
+     "mood": "nervous",
+     "count": 1
+    },
+    {
+     "rect": [
+      230,
+      200,
+      170,
+      70
+     ],
+     "mood": "happy",
+     "count": 2
+    }
+   ],
+   "solution": [
+    {
+     "t": 0,
+     "target": "kip",
+     "mood": "happy"
+    },
+    {
+     "t": 0,
+     "target": "sol",
+     "mood": "nervous"
+    }
+   ],
+   "pegs": [],
+   "size": [
+    400,
+    720
+   ]
+  }
+ ]
+}

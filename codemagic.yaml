@@ -332,3 +332,104 @@ workflows:
       app_store_connect:
         auth: integration
         # Upload only: the build appears in TestFlight for Internal Testing.
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # MOOD MAGNETS — the SwiftUI + SpriteKit puzzle game in MoodMagnets/
+  # (XcodeGen, no CocoaPods). Start it from any Codemagic app linked to this repo:
+  # Start new build → branch claude/mood-magnets-ios-dev-t3wyk1 → workflow
+  # "Mood Magnets iOS → TestFlight". It has no push trigger on purpose, so it never
+  # double-builds from the Orbit and Field Guide Codemagic apps that share this repo.
+  #
+  # One-time setup:
+  #   1. App Store Connect → Apps → + New App: name "Mood Magnets", bundle id
+  #      com.tinybirdbigdreams.moodmagnets (the build registers the bundle id itself if
+  #      it's missing; the app record has to be created by hand — Apple's API can't).
+  #   2. The Codemagic app you start it from needs the same two things as Orbit: the
+  #      "Orbit ASC API key" integration (team-wide) and the orbit_signing group with
+  #      the Secure CERTIFICATE_PRIVATE_KEY. Same key → same distribution certificate.
+  # ─────────────────────────────────────────────────────────────────────────
+  moodmagnets-testflight:
+    name: Mood Magnets iOS → TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    working_directory: MoodMagnets
+    integrations:
+      app_store_connect: Orbit ASC API key
+    environment:
+      groups:
+        - orbit_signing
+      vars:
+        BUNDLE_ID: "com.tinybirdbigdreams.moodmagnets"
+        XCODE_PROJECT: "MoodMagnets.xcodeproj"
+        XCODE_SCHEME: "MoodMagnets"
+      xcode: latest
+    scripts:
+      - name: Generate the Xcode project (XcodeGen)
+        script: |
+          command -v xcodegen >/dev/null || brew install xcodegen
+          xcodegen generate
+      - name: Check the App Store Connect app record
+        script: |
+          set -e
+          # Registers the bundle id if it isn't there yet (harmless if it already is).
+          app-store-connect bundle-ids create "$BUNDLE_ID" --name "Mood Magnets" --platform IOS >/dev/null 2>&1 || true
+          APP_ID=$(app-store-connect apps list --json 2>/dev/null | python3 -c '
+          import json, os, sys
+          apps = json.load(sys.stdin)
+          print(next((a["id"] for a in apps if a.get("attributes", {}).get("bundleId") == os.environ["BUNDLE_ID"]), ""))
+          ' || true)
+          if [ -z "$APP_ID" ]; then
+            echo "❌ No App Store Connect app record for $BUNDLE_ID yet."
+            echo "   Create it once: App Store Connect → Apps → + → New App → bundle id $BUNDLE_ID."
+            exit 1
+          fi
+          echo "App Store Connect app id: $APP_ID"
+          echo "APP_STORE_APP_ID=$APP_ID" >> "$CM_ENV"
+      - name: Set the build number
+        script: |
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APP_ID" 2>/dev/null || echo "0")
+          case "$LATEST" in ''|*[!0-9]*) LATEST=0 ;; esac
+          NEXT=$(( LATEST + 1 ))
+          FALLBACK="${PROJECT_BUILD_NUMBER:-${BUILD_NUMBER:-1}}"
+          [ "$FALLBACK" -gt "$NEXT" ] 2>/dev/null && NEXT="$FALLBACK"
+          echo "Build number: $NEXT (latest on TestFlight: $LATEST)"
+          echo "MM_BUILD=$NEXT" >> "$CM_ENV"
+      - name: Set up code signing (persistent cert from CERTIFICATE_PRIVATE_KEY)
+        script: |
+          set -e
+          if [ -z "$CERTIFICATE_PRIVATE_KEY" ]; then
+            echo "❌ CERTIFICATE_PRIVATE_KEY is not set (Secure var in group orbit_signing)."
+            exit 1
+          fi
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles --project "$XCODE_PROJECT"
+      - name: Build IPA
+        script: |
+          set -e
+          SDK=$(xcrun --sdk iphoneos --show-sdk-version)
+          echo "Xcode $(xcodebuild -version | head -1), iOS SDK $SDK"
+          # iPhone Duo hinge APIs ship in the iOS 27.1 SDK. Try them first; if the
+          # unverified API names don't compile, ship without them (window-size fallback).
+          if python3 -c "import sys; v=tuple(int(x) for x in sys.argv[1].split('.')); sys.exit(0 if v >= (27, 1) else 1)" "$SDK"; then
+            if xcode-project build-ipa --project "$XCODE_PROJECT" --scheme "$XCODE_SCHEME" \
+                 --archive-xcargs "CURRENT_PROJECT_VERSION=$MM_BUILD SWIFT_ACTIVE_COMPILATION_CONDITIONS=MOODMAGNETS_DUO_SDK"; then
+              echo "✅ Built with iPhone Duo hinge support"
+              exit 0
+            fi
+            echo "⚠️ Duo hinge APIs didn't compile with this SDK; building without them."
+          fi
+          xcode-project build-ipa --project "$XCODE_PROJECT" --scheme "$XCODE_SCHEME" \
+            --archive-xcargs "CURRENT_PROJECT_VERSION=$MM_BUILD"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - build/ios/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Upload only: the build appears in TestFlight → Internal Testing (no review).

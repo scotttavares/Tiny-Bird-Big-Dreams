@@ -1,0 +1,5 @@
+build/
+MoodMagnets.xcodeproj/
+*.xcresult
+DerivedData/
+__pycache__/
