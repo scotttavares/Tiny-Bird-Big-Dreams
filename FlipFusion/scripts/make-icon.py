@@ -35,16 +35,34 @@ def pt(deg):
     r = math.radians(deg)
     c, s = math.cos(r), math.sin(r)
     return (cx + reach * math.copysign(abs(c) ** 0.5, c), cy + reach * math.copysign(abs(s) ** 0.5, s))
+# A clockwise arrow: a thin tail at the lower left, over the top, ending in an
+# arrowhead at the lower right.
+ARROW = (192, 140, 255, 255)
+START, END = -205, 42
 steps = 240
-for i in range(steps):
+for i in range(steps + 1):
     t = i / steps
-    a = -80 + 235 * t
-    w = W * 0.034 * (0.5 + 0.5 * min(1, t / 0.3)) * (1 if t < 0.55 else max(0.12, 1 - (t - 0.55) / 0.45))
+    a = START + (END - START) * t
+    w = W * 0.036 * (0.15 + 0.85 * min(1, t / 0.45))
     x, y = pt(a)
-    g.ellipse([x - w, y - w, x + w, y + w], fill=(192, 140, 255, 255))
+    g.ellipse([x - w, y - w, x + w, y + w], fill=ARROW)
     if i:
-        g.line([prev, (x, y)], fill=(192, 140, 255, 255), width=int(2 * w))
+        g.line([prev, (x, y)], fill=ARROW, width=int(2 * w))
     prev = (x, y)
+# Arrowhead, pointing the way the arc is travelling.
+ex, ey = pt(END)
+fx, fy = pt(END + 1.5)
+length = math.hypot(fx - ex, fy - ey)
+ux, uy = (fx - ex) / length, (fy - ey) / length
+head, half = W * 0.15, W * 0.095
+g.polygon(
+    [
+        (ex + ux * head, ey + uy * head),
+        (ex - uy * half, ey + ux * half),
+        (ex + uy * half, ey - ux * half),
+    ],
+    fill=ARROW,
+)
 soft = glow.filter(ImageFilter.GaussianBlur(W * 0.02))
 img.paste(soft, (0, 0), soft)
 img.paste(glow, (0, 0), glow)
