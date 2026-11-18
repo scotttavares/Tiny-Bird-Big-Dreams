@@ -33,6 +33,38 @@ final class SoundPlayer {
             }
             voices[sound] = players
         }
+
+        if let url = Bundle.main.url(forResource: "music", withExtension: "wav"),
+           let player = try? AVAudioPlayer(contentsOf: url) {
+            player.numberOfLoops = -1
+            player.volume = 0.28
+            player.prepareToPlay()
+            music = player
+        }
+        refreshMusic()
+    }
+
+    /// The settings key for the music switch in the menu. Music is on until turned off.
+    nonisolated static let musicKey = "ff.musicOn"
+
+    /// The background loop.
+    private var music: AVAudioPlayer?
+
+    /// Starts or stops the music to match the switch in the menu. Call it when the
+    /// switch changes and when the app comes back to the screen.
+    func refreshMusic() {
+        guard let music else { return }
+        let wanted = UserDefaults.standard.object(forKey: Self.musicKey) as? Bool ?? true
+        if wanted, !music.isPlaying {
+            music.play()
+        } else if !wanted, music.isPlaying {
+            music.pause()
+        }
+    }
+
+    /// Quietens the music while the app is away from the screen.
+    func pauseMusic() {
+        music?.pause()
     }
 
     /// The settings key for the sound switch in the menu. Sound is on until turned off.

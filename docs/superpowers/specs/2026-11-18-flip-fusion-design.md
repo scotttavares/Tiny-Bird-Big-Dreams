@@ -91,3 +91,14 @@ After playing build 15 the owner asked for a second mode and said no power-ups s
 - **Intro.** Each launch opens with a two-second animation: tiles 2, 4, 8 and 16 drop in as a cluster, the cluster makes the quarter turn, the tiles fuse in a burst, and the logo and tagline appear. A tap skips it. It was designed from the usual shape of puzzle-game openings (logo reveal built from the game's own pieces), not from any one game.
 - **How to play.** A "?" button in the top-right corner opens a sheet with the basics, the power-ups (shown with real tiles), the two modes, and a "Start a new game" button. It opens by itself the first time the game is seen. The clock stops while it is open.
 - **Menu.** The owner asked whether there was a menu and a settings screen. The top-right button (three lines) now opens one sheet titled "Menu": game mode (Timed or Endless), "Start a new game", settings (sound effects, vibration, replay the intro), then "How to play".
+
+## Arcade feel: boosters, coins, speed streak, music (2026-11-18)
+
+The owner showed two App Store listings (a colour-block puzzle and a one-minute match-3) and said "make it fun like this". Nothing of theirs is copied; what was taken is the general shape of the genre:
+
+- **Boosters** under the board, tapped to use: **Flip** (turn the board now, no move used), **Sweep** (clear every 2 and 4), **Double** (double points for 10 seconds). Three free uses of each, then 150 / 250 / 200 coins.
+- **Coins**, shown top-left: one for every 20 points, shared by both modes. No purchases.
+- **Speed streak:** a swipe that merges within 4 seconds of the last one multiplies points, x2 up to x5, shown as a yellow chip beside the rotation pill. It stacks with double points.
+- **Juice:** points float up out of each merge on the board; the board shakes on bombs, chains and sweeps.
+- **Music:** a 30-second arcade loop composed in `FlipFusion/scripts/make-music.py`, with a Music switch in the menu.
+- To make room for the booster bar the tagline and dots sit closer to the board than in the mockup.

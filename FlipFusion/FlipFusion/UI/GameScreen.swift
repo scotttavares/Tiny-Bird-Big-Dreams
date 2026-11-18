@@ -18,14 +18,12 @@ struct GameScreen: View {
     @State private var toastID = 0
     @State private var toastSeconds = 1.1
     @State private var confirmNewGame = false
-    /// Each special tile is explained the first time it turns up.
-    @AppStorage("ff.seenClockTile") private var seenClockTile = false
-    @AppStorage("ff.seenBombTile") private var seenBombTile = false
+    @AppStorage(SoundPlayer.musicKey) private var musicOn = true
 
     var body: some View {
         GeometryReader { geo in
             // The mockup is drawn on a 393-point-wide phone; everything scales from that.
-            let scale = min(geo.size.width / 393, geo.size.height / 720)
+            let scale = min(geo.size.width / 393, geo.size.height / 760)
             let side = 322 * scale
 
             VStack(spacing: 0) {
@@ -55,6 +53,14 @@ struct GameScreen: View {
                     .padding(.top, 14 * scale)
 
                 RotatePill(moves: store.state.movesUntilRotation, scale: scale)
+                    .frame(width: side)
+                    .overlay(alignment: .leading) {
+                        if store.streak > 0 {
+                            StreakChip(multiplier: store.streak + 1, scale: scale)
+                                .transition(.scale.combined(with: .opacity))
+                        }
+                    }
+                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: store.streak)
                     .padding(.top, 22 * scale)
 
                 ZStack {
@@ -86,17 +92,24 @@ struct GameScreen: View {
                     }
                 }
                 .frame(width: side, height: side)
+                .modifier(Shake(animatableData: CGFloat(store.shakeEvent)))
+                .animation(.linear(duration: 0.35), value: store.shakeEvent)
                 .padding(.top, 14 * scale)
+
+                BoosterBar(store: store, scale: scale) { booster in
+                    store.useBooster(booster)
+                }
+                .padding(.top, 20 * scale)
 
                 Text("Swipe. Merge. Rotate.")
                     .font(.system(size: 21 * scale, weight: .semibold, design: .rounded))
                     .foregroundStyle(Theme.tagline)
-                    .padding(.top, 46 * scale)
+                    .padding(.top, 16 * scale)
 
                 PageDots(scale: scale, selected: store.mode == .timed ? 0 : 1) { index in
                     pickMode(index)
                 }
-                .padding(.top, 30 * scale)
+                .padding(.top, 20 * scale)
 
                 Spacer(minLength: 0)
             }
@@ -122,29 +135,15 @@ struct GameScreen: View {
         .sensoryFeedback(trigger: store.rotatePulse) { _, _ in
             hapticsOn ? .impact(weight: .heavy) : nil
         }
-        .onChange(of: store.comboEvent) { _, _ in
-            if store.isFever {
-                show("Chain x\(store.lastCombo)! Double points", seconds: 1.8)
-            } else {
-                show("Chain x\(store.lastCombo)!")
-            }
-        }
-        .onChange(of: store.timeBonusEvent) { _, _ in
-            show("+\(Int(GameStore.timeBonus)) seconds")
-        }
-        .onChange(of: store.bombEvent) { _, _ in
-            show("Boom!")
-        }
-        .onChange(of: store.specialSpawnEvent) { _, _ in
-            if store.lastSpecialKind == .time, !seenClockTile {
-                seenClockTile = true
-                show("Clock tile: merge it for +\(Int(GameStore.timeBonus)) seconds", seconds: 3.2)
-            } else if store.lastSpecialKind == .bomb, !seenBombTile {
-                seenBombTile = true
-                show("Bomb tile: merge it to blast its neighbours", seconds: 3.2)
-            }
-        }
+        .modifier(GameBanners(store: store) { message, seconds in
+            show(message, seconds: seconds)
+        })
         .modifier(GameSounds(store: store, sounds: sounds))
+        .overlay(alignment: .topLeading) {
+            CoinCounter(coins: store.coins)
+                .padding(.leading, 16)
+                .padding(.top, 6)
+        }
         .overlay(alignment: .topTrailing) {
             Button {
                 openHelp()
@@ -171,9 +170,17 @@ struct GameScreen: View {
             }
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase != .active {
+            if phase == .active {
+                sounds.refreshMusic()
+            } else {
                 store.pauseTimer()
+                if phase == .background {
+                    sounds.pauseMusic()
+                }
             }
+        }
+        .onChange(of: musicOn) { _, _ in
+            sounds.refreshMusic()
         }
         .task {
             // Runs the game clock from real elapsed time.

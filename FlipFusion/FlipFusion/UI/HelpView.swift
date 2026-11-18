@@ -8,6 +8,7 @@ struct HelpView: View {
 
     @Environment(\.dismiss) private var dismiss
     @AppStorage(SoundPlayer.enabledKey) private var soundOn = true
+    @AppStorage(SoundPlayer.musicKey) private var musicOn = true
     @AppStorage("ff.hapticsOn") private var hapticsOn = true
 
     var body: some View {
@@ -44,6 +45,7 @@ struct HelpView: View {
                 }
 
                 section("Settings") {
+                    Toggle("Music", isOn: $musicOn)
                     Toggle("Sound effects", isOn: $soundOn)
                     Toggle("Vibration", isOn: $hapticsOn)
                     Button {
@@ -69,6 +71,14 @@ struct HelpView: View {
                     row(symbol: "hand.draw.fill", title: "Swipe", text: "Every tile slides as far as it can. Two tiles with the same number merge into one worth double.")
                     row(symbol: "arrow.clockwise", title: "Rotate", text: "After every two moves the board makes a quarter turn and gravity pulls the tiles down.")
                     row(symbol: "link", title: "Chain", text: "When falling tiles merge, and those merge again, that is a chain. Each step of a chain scores more than the last.")
+                }
+
+                section("Boosters and coins") {
+                    row(symbol: BoosterBar.symbol(.flip), title: "Flip", text: "Turns the board right now, without using up a move.")
+                    row(symbol: BoosterBar.symbol(.sweep), title: "Sweep", text: "Clears every 2 and 4 off the board.")
+                    row(symbol: BoosterBar.symbol(.fever), title: "Double", text: "Starts double points for \(Int(GameStore.feverSeconds)) seconds.")
+                    row(symbol: "circle.circle.fill", title: "Coins", text: "You start with \(GameStore.freeBoosters) free uses of each booster. After that a use costs coins, and you earn a coin for every \(GameStore.pointsPerCoin) points.")
+                    row(symbol: "bolt.fill", title: "Speed bonus", text: "Merge again within \(Int(GameStore.streakWindow)) seconds and your points multiply, up to x\(GameStore.maxStreak + 1).")
                 }
 
                 section("Power-ups") {

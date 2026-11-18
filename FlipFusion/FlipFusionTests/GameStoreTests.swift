@@ -251,6 +251,71 @@ struct GameStoreTests {
         #expect(!store.isTimeUp)
     }
 
+    @Test func quickMergesBuildASpeedStreakThatFadesAndEarnCoins() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[2, 2, 4, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 2, nextID: 10), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        store.swipe(.left)          // 2+2: the first merge, at x1
+        #expect(store.streak == 0)
+        #expect(store.state.score == 4)
+        store.swipe(.left)          // 4+4 straight after: the streak begins, at x2
+        #expect(store.streak == 1)
+        #expect(store.state.score >= 4 + 16)
+        #expect(store.coins >= 1)
+        store.tick(GameStore.streakWindow + 1)
+        #expect(store.streak == 0)
+    }
+
+    @Test func theFlipBoosterTurnsTheBoardWithoutUsingAMove() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[8, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 2, nextID: 10), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.boosterCounts[.flip] == GameStore.freeBoosters)
+        #expect(store.useBooster(.flip))
+        #expect(store.boosterCounts[.flip] == GameStore.freeBoosters - 1)
+        #expect(store.rotatePulse == 1)
+        #expect(store.state.movesUntilRotation == 2)
+        // Top-left goes to top-right, then falls to the bottom-right corner.
+        #expect(store.state.tiles.first?.row == 3)
+        #expect(store.state.tiles.first?.col == 3)
+        // The free uses are remembered.
+        #expect(GameStore(defaults: defaults, animated: false).boosterCounts[.flip] == GameStore.freeBoosters - 1)
+    }
+
+    @Test func theSweepBoosterClearsTwosAndFours() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[2, 4, 8, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 2, nextID: 10), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.useBooster(.sweep))
+        #expect(store.lastSweepCount == 2)
+        #expect(store.state.score == 6)
+        #expect(store.state.tiles.contains { $0.value == 8 })
+        // The board is topped back up to two tiles.
+        #expect(store.state.tiles.count == 2)
+
+        // With nothing small to clear, the booster is not used up.
+        let other = freshDefaults()
+        save(GameState(tiles: tiles([[8, 16, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 2, nextID: 10), to: other)
+        let untouched = GameStore(defaults: other, animated: false)
+        #expect(!untouched.useBooster(.sweep))
+        #expect(untouched.boosterCounts[.sweep] == GameStore.freeBoosters)
+        #expect(untouched.boosterDeniedEvent == 1)
+    }
+
+    @Test func aBoosterCostsCoinsOnceTheFreeUsesAreGone() {
+        let defaults = freshDefaults()
+        defaults.set(0, forKey: "ff.booster.fever")
+        defaults.set(250, forKey: "ff.coins")
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.useBooster(.fever))
+        #expect(store.isFever)
+        #expect(store.coins == 250 - GameStore.Booster.fever.price)
+        // 50 coins left: not enough for another.
+        #expect(!store.useBooster(.fever))
+        #expect(store.coins == 50)
+        #expect(store.boosterDeniedEvent == 1)
+    }
+
     @Test func aDeadBoardIsGameOverAndIgnoresSwipes() {
         let defaults = freshDefaults()
         let dead = GameState(tiles: tiles([[2, 4, 2, 4], [4, 2, 4, 2], [2, 4, 2, 4], [4, 2, 4, 2]]), score: 100, movesUntilRotation: 1, nextID: 20)

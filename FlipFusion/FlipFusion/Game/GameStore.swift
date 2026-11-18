@@ -67,9 +67,58 @@ final class GameStore {
         let col: Int
         let value: Int
         var isBlast = false
+        /// Points to float up from the cell (0 shows nothing).
+        var points = 0
     }
 
     @ObservationIgnored private var feverLeft: Double = 0
+
+    // MARK: Coins, boosters and the speed streak
+
+    /// A helper the player taps under the board. Each starts with a few free uses;
+    /// after that a use costs coins.
+    enum Booster: String, CaseIterable, Sendable {
+        /// Turns the board right now, without using up a move.
+        case flip
+        /// Clears every 2 and 4 off the board.
+        case sweep
+        /// Starts double points.
+        case fever
+
+        var price: Int {
+            switch self {
+            case .flip: return 150
+            case .sweep: return 250
+            case .fever: return 200
+            }
+        }
+    }
+
+    static let freeBoosters = 3
+    /// Points needed to earn one coin.
+    static let pointsPerCoin = 20
+    /// Merge again within this many seconds to keep the speed streak going.
+    static let streakWindow: Double = 4
+    static let maxStreak = 4
+
+    /// Coins are earned from points and shared by both game modes.
+    private(set) var coins: Int
+    private(set) var boosterCounts: [Booster: Int]
+    /// Quick merges in a row. Each step adds one to the score multiplier (so 0 is x1).
+    private(set) var streak = 0
+    /// Go up when a booster is used, when one is refused, and when the board should shake.
+    private(set) var boosterEvent = 0
+    private(set) var boosterDeniedEvent = 0
+    private(set) var shakeEvent = 0
+    private(set) var lastBooster = Booster.flip
+    /// How many tiles the last sweep cleared.
+    private(set) var lastSweepCount = 0
+
+    @ObservationIgnored private var streakLeft: Double = 0
+    @ObservationIgnored private var coinBank = 0
+
+    /// What every point is multiplied by right now.
+    var scoreMultiplier: Int { (1 + streak) * (isFever ? 2 : 1) }
 
     /// The two ways to play. Each keeps its own game in progress and its own best score.
     enum Mode: String, Sendable {
@@ -93,6 +142,11 @@ final class GameStore {
         static let merged = "ff.merged"
         static let time = "ff.time"
         static let mode = "ff.mode"
+        static let coins = "ff.coins"
+
+        static func booster(_ booster: Booster) -> String {
+            "ff.booster." + booster.rawValue
+        }
 
         static func state(_ mode: Mode) -> String {
             mode == .timed ? "ff.state" : "ff.endless.state"
@@ -148,6 +202,13 @@ final class GameStore {
         self.defaults = defaults
         self.animated = animated
         self.hasMergedOnce = defaults.bool(forKey: Key.merged)
+        self.coins = max(0, defaults.integer(forKey: Key.coins))
+        var counts: [Booster: Int] = [:]
+        for booster in Booster.allCases {
+            let saved = defaults.object(forKey: Key.booster(booster)) as? Int
+            counts[booster] = max(0, saved ?? GameStore.freeBoosters)
+        }
+        self.boosterCounts = counts
 
         let mode = Mode(rawValue: defaults.string(forKey: Key.mode) ?? "") ?? .timed
         let loaded = GameStore.load(mode, from: defaults)
@@ -178,9 +239,82 @@ final class GameStore {
         boardAngle = 0
         isFever = false
         feverLeft = 0
+        streak = 0
+        streakLeft = 0
         isTimerRunning = false
         isGameOver = !GameEngine.hasMove(state.tiles) || isTimeUp
         save()
+    }
+
+    // MARK: Boosters
+
+    /// True when the booster can be used now: a free use is left or the coins cover it.
+    func canAfford(_ booster: Booster) -> Bool {
+        (boosterCounts[booster] ?? 0) > 0 || coins >= booster.price
+    }
+
+    /// Uses a booster. Returns false (and changes nothing) when it cannot be used:
+    /// a move is still playing, the game is over, there is nothing for it to do,
+    /// or there are no free uses and not enough coins.
+    @discardableResult
+    func useBooster(_ booster: Booster) -> Bool {
+        guard !isAnimating, !isGameOver else { return false }
+        guard canAfford(booster) else {
+            lastBooster = booster
+            boosterDeniedEvent += 1
+            return false
+        }
+        if booster == .sweep, !state.tiles.contains(where: { $0.value <= 4 }) {
+            lastBooster = booster
+            boosterDeniedEvent += 1
+            return false
+        }
+
+        if let count = boosterCounts[booster], count > 0 {
+            boosterCounts[booster] = count - 1
+        } else {
+            coins -= booster.price
+        }
+        lastBooster = booster
+        boosterEvent += 1
+        bursts.removeAll()
+        isTimerRunning = true
+
+        switch booster {
+        case .flip:
+            if animated {
+                isAnimating = true
+                Task { [weak self] in
+                    await self?.rotateAnimated()
+                    self?.finishMove()
+                    self?.isAnimating = false
+                }
+            } else {
+                rotateImmediately()
+                finishMove()
+            }
+        case .sweep:
+            let swept = state.tiles.filter { $0.value <= 4 }
+            lastSweepCount = swept.count
+            state.tiles.removeAll { $0.value <= 4 }
+            for tile in swept {
+                nextBurstID += 1
+                bursts.append(Burst(id: nextBurstID, row: tile.row, col: tile.col, value: tile.value))
+            }
+            addPoints(swept.map(\.value).reduce(0, +))
+            shakeEvent += 1
+            // Never leave an empty board: there would be nothing to swipe.
+            while state.tiles.count < 2 {
+                spawnTile()
+            }
+            finishMove()
+        case .fever:
+            isFever = true
+            feverLeft = Self.feverSeconds
+            feverEvent += 1
+            save()
+        }
+        return true
     }
 
     /// The tiles to draw: the live ones plus any being merged away this step.
@@ -234,6 +368,8 @@ final class GameStore {
         bursts = []
         isFever = false
         feverLeft = 0
+        streak = 0
+        streakLeft = 0
         secondsLeft = Self.roundSeconds
         wholeSecondsLeft = Int(Self.roundSeconds)
         isTimerRunning = false
@@ -249,6 +385,12 @@ final class GameStore {
             feverLeft -= seconds
             if feverLeft <= 0 {
                 isFever = false
+            }
+        }
+        if streakLeft > 0 {
+            streakLeft -= seconds
+            if streakLeft <= 0 {
+                streak = 0
             }
         }
         // Only the timed game has a clock to run down.
@@ -276,26 +418,31 @@ final class GameStore {
     // MARK: The move sequence
 
     private func playImmediately(_ result: StepResult) {
-        apply(result)
+        apply(result, isSwipe: true)
         ghosts = []
         spawnTile()
         state.movesUntilRotation -= 1
         if state.movesUntilRotation <= 0 {
-            rotatePulse += 1
-            state.tiles = GameEngine.rotateClockwise(state.tiles)
-            let passes = GameEngine.settle(state.tiles)
-            for pass in passes {
-                apply(pass)
-                ghosts = []
-            }
-            finishRotation(passes)
+            rotateImmediately()
         }
         finishMove()
     }
 
+    /// The quarter turn and the gravity that follows, with no animation (tests).
+    private func rotateImmediately() {
+        rotatePulse += 1
+        state.tiles = GameEngine.rotateClockwise(state.tiles)
+        let passes = GameEngine.settle(state.tiles)
+        for pass in passes {
+            apply(pass)
+            ghosts = []
+        }
+        finishRotation(passes)
+    }
+
     private func playAnimated(_ result: StepResult) async {
         withAnimation(.easeOut(duration: Timing.slide)) {
-            apply(result)
+            apply(result, isSwipe: true)
         }
         await pause(Timing.slide)
         // One animated update: the merged-away tiles go, the survivors pulse,
@@ -313,57 +460,79 @@ final class GameStore {
 
         if state.movesUntilRotation <= 0 {
             await pause(Timing.beforeRotation)
-            rotatePulse += 1
-            withAnimation(.easeInOut(duration: Timing.rotation)) {
-                boardAngle = 90
-            }
-            await pause(Timing.rotation + 0.03)
-            // Swap to the turned coordinates and snap the board back upright in one
-            // un-animated update: the picture on screen does not change.
-            state.tiles = GameEngine.rotateClockwise(state.tiles)
-            boardAngle = 0
-            // Let that swap reach the screen before gravity starts animating.
-            await pause(0.05)
-
-            let passes = GameEngine.settle(state.tiles)
-            for pass in passes {
-                withAnimation(.easeIn(duration: Timing.fall)) {
-                    apply(pass)
-                }
-                await pause(Timing.fall)
-                withAnimation(.spring(response: 0.22, dampingFraction: 0.55)) {
-                    ghosts = []
-                    poppedIDs = pass.mergedIDs
-                }
-                if !pass.mergedIDs.isEmpty {
-                    await pause(Timing.pop)
-                    withAnimation(.easeOut(duration: 0.15)) {
-                        poppedIDs = []
-                    }
-                }
-            }
-            withAnimation(.easeInOut(duration: 0.2)) {
-                finishRotation(passes)
-            }
+            await rotateAnimated()
         }
 
         finishMove()
         isAnimating = false
     }
 
-    /// Puts a slide or a gravity pass on the board and adds its points.
-    private func apply(_ result: StepResult) {
-        state.tiles = result.tiles
-        ghosts = result.ghosts
-        let points = result.gained * (isFever ? 2 : 1)
+    /// The quarter turn and the gravity that follows, animated.
+    private func rotateAnimated() async {
+        rotatePulse += 1
+        withAnimation(.easeInOut(duration: Timing.rotation)) {
+            boardAngle = 90
+        }
+        await pause(Timing.rotation + 0.03)
+        // Swap to the turned coordinates and snap the board back upright in one
+        // un-animated update: the picture on screen does not change.
+        state.tiles = GameEngine.rotateClockwise(state.tiles)
+        boardAngle = 0
+        // Let that swap reach the screen before gravity starts animating.
+        await pause(0.05)
+
+        let passes = GameEngine.settle(state.tiles)
+        for pass in passes {
+            withAnimation(.easeIn(duration: Timing.fall)) {
+                apply(pass)
+            }
+            await pause(Timing.fall)
+            withAnimation(.spring(response: 0.22, dampingFraction: 0.55)) {
+                ghosts = []
+                poppedIDs = pass.mergedIDs
+            }
+            if !pass.mergedIDs.isEmpty {
+                await pause(Timing.pop)
+                withAnimation(.easeOut(duration: 0.15)) {
+                    poppedIDs = []
+                }
+            }
+        }
+        withAnimation(.easeInOut(duration: 0.2)) {
+            finishRotation(passes)
+        }
+    }
+
+    /// Adds points (times the current multiplier) and turns them into coins.
+    private func addPoints(_ gained: Int) {
+        let points = gained * scoreMultiplier
+        guard points > 0 else { return }
         state.score += points
         if state.score > best {
             best = state.score
         }
-        if points > 0 {
-            lastGain = points
-            gainEvent += 1
+        lastGain = points
+        gainEvent += 1
+        coinBank += points
+        coins += coinBank / Self.pointsPerCoin
+        coinBank %= Self.pointsPerCoin
+    }
+
+    /// Puts a slide or a gravity pass on the board and adds its points.
+    /// `isSwipe` marks the player's own slide, which is what the speed streak counts.
+    private func apply(_ result: StepResult, isSwipe: Bool = false) {
+        state.tiles = result.tiles
+        ghosts = result.ghosts
+        if isSwipe, !result.mergedIDs.isEmpty {
+            // A merge soon after the last one builds the streak (and already counts
+            // at the higher rate); every merge restarts the countdown.
+            if streakLeft > 0 {
+                streak = min(Self.maxStreak, streak + 1)
+            }
+            streakLeft = Self.streakWindow
         }
+        let multiplier = scoreMultiplier
+        addPoints(result.gained)
         for effect in result.effects {
             switch effect.kind {
             case .time:
@@ -374,6 +543,7 @@ final class GameStore {
                 nextBurstID += 1
                 bursts.append(Burst(id: nextBurstID, row: effect.row, col: effect.col, value: 64, isBlast: true))
                 bombEvent += 1
+                shakeEvent += 1
             case .normal:
                 break
             }
@@ -383,7 +553,7 @@ final class GameStore {
             lastMergeValue = merged.map(\.value).max() ?? 0
             for tile in merged {
                 nextBurstID += 1
-                bursts.append(Burst(id: nextBurstID, row: tile.row, col: tile.col, value: tile.value))
+                bursts.append(Burst(id: nextBurstID, row: tile.row, col: tile.col, value: tile.value, points: tile.value * multiplier))
             }
             mergePulse += 1
             if !hasMergedOnce {
@@ -412,6 +582,7 @@ final class GameStore {
         }
         if lastCombo >= 2 {
             comboEvent += 1
+            shakeEvent += 1
             // A chain is rewarded with a power-up tile: a clock or a bomb in the timed
             // game, always a bomb in the endless one.
             let coin = Bool.random(using: &rng)
@@ -446,6 +617,10 @@ final class GameStore {
         defaults.set(best, forKey: Key.best(mode))
         if mode == .timed {
             defaults.set(secondsLeft, forKey: Key.time)
+        }
+        defaults.set(coins, forKey: Key.coins)
+        for (booster, count) in boosterCounts {
+            defaults.set(count, forKey: Key.booster(booster))
         }
     }
 }
