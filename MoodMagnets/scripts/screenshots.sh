@@ -50,7 +50,6 @@ prepare "$PHONE"
 shoot "$PHONE" warmup 12 >/dev/null 2>&1 || true
 rm -f "$SHOTS/warmup.png"
 shoot "$PHONE" home 5 || FAILED="$FAILED home"
-shoot "$PHONE" level-04-start 3 -MMStartLevel 4 -MMPostureOverride closed || FAILED="$FAILED l4"
 shoot "$PHONE" level-04-solving 5 -MMStartLevel 4 -MMPostureOverride closed -MMAutoSolve || FAILED="$FAILED l4s"
 shoot "$PHONE" level-05-hop 3.6 -MMStartLevel 5 -MMPostureOverride closed -MMAutoSolve || FAILED="$FAILED l5"
 shoot "$PHONE" level-10-won 7 -MMStartLevel 10 -MMPostureOverride closed -MMAutoSolve || FAILED="$FAILED l10"

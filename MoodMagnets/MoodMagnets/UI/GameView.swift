@@ -163,8 +163,17 @@ struct GameView: View {
 private struct Board: View {
     @ObservedObject var model: GameModel
 
+    /// ProMotion on device; the GPU-less CI simulator can't keep up with 120 Hz SpriteKit.
+    static var framesPerSecond: Int {
+        #if targetEnvironment(simulator)
+        return 30
+        #else
+        return 120
+        #endif
+    }
+
     var body: some View {
-        SpriteView(scene: model.scene, preferredFramesPerSecond: 120, options: [.ignoresSiblingOrder])
+        SpriteView(scene: model.scene, preferredFramesPerSecond: Self.framesPerSecond, options: [.ignoresSiblingOrder])
             .aspectRatio(CGFloat(model.level.width / model.level.height), contentMode: .fit)
             .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).strokeBorder(.white.opacity(0.8), lineWidth: 3))
