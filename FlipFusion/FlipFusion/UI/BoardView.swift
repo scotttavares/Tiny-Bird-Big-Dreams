@@ -71,8 +71,6 @@ struct BoardView: View {
             }
         }
         .frame(width: side, height: side, alignment: .topLeading)
-        // Shrink a little mid-turn so the corners stay on screen.
-        .scaleEffect(1 - 0.2 * CGFloat(sin(store.boardAngle * Double.pi / 90)))
         .rotationEffect(.degrees(store.boardAngle))
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text("Game board"))
