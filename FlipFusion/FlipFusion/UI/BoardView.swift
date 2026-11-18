@@ -6,20 +6,20 @@ struct BoardView: View {
     let store: GameStore
     let side: CGFloat
 
-    private var padding: CGFloat { side * 0.04 }
+    private var inset: CGFloat { side * 0.04 }
     private var gap: CGFloat { side * 0.028 }
-    private var cell: CGFloat { (side - 2 * padding - 3 * gap) / 4 }
+    private var cell: CGFloat { (side - 2 * inset - 3 * gap) / 4 }
 
     private func origin(row: Int, col: Int) -> CGPoint {
         CGPoint(
-            x: padding + CGFloat(col) * (cell + gap),
-            y: padding + CGFloat(row) * (cell + gap)
+            x: inset + CGFloat(col) * (cell + gap),
+            y: inset + CGFloat(row) * (cell + gap)
         )
     }
 
     /// The first pair of equal tiles sitting side by side, for the first-game hint.
     private var hintPair: (left: Tile, right: Tile)? {
-        guard !store.hasMergedOnce, store.boardAngle == 0, !store.isAnimating else { return nil }
+        guard !store.hasMergedOnce, store.boardAngle == 0 else { return nil }
         let sorted = store.state.tiles.sorted { ($0.row, $0.col) < ($1.row, $1.col) }
         for tile in sorted {
             if let neighbour = sorted.first(where: { $0.row == tile.row && $0.col == tile.col + 1 && $0.value == tile.value }) {
@@ -71,6 +71,8 @@ struct BoardView: View {
             }
         }
         .frame(width: side, height: side, alignment: .topLeading)
+        // Shrink a little mid-turn so the corners stay on screen.
+        .scaleEffect(1 - 0.2 * CGFloat(sin(store.boardAngle * Double.pi / 90)))
         .rotationEffect(.degrees(store.boardAngle))
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text("Game board"))

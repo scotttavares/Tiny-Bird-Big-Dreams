@@ -131,7 +131,8 @@ struct GameEngineTests {
         }
         #expect(Set(state.tiles.map { Cell(row: $0.row, col: $0.col) }).count == 16)
         #expect(Set(state.tiles.map(\.id)).count == 16)
-        #expect(GameEngine.spawn(in: &state, using: &rng) == nil)
+        let extra = GameEngine.spawn(in: &state, using: &rng)
+        #expect(extra == nil)
     }
 
     @Test func aNewGameStartsWithTwoTiles() {

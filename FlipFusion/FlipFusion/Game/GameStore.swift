@@ -97,7 +97,17 @@ final class GameStore {
 
     func newGame() {
         guard !isAnimating else { return }
-        state = GameEngine.newGame(using: &rng)
+        // Keep counting tile ids upward so the new tiles are new to the screen
+        // and pop in, instead of sliding over from where old tiles sat.
+        var fresh = GameState(
+            tiles: [],
+            score: 0,
+            movesUntilRotation: GameEngine.movesPerRotation,
+            nextID: state.nextID
+        )
+        GameEngine.spawn(in: &fresh, using: &rng)
+        GameEngine.spawn(in: &fresh, using: &rng)
+        state = fresh
         ghosts = []
         poppedIDs = []
         lastCombo = 0
@@ -131,12 +141,12 @@ final class GameStore {
             apply(result)
         }
         await pause(Timing.slide)
-        ghosts = []
+        // One animated update: the merged-away tiles go, the survivors pulse,
+        // the new tile arrives and the countdown ticks.
         withAnimation(.spring(response: 0.22, dampingFraction: 0.55)) {
+            ghosts = []
             poppedIDs = result.mergedIDs
-        }
-        GameEngine.spawn(in: &state, using: &rng)
-        withAnimation(.easeInOut(duration: 0.2)) {
+            GameEngine.spawn(in: &state, using: &rng)
             state.movesUntilRotation -= 1
         }
         await pause(Timing.pop)
@@ -155,6 +165,8 @@ final class GameStore {
             // un-animated update: the picture on screen does not change.
             state.tiles = GameEngine.rotateClockwise(state.tiles)
             boardAngle = 0
+            // Let that swap reach the screen before gravity starts animating.
+            await pause(0.05)
 
             let passes = GameEngine.settle(state.tiles)
             for pass in passes {
@@ -162,11 +174,11 @@ final class GameStore {
                     apply(pass)
                 }
                 await pause(Timing.fall)
-                ghosts = []
+                withAnimation(.spring(response: 0.22, dampingFraction: 0.55)) {
+                    ghosts = []
+                    poppedIDs = pass.mergedIDs
+                }
                 if !pass.mergedIDs.isEmpty {
-                    withAnimation(.spring(response: 0.22, dampingFraction: 0.55)) {
-                        poppedIDs = pass.mergedIDs
-                    }
                     await pause(Timing.pop)
                     withAnimation(.easeOut(duration: 0.15)) {
                         poppedIDs = []

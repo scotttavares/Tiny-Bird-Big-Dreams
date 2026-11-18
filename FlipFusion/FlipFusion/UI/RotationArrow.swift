@@ -18,9 +18,15 @@ struct RotationArrow: View {
         .frame(width: side * 1.3, height: side * 1.3)
         .shadow(color: Theme.arrowDark.opacity(0.9), radius: side * 0.03, x: 0, y: 0)
         .opacity(isImminent ? (pulse ? 1.0 : 0.5) : 0.85)
-        .onAppear {
-            withAnimation(.easeInOut(duration: 0.7).repeatForever(autoreverses: true)) {
-                pulse = true
+        .onChange(of: isImminent, initial: true) { _, imminent in
+            if imminent {
+                withAnimation(.easeInOut(duration: 0.7).repeatForever(autoreverses: true)) {
+                    pulse = true
+                }
+            } else {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    pulse = false
+                }
             }
         }
         .allowsHitTesting(false)
@@ -95,8 +101,8 @@ struct RotationArrow: View {
             piece.move(to: point(a0, center: center, reach: reach))
             piece.addLine(to: point(a1, center: center, reach: reach))
             // Swell up to a peak a third of the way along, then taper.
-            let swell = t0 < 0.35 ? 0.55 + 0.45 * (t0 / 0.35) : 1.0 - 0.9 * ((t0 - 0.35) / 0.65)
-            let alpha = t0 < 0.35 ? 0.95 : 0.95 - 0.75 * ((t0 - 0.35) / 0.65)
+            let swell: Double = t0 < 0.35 ? 0.55 + 0.45 * (t0 / 0.35) : 1.0 - 0.9 * ((t0 - 0.35) / 0.65)
+            let alpha: Double = t0 < 0.35 ? 0.95 : 0.95 - 0.75 * ((t0 - 0.35) / 0.65)
             context.stroke(
                 piece,
                 with: .color(Theme.arrowLight.opacity(alpha)),
