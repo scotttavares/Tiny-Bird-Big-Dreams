@@ -1,17 +1,68 @@
 import SwiftUI
 
-/// "How to play": the rules, the power-ups and the two game modes, on one sheet.
+/// The menu: game mode, settings and a new game at the top, then "How to play"
+/// (the rules, the power-ups and the two modes), all on one sheet.
 struct HelpView: View {
-    let onNewGame: () -> Void
+    let store: GameStore
+    let onReplayIntro: () -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @AppStorage(SoundPlayer.enabledKey) private var soundOn = true
+    @AppStorage("ff.hapticsOn") private var hapticsOn = true
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
-                Text("How to play")
+                Text("Menu")
                     .font(.system(size: 30, weight: .black, design: .rounded))
                     .foregroundStyle(LinearGradient(colors: Theme.fusion, startPoint: .leading, endPoint: .trailing))
+                    .accessibilityAddTraits(.isHeader)
+
+                section("Game") {
+                    Picker("Game mode", selection: Binding(
+                        get: { store.mode },
+                        set: { store.switchMode($0) }
+                    )) {
+                        Text("Timed").tag(GameStore.Mode.timed)
+                        Text("Endless").tag(GameStore.Mode.endless)
+                    }
+                    .pickerStyle(.segmented)
+
+                    Button {
+                        store.newGame()
+                        dismiss()
+                    } label: {
+                        Text("Start a new game")
+                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 46)
+                            .background(Capsule().fill(LinearGradient(colors: [Theme.pillTop, Theme.pillBottom], startPoint: .top, endPoint: .bottom)))
+                            .overlay(Capsule().strokeBorder(Theme.pillStroke, lineWidth: 1.5))
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                section("Settings") {
+                    Toggle("Sound effects", isOn: $soundOn)
+                    Toggle("Vibration", isOn: $hapticsOn)
+                    Button {
+                        dismiss()
+                        onReplayIntro()
+                    } label: {
+                        Text("Replay the intro")
+                            .font(.system(size: 17, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Theme.flip[0])
+                    }
+                    .buttonStyle(.plain)
+                }
+                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.white)
+                .tint(Theme.pillStroke)
+
+                Text("How to play")
+                    .font(.system(size: 24, weight: .black, design: .rounded))
+                    .foregroundStyle(Color.white)
                     .accessibilityAddTraits(.isHeader)
 
                 section("The basics") {
@@ -35,32 +86,17 @@ struct HelpView: View {
                         .foregroundStyle(Theme.label)
                 }
 
-                VStack(spacing: 12) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Text("Got it")
-                            .font(.system(size: 19, weight: .heavy, design: .rounded))
-                            .foregroundStyle(Color.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .background(Capsule().fill(LinearGradient(colors: Theme.flip.reversed(), startPoint: .top, endPoint: .bottom)))
-                    }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        onNewGame()
-                        dismiss()
-                    } label: {
-                        Text("Start a new game")
-                            .font(.system(size: 17, weight: .bold, design: .rounded))
-                            .foregroundStyle(Theme.tagline)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 48)
-                            .overlay(Capsule().strokeBorder(Theme.glassStroke, lineWidth: 1.5))
-                    }
-                    .buttonStyle(.plain)
+                Button {
+                    dismiss()
+                } label: {
+                    Text("Back to the game")
+                        .font(.system(size: 19, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Color.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(Capsule().fill(LinearGradient(colors: Theme.flip.reversed(), startPoint: .top, endPoint: .bottom)))
                 }
+                .buttonStyle(.plain)
                 .padding(.top, 4)
             }
             .padding(24)

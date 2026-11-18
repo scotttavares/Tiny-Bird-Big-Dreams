@@ -17,7 +17,15 @@ struct RootView: View {
 
     var body: some View {
         ZStack {
-            GameScreen(sounds: sounds, isIntroOver: !showIntro)
+            GameScreen(
+                sounds: sounds,
+                isIntroOver: !showIntro,
+                onReplayIntro: {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        showIntro = true
+                    }
+                }
+            )
 
             if showIntro {
                 IntroView(sounds: sounds) {

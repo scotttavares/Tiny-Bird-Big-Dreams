@@ -35,7 +35,11 @@ final class SoundPlayer {
         }
     }
 
+    /// The settings key for the sound switch in the menu. Sound is on until turned off.
+    nonisolated static let enabledKey = "ff.soundOn"
+
     func play(_ sound: Sound, volume: Float = 1) {
+        guard UserDefaults.standard.object(forKey: Self.enabledKey) as? Bool ?? true else { return }
         guard let players = voices[sound], !players.isEmpty else { return }
         let index = (nextVoice[sound] ?? 0) % players.count
         nextVoice[sound] = index + 1

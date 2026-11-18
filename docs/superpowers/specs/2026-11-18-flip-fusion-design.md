@@ -90,3 +90,4 @@ After playing build 15 the owner asked for a second mode and said no power-ups s
 
 - **Intro.** Each launch opens with a two-second animation: tiles 2, 4, 8 and 16 drop in as a cluster, the cluster makes the quarter turn, the tiles fuse in a burst, and the logo and tagline appear. A tap skips it. It was designed from the usual shape of puzzle-game openings (logo reveal built from the game's own pieces), not from any one game.
 - **How to play.** A "?" button in the top-right corner opens a sheet with the basics, the power-ups (shown with real tiles), the two modes, and a "Start a new game" button. It opens by itself the first time the game is seen. The clock stops while it is open.
+- **Menu.** The owner asked whether there was a menu and a settings screen. The top-right button (three lines) now opens one sheet titled "Menu": game mode (Timed or Endless), "Start a new game", settings (sound effects, vibration, replay the intro), then "How to play".

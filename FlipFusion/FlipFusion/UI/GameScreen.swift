@@ -6,7 +6,9 @@ struct GameScreen: View {
     let sounds: SoundPlayer
     /// False while the opening animation is still covering the game.
     let isIntroOver: Bool
+    let onReplayIntro: () -> Void
 
+    @AppStorage("ff.hapticsOn") private var hapticsOn = true
     @State private var store = GameStore()
     @State private var showHelp = false
     /// "How to play" opens by itself the first time the game is seen.
@@ -114,8 +116,12 @@ struct GameScreen: View {
                 }
         )
         .animation(.easeOut(duration: 0.25), value: store.isGameOver)
-        .sensoryFeedback(.impact(weight: .light), trigger: store.mergePulse)
-        .sensoryFeedback(.impact(weight: .heavy), trigger: store.rotatePulse)
+        .sensoryFeedback(trigger: store.mergePulse) { _, _ in
+            hapticsOn ? .impact(weight: .light) : nil
+        }
+        .sensoryFeedback(trigger: store.rotatePulse) { _, _ in
+            hapticsOn ? .impact(weight: .heavy) : nil
+        }
         .onChange(of: store.comboEvent) { _, _ in
             if store.isFever {
                 show("Chain x\(store.lastCombo)! Double points", seconds: 1.8)
@@ -143,7 +149,7 @@ struct GameScreen: View {
             Button {
                 openHelp()
             } label: {
-                Image(systemName: "questionmark")
+                Image(systemName: "line.3.horizontal")
                     .font(.system(size: 16, weight: .heavy))
                     .foregroundStyle(Theme.tagline)
                     .frame(width: 38, height: 38)
@@ -154,12 +160,10 @@ struct GameScreen: View {
             }
             .buttonStyle(.plain)
             .padding(.trailing, 10)
-            .accessibilityLabel(Text("How to play"))
+            .accessibilityLabel(Text("Menu"))
         }
         .sheet(isPresented: $showHelp) {
-            HelpView {
-                store.newGame()
-            }
+            HelpView(store: store, onReplayIntro: onReplayIntro)
         }
         .onChange(of: isIntroOver, initial: true) { _, isOver in
             if isOver, !seenHelp {
