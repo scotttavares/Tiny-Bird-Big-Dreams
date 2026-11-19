@@ -18,7 +18,7 @@ struct IntroView: View {
     private let values = [2, 4, 8, 16]
     private let notes: [SoundPlayer.Sound] = [.merge1, .merge2, .merge3, .merge4]
     /// The original look.
-    private let neon = Skin.all[0]
+    private let neon = Skin.classic
 
     var body: some View {
         GeometryReader { geo in

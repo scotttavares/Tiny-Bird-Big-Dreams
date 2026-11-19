@@ -44,36 +44,50 @@ struct TileView: View {
         let style = Theme.tile(value, skin: skin)
         let outline = TileOutline(shape: skin.shape)
         let isStone = kind == .stone
-        // A stone block is grey rock in every theme.
-        let top = isStone ? Color(hex: 0x9AA3C4) : style.top
-        let bottom = isStone ? Color(hex: 0x3F4668) : style.bottom
+        let isNeon = skin.shape == .neon
+        let top = style.top
+        let bottom = style.bottom
 
         ZStack {
-            outline.fill(
-                LinearGradient(colors: [top, bottom], startPoint: .top, endPoint: .bottom)
-            )
-
-            gloss(outline)
-
-            // Bright rim on top, fading down the sides.
-            outline.strokeBorder(
-                LinearGradient(
-                    colors: [Color.white.opacity(0.75), Color.white.opacity(0.08)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                ),
-                lineWidth: max(1, size * 0.03)
-            )
-
             if isStone {
-                Image(systemName: "mountain.2.fill")
-                    .font(.system(size: size * 0.36, weight: .bold))
-                    .foregroundStyle(Color.white.opacity(0.5))
+                // A stone block is a boulder, not a tile, in every theme.
+                StoneView(size: size, look: skin.stone)
             } else {
+                if isNeon {
+                    // Dark glass; the colour is all in the glowing edge.
+                    outline.fill(Color(hex: 0x0B0624, opacity: 0.92))
+                } else {
+                    outline.fill(
+                        LinearGradient(colors: [top, bottom], startPoint: .top, endPoint: .bottom)
+                    )
+                }
+
+                gloss(outline)
+
+                if isNeon {
+                    // The neon tube, with a thin white core inside it.
+                    outline.strokeBorder(
+                        LinearGradient(colors: [top, bottom], startPoint: .top, endPoint: .bottom),
+                        lineWidth: size * 0.075
+                    )
+                    outline.inset(by: size * 0.03)
+                        .stroke(Color.white.opacity(0.75), lineWidth: max(1, size * 0.015))
+                } else {
+                    // Bright rim on top, fading down the sides.
+                    outline.strokeBorder(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.75), Color.white.opacity(0.08)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        lineWidth: max(1, size * 0.03)
+                    )
+                }
+
                 Text(String(value))
                     .font(.system(size: fontSize, weight: .heavy, design: .rounded))
                     .foregroundStyle(Color.white)
-                    .shadow(color: Color.black.opacity(0.28), radius: 1, x: 0, y: 1.5)
+                    .shadow(color: isNeon ? top : Color.black.opacity(0.28), radius: isNeon ? size * 0.09 : 1, x: 0, y: isNeon ? 0 : 1.5)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
                     .padding(.horizontal, size * 0.06)
@@ -93,7 +107,13 @@ struct TileView: View {
             }
         }
         .frame(width: size, height: size)
-        .shadow(color: bottom.opacity(0.75), radius: size * 0.16, x: 0, y: 0)
+        // A tile glows in its own colour; a rock just casts a shadow.
+        .shadow(
+            color: isStone ? Color.black.opacity(0.55) : bottom.opacity(0.75),
+            radius: size * (isStone ? 0.07 : 0.16),
+            x: 0,
+            y: isStone ? size * 0.05 : 0
+        )
         .scaleEffect(appeared ? 1 : 0.2)
         .opacity(appeared ? 1 : 0)
         .onAppear {
@@ -144,6 +164,11 @@ struct TileView: View {
             }
             .frame(width: size, height: size)
             .clipShape(outline)
+        case .neon:
+            // A faint wash of the tile's colour over the dark glass.
+            outline
+                .fill(Theme.tile(value, skin: skin).top.opacity(0.2))
+                .frame(width: size, height: size)
         case .bubble, .orb:
             ZStack {
                 if skin.shape == .orb {

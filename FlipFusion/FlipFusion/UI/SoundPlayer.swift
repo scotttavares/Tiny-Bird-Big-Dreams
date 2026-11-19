@@ -18,6 +18,16 @@ final class SoundPlayer {
         case endless = "music-endless"
         /// Double points and the last seconds of a timed game: fast.
         case rush = "music-rush"
+        /// One tune for each theme. They play in every game mode.
+        case neon = "music-neon"
+        case sunset = "music-sunset"
+        case ocean = "music-ocean"
+        case bubblegum = "music-bubblegum"
+        case lava = "music-lava"
+        case frost = "music-frost"
+        case gold = "music-gold"
+        case party = "music-party"
+        case galaxy = "music-galaxy"
     }
 
     /// A few copies of each sound, so the same one can overlap itself.
@@ -64,7 +74,9 @@ final class SoundPlayer {
 
     /// Changes the tune. The one left behind keeps its place for next time; the
     /// rush always starts from its beginning.
-    func setTrack(_ newTrack: Track) {
+    func setTrack(_ wanted: Track) {
+        // A tune that failed to load falls back to the first one.
+        let newTrack = tracks[wanted] == nil ? Track.timed : wanted
         guard newTrack != track else { return }
         tracks[track]?.pause()
         track = newTrack

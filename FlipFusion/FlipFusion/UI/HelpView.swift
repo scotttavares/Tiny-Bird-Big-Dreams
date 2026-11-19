@@ -15,6 +15,8 @@ struct HelpView: View {
     @AppStorage(Skin.key) private var skinID = "neon"
     /// A line under the themes after a tap on one that is not yet the player's.
     @State private var themeNotice: String?
+    /// A line under the games after a tap on one that is still locked.
+    @State private var modeNotice: String?
 
     var body: some View {
         ScrollView {
@@ -24,16 +26,20 @@ struct HelpView: View {
                     .foregroundStyle(LinearGradient(colors: Theme.fusion, startPoint: .leading, endPoint: .trailing))
                     .accessibilityAddTraits(.isHeader)
 
-                section("Game") {
-                    Picker("Game mode", selection: Binding(
-                        get: { store.mode },
-                        set: { store.switchMode($0) }
-                    )) {
-                        Text("Timed").tag(GameStore.Mode.timed)
-                        Text("Endless").tag(GameStore.Mode.endless)
-                        Text("Shape Shift").tag(GameStore.Mode.shift)
+                section("Game modes") {
+                    modeRow(.timed, symbol: "timer", title: "2 Minutes", text: "Two minutes on the clock, which starts on your first swipe. Level up and merge clock tiles to win more time.")
+                    modeRow(.endless, symbol: "infinity", title: "Endless", text: "No clock. An extra tile lands after every rotation, and the game ends when no move is left.")
+                    modeRow(.shift, symbol: "shuffle", title: "Shape Shift", text: "No clock. Every \(GameEngine.movesPerShift) moves the board changes to a new shape picked at random. Unlocks with your first new theme.")
+                    if let modeNotice {
+                        Text(modeNotice)
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundStyle(Theme.counter)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    .pickerStyle(.segmented)
+                    Text("Tap a game to play it. Each keeps its own board and best score.")
+                        .font(.system(size: 15, weight: .medium, design: .rounded))
+                        .foregroundStyle(Theme.label)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     Button {
                         store.newGame()
@@ -146,15 +152,6 @@ struct HelpView: View {
                     row(symbol: "gift.fill", title: "Chain reward", text: "Every chain also drops a clock or bomb tile onto the board.")
                 }
 
-                section("Game modes") {
-                    row(symbol: "timer", title: "Timed", text: "Two minutes on the clock, which starts on your first swipe. Level up and merge clock tiles to win more time.")
-                    row(symbol: "infinity", title: "Endless", text: "No clock. An extra tile lands after every rotation, and the game ends when no move is left.")
-                    row(symbol: "shuffle", title: "Shape Shift", text: "Unlocks with your first new theme. No clock. Every \(GameEngine.movesPerShift) moves the board changes to a new shape picked at random. The game ends when no move is left.")
-                    Text("Tap 2 Minutes, Endless or Shape Shift under the board to switch. Each mode keeps its own game and best score.")
-                        .font(.system(size: 15, weight: .medium, design: .rounded))
-                        .foregroundStyle(Theme.label)
-                }
-
                 Button {
                     dismiss()
                 } label: {
@@ -212,6 +209,44 @@ struct HelpView: View {
             words(title: title, text: text)
         }
         .accessibilityElement(children: .combine)
+    }
+
+    /// One game in the list: tap it to play it.
+    private func modeRow(_ mode: GameStore.Mode, symbol: String, title: String, text: String) -> some View {
+        let isOn = store.mode == mode
+        let isLocked = !store.isUnlocked(mode)
+        let card = RoundedRectangle(cornerRadius: 14, style: .continuous)
+        return Button {
+            if isLocked {
+                modeNotice = "\(title) unlocks with your first new theme."
+            } else {
+                modeNotice = nil
+                store.switchMode(mode)
+            }
+        } label: {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: isLocked ? "lock.fill" : symbol)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(isOn ? Color.white : Theme.flip[0])
+                    .frame(width: 44, height: 44)
+                    .background(Circle().fill(isOn ? Theme.pillTop : Theme.cellFill))
+                words(title: title, text: text)
+                Spacer(minLength: 4)
+                if isOn {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(Color(hex: 0x86F2BC))
+                }
+            }
+            .multilineTextAlignment(.leading)
+            .padding(10)
+            .background(card.fill(Theme.cellFill.opacity(isOn ? 0.9 : 0.4)))
+            .overlay(card.strokeBorder(isOn ? Color(hex: 0x86F2BC) : Theme.glassStroke, lineWidth: isOn ? 2 : 1))
+            .opacity(isLocked ? 0.7 : 1)
+        }
+        .buttonStyle(BounceButtonStyle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("\(title). \(text)" + (isOn ? " Playing now." : "") + (isLocked ? " Locked." : "")))
     }
 
     private func gem(size: CGFloat) -> some View {

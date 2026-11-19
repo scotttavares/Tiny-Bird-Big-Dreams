@@ -43,6 +43,11 @@ struct GameScreen: View {
                         confirmNewGame = true
                     }
 
+                Text("Swipe. Merge. Rotate.")
+                    .font(.system(size: 14 * scale, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Theme.tagline)
+                    .padding(.top, -4 * scale)
+
                 ScoreCards(score: store.state.score, best: store.best, isFever: store.isFever, scale: scale)
                     .frame(width: side)
                     .overlay {
@@ -55,7 +60,7 @@ struct GameScreen: View {
                                 .id(store.gainEvent)
                         }
                     }
-                    .padding(.top, 14 * scale)
+                    .padding(.top, 9 * scale)
 
                 LevelBar(level: store.level, score: store.state.score, scale: scale)
                     .frame(width: side)
@@ -79,6 +84,11 @@ struct GameScreen: View {
                         DangerGlow(side: side)
                     }
 
+                    if Skin.current.backdrop == .snow {
+                        SnowCap(side: side, shakeOff: store.rotatePulse)
+                            .offset(y: -side * 0.545 + 2)
+                    }
+
                     RotationArrow(
                         side: side,
                         isImminent: store.state.movesUntilRotation == 1 && !store.isGameOver
@@ -86,30 +96,10 @@ struct GameScreen: View {
 
                     Celebration(store: store, side: side)
 
-                    if let toast {
-                        ToastView(text: toast, scale: scale)
-                            .transition(.scale(scale: 0.6).combined(with: .opacity))
-                    }
-
                     if let calloutText {
                         Callout(text: calloutText, scale: scale)
-                            .offset(y: -side * 0.24)
+                            .offset(y: -side * 0.44)
                             .id(calloutID)
-                    }
-
-                    if store.prizeEvent > 0, !store.isGameOver {
-                        PrizeReel(
-                            prize: store.lastPrize,
-                            scale: scale,
-                            onTick: {
-                                sounds.play(.tick, volume: 0.45)
-                            },
-                            onStop: {
-                                sounds.play(store.lastPrize == GameStore.jackpot ? .fever : .bonus)
-                            }
-                        )
-                        .offset(y: side * 0.27)
-                        .id(store.prizeEvent)
                     }
 
                     if store.isGameOver {
@@ -131,7 +121,9 @@ struct GameScreen: View {
                                 if !store.continueGame() {
                                     openHelp()
                                 }
-                            }
+                            },
+                            graffiti: Skin.current.overWord,
+                            spark: Skin.current.spark
                         )
                         .transition(.scale(scale: 0.8).combined(with: .opacity))
                     }
@@ -146,17 +138,47 @@ struct GameScreen: View {
                 }
                 .padding(.top, 14 * scale)
 
-                Text(tagline)
-                    .font(.system(size: 21 * scale, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Theme.tagline)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .padding(.top, 12 * scale)
+                // Under the boosters: the level prize when one is won, otherwise which
+                // game this is (a tap opens the menu, where the games are). Nothing
+                // here ever covers the board.
+                ZStack {
+                    Button {
+                        openHelp()
+                    } label: {
+                        HStack(spacing: 6 * scale) {
+                            Text(tagline)
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12 * scale, weight: .heavy))
+                        }
+                        .font(.system(size: 17 * scale, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Theme.tagline)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .padding(.horizontal, 16 * scale)
+                        .frame(height: 36 * scale)
+                        .background(Capsule().fill(Theme.glassFill))
+                        .overlay(Capsule().strokeBorder(Theme.glassStroke, lineWidth: 1))
+                    }
+                    .buttonStyle(BounceButtonStyle())
+                    .accessibilityHint(Text("Opens the menu"))
 
-                ModeSwitch(scale: scale, mode: store.mode, lockedModes: store.isUnlocked(.shift) ? [] : [.shift]) { mode in
-                    pickMode(mode)
+                    if store.prizeEvent > 0, !store.isGameOver {
+                        PrizeReel(
+                            prize: store.lastPrize,
+                            scale: scale,
+                            onTick: {
+                                sounds.play(.tick, volume: 0.45)
+                            },
+                            onStop: {
+                                sounds.play(store.lastPrize == GameStore.jackpot ? .fever : .bonus)
+                            }
+                        )
+                        .scaleEffect(0.84)
+                        .id(store.prizeEvent)
+                    }
                 }
-                .padding(.top, 12 * scale)
+                .frame(width: side, height: 64 * scale)
+                .padding(.top, 8 * scale)
 
                 Spacer(minLength: 0)
             }
@@ -189,6 +211,15 @@ struct GameScreen: View {
             }
         ))
         .modifier(GameSounds(store: store, sounds: sounds))
+        .modifier(ThemeMoments(store: store, sounds: sounds))
+        // Messages sit over the title, clear of the board.
+        .overlay(alignment: .top) {
+            if let toast {
+                ToastView(text: toast, scale: 1)
+                    .padding(.top, 46)
+                    .transition(.scale(scale: 0.6).combined(with: .opacity))
+            }
+        }
         .onChange(of: track, initial: true) { _, newTrack in
             sounds.setTrack(newTrack)
         }
@@ -285,15 +316,22 @@ struct GameScreen: View {
         if !store.isGameOver, store.isFever || lastSeconds || store.isDanger {
             return .rush
         }
-        return store.mode == .timed ? .timed : .endless
+        // Each theme has its own tune.
+        return SoundPlayer.Track(rawValue: "music-" + skinID) ?? (store.mode == .timed ? .timed : .endless)
     }
 
     /// The line under the boosters. In the Shape Shift game it counts down to the
     /// next change of shape.
     private var tagline: String {
-        guard store.mode == .shift, !store.isGameOver else { return "Swipe. Merge. Rotate." }
-        let moves = max(1, store.state.movesUntilShift)
-        return moves == 1 ? "Board changes in 1 move" : "Board changes in \(moves) moves"
+        switch store.mode {
+        case .timed:
+            return "2 Minute Game"
+        case .endless:
+            return "Endless Game"
+        case .shift:
+            let moves = max(1, store.state.movesUntilShift)
+            return moves == 1 ? "Board changes in 1 move" : "Board changes in \(moves) moves"
+        }
     }
 
     /// What carrying on with the finished game would give, or nil when it cannot be
@@ -394,11 +432,16 @@ struct GameOverOverlay: View {
     let scale: CGFloat
     let onPlayAgain: () -> Void
     let onContinue: () -> Void
+    /// The theme's word, sprayed across the top of the card, and its spark.
+    var graffiti = ""
+    var spark = "sparkle"
 
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: side * 0.07, style: .continuous)
                 .fill(Color(hex: 0x070A26, opacity: 0.86))
+
+            Graffiti(word: graffiti, symbol: spark, side: side)
 
             VStack(spacing: 7 * scale) {
                 StarRow(level: level, scale: scale)

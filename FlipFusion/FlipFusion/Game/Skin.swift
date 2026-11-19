@@ -59,6 +59,8 @@ struct Skin: Identifiable, Equatable, Sendable {
     enum TileShape: Equatable, Sendable {
         /// A square with rounded corners.
         case rounded
+        /// A dark rounded square lit by a glowing tube round its edge.
+        case neon
         /// A round, glassy bubble.
         case bubble
         /// A very soft square with a stripe of gloss.
@@ -96,9 +98,9 @@ struct Skin: Identifiable, Equatable, Sendable {
     var isPremium: Bool { unlock != .free }
 
     static let all: [Skin] = [
-        Skin(id: "neon", name: "Neon", blurb: "The classic glow", unlock: .free,
+        Skin(id: "neon", name: "Neon", blurb: "80s arcade nights", unlock: .free,
              chromeHue: nil, chromeBrightness: 1, tiles: .original,
-             backdrop: .grid, shape: .rounded, spark: "sparkle", boards: []),
+             backdrop: .grid, shape: .neon, spark: "sparkle", boards: []),
         Skin(id: "sunset", name: "Sunset", blurb: "A striped sun going down", unlock: .gems(40),
              chromeHue: 0.92, chromeBrightness: 1.05, tiles: .shifted(0.04),
              backdrop: .sun, shape: .rounded, spark: "sun.max.fill", boards: [15, 16]),
@@ -124,6 +126,48 @@ struct Skin: Identifiable, Equatable, Sendable {
              chromeHue: 0.76, chromeBrightness: 0.7, tiles: .shifted(0.5),
              backdrop: .stars, shape: .orb, spark: "star.fill", boards: [29, 30]),
     ]
+
+    /// The look the game was first drawn in: glossy tiles on plain navy. The opening
+    /// animation always uses it. It is not a theme the player can pick.
+    static let classic = Skin(
+        id: "classic", name: "Classic", blurb: "", unlock: .free,
+        chromeHue: nil, chromeBrightness: 1, tiles: .original,
+        backdrop: .grid, shape: .rounded, spark: "circle.fill", boards: []
+    )
+
+    /// What a stone block is made of in a theme.
+    enum StoneLook: Equatable, Sendable {
+        case rock, sandstone, coral, candy, magma, ice, nugget, mirror, moon
+    }
+
+    var stone: StoneLook {
+        switch id {
+        case "sunset": return .sandstone
+        case "ocean": return .coral
+        case "bubblegum": return .candy
+        case "lava": return .magma
+        case "frost": return .ice
+        case "gold": return .nugget
+        case "party": return .mirror
+        case "galaxy": return .moon
+        default: return .rock
+        }
+    }
+
+    /// The word sprayed across the card when a game ends.
+    var overWord: String {
+        switch id {
+        case "sunset": return "Sundown!"
+        case "ocean": return "Wipeout!"
+        case "bubblegum": return "Pop!"
+        case "lava": return "Burned!"
+        case "frost": return "Frozen!"
+        case "gold": return "Busted!"
+        case "party": return "Lights out!"
+        case "galaxy": return "Lost in space!"
+        default: return "Game over, dude!"
+        }
+    }
 
     static func named(_ id: String) -> Skin {
         all.first { $0.id == id } ?? all[0]

@@ -164,8 +164,9 @@ struct Callout: View {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.45)) {
                     stage = 1
                 }
-                try? await Task.sleep(for: .milliseconds(900))
-                withAnimation(.easeIn(duration: 0.35)) {
+                // Short, so it is never in the way of the next move.
+                try? await Task.sleep(for: .milliseconds(550))
+                withAnimation(.easeIn(duration: 0.25)) {
                     stage = 2
                 }
             }
@@ -940,5 +941,66 @@ struct ObstacleView: View {
         .shadow(color: Color.black.opacity(0.45), radius: size * 0.08, x: 0, y: size * 0.04)
         .accessibilityElement()
         .accessibilityLabel(Text(isCrate ? "crate" : "wall"))
+    }
+}
+
+/// The end-of-game card's decoration: the theme's word sprayed at a slant across the
+/// top, and its sparks scattered round the edge like stickers.
+struct Graffiti: View {
+    let word: String
+    let symbol: String
+    let side: CGFloat
+
+    @State private var isSprayed = false
+
+    /// Where each spark goes (as fractions of the card), how big and how far turned.
+    private static let marks: [(x: CGFloat, y: CGFloat, size: CGFloat, turn: Double)] = [
+        (0.08, 0.10, 0.09, -20), (0.92, 0.09, 0.07, 25), (0.06, 0.52, 0.06, 15),
+        (0.94, 0.48, 0.08, -15), (0.10, 0.90, 0.08, 30), (0.90, 0.91, 0.10, -25),
+        (0.30, 0.95, 0.05, 10), (0.70, 0.05, 0.05, -10),
+    ]
+    private static let colors: [Color] = [
+        Color(hex: 0xFF8AD8), Color(hex: 0xFFE26A), Color(hex: 0x86F2BC), Color(hex: 0x8FF0FF), Color(hex: 0xFF9F2E),
+    ]
+
+    var body: some View {
+        ZStack {
+            ForEach(0..<Self.marks.count, id: \.self) { index in
+                let mark = Self.marks[index]
+                Image(systemName: symbol)
+                    .font(.system(size: side * mark.size, weight: .black))
+                    .foregroundStyle(Self.colors[index % Self.colors.count].opacity(0.6))
+                    .rotationEffect(.degrees(mark.turn))
+                    .scaleEffect(isSprayed ? 1 : 0.2)
+                    .position(x: side * mark.x, y: side * mark.y)
+            }
+
+            if !word.isEmpty {
+                Text(word.uppercased())
+                    .font(.system(size: side * 0.1, weight: .black, design: .rounded))
+                    .italic()
+                    .foregroundStyle(
+                        LinearGradient(colors: [Color(hex: 0xFFE26A), Color(hex: 0xFF7AD9)], startPoint: .leading, endPoint: .trailing)
+                    )
+                    // A hard offset shadow, like the outline of spray-can lettering.
+                    .shadow(color: Color(hex: 0x3A0A5A), radius: 0, x: side * 0.008, y: side * 0.008)
+                    .shadow(color: Color(hex: 0xFF7AD9, opacity: 0.8), radius: side * 0.03)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .frame(maxWidth: side * 0.86)
+                    .rotationEffect(.degrees(-7))
+                    .scaleEffect(isSprayed ? 1 : 1.6)
+                    .opacity(isSprayed ? 1 : 0)
+                    .position(x: side * 0.5, y: side * 0.1)
+            }
+        }
+        .frame(width: side, height: side)
+        .onAppear {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.5).delay(0.15)) {
+                isSprayed = true
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }

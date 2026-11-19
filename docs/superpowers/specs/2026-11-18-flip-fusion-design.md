@@ -157,3 +157,16 @@ The owner asked that themes "unlock new board games and boards and better animat
 - **Shape Shift unlocks with the player's first theme beyond Neon**, bought or won (`GameStore.isUnlocked`). Until then its button shows a padlock and says how to open it. Gold Rush (score 2,000) opens it without spending anything.
 - **The intro** always plays in the original Neon look: its own backdrop, Neon tiles, plain round sparks.
 - The largest gem pack is 150 gems, so the dearest themes now take more than one pack. A bigger pack would need a new product in App Store Connect.
+
+## Full scenes, theme moments, theme music, and a clearer board (2026-11-18)
+
+After playing build 25 the owner asked for much richer themes (fish and a shark for Ocean, a volcano with real-looking lava for Lava, piling snow and a snowman for Frost, an 80s look with neon tiles for Neon), music for each theme, stone blocks that look like 3D stone with versions for themes, messages that never cover the tiles, the game modes moved into the menu, the tagline moved, and themed graffiti on the game-over card.
+
+- **Scenes** (`UI/ThemeScenes.swift`). Ocean: shafts of light, swaying weed, three kinds of fish, jellyfish. Lava: a volcano with lava streams, a heaving pool with bubbles that pop, a small spurt every five seconds. Frost: snowy pines, a blanket of snow, a waving snowman, and snow that settles along the top of the board until a turn shakes it off. Neon: stars, a wire-frame mountain range, turning neon triangles over the rolling grid.
+- **Moments.** A new level, a four-tile merge, or five merges before a turn plays the theme's moment over the whole screen for 1.8 seconds: a shark bursting up with open jaws (Ocean), an eruption whose lava lands and drips on the board (Lava), a blizzard (Frost), laser bars (Neon). They never block touches and are skipped with Reduce Motion. The shark is a generic shark, not any film's.
+- **Neon tiles** are dark glass with a glowing tube round the edge. The original glossy look lives on as `Skin.classic`, which only the intro uses.
+- **Music.** `scripts/make-theme-music.py` composes one looping tune per theme (`music-<theme>.wav`) from a chord progression and a motif, in a style of its own. The theme's tune plays in every mode; the fast tune still takes over for double points, the last seconds and danger.
+- **Stone blocks** are boulders with thickness, faces, cracks and speckles, made of something different in each theme: rock, sandstone, coral, rock candy, cooling magma with glowing cracks, ice, a gold nugget, mirror stone, moon rock with craters.
+- **Nothing covers the board any more.** Messages appear over the title. The prize reel sits in a strip under the boosters. Call-out words sit at the board's top edge and last about half a second.
+- **Layout.** "Swipe. Merge. Rotate." is under the logo. The mode buttons are gone from the game screen: the strip under the boosters names the game in play (or counts down to the next shape) and opens the menu, whose first section lists the three games as cards.
+- **Game-over graffiti.** The card shows the theme's word at a slant ("Wipeout!", "Burned!", "Frozen!", "Game over, dude!" and so on) and its sparks scattered like stickers.

@@ -9,7 +9,7 @@ struct TileOutline: InsettableShape {
         let box = rect.insetBy(dx: inset, dy: inset)
         let side = min(box.width, box.height)
         switch shape {
-        case .rounded:
+        case .rounded, .neon:
             return RoundedRectangle(cornerRadius: side * 0.2, style: .continuous).path(in: box)
         case .jelly:
             return RoundedRectangle(cornerRadius: side * 0.36, style: .continuous).path(in: box)
@@ -91,6 +91,7 @@ enum SceneArt {
     static func draw(_ backdrop: Skin.Backdrop, in context: inout GraphicsContext, size: CGSize, time: Double) {
         switch backdrop {
         case .grid:
+            eighties(&context, size: size, time: time)
             grid(&context, size: size, time: time)
             drift(&context, size: size, time: time, count: 10, mark: .diamond,
                   colors: [Color(hex: 0x8FF0FF), Color(hex: 0xFF7AD9)], sizes: 4...9, rising: true, pace: 0.6, twinkle: true)
@@ -99,6 +100,7 @@ enum SceneArt {
             drift(&context, size: size, time: time, count: 14, mark: .dot,
                   colors: [Color(hex: 0xFFE26A), Color(hex: 0xFF9F6A)], sizes: 2...6, rising: true, pace: 0.5, twinkle: true)
         case .bubbles:
+            ocean(&context, size: size, time: time)
             drift(&context, size: size, time: time, count: 18, mark: .ring,
                   colors: [Color(hex: 0xBFF6FF), Color.white], sizes: 8...30, rising: true, pace: 1)
             drift(&context, size: size, time: time, count: 16, mark: .dot,
@@ -110,9 +112,11 @@ enum SceneArt {
                   colors: [Color.white], sizes: 2...5, rising: true, pace: 0.6, twinkle: true, salt: 40)
         case .embers:
             glow(&context, size: size, color: Color(hex: 0xFF5A1F), time: time)
+            volcano(&context, size: size, time: time)
             drift(&context, size: size, time: time, count: 34, mark: .dot,
                   colors: [Color(hex: 0xFFD23F), Color(hex: 0xFF7A2E), Color(hex: 0xFF4A2E)], sizes: 2...6, rising: true, pace: 2.2, twinkle: true)
         case .snow:
+            winter(&context, size: size, time: time)
             drift(&context, size: size, time: time, count: 40, mark: .dot,
                   colors: [Color.white, Color(hex: 0xD6F3FF)], sizes: 2...7, rising: false, pace: 0.9)
             drift(&context, size: size, time: time, count: 8, mark: .star,
@@ -132,12 +136,12 @@ enum SceneArt {
     }
 
     /// A number from 0 up to 1 that is always the same for the same speck and salt.
-    private static func unit(_ index: Int, _ salt: Int) -> Double {
+    static func unit(_ index: Int, _ salt: Int) -> Double {
         let value = sin(Double(index) * 12.9898 + Double(salt) * 78.233) * 43758.5453
         return value - floor(value)
     }
 
-    private static func fraction(_ value: Double) -> Double {
+    static func fraction(_ value: Double) -> Double {
         value - floor(value)
     }
 
@@ -352,5 +356,146 @@ enum SceneArt {
                 )
             }
         }
+    }
+}
+
+/// A shape drawn through points given as fractions of its frame (0 to 1 each way).
+struct Outline: Shape {
+    var points: [CGPoint]
+    var isClosed = true
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        for (index, point) in points.enumerated() {
+            let spot = CGPoint(x: rect.minX + point.x * rect.width, y: rect.minY + point.y * rect.height)
+            if index == 0 {
+                path.move(to: spot)
+            } else {
+                path.addLine(to: spot)
+            }
+        }
+        if isClosed {
+            path.closeSubpath()
+        }
+        return path
+    }
+}
+
+/// A stone block: an uneven boulder with thickness, flat faces, cracks and speckles.
+/// Each theme makes it of something else: rock, coral, ice, cooling magma and so on.
+struct StoneView: View {
+    let size: CGFloat
+    var look: Skin.StoneLook = .rock
+
+    /// The colours of one kind of stone.
+    private struct Palette {
+        /// The top face, lit corner to shaded corner.
+        let face: [UInt32]
+        /// The side of the block, seen below the top face.
+        let side: UInt32
+        let crack: UInt32
+        /// Glowing cracks (magma) or pale ones (ice) are drawn wider, with a glow.
+        var glow = false
+    }
+
+    private var palette: Palette {
+        switch look {
+        case .rock: return Palette(face: [0xC9CDD6, 0x8E93A0, 0x5A5F6B], side: 0x33363F, crack: 0x2B2F39)
+        case .sandstone: return Palette(face: [0xF0D2A8, 0xC89660, 0x8A5C36], side: 0x4F3018, crack: 0x4A2E18)
+        case .coral: return Palette(face: [0xFFB0A8, 0xE8647E, 0x9A3560], side: 0x5A1838, crack: 0x5A1838)
+        case .candy: return Palette(face: [0xFBD0FF, 0xCE8FEA, 0x8457B0], side: 0x4A2A70, crack: 0x4A2A70)
+        case .magma: return Palette(face: [0x5A4744, 0x33252A, 0x170E0E], side: 0x0C0606, crack: 0xFF8A2E, glow: true)
+        case .ice: return Palette(face: [0xF2FAFF, 0xB4DBF8, 0x6AA6D8], side: 0x3A6E9E, crack: 0xFFFFFF, glow: true)
+        case .nugget: return Palette(face: [0xFFEC9A, 0xE8B030, 0x9A6612], side: 0x5A3A08, crack: 0x5A3A08)
+        case .mirror: return Palette(face: [0xD2C6FF, 0x8468E8, 0x43308E], side: 0x231650, crack: 0x231650)
+        case .moon: return Palette(face: [0xE2E2EA, 0xA2A2B2, 0x5C5C70], side: 0x30303E, crack: 0x3A3A4A)
+        }
+    }
+
+    /// The edge of the rock, clockwise from the top-left.
+    private static let rim: [CGPoint] = [
+        CGPoint(x: 0.24, y: 0.07), CGPoint(x: 0.63, y: 0.04), CGPoint(x: 0.90, y: 0.21),
+        CGPoint(x: 0.97, y: 0.57), CGPoint(x: 0.83, y: 0.89), CGPoint(x: 0.46, y: 0.97),
+        CGPoint(x: 0.13, y: 0.86), CGPoint(x: 0.03, y: 0.47),
+    ]
+    /// The face that catches the light, top-left.
+    private static let lit: [CGPoint] = [
+        CGPoint(x: 0.24, y: 0.07), CGPoint(x: 0.63, y: 0.04), CGPoint(x: 0.56, y: 0.33),
+        CGPoint(x: 0.29, y: 0.41), CGPoint(x: 0.03, y: 0.47),
+    ]
+    /// The face in shadow, bottom-right.
+    private static let shaded: [CGPoint] = [
+        CGPoint(x: 0.97, y: 0.57), CGPoint(x: 0.83, y: 0.89), CGPoint(x: 0.46, y: 0.97),
+        CGPoint(x: 0.52, y: 0.66), CGPoint(x: 0.75, y: 0.51),
+    ]
+    /// The cracks, each a line through a few points.
+    private static let cracks: [[CGPoint]] = [
+        [CGPoint(x: 0.29, y: 0.41), CGPoint(x: 0.56, y: 0.33), CGPoint(x: 0.75, y: 0.51), CGPoint(x: 0.97, y: 0.57)],
+        [CGPoint(x: 0.56, y: 0.33), CGPoint(x: 0.52, y: 0.66), CGPoint(x: 0.46, y: 0.97)],
+        [CGPoint(x: 0.52, y: 0.66), CGPoint(x: 0.33, y: 0.72), CGPoint(x: 0.13, y: 0.86)],
+    ]
+    /// Speckles: where (as fractions), how big (as a fraction of the size), dark or light.
+    private static let speckles: [(x: CGFloat, y: CGFloat, size: CGFloat, isDark: Bool)] = [
+        (0.36, 0.22, 0.05, false), (0.70, 0.30, 0.04, true), (0.20, 0.60, 0.05, true),
+        (0.42, 0.52, 0.035, false), (0.66, 0.76, 0.05, true), (0.82, 0.42, 0.035, false),
+        (0.30, 0.84, 0.035, true),
+    ]
+
+    var body: some View {
+        let colors = palette
+        let rock = Outline(points: Self.rim)
+        let round = StrokeStyle(lineWidth: size * 0.09, lineCap: .round, lineJoin: .round)
+        let crackWidth = max(1, size * (colors.glow ? 0.034 : 0.022))
+        let crack = StrokeStyle(lineWidth: crackWidth, lineCap: .round, lineJoin: .round)
+        let crackColor = Color(hex: colors.crack, opacity: colors.glow ? 1 : 0.75)
+        let face = LinearGradient(
+            colors: colors.face.map { Color(hex: $0) },
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        // The moon's speckles are craters: bigger and all dark.
+        let speckScale: CGFloat = look == .moon ? 1.9 : 1
+        // The top face sits a little above the block's side, which gives it thickness.
+        let depth = size * 0.09
+        let top = size * 0.9 - depth
+
+        ZStack(alignment: .top) {
+            // The side of the block: the same outline, lower down and dark.
+            ZStack {
+                rock.stroke(Color(hex: colors.side), style: round)
+                rock.fill(Color(hex: colors.side))
+            }
+            .frame(width: size * 0.9, height: top)
+            .offset(y: depth)
+
+            ZStack {
+                // A fat rounded stroke under the fill takes the sharpness off the corners.
+                rock.stroke(Color(hex: colors.face[2]), style: round)
+                rock.fill(face)
+                Outline(points: Self.lit).fill(Color.white.opacity(0.22))
+                Outline(points: Self.shaded).fill(Color.black.opacity(0.22))
+
+                ForEach(0..<Self.speckles.count, id: \.self) { index in
+                    let speck = Self.speckles[index]
+                    let isDark = speck.isDark || look == .moon
+                    Circle()
+                        .fill(isDark ? Color.black.opacity(0.26) : Color.white.opacity(0.4))
+                        .frame(width: size * speck.size * speckScale, height: size * speck.size * speckScale)
+                        .position(x: size * 0.9 * speck.x, y: top * speck.y)
+                }
+
+                ForEach(0..<Self.cracks.count, id: \.self) { index in
+                    Outline(points: Self.cracks[index], isClosed: false)
+                        .stroke(crackColor, style: crack)
+                        .shadow(color: colors.glow ? crackColor : Color.clear, radius: size * 0.05)
+                }
+                // A thin light edge along the lit side.
+                Outline(points: [Self.rim[7], Self.rim[0], Self.rim[1], Self.rim[2]], isClosed: false)
+                    .stroke(Color.white.opacity(0.6), style: StrokeStyle(lineWidth: max(1, size * 0.025), lineCap: .round, lineJoin: .round))
+            }
+            .frame(width: size * 0.9, height: top)
+        }
+        .frame(width: size * 0.9, height: size * 0.9, alignment: .top)
+        .frame(width: size, height: size)
     }
 }
