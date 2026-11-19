@@ -160,6 +160,23 @@ enum GameEngine {
     // MARK: Rotation and gravity
 
     /// Turns the board a quarter turn clockwise: the top-left cell becomes the top-right cell.
+    /// Turns the board a quarter turn the other way: the top-right cell becomes the
+    /// top-left cell.
+    static func rotateCounterClockwise(_ tiles: [Tile]) -> [Tile] {
+        tiles.map { tile in
+            var turned = tile
+            turned.row = size - 1 - tile.col
+            turned.col = tile.row
+            return turned
+        }
+    }
+
+    static func rotateCounterClockwise(_ blocks: [Block]) -> [Block] {
+        blocks.map { block in
+            Block(row: size - 1 - block.col, col: block.row, kind: block.kind)
+        }
+    }
+
     static func rotateClockwise(_ blocks: [Block]) -> [Block] {
         blocks.map { block in
             Block(row: block.col, col: size - 1 - block.row, kind: block.kind)

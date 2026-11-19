@@ -190,3 +190,9 @@ More requests from the owner after playing build 27.
 - **Bomb tile:** a round black bomb with its number on it and a fuse whose tip sparks. **Clock tile:** an alarm clock with its number on the face and a hand going round. Both look the same in every theme.
 - **Speed bonus:** each time it goes up, lightning strikes down the left edge of the board and speed lines streak across its top edge, with a sound.
 - **Chain reward:** the power-up tile lands with a big burst and a flash, the call-out says "Chain x2! Double points!", and the theme's big moment plays.
+
+## Twist, a livelier arrow, obstacles that move (2026-11-19)
+
+- **Twist**, a fourth game mode: no clock, an extra tile after every turn, and after any turn the board may (one time in two) start turning the other way. The arrow is mirrored to show which way the next turn goes, the strip under the boosters says it in words, and "Reversed!" is called out when it changes. It unlocks once the player has two themes beyond Neon (`GameStore.themesNeeded`); Shape Shift still needs one.
+- **The arrow** now moves all the time: its head nods along the path, light runs down the trail in waves, and beads of light travel from the pill to the trail's end. All of it speeds up when the turn is one move away. It stands still with Reduce Motion.
+- **Walls and crates move a little:** a crate rocks gently and a gleam of light slides across a wall.

@@ -309,6 +309,18 @@ struct GameEngineTests {
         #expect(turned == [Block(row: 0, col: 3, kind: .wall), Block(row: 2, col: 2, kind: .crate)])
     }
 
+    @Test func aTurnToTheLeftUndoesATurnToTheRight() {
+        let start = tiles([[2, 4, 0, 0], [0, 8, 0, 0], [0, 0, 0, 16], [32, 0, 0, 0]])
+        let there = GameEngine.rotateClockwise(start)
+        #expect(GameEngine.rotateCounterClockwise(there) == start)
+        // The top-right cell goes to the top-left.
+        let turned = GameEngine.rotateCounterClockwise([Tile(id: 1, value: 2, row: 0, col: 3)])
+        #expect(turned[0].row == 0)
+        #expect(turned[0].col == 0)
+        let blocks = [Block(row: 0, col: 3, kind: .wall), Block(row: 2, col: 1, kind: .crate)]
+        #expect(GameEngine.rotateCounterClockwise(GameEngine.rotateClockwise(blocks)) == blocks)
+    }
+
     @Test func aBlockedCellCountsAsFull() {
         var almostDead = tiles([[2, 4, 2, 4], [4, 2, 4, 2], [2, 4, 2, 4], [4, 2, 4, 2]])
         almostDead.removeFirst()

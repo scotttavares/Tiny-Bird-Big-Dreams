@@ -629,6 +629,37 @@ struct GameStoreTests {
         #expect(store.turnMerges == 0)
     }
 
+    @Test func theTwistGameNeedsTwoThemesAndTurnsEitherWay() {
+        let defaults = freshDefaults()
+        defaults.set("twist", forKey: "ff.mode")
+        defaults.set(["sunset"], forKey: "ff.skins")
+        // One theme is not enough.
+        let early = GameStore(defaults: defaults, animated: false)
+        #expect(early.mode == .timed)
+        #expect(!early.isUnlocked(.twist))
+        #expect(early.isUnlocked(.shift))
+
+        defaults.set(["sunset", "ocean"], forKey: "ff.skins")
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.mode == .twist)
+        #expect(!store.state.counterClockwise)
+        let directions: [Direction] = [.left, .down, .right, .up]
+        var tries = 0
+        // Play until the board has turned six times.
+        while store.rotatePulse < 6, tries < 200, !store.isGameOver {
+            store.swipe(directions[tries % 4])
+            tries += 1
+            #expect(GameEngine.isValid(store.state))
+        }
+        #expect(store.rotatePulse == 6 || store.isGameOver)
+        // The direction in the game matches the changes announced so far.
+        #expect(store.state.counterClockwise == (store.directionEvent % 2 == 1))
+        // The clock never runs, and the direction is saved with the game.
+        #expect(!store.isTimeUp)
+        let again = GameStore(defaults: defaults, animated: false)
+        #expect(again.state.counterClockwise == store.state.counterClockwise)
+    }
+
     @Test func aDeadBoardIsGameOverAndIgnoresSwipes() {
         let defaults = freshDefaults()
         let dead = GameState(tiles: tiles([[2, 4, 2, 4], [4, 2, 4, 2], [2, 4, 2, 4], [4, 2, 4, 2]]), score: 100, movesUntilRotation: 1, nextID: 20)

@@ -109,9 +109,11 @@ struct GameState: Equatable, Codable, Sendable {
     var shapeID: Int = 0
     /// Shape Shift game only: moves left before the board changes shape.
     var movesUntilShift: Int = GameEngine.movesPerShift
+    /// Twist game only: true when the next turn of the board is to the left.
+    var counterClockwise: Bool = false
 
     enum CodingKeys: String, CodingKey {
-        case tiles, score, movesUntilRotation, nextID, blocks, shapeID, movesUntilShift
+        case tiles, score, movesUntilRotation, nextID, blocks, shapeID, movesUntilShift, counterClockwise
     }
 }
 
@@ -126,5 +128,6 @@ extension GameState {
         blocks = try box.decodeIfPresent([Block].self, forKey: .blocks) ?? []
         shapeID = try box.decodeIfPresent(Int.self, forKey: .shapeID) ?? 0
         movesUntilShift = try box.decodeIfPresent(Int.self, forKey: .movesUntilShift) ?? GameEngine.movesPerShift
+        counterClockwise = try box.decodeIfPresent(Bool.self, forKey: .counterClockwise) ?? false
     }
 }

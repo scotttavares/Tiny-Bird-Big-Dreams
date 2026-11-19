@@ -96,7 +96,8 @@ struct GameScreen: View {
 
                     RotationArrow(
                         side: side,
-                        isImminent: store.state.movesUntilRotation == 1 && !store.isGameOver
+                        isImminent: store.state.movesUntilRotation == 1 && !store.isGameOver,
+                        isReversed: store.state.counterClockwise
                     )
 
                     Celebration(store: store, side: side)
@@ -336,6 +337,8 @@ struct GameScreen: View {
         case .shift:
             let moves = max(1, store.state.movesUntilShift)
             return moves == 1 ? "Board changes in 1 move" : "Board changes in \(moves) moves"
+        case .twist:
+            return store.state.counterClockwise ? "Twist: next turn is left" : "Twist: next turn is right"
         }
     }
 
@@ -366,6 +369,8 @@ struct GameScreen: View {
             show("Endless: play until no moves are left", seconds: 2.6)
         case .shift:
             show("Shape Shift: the board changes every \(GameEngine.movesPerShift) moves", seconds: 3)
+        case .twist:
+            show("Twist: the board may turn either way", seconds: 3)
         }
     }
 

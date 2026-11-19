@@ -365,7 +365,17 @@ final class GameStore {
     /// The Shape Shift game opens with the player's first theme beyond the free one,
     /// bought or won.
     func isUnlocked(_ mode: Mode) -> Bool {
-        mode != .shift || !ownedSkins.isEmpty
+        ownedSkins.count >= Self.themesNeeded(for: mode)
+    }
+
+    /// How many themes beyond the free one a game needs: none for the first two
+    /// games, one for Shape Shift, two for Twist.
+    nonisolated static func themesNeeded(for mode: Mode) -> Int {
+        switch mode {
+        case .timed, .endless: return 0
+        case .shift: return 1
+        case .twist: return 2
+        }
     }
 
     /// True when the theme is the player's to use.
@@ -448,6 +458,8 @@ final class GameStore {
         case endless
         /// No clock, and the board changes shape at random every few moves.
         case shift
+        /// No clock, and the board may turn left or right: the arrow shows which.
+        case twist
     }
 
     private(set) var mode: Mode
@@ -477,6 +489,7 @@ final class GameStore {
             case .timed: return "ff.state"
             case .endless: return "ff.endless.state"
             case .shift: return "ff.shift.state"
+            case .twist: return "ff.twist.state"
             }
         }
 
@@ -485,6 +498,7 @@ final class GameStore {
             case .timed: return "ff.best"
             case .endless: return "ff.endless.best"
             case .shift: return "ff.shift.best"
+            case .twist: return "ff.twist.best"
             }
         }
     }
@@ -546,7 +560,7 @@ final class GameStore {
         self.ownedSkins = owned
 
         var mode = Mode(rawValue: defaults.string(forKey: Key.mode) ?? "") ?? .timed
-        if mode == .shift, owned.isEmpty {
+        if owned.count < GameStore.themesNeeded(for: mode) {
             mode = .timed
         }
         let loaded = GameStore.load(mode, from: defaults)
@@ -805,11 +819,25 @@ final class GameStore {
         finishMove()
     }
 
+    /// Goes up each time the Twist game changes the way the board turns.
+    private(set) var directionEvent = 0
+
+    /// Moves every tile and block to where a quarter turn puts it: to the right,
+    /// or to the left when the Twist game says so.
+    private func turnBoard() {
+        if state.counterClockwise {
+            state.tiles = GameEngine.rotateCounterClockwise(state.tiles)
+            state.blocks = GameEngine.rotateCounterClockwise(state.blocks)
+        } else {
+            state.tiles = GameEngine.rotateClockwise(state.tiles)
+            state.blocks = GameEngine.rotateClockwise(state.blocks)
+        }
+    }
+
     /// The quarter turn and the gravity that follows, with no animation (tests).
     private func rotateImmediately() {
         rotatePulse += 1
-        state.tiles = GameEngine.rotateClockwise(state.tiles)
-        state.blocks = GameEngine.rotateClockwise(state.blocks)
+        turnBoard()
         let passes = GameEngine.settle(state.tiles, blocked: blockedSet)
         for pass in passes {
             apply(pass)
@@ -850,13 +878,12 @@ final class GameStore {
     private func rotateAnimated() async {
         rotatePulse += 1
         withAnimation(.easeInOut(duration: Timing.rotation)) {
-            boardAngle = 90
+            boardAngle = state.counterClockwise ? -90 : 90
         }
         await pause(Timing.rotation + 0.03)
         // Swap to the turned coordinates and snap the board back upright in one
         // un-animated update: the picture on screen does not change.
-        state.tiles = GameEngine.rotateClockwise(state.tiles)
-        state.blocks = GameEngine.rotateClockwise(state.blocks)
+        turnBoard()
         boardAngle = 0
         // Let that swap reach the screen before gravity starts animating.
         await pause(0.05)
@@ -1068,8 +1095,13 @@ final class GameStore {
             }
         }
         // The endless game gets an extra tile after every rotation, so the board fills.
-        if mode == .endless {
+        if mode == .endless || mode == .twist {
             spawnTile()
+        }
+        // In the Twist game, any turn may be followed by one the other way.
+        if mode == .twist, Bool.random(using: &rng) {
+            state.counterClockwise.toggle()
+            directionEvent += 1
         }
         state.movesUntilRotation = GameEngine.movesPerRotation
         turnMerges = 0

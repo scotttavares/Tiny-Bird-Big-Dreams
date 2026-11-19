@@ -617,6 +617,9 @@ struct GameBanners: ViewModifier {
             .onChange(of: store.crateEvent) { _, _ in
                 callout(store.lastCrateCount > 1 ? "Smash x\(store.lastCrateCount)!" : "Smash!")
             }
+            .onChange(of: store.directionEvent) { _, _ in
+                callout("Reversed!")
+            }
             .onChange(of: store.specialSpawnEvent) { _, _ in
                 if store.lastSpecialKind == .time, !seenClockTile {
                     seenClockTile = true
@@ -702,6 +705,9 @@ struct GameSounds: ViewModifier {
             }
             .onChange(of: store.crateEvent) { _, _ in
                 sounds.play(.boom, volume: 0.6)
+            }
+            .onChange(of: store.directionEvent) { _, _ in
+                sounds.play(.mode)
             }
             .onChange(of: store.mode) { _, _ in
                 sounds.play(.mode, volume: 0.8)
@@ -921,13 +927,40 @@ struct ObstacleView: View {
     let kind: BlockKind
     let size: CGFloat
 
+    /// A crate rocks gently; a gleam of light crosses a wall.
+    @State private var isMoving = false
+
     var body: some View {
+        let block = RoundedRectangle(cornerRadius: size * 0.1, style: .continuous)
+
         Group {
             if kind == .crate {
                 crate
+                    .rotationEffect(.degrees(isMoving ? 2.5 : -2.5))
+                    .offset(y: isMoving ? -size * 0.015 : size * 0.015)
+                    .animation(.easeInOut(duration: 1.3).repeatForever(autoreverses: true), value: isMoving)
             } else {
                 wall
+                    .overlay {
+                        // A slanted bar of light that slides across, again and again.
+                        Rectangle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.white.opacity(0), Color.white.opacity(0.4), Color.white.opacity(0)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(width: size * 0.3, height: size * 1.6)
+                            .rotationEffect(.degrees(22))
+                            .offset(x: isMoving ? size * 0.95 : -size * 0.95)
+                            .animation(.easeInOut(duration: 2.8).repeatForever(autoreverses: false), value: isMoving)
+                    }
+                    .clipShape(block)
             }
+        }
+        .onAppear {
+            isMoving = true
         }
         .frame(width: size, height: size)
         .shadow(color: Color.black.opacity(0.55), radius: size * 0.08, x: 0, y: size * 0.06)
