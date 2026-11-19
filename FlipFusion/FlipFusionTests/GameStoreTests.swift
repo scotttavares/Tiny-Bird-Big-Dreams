@@ -25,6 +25,15 @@ struct GameStoreTests {
         #expect(!store.isGameOver)
     }
 
+    @Test func anEmptyBoardIsDealtNewTilesOnASwipe() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: [], score: 40, movesUntilRotation: 2, nextID: 10), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        store.swipe(.left)
+        #expect(!store.state.tiles.isEmpty)
+        #expect(!store.isGameOver)
+    }
+
     @Test func aSwipeThatChangesNothingIsNotAMove() {
         let defaults = freshDefaults()
         let start = GameState(tiles: tiles([[2, 4, 0, 0], [8, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 12, movesUntilRotation: 2, nextID: 10)

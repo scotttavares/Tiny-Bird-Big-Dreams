@@ -994,6 +994,11 @@ final class GameStore {
 
     func swipe(_ dir: Direction) {
         guard !isAnimating, !isGameOver else { return }
+        // A board with nothing on it has nothing to swipe: deal new tiles instead.
+        if refillEmptyBoard() {
+            save()
+            return
+        }
         let result = GameEngine.slide(state.tiles, dir, blocked: blockedSet)
         guard result.changed else { return }
 
@@ -1390,10 +1395,21 @@ final class GameStore {
         turnMerges = 0
     }
 
+    /// Deals two tiles onto a board that has none left (bombs, a sweep or a creature
+    /// can clear it), so there is always something to swipe. Returns true when it did.
+    @discardableResult
+    private func refillEmptyBoard() -> Bool {
+        guard state.tiles.isEmpty else { return false }
+        spawnTile(forcing: .normal)
+        spawnTile(forcing: .normal)
+        return !state.tiles.isEmpty
+    }
+
     private func finishMove() {
         let wasSwipe = swipeInFlight
         swipeInFlight = false
         reshapeIfNeeded(afterSwipe: wasSwipe)
+        refillEmptyBoard()
         if wasSwipe, mode == .fusion {
             mutateTile()
         }
