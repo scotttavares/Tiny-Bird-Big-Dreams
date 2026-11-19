@@ -453,7 +453,7 @@ struct BoosterBar: View {
         }
     }
 
-    private func colors(_ booster: GameStore.Booster) -> [Color] {
+    static func colors(_ booster: GameStore.Booster) -> [Color] {
         switch booster {
         case .flip: return [Color(hex: 0xC08CFF), Color(hex: 0x6C4BFF)]
         case .sweep: return [Color(hex: 0x86F2BC), Color(hex: 0x1FA5A0)]
@@ -477,13 +477,13 @@ struct BoosterBar: View {
                             .frame(width: 54 * scale, height: 54 * scale)
                             .background(
                                 RoundedRectangle(cornerRadius: 16 * scale, style: .continuous)
-                                    .fill(LinearGradient(colors: colors(booster), startPoint: .top, endPoint: .bottom))
+                                    .fill(LinearGradient(colors: Self.colors(booster), startPoint: .top, endPoint: .bottom))
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16 * scale, style: .continuous)
                                     .strokeBorder(Color.white.opacity(0.55), lineWidth: 1.5)
                             )
-                            .shadow(color: colors(booster)[1].opacity(0.7), radius: 7 * scale)
+                            .shadow(color: Self.colors(booster)[1].opacity(0.7), radius: 7 * scale)
                             .overlay(alignment: .topTrailing) {
                                 // Free uses left, or the price in coins.
                                 Text(count > 0 ? "\(count)" : "\(booster.price)")

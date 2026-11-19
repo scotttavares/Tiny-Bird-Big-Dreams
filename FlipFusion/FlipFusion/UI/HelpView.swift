@@ -140,12 +140,12 @@ struct HelpView: View {
                 }
 
                 section("Boosters and coins") {
-                    row(symbol: BoosterBar.symbol(.flip), title: "Flip", text: "Turns the board right now, without using up a move.")
-                    row(symbol: BoosterBar.symbol(.sweep), title: "Sweep", text: "Clears every 2, 4 and stone block off the board.")
-                    row(symbol: BoosterBar.symbol(.fever), title: "Double", text: "Starts double points for \(Int(GameStore.feverSeconds)) seconds.")
-                    row(symbol: BoosterBar.symbol(.arm), title: "Bombs", text: "Turns up to \(GameStore.armedTiles) of your tiles into bomb tiles.")
-                    row(symbol: "circle.circle.fill", title: "Coins", text: "You start with \(GameStore.freeBoosters) free uses of each booster. After that a use costs coins, and you earn a coin for every \(GameStore.pointsPerCoin) points.")
-                    row(symbol: "bolt.fill", title: "Speed bonus", text: "Merge again within \(Int(GameStore.streakWindow)) seconds and your points multiply, up to x\(GameStore.maxStreak + 1). Lightning strikes each time it goes up.")
+                    boosterRow(.flip, title: "Flip", text: "Turns the board right now, without using up a move.")
+                    boosterRow(.sweep, title: "Sweep", text: "Clears every 2, 4 and stone block off the board.")
+                    boosterRow(.fever, title: "Double", text: "Starts double points for \(Int(GameStore.feverSeconds)) seconds.")
+                    boosterRow(.arm, title: "Bombs", text: "Turns up to \(GameStore.armedTiles) of your tiles into bomb tiles.")
+                    coinRow(title: "Coins", text: "You start with \(GameStore.freeBoosters) free uses of each booster. After that a use costs coins, and you earn a coin for every \(GameStore.pointsPerCoin) points.")
+                    streakRow(title: "Speed bonus", text: "Merge again within \(Int(GameStore.streakWindow)) seconds and your points multiply, up to x\(GameStore.maxStreak + 1). Lightning strikes each time it goes up.")
                 }
 
                 section("Power-ups") {
@@ -198,6 +198,51 @@ struct HelpView: View {
                 .foregroundStyle(Theme.flip[0])
                 .frame(width: 44, height: 44)
                 .background(Circle().fill(Theme.cellFill))
+                .accessibilityHidden(true)
+            words(title: title, text: text)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// A row whose picture is the booster's own button.
+    private func boosterRow(_ booster: GameStore.Booster, title: String, text: String) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 13, style: .continuous)
+        let tones = BoosterBar.colors(booster)
+        return HStack(alignment: .top, spacing: 14) {
+            Image(systemName: BoosterBar.symbol(booster))
+                .font(.system(size: 19, weight: .heavy))
+                .foregroundStyle(Color.white)
+                .frame(width: 44, height: 44)
+                .background(shape.fill(LinearGradient(colors: tones, startPoint: .top, endPoint: .bottom)))
+                .overlay(shape.strokeBorder(Color.white.opacity(0.55), lineWidth: 1.5))
+                .shadow(color: tones[1].opacity(0.7), radius: 5)
+                .accessibilityHidden(true)
+            words(title: title, text: text)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// A row whose picture is a gold coin, as in the counter at the top of the game.
+    private func coinRow(title: String, text: String) -> some View {
+        let gold = LinearGradient(colors: [Color(hex: 0xFFE26A), Color(hex: 0xFF9F2E)], startPoint: .top, endPoint: .bottom)
+        return HStack(alignment: .top, spacing: 14) {
+            Circle()
+                .fill(gold)
+                .overlay(Circle().strokeBorder(Color.white.opacity(0.6), lineWidth: 1.5))
+                .frame(width: 30, height: 30)
+                .shadow(color: Color(hex: 0xFFB02E).opacity(0.8), radius: 5)
+                .frame(width: 44, height: 44)
+                .accessibilityHidden(true)
+            words(title: title, text: text)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// A row whose picture is the speed-bonus chip that shows beside the board.
+    private func streakRow(title: String, text: String) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            StreakChip(multiplier: 2, scale: 0.85)
+                .frame(width: 44, height: 44)
                 .accessibilityHidden(true)
             words(title: title, text: text)
         }
