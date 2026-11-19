@@ -29,8 +29,27 @@ struct BoardView: View {
         return nil
     }
 
+    /// Everything of the board except its holes.
+    private func boardMask(_ holes: [Block]) -> some View {
+        ZStack(alignment: .topLeading) {
+            Rectangle()
+                .frame(width: side, height: side)
+            ForEach(holes, id: \.self) { hole in
+                let point = origin(row: hole.row, col: hole.col)
+                RoundedRectangle(cornerRadius: cell * 0.2, style: .continuous)
+                    .frame(width: cell, height: cell)
+                    .offset(x: point.x, y: point.y)
+                    .blendMode(.destinationOut)
+            }
+        }
+        .frame(width: side, height: side, alignment: .topLeading)
+        .compositingGroup()
+    }
+
     var body: some View {
         let boardShape = RoundedRectangle(cornerRadius: side * 0.07, style: .continuous)
+        let holes = store.state.blocks.filter { $0.kind == .hole }
+        let holeCells = Set(holes.map(\.cell))
 
         ZStack(alignment: .topLeading) {
           // The board and its cells change colour with every level.
@@ -39,6 +58,10 @@ struct BoardView: View {
                 .fill(Theme.boardFill)
                 // The board glows pink while points count double.
                 .overlay(boardShape.strokeBorder(store.isFever ? Theme.fusion[0] : Theme.boardStroke, lineWidth: store.isFever ? 3 : 1.5))
+                // A hole is cut right through the board: the backdrop shows through.
+                .mask {
+                    boardMask(holes)
+                }
                 .shadow(
                     color: (store.isFever ? Theme.fusion[0] : Theme.boardGlow).opacity(store.isFever ? 0.9 : 0.55),
                     radius: side * (store.isFever ? 0.09 : 0.06),
@@ -50,16 +73,34 @@ struct BoardView: View {
             ForEach(0..<(GameEngine.size * GameEngine.size), id: \.self) { index in
                 let point = origin(row: index / GameEngine.size, col: index % GameEngine.size)
                 let cellShape = RoundedRectangle(cornerRadius: cell * 0.2, style: .continuous)
-                cellShape
-                    .fill(Theme.cellFill)
-                    .overlay(cellShape.strokeBorder(Theme.cellStroke, lineWidth: 1))
-                    .frame(width: cell, height: cell)
-                    .offset(x: point.x, y: point.y)
+                if holeCells.contains(Cell(row: index / GameEngine.size, col: index % GameEngine.size)) {
+                    // The rim of a hole.
+                    cellShape
+                        .strokeBorder(Theme.boardStroke, lineWidth: 2.5)
+                        .frame(width: cell, height: cell)
+                        .offset(x: point.x, y: point.y)
+                } else {
+                    cellShape
+                        .fill(Theme.cellFill)
+                        .overlay(cellShape.strokeBorder(Theme.cellStroke, lineWidth: 1))
+                        .frame(width: cell, height: cell)
+                        .offset(x: point.x, y: point.y)
+                }
             }
           }
           .frame(width: side, height: side, alignment: .topLeading)
           .hueRotation(.degrees(Double((store.level - 1) % 9) * 40))
           .animation(.easeInOut(duration: 0.6), value: store.level)
+
+            // Walls and crates stand on the board and keep their own colours.
+            ForEach(store.state.blocks.filter { $0.kind != .hole }, id: \.self) { block in
+                let point = origin(row: block.row, col: block.col)
+                ObstacleView(kind: block.kind, size: cell)
+                    .rotationEffect(.degrees(-store.boardAngle))
+                    .offset(x: point.x, y: point.y)
+                    .zIndex(1)
+                    .transition(.scale(scale: 0.2).combined(with: .opacity))
+            }
 
             ForEach(store.displayTiles) { tile in
                 let point = origin(row: tile.row, col: tile.col)

@@ -134,3 +134,15 @@ After playing build 23 the owner said the themes were "just a different colour b
 - **Themes are now more than colours** (`Game/Skin.swift`, `UI/Scenery.swift`). Each has a moving backdrop, a tile shape and its own sparks: Neon (free; rolling grid), Sunset (15 gems; striped sun), Ocean (30; bubble tiles, rising bubbles), Bubblegum (50; jelly tiles, hearts), Lava (80; six-sided tiles, embers), Frost (120; crystal tiles, snow), Gold Rush (score 2,000; cut-gem tiles, falling gold), Party Lights (reach level 7; sweeping lights), Galaxy (mega combo; planet tiles, shooting stars). The paid themes now cost 295 gems in all. Backdrops stand still when Reduce Motion is on.
 - **Menu.** Themes are cards in two columns, each showing three of its tiles in front of its backdrop. Gem packs are cards with "POPULAR" and "BEST VALUE" labels and how many more gems per dollar the bigger packs give, worked out from the App Store's own prices.
 - **Not built:** boards of different shapes (walls or holes). Only the board's colour changes with the level.
+
+## Board shapes and the Shape Shift game (2026-11-18)
+
+The owner asked for boards of different shapes with walls and holes, then for "a bunch of board shapes with all kinds of obstacles that change" and a new game mode where the board changes at random while playing.
+
+- **Blocks** (`Block` in `Game/Board.swift`, kept in `GameState.blocks`). A blocked cell lets no tile in: tiles stop beside it, do not merge across it, rest on it under gravity, and new tiles never land on it. Blocks turn with the board. Three kinds: a **wall** (a solid block), a **hole** (cut through the board, the backdrop shows through) and a **crate**, which a merge in the cell directly beside it or a bomb's blast smashes for 20 points.
+- **Fourteen shapes** plus the open board (`GameEngine.layouts`), each with one to three blocks.
+- **Timed and Endless:** level 1 is the open board; each level from 2 is played on the next shape, starting over after the fourteenth. The shape changes at the end of the move that reached the level.
+- **Shape Shift**, a third game mode with its own saved game and best score: no clock, and every 4 moves the board changes to a different shape picked at random and turned a random number of quarter turns. The line under the boosters counts down the moves. It ends when no move is left.
+- **When the shape changes**, a tile standing where a block now is jumps to a random empty cell, biggest tiles first. If the board has no empty cell, that tile is removed (rare: it needs a full board).
+- Games saved before this have no blocks and open as before.
+- Walls and holes follow the same rule on purpose; a hole that swallowed tiles would drain whole columns after every rotation on a board this small.

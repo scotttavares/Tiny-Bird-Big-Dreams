@@ -56,6 +56,25 @@ struct Cell: Hashable, Sendable {
     var col: Int
 }
 
+/// What kind of obstacle a blocked cell is. No tile can enter any of them.
+enum BlockKind: String, Codable, Sendable {
+    /// A solid block standing on the board.
+    case wall
+    /// A gap cut out of the board.
+    case hole
+    /// A wooden crate: a merge beside it, or a bomb's blast, smashes it.
+    case crate
+}
+
+/// One cell of the board that tiles cannot enter. Blocks turn with the board.
+struct Block: Hashable, Codable, Sendable {
+    var row: Int
+    var col: Int
+    var kind: BlockKind
+
+    var cell: Cell { Cell(row: row, col: col) }
+}
+
 /// What one slide (or one gravity pass) did to the board.
 struct StepResult: Equatable, Sendable {
     /// The tiles left on the board, at their new positions.
@@ -84,4 +103,28 @@ struct GameState: Equatable, Codable, Sendable {
     var score: Int
     var movesUntilRotation: Int
     var nextID: Int
+    /// The obstacles on the board, where they are now (they turn with the board).
+    var blocks: [Block] = []
+    /// Which of `GameEngine.layouts` the board was last shaped to. 0 is the open board.
+    var shapeID: Int = 0
+    /// Shape Shift game only: moves left before the board changes shape.
+    var movesUntilShift: Int = GameEngine.movesPerShift
+
+    enum CodingKeys: String, CodingKey {
+        case tiles, score, movesUntilRotation, nextID, blocks, shapeID, movesUntilShift
+    }
+}
+
+extension GameState {
+    /// Games saved before board shapes existed have no blocks.
+    init(from decoder: any Decoder) throws {
+        let box = try decoder.container(keyedBy: CodingKeys.self)
+        tiles = try box.decode([Tile].self, forKey: .tiles)
+        score = try box.decode(Int.self, forKey: .score)
+        movesUntilRotation = try box.decode(Int.self, forKey: .movesUntilRotation)
+        nextID = try box.decode(Int.self, forKey: .nextID)
+        blocks = try box.decodeIfPresent([Block].self, forKey: .blocks) ?? []
+        shapeID = try box.decodeIfPresent(Int.self, forKey: .shapeID) ?? 0
+        movesUntilShift = try box.decodeIfPresent(Int.self, forKey: .movesUntilShift) ?? GameEngine.movesPerShift
+    }
 }

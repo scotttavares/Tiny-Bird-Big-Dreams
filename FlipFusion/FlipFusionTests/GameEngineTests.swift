@@ -273,6 +273,107 @@ struct GameEngineTests {
         #expect(GameEngine.isValid(state))
     }
 
+    @Test func tilesStopBesideABlockedCell() {
+        let wall: Set<Cell> = [Cell(row: 0, col: 1)]
+        let stopped = GameEngine.slide(tiles([[0, 0, 0, 2], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), .left, blocked: wall)
+        #expect(grid(stopped.tiles)[0] == [0, 0, 2, 0])
+        #expect(stopped.changed)
+
+        // Equal tiles either side of it do not merge.
+        let apart = GameEngine.slide(tiles([[2, 0, 2, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), .left, blocked: wall)
+        #expect(!apart.changed)
+        #expect(apart.gained == 0)
+
+        // Tiles on the same side of it still merge, against it.
+        let merged = GameEngine.slide(tiles([[0, 0, 2, 2], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), .left, blocked: wall)
+        #expect(grid(merged.tiles)[0] == [0, 0, 4, 0])
+        #expect(merged.gained == 4)
+
+        // Sliding the other way, the block is in nobody's way.
+        let free = GameEngine.slide(tiles([[0, 0, 2, 2], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), .right, blocked: wall)
+        #expect(grid(free.tiles)[0] == [0, 0, 0, 4])
+    }
+
+    @Test func gravityRestsATileOnABlockedCell() {
+        let passes = GameEngine.settle(
+            tiles([[2, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
+            blocked: [Cell(row: 2, col: 0)]
+        )
+        #expect(passes.count == 1)
+        #expect(passes.last?.tiles.first?.row == 1)
+        #expect(passes.last?.tiles.first?.col == 0)
+    }
+
+    @Test func blocksTurnWithTheBoard() {
+        let turned = GameEngine.rotateClockwise([Block(row: 0, col: 0, kind: .wall), Block(row: 1, col: 2, kind: .crate)])
+        #expect(turned == [Block(row: 0, col: 3, kind: .wall), Block(row: 2, col: 2, kind: .crate)])
+    }
+
+    @Test func aBlockedCellCountsAsFull() {
+        var almostDead = tiles([[2, 4, 2, 4], [4, 2, 4, 2], [2, 4, 2, 4], [4, 2, 4, 2]])
+        almostDead.removeFirst()
+        // With the corner open there is room to move; with a hole there, there is not.
+        #expect(GameEngine.hasMove(almostDead))
+        #expect(!GameEngine.hasMove(almostDead, blocked: [Cell(row: 0, col: 0)]))
+        #expect(GameEngine.emptyCells(almostDead, blocked: [Cell(row: 0, col: 0)]).isEmpty)
+    }
+
+    @Test func newTilesNeverLandOnABlock() {
+        var rng = SeededGenerator(seed: 9)
+        var state = GameState(tiles: [], score: 0, movesUntilRotation: 2, nextID: 1)
+        state.blocks = [Block(row: 0, col: 0, kind: .wall), Block(row: 1, col: 1, kind: .hole)]
+        for _ in 0..<14 {
+            #expect(GameEngine.spawn(in: &state, using: &rng) != nil)
+        }
+        #expect(GameEngine.spawn(in: &state, using: &rng) == nil)
+        #expect(!state.tiles.contains { ($0.row == 0 && $0.col == 0) || ($0.row == 1 && $0.col == 1) })
+        #expect(GameEngine.isValid(state))
+
+        var broken = state
+        broken.tiles[0].row = 0
+        broken.tiles[0].col = 0
+        #expect(!GameEngine.isValid(broken))
+    }
+
+    @Test func everyBoardShapeIsSound() {
+        #expect(GameEngine.layouts.count == 15)
+        #expect(GameEngine.layouts[0].isEmpty)
+        for layout in GameEngine.layouts.dropFirst() {
+            #expect(!layout.isEmpty)
+            #expect(layout.count <= 3)
+            #expect(Set(layout.map(\.cell)).count == layout.count)
+            #expect(layout.allSatisfy { (0..<4).contains($0.row) && (0..<4).contains($0.col) })
+        }
+        #expect(GameEngine.layoutIndex(forLevel: 1) == 0)
+        #expect(GameEngine.layoutIndex(forLevel: 2) == 1)
+        #expect(GameEngine.layoutIndex(forLevel: 15) == 14)
+        #expect(GameEngine.layoutIndex(forLevel: 16) == 1)
+    }
+
+    @Test func aMergeBesideACrateSmashesIt() {
+        let result = GameEngine.slide(tiles([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), .left)
+        let below = Block(row: 1, col: 0, kind: .crate)
+        let diagonal = Block(row: 1, col: 1, kind: .crate)
+        let wall = Block(row: 0, col: 1, kind: .wall)
+        // The merge is in the top-left corner: only the crate straight below it goes.
+        #expect(GameEngine.cratesBroken(by: result, blocks: [below, diagonal, wall]) == [below])
+
+        var armed = tiles([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
+        armed[0].kind = .bomb
+        let blast = GameEngine.slide(armed, .left)
+        // A bomb's blast reaches the diagonal one too.
+        #expect(GameEngine.cratesBroken(by: blast, blocks: [below, diagonal, wall]) == [below, diagonal])
+    }
+
+    @Test func aGameSavedBeforeBoardShapesStillOpens() throws {
+        let old = #"{"tiles":[{"id":1,"value":2,"row":0,"col":0}],"score":8,"movesUntilRotation":2,"nextID":2}"#
+        let state = try JSONDecoder().decode(GameState.self, from: Data(old.utf8))
+        #expect(state.blocks.isEmpty)
+        #expect(state.shapeID == 0)
+        #expect(state.movesUntilShift == GameEngine.movesPerShift)
+        #expect(GameEngine.isValid(state))
+    }
+
     @Test func aNewGameStartsWithTwoTiles() {
         var rng = SeededGenerator(seed: 3)
         let state = GameEngine.newGame(using: &rng)

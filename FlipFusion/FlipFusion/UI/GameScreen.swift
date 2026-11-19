@@ -146,9 +146,11 @@ struct GameScreen: View {
                 }
                 .padding(.top, 14 * scale)
 
-                Text("Swipe. Merge. Rotate.")
+                Text(tagline)
                     .font(.system(size: 21 * scale, weight: .semibold, design: .rounded))
                     .foregroundStyle(Theme.tagline)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                     .padding(.top, 12 * scale)
 
                 ModeSwitch(scale: scale, mode: store.mode) { mode in
@@ -286,6 +288,14 @@ struct GameScreen: View {
         return store.mode == .timed ? .timed : .endless
     }
 
+    /// The line under the boosters. In the Shape Shift game it counts down to the
+    /// next change of shape.
+    private var tagline: String {
+        guard store.mode == .shift, !store.isGameOver else { return "Swipe. Merge. Rotate." }
+        let moves = max(1, store.state.movesUntilShift)
+        return moves == 1 ? "Board changes in 1 move" : "Board changes in \(moves) moves"
+    }
+
     /// What carrying on with the finished game would give, or nil when it cannot be
     /// carried on (it already was, or nothing was scored).
     private var continueOffer: String? {
@@ -302,10 +312,13 @@ struct GameScreen: View {
         withAnimation(.easeInOut(duration: 0.25)) {
             store.switchMode(mode)
         }
-        if mode == .timed {
+        switch mode {
+        case .timed:
             show("Timed: 2 minutes on the clock", seconds: 2.2)
-        } else {
+        case .endless:
             show("Endless: play until no moves are left", seconds: 2.6)
+        case .shift:
+            show("Shape Shift: the board changes every \(GameEngine.movesPerShift) moves", seconds: 3)
         }
     }
 

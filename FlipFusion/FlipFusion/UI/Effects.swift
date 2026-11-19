@@ -6,7 +6,7 @@ struct TimerRing: View {
     let scale: CGFloat
 
     var body: some View {
-        let isEndless = store.mode == .endless
+        let isEndless = store.mode != .timed
         let left = store.secondsLeft
         let fraction: CGFloat = isEndless ? 1 : CGFloat(max(0, min(1, left / GameStore.roundSeconds)))
         let whole = Int(left.rounded(.up))
@@ -38,7 +38,7 @@ struct TimerRing: View {
         .scaleEffect(beat ? 1.1 : 1)
         .animation(.easeInOut(duration: 0.3), value: whole)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(isEndless ? "Endless game, no clock" : "\(whole) seconds left"))
+        .accessibilityLabel(Text(isEndless ? "No clock in this game" : "\(whole) seconds left"))
     }
 }
 
@@ -272,9 +272,10 @@ struct ModeSwitch: View {
     let onPick: (GameStore.Mode) -> Void
 
     var body: some View {
-        HStack(spacing: 8 * scale) {
+        HStack(spacing: 6 * scale) {
             option(.timed, symbol: "timer", title: "2 Minutes")
             option(.endless, symbol: "infinity", title: "Endless")
+            option(.shift, symbol: "shuffle", title: "Shape Shift")
         }
     }
 
@@ -290,7 +291,8 @@ struct ModeSwitch: View {
                     .font(.system(size: 14 * scale, weight: .heavy, design: .rounded))
             }
             .foregroundStyle(isOn ? Color.white : Theme.label)
-            .padding(.horizontal, 14 * scale)
+            .lineLimit(1)
+            .padding(.horizontal, 10 * scale)
             .frame(height: 34 * scale)
             .background(
                 Capsule().fill(
@@ -513,6 +515,8 @@ struct GameBanners: ViewModifier {
     @AppStorage("ff.seenClockTile") private var seenClockTile = false
     @AppStorage("ff.seenBombTile") private var seenBombTile = false
     @AppStorage("ff.seenStoneTile") private var seenStoneTile = false
+    @AppStorage("ff.seenBlocks") private var seenBlocks = false
+    @AppStorage("ff.seenCrate") private var seenCrate = false
 
     func body(content: Content) -> some View {
         content
@@ -561,6 +565,23 @@ struct GameBanners: ViewModifier {
             }
             .onChange(of: store.continueEvent) { _, _ in
                 callout("Keep going!")
+            }
+            .onChange(of: store.shapeEvent) { _, _ in
+                if store.mode == .shift {
+                    callout("Shape shift!")
+                }
+                if !store.state.blocks.isEmpty {
+                    if !seenBlocks {
+                        seenBlocks = true
+                        show("New board shape: tiles stop at walls and holes", 3.4)
+                    } else if !seenCrate, store.state.blocks.contains(where: { $0.kind == .crate }) {
+                        seenCrate = true
+                        show("Crates: merge beside one to smash it", 3.4)
+                    }
+                }
+            }
+            .onChange(of: store.crateEvent) { _, _ in
+                callout(store.lastCrateCount > 1 ? "Smash x\(store.lastCrateCount)!" : "Smash!")
             }
             .onChange(of: store.specialSpawnEvent) { _, _ in
                 if store.lastSpecialKind == .time, !seenClockTile {
@@ -636,6 +657,12 @@ struct GameSounds: ViewModifier {
             }
             .onChange(of: store.levelEvent) { _, _ in
                 sounds.play(.combo)
+            }
+            .onChange(of: store.shapeEvent) { _, _ in
+                sounds.play(.mode, volume: 0.8)
+            }
+            .onChange(of: store.crateEvent) { _, _ in
+                sounds.play(.boom, volume: 0.6)
             }
             .onChange(of: store.mode) { _, _ in
                 sounds.play(.mode, volume: 0.8)
@@ -846,5 +873,37 @@ struct StarRow: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(won == 1 ? "1 star" : "\(won) stars"))
+    }
+}
+
+/// A wall or a crate standing on the board. (A hole is drawn by the board itself.)
+struct ObstacleView: View {
+    let kind: BlockKind
+    let size: CGFloat
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: size * 0.2, style: .continuous)
+        let isCrate = kind == .crate
+        let top = isCrate ? Color(hex: 0xE8B06A) : Color(hex: 0x6E78A8)
+        let bottom = isCrate ? Color(hex: 0x8A5324) : Color(hex: 0x232A4F)
+
+        ZStack {
+            shape.fill(LinearGradient(colors: [top, bottom], startPoint: .top, endPoint: .bottom))
+            shape.strokeBorder(
+                LinearGradient(
+                    colors: [Color.white.opacity(0.7), Color.white.opacity(0.1)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                ),
+                lineWidth: max(1.5, size * 0.045)
+            )
+            Image(systemName: isCrate ? "shippingbox.fill" : "square.grid.2x2.fill")
+                .font(.system(size: size * 0.42, weight: .bold))
+                .foregroundStyle(Color.white.opacity(isCrate ? 0.85 : 0.4))
+        }
+        .frame(width: size, height: size)
+        .shadow(color: Color.black.opacity(0.45), radius: size * 0.08, x: 0, y: size * 0.04)
+        .accessibilityElement()
+        .accessibilityLabel(Text(isCrate ? "crate" : "wall"))
     }
 }

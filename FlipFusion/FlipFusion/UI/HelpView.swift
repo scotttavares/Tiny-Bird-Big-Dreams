@@ -31,6 +31,7 @@ struct HelpView: View {
                     )) {
                         Text("Timed").tag(GameStore.Mode.timed)
                         Text("Endless").tag(GameStore.Mode.endless)
+                        Text("Shape Shift").tag(GameStore.Mode.shift)
                     }
                     .pickerStyle(.segmented)
 
@@ -113,12 +114,19 @@ struct HelpView: View {
                 }
 
                 section("Levels") {
-                    row(symbol: "chart.bar.fill", title: "Level up", text: "The bar under your score fills as you play. Each new level changes the board's colour, spins the prize reel and, in the timed game, adds \(Int(GameStore.levelTimeBonus)) seconds.")
+                    row(symbol: "chart.bar.fill", title: "Level up", text: "The bar under your score fills as you play. Each new level changes the board's shape and colour, spins the prize reel and, in the timed game, adds \(Int(GameStore.levelTimeBonus)) seconds.")
                     row(symbol: "gift.fill", title: "Prize reel", text: "Every new level wins coins, a free booster or gems. Now and then it stops on the jackpot: 5 gems.")
                     tileRow(value: 2, kind: .stone, title: "Stone block", text: "From level 3. It never merges and gets in the way. A bomb's blast or the Sweep booster clears it.")
                     row(symbol: "hare.fill", title: "Faster drops", text: "From level 4 a move sometimes drops two new tiles, more often the higher you go.")
                     row(symbol: "star.fill", title: "Stars", text: "A game earns one star at level 2, two at level 4 and three at level 6.")
                     row(symbol: "arrow.uturn.forward", title: "Keep going", text: "Once in a game that has ended, \(GameStore.continueCost) gems buy \(Int(GameStore.continueSeconds)) more seconds, or clear \(GameStore.continueClears) tiles when no move is left.")
+                }
+
+                section("Board shapes") {
+                    row(symbol: "square.grid.2x2.fill", title: "Walls", text: "Solid blocks on the board. Tiles stop beside them and cannot merge across them.")
+                    row(symbol: "circle.dashed", title: "Holes", text: "Gaps cut out of the board. Tiles stop beside them too.")
+                    row(symbol: "shippingbox.fill", title: "Crates", text: "They block like walls, but a merge right beside one, or a bomb's blast, smashes it for \(GameStore.cratePoints) points.")
+                    row(symbol: "arrow.clockwise", title: "They turn too", text: "Walls, holes and crates turn with the board. A tile that is in the way when the shape changes jumps to an empty cell.")
                 }
 
                 section("Boosters and coins") {
@@ -140,7 +148,8 @@ struct HelpView: View {
                 section("Game modes") {
                     row(symbol: "timer", title: "Timed", text: "Two minutes on the clock, which starts on your first swipe. Level up and merge clock tiles to win more time.")
                     row(symbol: "infinity", title: "Endless", text: "No clock. An extra tile lands after every rotation, and the game ends when no move is left.")
-                    Text("Tap 2 Minutes or Endless under the board to switch. Each mode keeps its own game and best score.")
+                    row(symbol: "shuffle", title: "Shape Shift", text: "No clock. Every \(GameEngine.movesPerShift) moves the board changes to a new shape picked at random. The game ends when no move is left.")
+                    Text("Tap 2 Minutes, Endless or Shape Shift under the board to switch. Each mode keeps its own game and best score.")
                         .font(.system(size: 15, weight: .medium, design: .rounded))
                         .foregroundStyle(Theme.label)
                 }

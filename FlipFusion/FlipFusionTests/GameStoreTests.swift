@@ -529,6 +529,75 @@ struct GameStoreTests {
         #expect(StarRow.stars(forLevel: 6) == 3)
     }
 
+    @Test func aNewLevelChangesTheBoardsShape() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 196, movesUntilRotation: 2, nextID: 10), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.state.blocks.isEmpty)
+        store.swipe(.left)
+        #expect(store.level == 2)
+        // Level 2 is played on the second shape: a hole in the corner the 4 was made in.
+        #expect(store.state.shapeID == 1)
+        #expect(store.state.blocks == GameEngine.layouts[1])
+        #expect(store.shapeEvent == 1)
+        // The 4 jumped out of the way; nothing was lost.
+        #expect(store.state.tiles.count == 2)
+        #expect(!store.state.tiles.contains { $0.row == 0 && $0.col == 0 })
+        #expect(GameEngine.isValid(store.state))
+        // The shape comes back with the game, and a new game starts on the open board.
+        #expect(GameStore(defaults: defaults, animated: false).state.blocks == GameEngine.layouts[1])
+        store.newGame()
+        #expect(store.state.blocks.isEmpty)
+        #expect(store.state.shapeID == 0)
+    }
+
+    @Test func smashingACrateScoresAndClearsIt() {
+        let defaults = freshDefaults()
+        save(GameState(
+            tiles: tiles([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
+            score: 0,
+            movesUntilRotation: 2,
+            nextID: 10,
+            blocks: [Block(row: 1, col: 0, kind: .crate), Block(row: 3, col: 3, kind: .wall)]
+        ), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        store.swipe(.left)
+        #expect(store.crateEvent == 1)
+        #expect(store.lastCrateCount == 1)
+        #expect(store.state.score == 4 + GameStore.cratePoints)
+        #expect(store.state.blocks == [Block(row: 3, col: 3, kind: .wall)])
+    }
+
+    @Test func theShapeShiftGameChangesTheBoardEveryFewMoves() {
+        let defaults = freshDefaults()
+        defaults.set("shift", forKey: "ff.mode")
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.mode == .shift)
+        #expect(store.state.blocks.isEmpty)
+        #expect(!store.isTimeUp)
+        let directions: [Direction] = [.left, .down, .right, .up]
+        var tries = 0
+        while store.shapeEvent == 0, tries < 60 {
+            store.swipe(directions[tries % 4])
+            tries += 1
+        }
+        // It changed on the fourth swipe that moved something, not before.
+        #expect(store.shapeEvent == 1)
+        #expect(store.slidePulse == GameEngine.movesPerShift)
+        #expect(!store.state.blocks.isEmpty)
+        #expect(store.state.shapeID >= 1)
+        #expect(store.state.movesUntilShift == GameEngine.movesPerShift)
+        #expect(GameEngine.isValid(store.state))
+        // The clock never runs in this game.
+        store.tick(GameStore.roundSeconds + 1)
+        #expect(!store.isGameOver)
+        // It keeps its own saved game, apart from the other two.
+        store.switchMode(.timed)
+        #expect(store.state.blocks.isEmpty)
+        store.switchMode(.shift)
+        #expect(!store.state.blocks.isEmpty)
+    }
+
     @Test func aDeadBoardIsGameOverAndIgnoresSwipes() {
         let defaults = freshDefaults()
         let dead = GameState(tiles: tiles([[2, 4, 2, 4], [4, 2, 4, 2], [2, 4, 2, 4], [4, 2, 4, 2]]), score: 100, movesUntilRotation: 1, nextID: 20)

@@ -195,7 +195,83 @@ final class GameStore {
 
     /// True when the board is nearly full: the screen glows red and the music speeds up.
     var isDanger: Bool {
-        !isGameOver && GameEngine.emptyCells(state.tiles).count <= 2
+        !isGameOver && GameEngine.emptyCells(state.tiles, blocked: blockedSet).count <= 2
+    }
+
+    // MARK: Board shapes
+
+    /// The cells no tile can enter right now.
+    private var blockedSet: Set<Cell> {
+        Set(state.blocks.map(\.cell))
+    }
+
+    /// Goes up each time the board changes shape.
+    private(set) var shapeEvent = 0
+    /// Goes up when crates are smashed; `lastCrateCount` is how many.
+    private(set) var crateEvent = 0
+    private(set) var lastCrateCount = 0
+    /// Points for smashing a crate.
+    static let cratePoints = 20
+    /// True between a swipe and the end of its move, so only swipes count toward
+    /// the next change of shape.
+    @ObservationIgnored private var swipeInFlight = false
+
+    /// Puts a new shape on the board. A tile standing where an obstacle now is
+    /// jumps to an empty cell (the biggest tiles first); if there is none, it goes.
+    private func reshape(to index: Int, turns: Int) {
+        var blocks = GameEngine.layouts[index]
+        for _ in 0..<turns {
+            blocks = GameEngine.rotateClockwise(blocks)
+        }
+        state.shapeID = index
+        state.blocks = blocks
+        let blocked = Set(blocks.map(\.cell))
+        let displaced = state.tiles
+            .filter { blocked.contains(Cell(row: $0.row, col: $0.col)) }
+            .sorted { $0.value > $1.value }
+        for tile in displaced {
+            guard let at = state.tiles.firstIndex(where: { $0.id == tile.id }) else { continue }
+            if let cell = GameEngine.emptyCells(state.tiles, blocked: blocked).randomElement(using: &rng) {
+                state.tiles[at].row = cell.row
+                state.tiles[at].col = cell.col
+            } else {
+                state.tiles.remove(at: at)
+            }
+        }
+        shapeEvent += 1
+    }
+
+    /// Changes the board's shape when it is time to: on a new level in the timed and
+    /// endless games, and every few moves, at random, in the Shape Shift game.
+    private func reshapeIfNeeded(afterSwipe: Bool) {
+        var target: Int?
+        var turns = 0
+        if mode == .shift {
+            guard afterSwipe else { return }
+            state.movesUntilShift -= 1
+            guard state.movesUntilShift <= 0 else { return }
+            state.movesUntilShift = GameEngine.movesPerShift
+            let shapes = GameEngine.layouts.count - 1
+            var pick = Int.random(in: 1...shapes, using: &rng)
+            if pick == state.shapeID {
+                pick = pick % shapes + 1
+            }
+            target = pick
+            turns = Int.random(in: 0..<4, using: &rng)
+        } else {
+            let wanted = GameEngine.layoutIndex(forLevel: level)
+            if wanted != state.shapeID {
+                target = wanted
+            }
+        }
+        guard let target else { return }
+        if animated {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                reshape(to: target, turns: turns)
+            }
+        } else {
+            reshape(to: target, turns: turns)
+        }
     }
 
     // MARK: Keep going
@@ -228,7 +304,7 @@ final class GameStore {
             secondsLeft = Self.continueSeconds
             wholeSecondsLeft = Int(Self.continueSeconds.rounded(.up))
         }
-        if !GameEngine.hasMove(state.tiles) {
+        if !GameEngine.hasMove(state.tiles, blocked: blockedSet) {
             let doomed = state.tiles.sorted { first, second in
                 if (first.kind == .stone) != (second.kind == .stone) {
                     return first.kind == .stone
@@ -351,6 +427,8 @@ final class GameStore {
         /// No clock: play until no move is left. An extra tile lands after every
         /// rotation, so the board does fill up.
         case endless
+        /// No clock, and the board changes shape at random every few moves.
+        case shift
     }
 
     private(set) var mode: Mode
@@ -376,11 +454,19 @@ final class GameStore {
         }
 
         static func state(_ mode: Mode) -> String {
-            mode == .timed ? "ff.state" : "ff.endless.state"
+            switch mode {
+            case .timed: return "ff.state"
+            case .endless: return "ff.endless.state"
+            case .shift: return "ff.shift.state"
+            }
         }
 
         static func best(_ mode: Mode) -> String {
-            mode == .timed ? "ff.best" : "ff.endless.best"
+            switch mode {
+            case .timed: return "ff.best"
+            case .endless: return "ff.endless.best"
+            case .shift: return "ff.shift.best"
+            }
         }
     }
 
@@ -448,7 +534,7 @@ final class GameStore {
         self.bestAtStart = loaded.best
         self.secondsLeft = loaded.seconds
         self.wholeSecondsLeft = Int(loaded.seconds.rounded(.up))
-        self.isGameOver = !GameEngine.hasMove(loaded.state.tiles) || (mode == .timed && loaded.seconds <= 0)
+        self.isGameOver = !GameEngine.hasMove(loaded.state.tiles, blocked: Set(loaded.state.blocks.map(\.cell))) || (mode == .timed && loaded.seconds <= 0)
     }
 
     /// Changes the way to play. The game left behind is saved and waits for you.
@@ -478,7 +564,7 @@ final class GameStore {
         streak = 0
         streakLeft = 0
         isTimerRunning = false
-        isGameOver = !GameEngine.hasMove(state.tiles) || isTimeUp
+        isGameOver = !GameEngine.hasMove(state.tiles, blocked: blockedSet) || isTimeUp
         save()
     }
 
@@ -588,12 +674,13 @@ final class GameStore {
 
     func swipe(_ dir: Direction) {
         guard !isAnimating, !isGameOver else { return }
-        let result = GameEngine.slide(state.tiles, dir)
+        let result = GameEngine.slide(state.tiles, dir, blocked: blockedSet)
         guard result.changed else { return }
 
         bursts.removeAll()
         slidePulse += 1
         isTimerRunning = true
+        swipeInFlight = true
 
         if animated {
             isAnimating = true
@@ -697,7 +784,8 @@ final class GameStore {
     private func rotateImmediately() {
         rotatePulse += 1
         state.tiles = GameEngine.rotateClockwise(state.tiles)
-        let passes = GameEngine.settle(state.tiles)
+        state.blocks = GameEngine.rotateClockwise(state.blocks)
+        let passes = GameEngine.settle(state.tiles, blocked: blockedSet)
         for pass in passes {
             apply(pass)
             ghosts = []
@@ -743,11 +831,12 @@ final class GameStore {
         // Swap to the turned coordinates and snap the board back upright in one
         // un-animated update: the picture on screen does not change.
         state.tiles = GameEngine.rotateClockwise(state.tiles)
+        state.blocks = GameEngine.rotateClockwise(state.blocks)
         boardAngle = 0
         // Let that swap reach the screen before gravity starts animating.
         await pause(0.05)
 
-        let passes = GameEngine.settle(state.tiles)
+        let passes = GameEngine.settle(state.tiles, blocked: blockedSet)
         for pass in passes {
             withAnimation(.easeIn(duration: Timing.fall)) {
                 apply(pass)
@@ -878,6 +967,18 @@ final class GameStore {
             flashEvent += 1
             power = max(power, 2)
         }
+        let broken = GameEngine.cratesBroken(by: result, blocks: state.blocks)
+        if !broken.isEmpty {
+            state.blocks.removeAll { broken.contains($0) }
+            for crate in broken {
+                nextBurstID += 1
+                bursts.append(Burst(id: nextBurstID, row: crate.row, col: crate.col, value: 64))
+            }
+            lastCrateCount = broken.count
+            crateEvent += 1
+            addPoints(Self.cratePoints * broken.count)
+            power = max(power, 2)
+        }
         if power > 0 {
             shake(power)
         }
@@ -903,7 +1004,7 @@ final class GameStore {
     /// the level. Never onto a board that is already nearly full.
     private func spawnExtraTile() {
         let chance = GameEngine.extraTilePerHundred(level: level)
-        guard chance > 0, GameEngine.emptyCells(state.tiles).count > 2 else { return }
+        guard chance > 0, GameEngine.emptyCells(state.tiles, blocked: blockedSet).count > 2 else { return }
         if Int.random(in: 0..<100, using: &rng) < chance {
             spawnTile()
         }
@@ -934,8 +1035,11 @@ final class GameStore {
     }
 
     private func finishMove() {
+        let wasSwipe = swipeInFlight
+        swipeInFlight = false
+        reshapeIfNeeded(afterSwipe: wasSwipe)
         let wasOver = isGameOver
-        isGameOver = !GameEngine.hasMove(state.tiles) || isTimeUp
+        isGameOver = !GameEngine.hasMove(state.tiles, blocked: blockedSet) || isTimeUp
         if isGameOver {
             isTimerRunning = false
             if !wasOver {
