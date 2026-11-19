@@ -483,8 +483,7 @@ workflows:
           command -v xcodegen >/dev/null || brew install xcodegen
           xcodegen generate
       - name: Run the unit tests (game rules and saving)
-        # A red test run is shown in the build log but does not stop the TestFlight upload.
-        ignore_failure: true
+        # A red test run stops the build: nothing untested goes to TestFlight.
         script: |
           set -o pipefail
           UDID="$(bash scripts/pick-simulator.sh phone)"
