@@ -2,7 +2,8 @@ import SwiftUI
 
 /// The opening animation, shown each time the app starts: four tiles drop in, the
 /// cluster makes the game's quarter turn, the tiles fuse in a burst and the logo
-/// appears. A tap skips it.
+/// appears. A tap skips it. It always plays in the original Neon look, whatever
+/// theme is in use.
 struct IntroView: View {
     let sounds: SoundPlayer
     let onFinish: () -> Void
@@ -16,6 +17,8 @@ struct IntroView: View {
 
     private let values = [2, 4, 8, 16]
     private let notes: [SoundPlayer.Sound] = [.merge1, .merge2, .merge3, .merge4]
+    /// The original look.
+    private let neon = Skin.all[0]
 
     var body: some View {
         GeometryReader { geo in
@@ -24,7 +27,21 @@ struct IntroView: View {
             let step = tile + 10 * scale
 
             ZStack {
-                BackgroundView().ignoresSafeArea()
+                // The original backdrop, written out here so no theme recolours it.
+                ZStack {
+                    LinearGradient(
+                        colors: [Color(hex: 0x0D1445), Color(hex: 0x070A26)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    RadialGradient(
+                        colors: [Color(hex: 0x1D2F8F, opacity: 0.55), Color(hex: 0x1D2F8F, opacity: 0)],
+                        center: UnitPoint(x: 0.5, y: 0.5),
+                        startRadius: 10,
+                        endRadius: 380
+                    )
+                }
+                .ignoresSafeArea()
 
                 // The four tiles, as a 2×2 cluster that turns as one.
                 ZStack {
@@ -34,7 +51,7 @@ struct IntroView: View {
                             height: (CGFloat(index / 2) - 0.5) * step
                         )
                         let hasLanded = index < dropped
-                        TileView(value: values[index], size: tile)
+                        TileView(value: values[index], size: tile, skin: neon)
                             .rotationEffect(.degrees(-turn))
                             .scaleEffect(isFused ? 0.3 : 1)
                             .opacity(isFused ? 0 : 1)
@@ -47,7 +64,7 @@ struct IntroView: View {
                 .rotationEffect(.degrees(turn))
 
                 if isFused {
-                    MergeBurst(color: Theme.fusion[0], size: tile, isBlast: true)
+                    MergeBurst(color: Theme.fusion[0], size: tile, isBlast: true, spark: "circle.fill", shape: .rounded)
                 }
 
                 VStack(spacing: 18 * scale) {
