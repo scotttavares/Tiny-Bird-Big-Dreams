@@ -57,6 +57,10 @@ struct GameScreen: View {
                     }
                     .padding(.top, 14 * scale)
 
+                LevelBar(level: store.level, score: store.state.score, scale: scale)
+                    .frame(width: side)
+                    .padding(.top, 8 * scale)
+
                 RotatePill(moves: store.state.movesUntilRotation, scale: scale)
                     .frame(width: side)
                     .overlay(alignment: .leading) {
@@ -66,10 +70,14 @@ struct GameScreen: View {
                         }
                     }
                     .animation(.spring(response: 0.3, dampingFraction: 0.6), value: store.streak)
-                    .padding(.top, 22 * scale)
+                    .padding(.top, 9 * scale)
 
                 ZStack {
                     BoardView(store: store, side: side)
+
+                    if store.isDanger {
+                        DangerGlow(side: side)
+                    }
 
                     RotationArrow(
                         side: side,
@@ -89,18 +97,42 @@ struct GameScreen: View {
                             .id(calloutID)
                     }
 
+                    if store.prizeEvent > 0, !store.isGameOver {
+                        PrizeReel(
+                            prize: store.lastPrize,
+                            scale: scale,
+                            onTick: {
+                                sounds.play(.tick, volume: 0.45)
+                            },
+                            onStop: {
+                                sounds.play(store.lastPrize == GameStore.jackpot ? .fever : .bonus)
+                            }
+                        )
+                        .offset(y: side * 0.27)
+                        .id(store.prizeEvent)
+                    }
+
                     if store.isGameOver {
                         GameOverOverlay(
                             title: store.isTimeUp ? "Time's Up" : "Game Over",
                             score: store.state.score,
+                            level: store.level,
                             isBest: store.state.score > 0 && store.state.score >= store.best,
+                            continueOffer: continueOffer,
                             side: side,
-                            scale: scale
-                        ) {
-                            withAnimation(.easeOut(duration: 0.2)) {
-                                store.newGame()
+                            scale: scale,
+                            onPlayAgain: {
+                                withAnimation(.easeOut(duration: 0.2)) {
+                                    store.newGame()
+                                }
+                            },
+                            onContinue: {
+                                // Not enough gems: the menu has the gem shop.
+                                if !store.continueGame() {
+                                    openHelp()
+                                }
                             }
-                        }
+                        )
                         .transition(.scale(scale: 0.8).combined(with: .opacity))
                     }
                 }
@@ -112,7 +144,7 @@ struct GameScreen: View {
                 BoosterBar(store: store, scale: scale) { booster in
                     store.useBooster(booster)
                 }
-                .padding(.top, 22 * scale)
+                .padding(.top, 14 * scale)
 
                 Text("Swipe. Merge. Rotate.")
                     .font(.system(size: 21 * scale, weight: .semibold, design: .rounded))
@@ -248,10 +280,20 @@ struct GameScreen: View {
     /// the last seconds of a timed game, otherwise the tune of the game mode.
     private var track: SoundPlayer.Track {
         let lastSeconds = store.mode == .timed && store.isTimerRunning && store.wholeSecondsLeft <= 20
-        if !store.isGameOver, store.isFever || lastSeconds {
+        if !store.isGameOver, store.isFever || lastSeconds || store.isDanger {
             return .rush
         }
         return store.mode == .timed ? .timed : .endless
+    }
+
+    /// What carrying on with the finished game would give, or nil when it cannot be
+    /// carried on (it already was, or nothing was scored).
+    private var continueOffer: String? {
+        guard store.canContinue else { return nil }
+        if store.isTimeUp {
+            return "+\(Int(GameStore.continueSeconds)) seconds"
+        }
+        return "Clear \(GameStore.continueClears) tiles"
     }
 
     /// A tap on one of the two mode buttons under the tagline.
@@ -291,6 +333,8 @@ struct BackgroundView: View {
                 startRadius: 10,
                 endRadius: 380
             )
+            // The moving backdrop of the theme in use.
+            SceneView(skin: Skin.current)
         }
     }
 }
@@ -324,25 +368,34 @@ struct ToastView: View {
 struct GameOverOverlay: View {
     let title: String
     let score: Int
+    /// The level the game reached, which decides the stars.
+    let level: Int
     let isBest: Bool
+    /// What "Keep going" gives, such as "+30 seconds". nil hides the button.
+    let continueOffer: String?
     let side: CGFloat
     let scale: CGFloat
     let onPlayAgain: () -> Void
+    let onContinue: () -> Void
 
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: side * 0.07, style: .continuous)
                 .fill(Color(hex: 0x070A26, opacity: 0.86))
 
-            VStack(spacing: 10 * scale) {
+            VStack(spacing: 7 * scale) {
+                StarRow(level: level, scale: scale)
+
                 Text(title)
-                    .font(.system(size: 34 * scale, weight: .black, design: .rounded))
+                    .font(.system(size: 32 * scale, weight: .black, design: .rounded))
                     .foregroundStyle(
                         LinearGradient(colors: Theme.fusion, startPoint: .leading, endPoint: .trailing)
                     )
-                Text(isBest ? "New best: \(score)" : "Score: \(score)")
-                    .font(.system(size: 20 * scale, weight: .bold, design: .rounded))
+                Text((isBest ? "New best: \(score)" : "Score: \(score)") + "  ·  Level \(level)")
+                    .font(.system(size: 18 * scale, weight: .bold, design: .rounded))
                     .foregroundStyle(isBest ? Theme.counter : Theme.tagline)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
 
                 Button(action: onPlayAgain) {
                     Text("Play Again")
@@ -357,9 +410,36 @@ struct GameOverOverlay: View {
                         )
                         .shadow(color: Theme.flip[1].opacity(0.7), radius: 10 * scale)
                 }
-                .buttonStyle(.plain)
-                .padding(.top, 10 * scale)
+                .buttonStyle(BounceButtonStyle())
+                .padding(.top, 6 * scale)
+
+                if let continueOffer {
+                    Button(action: onContinue) {
+                        HStack(spacing: 6 * scale) {
+                            Text("Keep going: \(continueOffer)")
+                            Image(systemName: "diamond.fill")
+                                .font(.system(size: 13 * scale, weight: .bold))
+                                .foregroundStyle(Color(hex: 0x8FF0FF))
+                            Text("\(GameStore.continueCost)")
+                        }
+                        .font(.system(size: 15 * scale, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Color.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .padding(.horizontal, 16 * scale)
+                        .frame(height: 40 * scale)
+                        .background(
+                            Capsule().fill(
+                                LinearGradient(colors: [Theme.pillTop, Theme.pillBottom], startPoint: .top, endPoint: .bottom)
+                            )
+                        )
+                        .overlay(Capsule().strokeBorder(Theme.pillStroke, lineWidth: 1.5))
+                    }
+                    .buttonStyle(BounceButtonStyle())
+                    .accessibilityLabel(Text("Keep going, \(continueOffer), for \(GameStore.continueCost) gems"))
+                }
             }
+            .padding(.horizontal, 12 * scale)
         }
         .frame(width: side, height: side)
     }

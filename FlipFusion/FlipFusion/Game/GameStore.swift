@@ -135,6 +135,122 @@ final class GameStore {
     /// How many tiles the last bombs booster armed.
     private(set) var lastArmCount = 0
 
+    // MARK: Levels
+
+    /// The level this game has reached. It goes up with the score, and the game gets
+    /// harder as it does: stone blocks from level 3, extra tiles from level 4.
+    private(set) var level: Int
+    /// Goes up each time a level is reached.
+    private(set) var levelEvent = 0
+    /// Seconds a new level adds to the clock in the timed game.
+    static let levelTimeBonus: Double = 10
+
+    /// What a new level wins. A reel spins on screen and stops on it.
+    enum Prize: Equatable, Sendable {
+        case coins(Int)
+        case gems(Int)
+        /// One free use of a booster.
+        case booster(Booster)
+    }
+
+    /// The top prize.
+    static let jackpot = Prize.gems(5)
+    /// The faces the reel flicks through before it stops.
+    static let reelFaces: [Prize] = [
+        .coins(50), .gems(1), .booster(.arm), .coins(100), .gems(2), .booster(.sweep), jackpot, .booster(.fever),
+    ]
+    /// Goes up each time a prize is won; `lastPrize` is the prize.
+    private(set) var prizeEvent = 0
+    private(set) var lastPrize = Prize.coins(50)
+
+    /// Picks the prize for a new level and hands it over. Out of 100: 40 are 50 coins,
+    /// 25 are 100 coins, 15 a free booster, 14 one gem, 5 two gems and 1 the jackpot.
+    private func awardLevelPrize() {
+        let roll = Int.random(in: 0..<100, using: &rng)
+        let prize: Prize
+        if roll < 40 {
+            prize = .coins(50)
+        } else if roll < 65 {
+            prize = .coins(100)
+        } else if roll < 80 {
+            prize = .booster(Booster.allCases.randomElement(using: &rng) ?? .flip)
+        } else if roll < 94 {
+            prize = .gems(1)
+        } else if roll < 99 {
+            prize = .gems(2)
+        } else {
+            prize = Self.jackpot
+        }
+        switch prize {
+        case .coins(let count):
+            coins += count
+        case .gems(let count):
+            gems += count
+        case .booster(let booster):
+            boosterCounts[booster, default: 0] += 1
+        }
+        lastPrize = prize
+        prizeEvent += 1
+    }
+
+    /// True when the board is nearly full: the screen glows red and the music speeds up.
+    var isDanger: Bool {
+        !isGameOver && GameEngine.emptyCells(state.tiles).count <= 2
+    }
+
+    // MARK: Keep going
+
+    /// Gems it costs to carry on with a game that has ended, once per game.
+    static let continueCost = 5
+    /// What carrying on gives: this much time, and this many tiles cleared off a
+    /// board with no move left.
+    static let continueSeconds: Double = 30
+    static let continueClears = 6
+    private(set) var continuesUsed = 0
+    /// Goes up each time a finished game is carried on.
+    private(set) var continueEvent = 0
+
+    /// True when the game has ended and has not been carried on yet.
+    var canContinue: Bool {
+        isGameOver && !isAnimating && continuesUsed == 0 && state.score > 0
+    }
+
+    /// Spends gems to carry on with a game that has ended. Time's up: the clock gets
+    /// more time. No move left: the smallest tiles (stone blocks first) are cleared.
+    /// Returns false (and changes nothing) when it cannot be done or the gems are short.
+    @discardableResult
+    func continueGame() -> Bool {
+        guard canContinue, gems >= Self.continueCost else { return false }
+        gems -= Self.continueCost
+        continuesUsed += 1
+        bursts.removeAll()
+        if isTimeUp {
+            secondsLeft = Self.continueSeconds
+            wholeSecondsLeft = Int(Self.continueSeconds.rounded(.up))
+        }
+        if !GameEngine.hasMove(state.tiles) {
+            let doomed = state.tiles.sorted { first, second in
+                if (first.kind == .stone) != (second.kind == .stone) {
+                    return first.kind == .stone
+                }
+                return first.value < second.value
+            }.prefix(Self.continueClears)
+            for tile in doomed {
+                nextBurstID += 1
+                bursts.append(Burst(id: nextBurstID, row: tile.row, col: tile.col, value: tile.value))
+            }
+            let ids = Set(doomed.map(\.id))
+            state.tiles.removeAll { ids.contains($0.id) }
+            shake(2)
+        }
+        isGameOver = false
+        // The next swipe starts the clock again.
+        isTimerRunning = false
+        continueEvent += 1
+        save()
+        return true
+    }
+
     // MARK: Gems and themes
 
     /// Gems are the rare prize: super combos, chains, big scores and new bests earn
@@ -205,11 +321,19 @@ final class GameStore {
     /// The best score when this game began (or was reopened): beating it earns gems.
     @ObservationIgnored private var bestAtStart = 0
 
-    /// The prizes handed out once, when a game ends.
+    /// What this game has already been paid, so a game that is carried on and ends a
+    /// second time is only paid for the points made since.
+    @ObservationIgnored private var paidScoreGems = 0
+    @ObservationIgnored private var paidBestBonus = false
+
+    /// The prizes handed out when a game ends.
     private func rewardFinishedGame() {
-        var prize = state.score / Self.pointsPerGem
-        if state.score > bestAtStart, state.score > 0 {
+        let earned = state.score / Self.pointsPerGem
+        var prize = max(0, earned - paidScoreGems)
+        paidScoreGems = max(paidScoreGems, earned)
+        if !paidBestBonus, state.score > bestAtStart, state.score > 0 {
             prize += Self.gemsForBest
+            paidBestBonus = true
         }
         earnGems(prize)
     }
@@ -319,6 +443,7 @@ final class GameStore {
         let loaded = GameStore.load(mode, from: defaults)
         self.mode = mode
         self.state = loaded.state
+        self.level = GameEngine.level(forScore: loaded.state.score)
         self.best = loaded.best
         self.bestAtStart = loaded.best
         self.secondsLeft = loaded.seconds
@@ -335,6 +460,10 @@ final class GameStore {
 
         let loaded = GameStore.load(newMode, from: defaults)
         state = loaded.state
+        level = GameEngine.level(forScore: loaded.state.score)
+        continuesUsed = 0
+        paidScoreGems = 0
+        paidBestBonus = false
         best = loaded.best
         bestAtStart = loaded.best
         secondsLeft = loaded.seconds
@@ -489,6 +618,10 @@ final class GameStore {
         GameEngine.spawn(in: &fresh, using: &rng, allowTime: mode == .timed)
         GameEngine.spawn(in: &fresh, using: &rng, allowTime: mode == .timed)
         state = fresh
+        level = 1
+        continuesUsed = 0
+        paidScoreGems = 0
+        paidBestBonus = false
         bestAtStart = best
         ghosts = []
         poppedIDs = []
@@ -552,6 +685,7 @@ final class GameStore {
         apply(result, isSwipe: true)
         ghosts = []
         spawnTile()
+        spawnExtraTile()
         state.movesUntilRotation -= 1
         if state.movesUntilRotation <= 0 {
             rotateImmediately()
@@ -582,6 +716,7 @@ final class GameStore {
             ghosts = []
             poppedIDs = result.mergedIDs
             spawnTile()
+            spawnExtraTile()
             state.movesUntilRotation -= 1
         }
         await pause(Timing.pop)
@@ -654,6 +789,22 @@ final class GameStore {
             }
             return false
         }
+        let reached = GameEngine.level(forScore: score)
+        if reached > level {
+            level = reached
+            levelEvent += 1
+            if mode == .timed {
+                secondsLeft = min(Self.roundSeconds, secondsLeft + Self.levelTimeBonus)
+                wholeSecondsLeft = Int(secondsLeft.rounded(.up))
+            }
+            awardLevelPrize()
+            unlockSkins { unlock in
+                if case .level(let target) = unlock {
+                    return reached >= target
+                }
+                return false
+            }
+        }
     }
 
     /// Puts a slide or a gravity pass on the board and adds its points.
@@ -684,7 +835,7 @@ final class GameStore {
                 nextBurstID += 1
                 bursts.append(Burst(id: nextBurstID, row: effect.row, col: effect.col, value: 64, isBlast: true))
                 bombs += 1
-            case .normal:
+            case .normal, .stone:
                 break
             }
         }
@@ -735,10 +886,26 @@ final class GameStore {
     /// Adds the new tile of a move, and notes it when it is a special one.
     /// Clock tiles only make sense when there is a clock, so the endless game has none.
     private func spawnTile(forcing kind: TileKind? = nil) {
-        let tile = GameEngine.spawn(in: &state, using: &rng, allowTime: mode == .timed, forcedKind: kind)
+        let tile = GameEngine.spawn(
+            in: &state,
+            using: &rng,
+            allowTime: mode == .timed,
+            forcedKind: kind,
+            stonesPerHundred: GameEngine.stonesPerHundred(level: level)
+        )
         if let tile, tile.kind != .normal {
             lastSpecialKind = tile.kind
             specialSpawnEvent += 1
+        }
+    }
+
+    /// From level 4 a move sometimes drops a second new tile, more often the higher
+    /// the level. Never onto a board that is already nearly full.
+    private func spawnExtraTile() {
+        let chance = GameEngine.extraTilePerHundred(level: level)
+        guard chance > 0, GameEngine.emptyCells(state.tiles).count > 2 else { return }
+        if Int.random(in: 0..<100, using: &rng) < chance {
+            spawnTile()
         }
     }
 

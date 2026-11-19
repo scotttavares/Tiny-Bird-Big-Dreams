@@ -13,6 +13,9 @@ enum TileKind: String, Codable, Sendable {
     case time
     /// Clears the tiles around it when it merges.
     case bomb
+    /// A stone block: it slides and falls like any tile but never merges. Only a
+    /// bomb's blast or the Sweep booster gets rid of it.
+    case stone
 }
 
 /// One numbered tile. Row 0 is the top row, column 0 is the left column.

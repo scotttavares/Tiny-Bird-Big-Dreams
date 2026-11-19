@@ -13,6 +13,8 @@ struct HelpView: View {
     @AppStorage(SoundPlayer.musicKey) private var musicOn = true
     @AppStorage("ff.hapticsOn") private var hapticsOn = true
     @AppStorage(Skin.key) private var skinID = "neon"
+    /// A line under the themes after a tap on one that is not yet the player's.
+    @State private var themeNotice: String?
 
     var body: some View {
         ScrollView {
@@ -54,10 +56,21 @@ struct HelpView: View {
                             .font(.system(size: 17, weight: .heavy, design: .rounded))
                             .foregroundStyle(Color.white)
                     }
-                    ForEach(Skin.all) { skin in
-                        themeRow(skin)
+                    LazyVGrid(
+                        columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
+                        spacing: 12
+                    ) {
+                        ForEach(Skin.all) { skin in
+                            themeCard(skin)
+                        }
                     }
-                    Text("Win gems with super combos, chains, big scores and new best scores.")
+                    if let themeNotice {
+                        Text(themeNotice)
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundStyle(Theme.counter)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Text("Every theme has its own moving backdrop, tile shape and sparks. Win gems with super combos, chains, level prizes, big scores and new best scores.")
                         .font(.system(size: 15, weight: .medium, design: .rounded))
                         .foregroundStyle(Theme.label)
                         .fixedSize(horizontal: false, vertical: true)
@@ -99,9 +112,18 @@ struct HelpView: View {
                     row(symbol: "link", title: "Chain", text: "When falling tiles merge, and those merge again, that is a chain. Each step of a chain scores more than the last.")
                 }
 
+                section("Levels") {
+                    row(symbol: "chart.bar.fill", title: "Level up", text: "The bar under your score fills as you play. Each new level changes the board's colour, spins the prize reel and, in the timed game, adds \(Int(GameStore.levelTimeBonus)) seconds.")
+                    row(symbol: "gift.fill", title: "Prize reel", text: "Every new level wins coins, a free booster or gems. Now and then it stops on the jackpot: 5 gems.")
+                    tileRow(value: 2, kind: .stone, title: "Stone block", text: "From level 3. It never merges and gets in the way. A bomb's blast or the Sweep booster clears it.")
+                    row(symbol: "hare.fill", title: "Faster drops", text: "From level 4 a move sometimes drops two new tiles, more often the higher you go.")
+                    row(symbol: "star.fill", title: "Stars", text: "A game earns one star at level 2, two at level 4 and three at level 6.")
+                    row(symbol: "arrow.uturn.forward", title: "Keep going", text: "Once in a game that has ended, \(GameStore.continueCost) gems buy \(Int(GameStore.continueSeconds)) more seconds, or clear \(GameStore.continueClears) tiles when no move is left.")
+                }
+
                 section("Boosters and coins") {
                     row(symbol: BoosterBar.symbol(.flip), title: "Flip", text: "Turns the board right now, without using up a move.")
-                    row(symbol: BoosterBar.symbol(.sweep), title: "Sweep", text: "Clears every 2 and 4 off the board.")
+                    row(symbol: BoosterBar.symbol(.sweep), title: "Sweep", text: "Clears every 2, 4 and stone block off the board.")
                     row(symbol: BoosterBar.symbol(.fever), title: "Double", text: "Starts double points for \(Int(GameStore.feverSeconds)) seconds.")
                     row(symbol: BoosterBar.symbol(.arm), title: "Bombs", text: "Turns up to \(GameStore.armedTiles) of your tiles into bomb tiles.")
                     row(symbol: "circle.circle.fill", title: "Coins", text: "You start with \(GameStore.freeBoosters) free uses of each booster. After that a use costs coins, and you earn a coin for every \(GameStore.pointsPerCoin) points.")
@@ -116,7 +138,7 @@ struct HelpView: View {
                 }
 
                 section("Game modes") {
-                    row(symbol: "timer", title: "Timed", text: "Two minutes to score as much as you can. The clock starts on your first swipe.")
+                    row(symbol: "timer", title: "Timed", text: "Two minutes on the clock, which starts on your first swipe. Level up and merge clock tiles to win more time.")
                     row(symbol: "infinity", title: "Endless", text: "No clock. An extra tile lands after every rotation, and the game ends when no move is left.")
                     Text("Tap 2 Minutes or Endless under the board to switch. Each mode keeps its own game and best score.")
                         .font(.system(size: 15, weight: .medium, design: .rounded))
@@ -209,31 +231,10 @@ struct HelpView: View {
                 .buttonStyle(BounceButtonStyle())
             }
         } else {
-            ForEach(shop.products, id: \.id) { product in
-                let count = GemShop.pack(for: product.id)?.gems ?? 0
-                HStack(spacing: 12) {
-                    gem(size: 22)
-                        .frame(width: 44, height: 44)
-                        .background(Circle().fill(Theme.cellFill))
-                    Text("\(count) gems")
-                        .font(.system(size: 18, weight: .heavy, design: .rounded))
-                        .foregroundStyle(Color.white)
-                    Spacer(minLength: 8)
-                    Button {
-                        Task {
-                            await shop.buy(product)
-                        }
-                    } label: {
-                        chip {
-                            Text(product.displayPrice)
-                        }
-                    }
-                    .buttonStyle(BounceButtonStyle())
-                    .disabled(shop.isBuying)
-                    .accessibilityLabel(Text("Buy \(count) gems for \(product.displayPrice)"))
-                }
+            ForEach(Array(shop.products.enumerated()), id: \.element.id) { index, product in
+                packCard(shop, product, index: index)
             }
-            Text("Gems are bought with real money through the App Store. They buy themes and cannot be exchanged or refunded for cash.")
+            Text("Gems unlock themes and let you keep a finished game going. They are bought with real money through the App Store and cannot be exchanged or refunded for cash.")
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(Theme.label)
                 .fixedSize(horizontal: false, vertical: true)
@@ -246,82 +247,180 @@ struct HelpView: View {
         }
     }
 
+    /// One pack of gems: a pile of gems, how many, what it saves, and the price.
+    private func packCard(_ shop: GemShop, _ product: Product, index: Int) -> some View {
+        let count = GemShop.pack(for: product.id)?.gems ?? 0
+        let isBest = index > 0 && index == shop.products.count - 1
+        let isPopular = index == 1 && shop.products.count > 2
+        let bonus = shop.bonusPercent(for: product)
+        let card = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        let gold = Color(hex: 0xFFD23F)
+        return Button {
+            Task {
+                await shop.buy(product)
+            }
+        } label: {
+            HStack(spacing: 12) {
+                gemPile(index + 1)
+                VStack(alignment: .leading, spacing: 3) {
+                    if isBest || isPopular {
+                        Text(isBest ? "BEST VALUE" : "POPULAR")
+                            .font(.system(size: 11, weight: .black, design: .rounded))
+                            .foregroundStyle(Color(hex: 0x201400))
+                            .padding(.horizontal, 8)
+                            .frame(height: 18)
+                            .background(Capsule().fill(gold))
+                    }
+                    Text("\(count) gems")
+                        .font(.system(size: 20, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Color.white)
+                    if bonus > 0 {
+                        Text("\(bonus)% more gems per dollar")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(gold)
+                    }
+                }
+                Spacer(minLength: 8)
+                Text(product.displayPrice)
+                    .font(.system(size: 17, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.white)
+                    .padding(.horizontal, 16)
+                    .frame(height: 42)
+                    .background(Capsule().fill(LinearGradient(colors: Theme.flip.reversed(), startPoint: .top, endPoint: .bottom)))
+                    .shadow(color: Theme.flip[1].opacity(0.6), radius: 6)
+            }
+            .padding(12)
+            .background(card.fill(Theme.cellFill))
+            .overlay(card.strokeBorder(isBest ? gold : Theme.glassStroke, lineWidth: isBest ? 2 : 1))
+        }
+        .buttonStyle(BounceButtonStyle())
+        .disabled(shop.isBuying)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Buy \(count) gems for \(product.displayPrice)"))
+    }
+
+    /// One, two or three gems in a little pile.
+    private func gemPile(_ count: Int) -> some View {
+        let shown = max(1, min(3, count))
+        return ZStack {
+            ForEach(0..<shown, id: \.self) { index in
+                gem(size: 22)
+                    .offset(x: (CGFloat(index) - CGFloat(shown - 1) / 2) * 12, y: index == 1 ? -8 : 0)
+            }
+        }
+        .frame(width: 56, height: 48)
+        .background(Circle().fill(Theme.boardFill))
+    }
+
     /// Puts a theme on. The screen behind the menu redraws in its colours.
     private func use(_ skin: Skin) {
         Skin.current = skin
         skinID = skin.id
     }
 
-    /// One theme: its colours, its name, and a button to use or buy it.
-    private func themeRow(_ skin: Skin) -> some View {
-        let owned = store.owns(skin)
-        let inUse = skinID == skin.id
-        let colors = Theme.preview(skin)
-        return HStack(spacing: 12) {
-            HStack(spacing: -7) {
-                ForEach(0..<colors.count, id: \.self) { index in
-                    Circle()
-                        .fill(colors[index])
-                        .frame(width: 24, height: 24)
-                        .overlay(Circle().strokeBorder(Color.white.opacity(0.65), lineWidth: 1))
-                }
+    /// A tap on a theme card: put it on, buy it, or say what it takes to get it.
+    private func pick(_ skin: Skin) {
+        themeNotice = nil
+        if store.owns(skin) {
+            use(skin)
+        } else if case .gems(let price) = skin.unlock {
+            if store.buy(skin) {
+                use(skin)
+            } else {
+                themeNotice = "\(skin.name) costs \(price) gems. You need \(price - store.gems) more."
             }
-            .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(skin.name)
-                    .font(.system(size: 17, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Color.white)
-                Text(inUse ? "In use" : (owned ? "Yours" : skin.howToGet))
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundStyle(Theme.tagline)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer(minLength: 8)
-
-            themeButton(skin, owned: owned, inUse: inUse)
+        } else {
+            themeNotice = "\(skin.name): \(skin.howToGet.lowercased()) to unlock it."
         }
     }
 
-    @ViewBuilder
-    private func themeButton(_ skin: Skin, owned: Bool, inUse: Bool) -> some View {
-        if inUse {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 24, weight: .bold))
-                .foregroundStyle(Color(hex: 0x86F2BC))
-                .accessibilityLabel(Text("In use"))
-        } else if owned {
-            Button {
-                use(skin)
-            } label: {
-                chip {
-                    Text("Use")
+    /// One theme as a card: three of its tiles in front of its moving backdrop.
+    private func themeCard(_ skin: Skin) -> some View {
+        let owned = store.owns(skin)
+        let inUse = skinID == skin.id
+        let card = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        let state = inUse ? "In use" : (owned ? "Yours, tap to use" : skin.howToGet)
+        return Button {
+            pick(skin)
+        } label: {
+            VStack(spacing: 7) {
+                HStack(spacing: 5) {
+                    TileView(value: 2, size: 36, skin: skin)
+                    TileView(value: 8, size: 36, skin: skin)
+                    TileView(value: 32, size: 36, skin: skin)
+                }
+                .padding(.top, 16)
+                Text(skin.name)
+                    .font(.system(size: 17, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Text(skin.blurb)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.white.opacity(0.85))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .frame(height: 32, alignment: .top)
+                themeTag(skin, owned: owned, inUse: inUse)
+            }
+            .padding(.horizontal, 8)
+            .padding(.bottom, 12)
+            .frame(maxWidth: .infinity)
+            .background {
+                ZStack {
+                    LinearGradient(
+                        colors: [Theme.chrome(0x1D2F8F, skin: skin), Theme.chrome(0x070A26, skin: skin)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    SceneView(skin: skin)
                 }
             }
-            .buttonStyle(BounceButtonStyle())
-            .accessibilityLabel(Text("Use the \(skin.name) theme"))
-        } else if case .gems(let price) = skin.unlock {
-            Button {
-                if store.buy(skin) {
-                    use(skin)
-                }
-            } label: {
-                chip {
-                    gem(size: 13)
-                    Text("\(price)")
-                }
-            }
-            .buttonStyle(BounceButtonStyle())
-            .opacity(store.gems >= price ? 1 : 0.45)
-            .accessibilityLabel(Text("Buy the \(skin.name) theme for \(price) gems"))
-        } else {
-            Image(systemName: "lock.fill")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(Theme.label)
-                .frame(width: 44, height: 36)
-                .accessibilityLabel(Text("Locked"))
+            .clipShape(card)
+            .overlay(card.strokeBorder(inUse ? Color(hex: 0x86F2BC) : Color.white.opacity(0.28), lineWidth: inUse ? 3 : 1))
         }
+        .buttonStyle(BounceButtonStyle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("\(skin.name) theme. \(state)"))
+    }
+
+    /// The label at the foot of a theme card: in use, yours, its price, or its lock.
+    @ViewBuilder
+    private func themeTag(_ skin: Skin, owned: Bool, inUse: Bool) -> some View {
+        if inUse {
+            tag(fill: Color(hex: 0x1F9D63)) {
+                Image(systemName: "checkmark")
+                Text("In use")
+            }
+        } else if owned {
+            tag(fill: Color.white.opacity(0.22)) {
+                Text("Use")
+            }
+        } else if case .gems(let price) = skin.unlock {
+            tag(fill: Color(hex: 0x4332C8)) {
+                gem(size: 12)
+                Text("\(price)")
+            }
+            .opacity(store.gems >= price ? 1 : 0.7)
+        } else {
+            tag(fill: Color.black.opacity(0.4)) {
+                Image(systemName: "lock.fill")
+                Text(skin.lockLabel)
+            }
+        }
+    }
+
+    private func tag<Content: View>(fill: Color, @ViewBuilder _ content: () -> Content) -> some View {
+        HStack(spacing: 4) {
+            content()
+        }
+        .font(.system(size: 13, weight: .heavy, design: .rounded))
+        .foregroundStyle(Color.white)
+        .lineLimit(1)
+        .padding(.horizontal, 12)
+        .frame(height: 28)
+        .background(Capsule().fill(fill))
+        .overlay(Capsule().strokeBorder(Color.white.opacity(0.5), lineWidth: 1))
     }
 
     private func chip<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {

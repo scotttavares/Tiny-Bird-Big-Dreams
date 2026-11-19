@@ -66,12 +66,14 @@ enum Theme {
         case .band(let from, let to):
             // 2 is level 1, 4 is level 2, and so on up to 2048 at level 11.
             let level = min(11.0, max(1.0, log2(Double(max(2, value)))))
-            let hue = from + (to - from) * (level - 1) / 10
+            let hue = (from + (to - from) * (level - 1) / 10).truncatingRemainder(dividingBy: 1)
             // Every other tile is a little paler, so neighbours in the band tell apart.
             let isEven = Int(level) % 2 == 0
             return Color(hue: hue, saturation: parts.s * (isEven ? 0.7 : 1), brightness: parts.b)
         case .pastel:
             return Color(hue: parts.h, saturation: parts.s * 0.62, brightness: min(1, parts.b * 1.08))
+        case .icy:
+            return Color(hue: parts.h, saturation: parts.s * 0.42, brightness: min(1, parts.b * 1.12))
         }
     }
 
@@ -132,19 +134,19 @@ enum Theme {
         let bottom: Color
     }
 
-    static func tile(_ value: Int) -> TileStyle {
+    static func tile(_ value: Int, skin: Skin = Skin.current) -> TileStyle {
         switch value {
-        case 2: return style(0xFF9484, 0xE8504F, value)
-        case 4: return style(0x86F2BC, 0x2FBF7F, value)
-        case 8: return style(0x66BEFF, 0x2B6FF0, value)
-        case 16: return style(0xBE94FF, 0x7B3FF2, value)
-        case 32: return style(0xFF8AD8, 0xE0409F, value)
-        case 64: return style(0xFFB067, 0xF0701F, value)
-        case 128: return style(0xFFE26A, 0xF0B41F, value)
-        case 256: return style(0x6AF0E6, 0x1FB5B0, value)
-        case 512: return style(0x8C98FF, 0x4A4FE0, value)
-        case 1024: return style(0xF27CFF, 0xB62FE0, value)
-        default: return style(0xFFE9A0, 0xE0A020, value)
+        case 2: return style(0xFF9484, 0xE8504F, value, skin)
+        case 4: return style(0x86F2BC, 0x2FBF7F, value, skin)
+        case 8: return style(0x66BEFF, 0x2B6FF0, value, skin)
+        case 16: return style(0xBE94FF, 0x7B3FF2, value, skin)
+        case 32: return style(0xFF8AD8, 0xE0409F, value, skin)
+        case 64: return style(0xFFB067, 0xF0701F, value, skin)
+        case 128: return style(0xFFE26A, 0xF0B41F, value, skin)
+        case 256: return style(0x6AF0E6, 0x1FB5B0, value, skin)
+        case 512: return style(0x8C98FF, 0x4A4FE0, value, skin)
+        case 1024: return style(0xF27CFF, 0xB62FE0, value, skin)
+        default: return style(0xFFE9A0, 0xE0A020, value, skin)
         }
     }
 }

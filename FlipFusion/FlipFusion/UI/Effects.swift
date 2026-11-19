@@ -52,6 +52,9 @@ struct MergeBurst: View {
     var isSuper = false
     /// Points to float up out of the burst (0 shows none).
     var points = 0
+    /// The theme's own spark and tile shape.
+    var spark: String = Skin.current.spark
+    var shape: Skin.TileShape = Skin.current.shape
 
     @State private var progress: CGFloat = 0
 
@@ -63,16 +66,17 @@ struct MergeBurst: View {
         let sparkSize: CGFloat = isBig ? size * 0.22 : size * 0.15
 
         ZStack {
-            RoundedRectangle(cornerRadius: size * 0.2, style: .continuous)
+            TileOutline(shape: shape)
                 .strokeBorder(isBlast ? color : Color.white.opacity(0.9), lineWidth: isBlast ? 5 : 3)
                 .scaleEffect(1 + ringGrowth * progress)
 
             ForEach(0..<sparks, id: \.self) { index in
                 let angle = CGFloat(index) / CGFloat(sparks) * 2 * .pi
-                Circle()
-                    .fill(color)
-                    .frame(width: sparkSize, height: sparkSize)
+                Image(systemName: spark)
+                    .font(.system(size: sparkSize * 1.25, weight: .bold))
+                    .foregroundStyle(color)
                     .shadow(color: color, radius: 3)
+                    .rotationEffect(.degrees(Double(progress) * 180))
                     .offset(
                         x: cos(angle) * reach * progress,
                         y: sin(angle) * reach * progress
@@ -240,6 +244,9 @@ struct Celebration: View {
         .onChange(of: store.comboEvent) { _, _ in
             confettiID += 1
         }
+        .onChange(of: store.levelEvent) { _, _ in
+            confettiID += 1
+        }
         .onChange(of: store.isGameOver) { _, isOver in
             // A new best score gets a send-off.
             if isOver, store.state.score > 0, store.state.score >= store.best {
@@ -319,6 +326,12 @@ struct GameHaptics: ViewModifier {
             }
             .sensoryFeedback(trigger: store.superEvent) { _, _ in
                 hapticsOn ? .success : nil
+            }
+            .sensoryFeedback(trigger: store.levelEvent) { _, _ in
+                hapticsOn ? .success : nil
+            }
+            .sensoryFeedback(trigger: store.isDanger) { _, isDanger in
+                hapticsOn && isDanger ? .warning : nil
             }
     }
 }
@@ -499,6 +512,7 @@ struct GameBanners: ViewModifier {
     /// Each special tile is explained the first time it turns up.
     @AppStorage("ff.seenClockTile") private var seenClockTile = false
     @AppStorage("ff.seenBombTile") private var seenBombTile = false
+    @AppStorage("ff.seenStoneTile") private var seenStoneTile = false
 
     func body(content: Content) -> some View {
         content
@@ -535,6 +549,19 @@ struct GameBanners: ViewModifier {
             .onChange(of: store.unlockEvent) { _, _ in
                 callout("New theme: \(store.lastUnlockedSkin)!")
             }
+            .onChange(of: store.levelEvent) { _, _ in
+                callout("Level \(store.level)!")
+                if store.level == 3 {
+                    show("Stone blocks are coming. Bombs and Sweep clear them.", 3.4)
+                } else if store.level == 4 {
+                    show("Faster now: extra tiles drop in", 2.6)
+                } else if store.mode == .timed {
+                    show("+\(Int(GameStore.levelTimeBonus)) seconds", 1.2)
+                }
+            }
+            .onChange(of: store.continueEvent) { _, _ in
+                callout("Keep going!")
+            }
             .onChange(of: store.specialSpawnEvent) { _, _ in
                 if store.lastSpecialKind == .time, !seenClockTile {
                     seenClockTile = true
@@ -542,6 +569,9 @@ struct GameBanners: ViewModifier {
                 } else if store.lastSpecialKind == .bomb, !seenBombTile {
                     seenBombTile = true
                     show("Bomb tile: merge it to blast its neighbours", 3.2)
+                } else if store.lastSpecialKind == .stone, !seenStoneTile {
+                    seenStoneTile = true
+                    show("Stone block: it never merges. Blast it with a bomb.", 3.4)
                 }
             }
             .onChange(of: store.boosterEvent) { _, _ in
@@ -602,7 +632,10 @@ struct GameSounds: ViewModifier {
                 sounds.play(.fever, volume: 0.9)
             }
             .onChange(of: store.specialSpawnEvent) { _, _ in
-                sounds.play(.powerup, volume: 0.8)
+                sounds.play(store.lastSpecialKind == .stone ? .tick : .powerup, volume: 0.8)
+            }
+            .onChange(of: store.levelEvent) { _, _ in
+                sounds.play(.combo)
             }
             .onChange(of: store.mode) { _, _ in
                 sounds.play(.mode, volume: 0.8)
@@ -623,5 +656,195 @@ struct GameSounds: ViewModifier {
             .onChange(of: store.isGameOver) { _, isOver in
                 sounds.play(isOver ? .over : .start, volume: 0.9)
             }
+    }
+}
+
+/// "LEVEL 3", a bar that fills as the score climbs toward the next level, and the
+/// score that level starts at.
+struct LevelBar: View {
+    let level: Int
+    let score: Int
+    let scale: CGFloat
+
+    var body: some View {
+        let from = GameEngine.scoreNeeded(forLevel: level)
+        let target = GameEngine.scoreNeeded(forLevel: level + 1)
+        let done = Double(score - from) / Double(max(1, target - from))
+        let fraction = CGFloat(max(0, min(1, done)))
+
+        HStack(spacing: 8 * scale) {
+            Text("LEVEL \(level)")
+                .font(.system(size: 12 * scale, weight: .black, design: .rounded))
+                .foregroundStyle(Theme.counter)
+                .fixedSize()
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Theme.cellFill)
+                    Capsule()
+                        .fill(LinearGradient(colors: Theme.fusion, startPoint: .leading, endPoint: .trailing))
+                        .frame(width: max(geo.size.height, geo.size.width * fraction))
+                        .shadow(color: Theme.fusion[0].opacity(0.8), radius: 4 * scale)
+                }
+            }
+            .frame(height: 9 * scale)
+            .overlay(Capsule().strokeBorder(Theme.glassStroke, lineWidth: 1))
+            Text(target.formatted(.number.grouping(.automatic)))
+                .font(.system(size: 12 * scale, weight: .heavy, design: .rounded))
+                .foregroundStyle(Theme.label)
+                .fixedSize()
+        }
+        .frame(height: 14 * scale)
+        .animation(.easeOut(duration: 0.3), value: score)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Level \(level). Next level at \(target) points"))
+    }
+}
+
+/// A red rim that beats round the board while it is nearly full.
+struct DangerGlow: View {
+    let side: CGFloat
+
+    @State private var isBright = false
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: side * 0.07, style: .continuous)
+            .strokeBorder(Theme.timerLow, lineWidth: 4)
+            .shadow(color: Theme.timerLow, radius: side * 0.05)
+            .opacity(isBright ? 0.95 : 0.2)
+            .frame(width: side, height: side)
+            .onAppear {
+                withAnimation(.easeInOut(duration: 0.42).repeatForever(autoreverses: true)) {
+                    isBright = true
+                }
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
+/// The prize reel of a new level: it flicks through the prizes, slows, and stops on
+/// the one that was won.
+struct PrizeReel: View {
+    let prize: GameStore.Prize
+    let scale: CGFloat
+    /// Called on every flick of the reel, and once when it stops.
+    let onTick: () -> Void
+    let onStop: () -> Void
+
+    @State private var step = 0
+    @State private var isStopped = false
+    @State private var isGone = false
+
+    static func symbol(_ prize: GameStore.Prize) -> String {
+        switch prize {
+        case .coins: return "circle.circle.fill"
+        case .gems: return "diamond.fill"
+        case .booster(let booster): return BoosterBar.symbol(booster)
+        }
+    }
+
+    static func words(_ prize: GameStore.Prize) -> String {
+        switch prize {
+        case .coins(let count): return "+\(count) coins"
+        case .gems(let count): return count == 1 ? "+1 gem" : "+\(count) gems"
+        case .booster(let booster): return "Free \(BoosterBar.name(booster))"
+        }
+    }
+
+    var body: some View {
+        let faces = GameStore.reelFaces
+        let face = isStopped ? prize : faces[step % faces.count]
+        let isJackpot = isStopped && prize == GameStore.jackpot
+        let gold = Color(hex: 0xFFD23F)
+
+        VStack(spacing: 2 * scale) {
+            Text(isJackpot ? "JACKPOT!" : "LEVEL PRIZE")
+                .font(.system(size: 12 * scale, weight: .black, design: .rounded))
+                .foregroundStyle(gold)
+            HStack(spacing: 8 * scale) {
+                Image(systemName: Self.symbol(face))
+                    .font(.system(size: 22 * scale, weight: .heavy))
+                    .foregroundStyle(gold)
+                Text(Self.words(face))
+                    .font(.system(size: 24 * scale, weight: .black, design: .rounded))
+                    .foregroundStyle(Color.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+            }
+        }
+        .padding(.horizontal, 20 * scale)
+        .frame(width: 236 * scale, height: 74 * scale)
+        .background(
+            RoundedRectangle(cornerRadius: 20 * scale, style: .continuous)
+                .fill(Color(hex: 0x12082E, opacity: 0.94))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20 * scale, style: .continuous)
+                .strokeBorder(gold, lineWidth: isStopped ? 3.5 : 2)
+        )
+        .shadow(color: gold.opacity(isStopped ? 0.9 : 0.45), radius: (isStopped ? 18 : 8) * scale)
+        .scaleEffect(isStopped ? 1.12 : 1)
+        .opacity(isGone ? 0 : 1)
+        .task {
+            var wait = 55
+            for flick in 0..<15 {
+                step = flick
+                onTick()
+                try? await Task.sleep(for: .milliseconds(wait))
+                if Task.isCancelled { return }
+                wait += 13
+            }
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.4)) {
+                isStopped = true
+            }
+            onStop()
+            try? await Task.sleep(for: .milliseconds(1500))
+            if Task.isCancelled { return }
+            withAnimation(.easeIn(duration: 0.3)) {
+                isGone = true
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+/// Three stars for the game just played: one for level 2, two for level 4, three for
+/// level 6. They pop in one after another.
+struct StarRow: View {
+    let level: Int
+    let scale: CGFloat
+
+    @State private var shown = 0
+
+    static func stars(forLevel level: Int) -> Int {
+        level >= 6 ? 3 : (level >= 4 ? 2 : (level >= 2 ? 1 : 0))
+    }
+
+    var body: some View {
+        let won = Self.stars(forLevel: level)
+
+        HStack(spacing: 6 * scale) {
+            ForEach(0..<3, id: \.self) { index in
+                let isWon = index < won
+                Image(systemName: "star.fill")
+                    .font(.system(size: (index == 1 ? 40 : 32) * scale, weight: .black))
+                    .foregroundStyle(isWon ? Color(hex: 0xFFD23F) : Color.white.opacity(0.16))
+                    .shadow(color: isWon ? Color(hex: 0xFFB02E) : Color.clear, radius: 8 * scale)
+                    .scaleEffect(!isWon || index < shown ? 1 : 0.1)
+                    .offset(y: index == 1 ? -6 * scale : 0)
+            }
+        }
+        .task {
+            for index in 0..<won {
+                try? await Task.sleep(for: .milliseconds(260))
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.4)) {
+                    shown = index + 1
+                }
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(won == 1 ? "1 star" : "\(won) stars"))
     }
 }

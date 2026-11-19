@@ -32,7 +32,7 @@ enum GameEngine {
             var runCount = 0
 
             for tile in lineTiles {
-                if runCount > 0, let last = placed.last, runValue == tile.value {
+                if runCount > 0, tile.kind != .stone, let last = placed.last, runValue == tile.value {
                     var survivor = last
                     survivor.value *= 2
                     // A special tile does its thing when it merges; the result is ordinary.
@@ -63,7 +63,8 @@ enum GameEngine {
                     moved.col = cell.col
                     placed.append(moved)
                     runValue = tile.value
-                    runCount = 1
+                    // Nothing merges into a stone block.
+                    runCount = tile.kind == .stone ? 0 : 1
                 }
             }
             kept.append(contentsOf: placed)
@@ -184,16 +185,49 @@ enum GameEngine {
     static let timeTilesPerHundred = 5
     static let bombTilesPerHundred = 12
 
+    // MARK: Levels
+
+    /// The score at which a level begins: 0, 200, 500, 900, 1,400, 2,000 and so on,
+    /// each level a little longer than the last.
+    static func scoreNeeded(forLevel level: Int) -> Int {
+        guard level > 1 else { return 0 }
+        return 50 * (level - 1) * (level + 2)
+    }
+
+    /// The level a score has reached. A game starts on level 1.
+    static func level(forScore score: Int) -> Int {
+        var level = 1
+        while scoreNeeded(forLevel: level + 1) <= score {
+            level += 1
+        }
+        return level
+    }
+
+    /// At most this many stone blocks sit on the board at once.
+    static let maxStones = 3
+
+    /// Out of every 100 new tiles, how many are stone blocks. None before level 3.
+    static func stonesPerHundred(level: Int) -> Int {
+        level < 3 ? 0 : min(14, 4 + 2 * (level - 3))
+    }
+
+    /// Out of every 100 moves, how many drop a second new tile. None before level 4.
+    static func extraTilePerHundred(level: Int) -> Int {
+        level < 4 ? 0 : min(40, 10 * (level - 3))
+    }
+
     /// Adds a new tile (a 2 nine times in ten, otherwise a 4) in a random empty cell.
-    /// Now and then it is a clock tile or a bomb. Returns nil when the board is full.
-    /// `allowTime: false` turns would-be clock tiles into ordinary ones; `forcedKind`
-    /// makes the new tile that kind whatever the dice say.
+    /// Now and then it is a clock tile or a bomb, and from level 3 a stone block.
+    /// Returns nil when the board is full. `allowTime: false` turns would-be clock
+    /// tiles into ordinary ones; `forcedKind` makes the new tile that kind whatever
+    /// the dice say.
     @discardableResult
     static func spawn<R: RandomNumberGenerator>(
         in state: inout GameState,
         using rng: inout R,
         allowTime: Bool = true,
-        forcedKind: TileKind? = nil
+        forcedKind: TileKind? = nil,
+        stonesPerHundred: Int = 0
     ) -> Tile? {
         let empty = emptyCells(state.tiles)
         guard let cell = empty.randomElement(using: &rng) else { return nil }
@@ -204,11 +238,15 @@ enum GameEngine {
             kind = allowTime ? .time : .normal
         } else if roll < timeTilesPerHundred + bombTilesPerHundred {
             kind = .bomb
+        } else if roll < timeTilesPerHundred + bombTilesPerHundred + stonesPerHundred,
+                  state.tiles.filter({ $0.kind == .stone }).count < maxStones {
+            kind = .stone
         }
         if let forcedKind {
             kind = forcedKind
         }
-        let tile = Tile(id: state.nextID, value: value, row: cell.row, col: cell.col, kind: kind)
+        // A stone block counts as a 2 when it is blasted or swept away.
+        let tile = Tile(id: state.nextID, value: kind == .stone ? 2 : value, row: cell.row, col: cell.col, kind: kind)
         state.nextID += 1
         state.tiles.append(tile)
         return tile
@@ -217,11 +255,12 @@ enum GameEngine {
     /// True while some swipe would change the board.
     static func hasMove(_ tiles: [Tile]) -> Bool {
         if tiles.count < size * size { return true }
+        // Stone blocks never merge, so they are left out.
         var values: [Cell: Int] = [:]
-        for tile in tiles {
+        for tile in tiles where tile.kind != .stone {
             values[Cell(row: tile.row, col: tile.col)] = tile.value
         }
-        for tile in tiles {
+        for tile in tiles where tile.kind != .stone {
             if values[Cell(row: tile.row, col: tile.col + 1)] == tile.value { return true }
             if values[Cell(row: tile.row + 1, col: tile.col)] == tile.value { return true }
         }

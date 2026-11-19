@@ -425,6 +425,110 @@ struct GameStoreTests {
         #expect(GemShop.pack(for: "not.a.pack") == nil)
     }
 
+    @Test func aNewLevelAddsTimeAndWinsAPrize() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 196, movesUntilRotation: 2, nextID: 10), to: defaults)
+        defaults.set(60.0, forKey: "ff.time")
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.level == 1)
+        #expect(store.prizeEvent == 0)
+        let before = store.coins + store.gems + store.boosterCounts.values.reduce(0, +)
+        store.swipe(.left)
+        #expect(store.state.score == 200)
+        #expect(store.level == 2)
+        #expect(store.levelEvent == 1)
+        #expect(store.secondsLeft == 60 + GameStore.levelTimeBonus)
+        // The reel stopped on coins, gems or a free booster.
+        #expect(store.prizeEvent == 1)
+        #expect(store.coins + store.gems + store.boosterCounts.values.reduce(0, +) > before)
+        // The level comes back with the game.
+        #expect(GameStore(defaults: defaults, animated: false).level == 2)
+        store.newGame()
+        #expect(store.level == 1)
+    }
+
+    @Test func aHighLevelUnlocksThePartyLightsTheme() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 2696, movesUntilRotation: 2, nextID: 10), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        let party = Skin.named("party")
+        #expect(store.level == 6)
+        #expect(!store.owns(party))
+        store.swipe(.left)
+        #expect(store.level == 7)
+        #expect(store.owns(party))
+    }
+
+    @Test func gemsKeepATimedGameGoingOnce() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[2, 4, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 300, movesUntilRotation: 2, nextID: 10), to: defaults)
+        defaults.set(0.0, forKey: "ff.time")
+        defaults.set(7, forKey: "ff.gems")
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.isGameOver)
+        #expect(store.canContinue)
+        #expect(store.continueGame())
+        #expect(store.gems == 7 - GameStore.continueCost)
+        #expect(!store.isGameOver)
+        #expect(store.secondsLeft == GameStore.continueSeconds)
+        #expect(store.continueEvent == 1)
+        // Not while the game is running, and not a second time once it ends again.
+        #expect(!store.continueGame())
+        store.swipe(.down)
+        store.tick(GameStore.continueSeconds + 1)
+        #expect(store.isGameOver)
+        #expect(!store.canContinue)
+        #expect(!store.continueGame())
+        #expect(store.gems == 7 - GameStore.continueCost)
+        // A new game can be carried on again.
+        store.newGame()
+        #expect(store.continuesUsed == 0)
+    }
+
+    @Test func gemsClearTilesOffADeadBoard() {
+        let defaults = freshDefaults()
+        let dead = GameState(tiles: tiles([[2, 4, 2, 4], [4, 2, 4, 2], [2, 4, 2, 4], [4, 2, 4, 2]]), score: 100, movesUntilRotation: 1, nextID: 20)
+        save(dead, to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.isGameOver)
+        // No gems: nothing happens.
+        #expect(!store.continueGame())
+        #expect(store.state == dead)
+        #expect(store.isGameOver)
+
+        defaults.set(GameStore.continueCost, forKey: "ff.gems")
+        let funded = GameStore(defaults: defaults, animated: false)
+        #expect(funded.continueGame())
+        #expect(funded.gems == 0)
+        #expect(!funded.isGameOver)
+        #expect(funded.state.tiles.count == 16 - GameStore.continueClears)
+        // The smallest tiles went first: every 4 is still there.
+        #expect(funded.state.tiles.filter { $0.value == 4 }.count == 8)
+    }
+
+    @Test func everyThemeHasItsOwnIdAndName() {
+        #expect(Skin.all.count == 9)
+        #expect(Set(Skin.all.map(\.id)).count == Skin.all.count)
+        #expect(Set(Skin.all.map(\.name)).count == Skin.all.count)
+        #expect(Skin.all[0].unlock == .free)
+        // A saved theme that no longer exists falls back to the free one.
+        #expect(Skin.named("no-such-theme").id == Skin.all[0].id)
+    }
+
+    @Test func biggerGemPacksShowTheirBonus() {
+        #expect(GemShop.bonusPercent(gems: 25, price: 0.99, baseGems: 25, basePrice: 0.99) == 0)
+        #expect(GemShop.bonusPercent(gems: 60, price: 1.99, baseGems: 25, basePrice: 0.99) == 19)
+        #expect(GemShop.bonusPercent(gems: 150, price: 3.99, baseGems: 25, basePrice: 0.99) == 48)
+        #expect(GemShop.bonusPercent(gems: 10, price: 0, baseGems: 25, basePrice: 0.99) == 0)
+    }
+
+    @Test func starsFollowTheLevelReached() {
+        #expect(StarRow.stars(forLevel: 1) == 0)
+        #expect(StarRow.stars(forLevel: 2) == 1)
+        #expect(StarRow.stars(forLevel: 5) == 2)
+        #expect(StarRow.stars(forLevel: 6) == 3)
+    }
+
     @Test func aDeadBoardIsGameOverAndIgnoresSwipes() {
         let defaults = freshDefaults()
         let dead = GameState(tiles: tiles([[2, 4, 2, 4], [4, 2, 4, 2], [2, 4, 2, 4], [4, 2, 4, 2]]), score: 100, movesUntilRotation: 1, nextID: 20)

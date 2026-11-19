@@ -33,6 +33,8 @@ struct BoardView: View {
         let boardShape = RoundedRectangle(cornerRadius: side * 0.07, style: .continuous)
 
         ZStack(alignment: .topLeading) {
+          // The board and its cells change colour with every level.
+          ZStack(alignment: .topLeading) {
             boardShape
                 .fill(Theme.boardFill)
                 // The board glows pink while points count double.
@@ -54,6 +56,10 @@ struct BoardView: View {
                     .frame(width: cell, height: cell)
                     .offset(x: point.x, y: point.y)
             }
+          }
+          .frame(width: side, height: side, alignment: .topLeading)
+          .hueRotation(.degrees(Double((store.level - 1) % 9) * 40))
+          .animation(.easeInOut(duration: 0.6), value: store.level)
 
             ForEach(store.displayTiles) { tile in
                 let point = origin(row: tile.row, col: tile.col)

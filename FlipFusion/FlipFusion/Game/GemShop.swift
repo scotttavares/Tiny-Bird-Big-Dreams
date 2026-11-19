@@ -24,6 +24,28 @@ final class GemShop {
         packs.first { $0.id == productID }
     }
 
+    /// How many more gems for the same money a pack gives than the smallest pack,
+    /// as a whole percentage (rounded down, never below zero).
+    static func bonusPercent(gems: Int, price: Double, baseGems: Int, basePrice: Double) -> Int {
+        guard gems > 0, price > 0, baseGems > 0, basePrice > 0 else { return 0 }
+        let ratio = (Double(gems) / price) / (Double(baseGems) / basePrice)
+        return max(0, Int(((ratio - 1) * 100).rounded(.down)))
+    }
+
+    /// The bonus of a pack on sale, worked out from the App Store's own prices.
+    func bonusPercent(for product: Product) -> Int {
+        guard let base = products.first, base.id != product.id,
+              let basePack = Self.pack(for: base.id),
+              let pack = Self.pack(for: product.id)
+        else { return 0 }
+        return Self.bonusPercent(
+            gems: pack.gems,
+            price: NSDecimalNumber(decimal: product.price).doubleValue,
+            baseGems: basePack.gems,
+            basePrice: NSDecimalNumber(decimal: base.price).doubleValue
+        )
+    }
+
     /// The packs as the App Store describes them, cheapest first. Empty until loaded.
     private(set) var products: [Product] = []
     private(set) var isLoading = false

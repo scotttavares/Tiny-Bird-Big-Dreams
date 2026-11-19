@@ -204,6 +204,75 @@ struct GameEngineTests {
         #expect(extra == nil)
     }
 
+    @Test func aStoneBlockSlidesButNeverMerges() {
+        var start = tiles([[0, 2, 0, 2], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
+        start[0].kind = .stone
+        let result = GameEngine.slide(start, .left)
+        // The stone and the 2 pack up side by side; they do not become a 4.
+        #expect(grid(result.tiles)[0] == [2, 2, 0, 0])
+        #expect(result.changed)
+        #expect(result.mergedIDs.isEmpty)
+        #expect(result.gained == 0)
+        #expect(result.tiles.contains { $0.kind == .stone })
+
+        // A stone between two equal tiles keeps them apart.
+        var blocked = tiles([[2, 2, 2, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
+        blocked[1].kind = .stone
+        let stuck = GameEngine.slide(blocked, .left)
+        #expect(!stuck.changed)
+        #expect(stuck.gained == 0)
+    }
+
+    @Test func aBombBlastsAStoneBlockAway() {
+        var start = tiles([[2, 2, 0, 0], [2, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
+        start[0].kind = .bomb
+        start[2].kind = .stone
+        let result = GameEngine.slide(start, .left)
+        #expect(!result.tiles.contains { $0.kind == .stone })
+        #expect(grid(result.tiles)[0] == [4, 0, 0, 0])
+    }
+
+    @Test func aStoneBlockIsNotAMove() {
+        // A dead board. Turning a 4 into a stone (which counts as a 2) next to 2s
+        // must not make it look as if something could merge.
+        var dead = tiles([[2, 4, 2, 4], [4, 2, 4, 2], [2, 4, 2, 4], [4, 2, 4, 2]])
+        dead[1].kind = .stone
+        dead[1].value = 2
+        #expect(!GameEngine.hasMove(dead))
+    }
+
+    @Test func levelsStartAtRisingScores() {
+        #expect(GameEngine.level(forScore: 0) == 1)
+        #expect(GameEngine.level(forScore: 199) == 1)
+        #expect(GameEngine.level(forScore: 200) == 2)
+        #expect(GameEngine.level(forScore: 499) == 2)
+        #expect(GameEngine.level(forScore: 500) == 3)
+        #expect(GameEngine.level(forScore: 2000) == 6)
+        #expect(GameEngine.scoreNeeded(forLevel: 1) == 0)
+        #expect(GameEngine.scoreNeeded(forLevel: 7) == 2700)
+    }
+
+    @Test func theGameGetsHarderWithTheLevel() {
+        #expect(GameEngine.stonesPerHundred(level: 2) == 0)
+        #expect(GameEngine.stonesPerHundred(level: 3) == 4)
+        #expect(GameEngine.stonesPerHundred(level: 30) == 14)
+        #expect(GameEngine.extraTilePerHundred(level: 3) == 0)
+        #expect(GameEngine.extraTilePerHundred(level: 4) == 10)
+        #expect(GameEngine.extraTilePerHundred(level: 30) == 40)
+    }
+
+    @Test func thereAreNeverTooManyStoneBlocks() {
+        var rng = SeededGenerator(seed: 5)
+        var state = GameState(tiles: [], score: 0, movesUntilRotation: 2, nextID: 1)
+        for _ in 0..<16 {
+            GameEngine.spawn(in: &state, using: &rng, stonesPerHundred: 100)
+        }
+        let stones = state.tiles.filter { $0.kind == .stone }
+        #expect(stones.count == GameEngine.maxStones)
+        #expect(stones.allSatisfy { $0.value == 2 })
+        #expect(GameEngine.isValid(state))
+    }
+
     @Test func aNewGameStartsWithTwoTiles() {
         var rng = SeededGenerator(seed: 3)
         let state = GameEngine.newGame(using: &rng)
