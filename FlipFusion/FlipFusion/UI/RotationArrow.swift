@@ -67,26 +67,7 @@ struct RotationArrow: View {
         let thickness = board * 0.02
 
         let startAngle = -70.0     // beside the end of the pill
-        let headAngle = -24.0      // the still arrowhead, at the board's upper corner
         let trailEnd = 48.0        // the bottom corner, clear of the boosters
-
-        // The still arrow.
-        var guide = Path()
-        var angle = startAngle
-        guide.move(to: point(angle, center: center, reach: reach))
-        while angle < trailEnd {
-            angle += 2
-            guide.addLine(to: point(angle, center: center, reach: reach))
-        }
-        context.stroke(
-            guide,
-            with: .color(Theme.arrowLight.opacity(0.22)),
-            style: StrokeStyle(lineWidth: thickness, lineCap: .round, lineJoin: .round)
-        )
-        context.fill(
-            arrowhead(at: headAngle, center: center, reach: reach, half: board * 0.04),
-            with: .color(Theme.arrowLight.opacity(0.4))
-        )
 
         // Where the comet's head is, how long its tail is, and how bright it burns.
         var headAt = startAngle
@@ -104,7 +85,8 @@ struct RotationArrow: View {
                 let eased = sweep * sweep * (3 - 2 * sweep)
                 headAt = startAngle + (trailEnd - startAngle) * eased
                 tail = 14 + 50 * sin(sweep * Double.pi)
-                strength = 0.3 + 0.7 * sin(sweep * Double.pi)
+                // It fades right out at each end, so nothing is left hanging there.
+                strength = sin(sweep * Double.pi)
             } else {
                 // One whole lap round the board.
                 let lap = (cycle - 6.4) / 2.6

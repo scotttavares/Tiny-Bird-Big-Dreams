@@ -321,8 +321,17 @@ final class GameStore {
 
     /// Throws every tile to a new cell and knocks up to `drop` of them off the board
     /// (stone blocks first, then the smallest tiles, never leaving fewer than two).
-    private func scatterTiles(dropping drop: Int) {
+    private func scatterTiles(dropping drop: Int, chewing bites: Int = 0) {
         func scatter() {
+            // A bite out of the board: a cell becomes a hole until the board next
+            // changes shape. Never on a board that already has its fill of obstacles.
+            var bitten = 0
+            for _ in 0..<bites where state.blocks.count < GameEngine.maxBlocks {
+                guard let cell = GameEngine.emptyCells([], blocked: blockedSet).randomElement(using: &rng) else { break }
+                state.blocks.append(Block(row: cell.row, col: cell.col, kind: .hole))
+                bitten += 1
+            }
+            lastChewCount = bitten
             let count = max(0, min(drop, state.tiles.count - 2))
             let doomed = state.tiles.sorted { first, second in
                 if (first.kind == .stone) != (second.kind == .stone) {
@@ -361,11 +370,28 @@ final class GameStore {
     /// `drop` are knocked off. Returns false, and does nothing, while a move is
     /// still playing or the game is over.
     @discardableResult
-    func stirBoard(dropping drop: Int = 2) -> Bool {
+    func stirBoard(dropping drop: Int = 2, chewing bites: Int = 1) -> Bool {
         guard !isAnimating, !isGameOver, state.tiles.count > 1 else { return false }
         bursts.removeAll()
-        scatterTiles(dropping: drop)
+        scatterTiles(dropping: drop, chewing: bites)
         finishMove()
+        return true
+    }
+
+    /// How many cells the shark bit out of the board last time.
+    private(set) var lastChewCount = 0
+
+    /// True once the Ocean theme's shark has come in this game: it comes once at most.
+    @ObservationIgnored private var sharkHasCome = false
+    /// The shark's chance, in a hundred, of coming when the game earns a big moment.
+    static let sharkPerHundred = 20
+
+    /// Asks whether the Ocean theme's shark comes now. It is rare on purpose: once a
+    /// game at most, and then only one time in five that it could.
+    func sharkComes() -> Bool {
+        guard !sharkHasCome, !isGameOver else { return false }
+        guard Int.random(in: 0..<100, using: &rng) < Self.sharkPerHundred else { return false }
+        sharkHasCome = true
         return true
     }
 
@@ -526,7 +552,7 @@ final class GameStore {
         case .monkey:
             scatterTiles(dropping: 0)
         case .shark:
-            scatterTiles(dropping: 2)
+            scatterTiles(dropping: 2, chewing: 1)
         case .ufo:
             abductTiles(2)
         case .trex:
@@ -1031,6 +1057,7 @@ final class GameStore {
         GameEngine.spawn(in: &fresh, using: &rng, allowTime: mode == .timed)
         state = fresh
         level = 1
+        sharkHasCome = false
         continuesUsed = 0
         paidScoreGems = 0
         paidBestBonus = false

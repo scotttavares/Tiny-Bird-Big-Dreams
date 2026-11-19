@@ -686,6 +686,10 @@ struct GameStoreTests {
         #expect(store.stirBoard())
         #expect(store.stirEvent == 1)
         #expect(store.lastStirDropped == 2)
+        // It bit one cell out of the board: a hole beside the wall that was there.
+        #expect(store.lastChewCount == 1)
+        #expect(store.state.blocks.filter { $0.kind == .hole }.count == 1)
+        #expect(store.state.blocks.count == 2)
         // The stone block went first, then the smallest tile; the rest are all there.
         #expect(store.state.tiles.map(\.value).sorted() == [4, 8, 16, 32])
         #expect(!store.state.tiles.contains { $0.kind == .stone })

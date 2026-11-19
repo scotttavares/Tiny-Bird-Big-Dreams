@@ -724,8 +724,10 @@ struct ThemeMoments: ViewModifier {
 
     private func play() {
         if Skin.current.backdrop == .bubbles {
-            // The Ocean theme's moment is the shark itself. It does not just show its
-            // teeth: as it covers the board it throws the tiles about and takes two.
+            // The Ocean theme's moment is the shark itself, and it is rare: once a game
+            // at most. It does not just show its teeth: it throws the tiles about,
+            // takes two and bites a hole out of the board.
+            guard store.sharkComes() else { return }
             release(.shark)
             let game = store
             Task {
