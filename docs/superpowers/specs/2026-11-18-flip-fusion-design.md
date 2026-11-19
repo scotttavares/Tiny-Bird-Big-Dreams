@@ -196,3 +196,7 @@ More requests from the owner after playing build 27.
 - **Twist**, a fourth game mode: no clock, an extra tile after every turn, and after any turn the board may (one time in two) start turning the other way. The arrow is mirrored to show which way the next turn goes, the strip under the boosters says it in words, and "Reversed!" is called out when it changes. It unlocks once the player has two themes beyond Neon (`GameStore.themesNeeded`); Shape Shift still needs one.
 - **The arrow** now moves all the time: its head nods along the path, light runs down the trail in waves, and beads of light travel from the pill to the trail's end. All of it speeds up when the turn is one move away. It stands still with Reduce Motion.
 - **Walls and crates move a little:** a crate rocks gently and a gleam of light slides across a wall.
+
+## The shark stirs the board (2026-11-19)
+
+At the owner's request the Ocean theme's shark now changes the game: as it covers the board (0.8 seconds into its moment) every tile is thrown to a random cell and up to two are knocked off, stone blocks first and then the smallest tiles, never leaving fewer than two (`GameStore.stirBoard`). If a move is still playing it tries once more 0.6 seconds later. This makes Ocean play differently from the other themes, on purpose.

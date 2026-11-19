@@ -675,6 +675,19 @@ struct ThemeMoments: ViewModifier {
         guard SceneArt.hasMoment(Skin.current.backdrop) else { return }
         momentID += 1
         sounds.play(.boom, volume: 0.8)
+        // The shark does not just show its teeth: as it covers the board it throws
+        // the tiles about and knocks a couple off.
+        if Skin.current.backdrop == .bubbles {
+            let store = store
+            Task {
+                try? await Task.sleep(for: .milliseconds(800))
+                if !store.stirBoard() {
+                    // A move was still playing: try once more when it has finished.
+                    try? await Task.sleep(for: .milliseconds(600))
+                    store.stirBoard()
+                }
+            }
+        }
     }
 
     func body(content: Content) -> some View {

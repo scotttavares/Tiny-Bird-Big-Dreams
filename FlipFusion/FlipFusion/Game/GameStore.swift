@@ -287,6 +287,59 @@ final class GameStore {
         }
     }
 
+    // MARK: The shark
+
+    /// Goes up each time the board is stirred; `lastStirDropped` is how many tiles
+    /// were knocked off it.
+    private(set) var stirEvent = 0
+    private(set) var lastStirDropped = 0
+
+    /// The Ocean theme's shark hits the board: every tile is thrown to a new cell and
+    /// up to `drop` of them are knocked off (stone blocks first, then the smallest
+    /// tiles, never leaving fewer than two). Returns false, and does nothing, while
+    /// a move is still playing or the game is over.
+    @discardableResult
+    func stirBoard(dropping drop: Int = 2) -> Bool {
+        guard !isAnimating, !isGameOver, state.tiles.count > 1 else { return false }
+
+        func stir() {
+            let count = max(0, min(drop, state.tiles.count - 2))
+            let doomed = state.tiles.sorted { first, second in
+                if (first.kind == .stone) != (second.kind == .stone) {
+                    return first.kind == .stone
+                }
+                return first.value < second.value
+            }.prefix(count)
+            bursts.removeAll()
+            for tile in doomed {
+                nextBurstID += 1
+                bursts.append(Burst(id: nextBurstID, row: tile.row, col: tile.col, value: tile.value))
+            }
+            let gone = Set(doomed.map(\.id))
+            state.tiles.removeAll { gone.contains($0.id) }
+            // Every cell a tile may stand on, in a random order.
+            var cells = GameEngine.emptyCells([], blocked: blockedSet).shuffled(using: &rng)
+            for index in state.tiles.indices {
+                guard let cell = cells.popLast() else { break }
+                state.tiles[index].row = cell.row
+                state.tiles[index].col = cell.col
+            }
+            lastStirDropped = doomed.count
+            stirEvent += 1
+            shake(3)
+        }
+
+        if animated {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
+                stir()
+            }
+        } else {
+            stir()
+        }
+        finishMove()
+        return true
+    }
+
     // MARK: Keep going
 
     /// Gems it costs to carry on with a game that has ended, once per game.

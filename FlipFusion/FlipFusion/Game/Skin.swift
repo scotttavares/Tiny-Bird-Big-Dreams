@@ -104,7 +104,7 @@ struct Skin: Identifiable, Equatable, Sendable {
         Skin(id: "sunset", name: "Sunset", blurb: "A striped sun going down", unlock: .gems(40),
              chromeHue: 0.92, chromeBrightness: 1.05, tiles: .shifted(0.04),
              backdrop: .sun, shape: .rounded, spark: "sun.max.fill", boards: [15, 16]),
-        Skin(id: "ocean", name: "Ocean", blurb: "Bubble tiles under the sea", unlock: .gems(80),
+        Skin(id: "ocean", name: "Ocean", blurb: "Fish, bubbles and a shark that scatters your tiles", unlock: .gems(80),
              chromeHue: 0.53, chromeBrightness: 0.95, tiles: .band(from: 0.42, to: 0.66),
              backdrop: .bubbles, shape: .bubble, spark: "drop.fill", boards: [17, 18]),
         Skin(id: "bubblegum", name: "Bubblegum", blurb: "Jelly tiles and floating hearts", unlock: .gems(120),

@@ -620,6 +620,12 @@ struct GameBanners: ViewModifier {
             .onChange(of: store.directionEvent) { _, _ in
                 callout("Reversed!")
             }
+            .onChange(of: store.stirEvent) { _, _ in
+                callout("Shark attack!")
+                if store.lastStirDropped > 0 {
+                    show(store.lastStirDropped == 1 ? "The shark took a tile" : "The shark took \(store.lastStirDropped) tiles", 1.6)
+                }
+            }
             .onChange(of: store.specialSpawnEvent) { _, _ in
                 if store.lastSpecialKind == .time, !seenClockTile {
                     seenClockTile = true

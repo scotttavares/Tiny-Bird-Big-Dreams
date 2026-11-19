@@ -660,6 +660,36 @@ struct GameStoreTests {
         #expect(again.state.counterClockwise == store.state.counterClockwise)
     }
 
+    @Test func theSharkScattersTheTilesAndTakesTwo() {
+        let defaults = freshDefaults()
+        var start = GameState(
+            tiles: tiles([[2, 4, 8, 16], [32, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
+            score: 0,
+            movesUntilRotation: 2,
+            nextID: 20,
+            blocks: [Block(row: 3, col: 3, kind: .wall)]
+        )
+        start.tiles[5].kind = .stone
+        save(start, to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.stirBoard())
+        #expect(store.stirEvent == 1)
+        #expect(store.lastStirDropped == 2)
+        // The stone block went first, then the smallest tile; the rest are all there.
+        #expect(store.state.tiles.map(\.value).sorted() == [4, 8, 16, 32])
+        #expect(!store.state.tiles.contains { $0.kind == .stone })
+        // Nobody landed on the wall or on anybody else.
+        #expect(GameEngine.isValid(store.state))
+        #expect(!store.isGameOver)
+
+        // It never leaves fewer than two tiles.
+        #expect(store.stirBoard(dropping: 10))
+        #expect(store.state.tiles.count == 2)
+        #expect(store.stirBoard())
+        #expect(store.state.tiles.count == 2)
+        #expect(store.lastStirDropped == 0)
+    }
+
     @Test func aDeadBoardIsGameOverAndIgnoresSwipes() {
         let defaults = freshDefaults()
         let dead = GameState(tiles: tiles([[2, 4, 2, 4], [4, 2, 4, 2], [2, 4, 2, 4], [4, 2, 4, 2]]), score: 100, movesUntilRotation: 1, nextID: 20)
