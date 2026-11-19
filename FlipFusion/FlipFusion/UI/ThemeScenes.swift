@@ -731,7 +731,7 @@ struct ThemeMoments: ViewModifier {
             release(.shark)
             let game = store
             Task {
-                try? await Task.sleep(for: .milliseconds(800))
+                try? await Task.sleep(for: .milliseconds(1400))
                 if !game.stirBoard() {
                     // A move was still playing: try once more when it has finished.
                     try? await Task.sleep(for: .milliseconds(600))
