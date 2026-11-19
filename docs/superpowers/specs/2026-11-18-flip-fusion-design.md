@@ -213,3 +213,9 @@ Only **Neon** has one so far (generated with the owner's OpenArt account, GPT Im
 - **Fruit Salad**, a fifth game mode, open to everyone: no clock, and every tile shows a fruit in place of its number (`Game/Fruit.swift`): cherries, strawberry, orange, lemon, apple, grapes, watermelon, pineapple, coconut, peach, then a star. The rules are unchanged; only the faces differ. The fruit are the system's own emoji.
 - **Fusion**, a sixth game mode, unlocked with three themes: no clock, and after every move one ordinary tile picked at random changes by itself. Six times in ten it doubles; otherwise it halves (a 2 stays a 2).
 - Every game without a clock except Shape Shift adds an extra tile after each turn, so each of them ends.
+
+## Opening crates (2026-11-19)
+
+The owner asked for crates that can be opened at the cost of a turn and may hold something valuable or something deadly. A tap on a crate opens it (`GameStore.openCrate`). Opening is a move: it counts toward the next turn of the board (and toward the next shape in Shape Shift), though no new tile is added. What is inside, out of 100: 100 coins (22), a gem (12), a free booster (12), double points (8), ten seconds on the clock or 100 coins where there is no clock (8); then a monkey that jumps out and mixes the tiles up (16), a shark that mixes them up and eats two (12), and two stone blocks (10). So 62 in 100 are prizes. The monkey is shown springing out over the board for about a second; the shark plays the Ocean theme's shark in whatever theme is on. Smashing a crate with a merge or a bomb still gives 20 points and nothing else.
+
+Premium generated art for the crates, rocks and holes was asked for too, but the OpenArt account had 9 credits left (an image costs 10) and the Higgsfield account none, so they are still drawn in code.

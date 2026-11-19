@@ -84,6 +84,11 @@ struct GameScreen: View {
                         DangerGlow(side: side)
                     }
 
+                    if store.crateOpenEvent > 0, store.lastCrateFind == .monkey {
+                        MonkeyPop(side: side)
+                            .id(store.crateOpenEvent)
+                    }
+
                     if store.streak > 0 {
                         SpeedBolt(side: side)
                             .id(store.streak)

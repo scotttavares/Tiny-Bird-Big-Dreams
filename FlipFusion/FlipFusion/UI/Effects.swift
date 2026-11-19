@@ -610,7 +610,7 @@ struct GameBanners: ViewModifier {
                         show("New board shape: tiles stop at walls and holes", 3.4)
                     } else if !seenCrate, store.state.blocks.contains(where: { $0.kind == .crate }) {
                         seenCrate = true
-                        show("Crates: merge beside one to smash it", 3.4)
+                        show("Crates: tap one to open it. It uses a move, and it might be trouble.", 4)
                     }
                 }
             }
@@ -621,9 +621,33 @@ struct GameBanners: ViewModifier {
                 callout("Reversed!")
             }
             .onChange(of: store.stirEvent) { _, _ in
-                callout("Shark attack!")
-                if store.lastStirDropped > 0 {
+                // A crate says for itself what came out of it.
+                if store.lastStirDropped > 0, store.crateOpenEvent == 0 || store.lastCrateFind.isPrize {
+                    callout("Shark attack!")
                     show(store.lastStirDropped == 1 ? "The shark took a tile" : "The shark took \(store.lastStirDropped) tiles", 1.6)
+                }
+            }
+            .onChange(of: store.crateOpenEvent) { _, _ in
+                switch store.lastCrateFind {
+                case .coins(let count):
+                    callout("+\(count) coins!")
+                case .gem:
+                    callout("A gem!")
+                case .booster(let booster):
+                    callout("Free \(BoosterBar.name(booster))!")
+                case .fever:
+                    callout("Double points!")
+                case .time:
+                    callout("+\(Int(GameStore.timeBonus)) seconds!")
+                case .monkey:
+                    callout("Monkey!")
+                    show("A monkey jumped out and mixed up the board", 2)
+                case .shark:
+                    callout("Shark!")
+                    show(store.lastStirDropped == 1 ? "A shark came out and ate a tile" : "A shark came out and ate \(store.lastStirDropped) tiles", 2)
+                case .stones:
+                    callout("Rock fall!")
+                    show("The crate was full of rocks", 2)
                 }
             }
             .onChange(of: store.specialSpawnEvent) { _, _ in
@@ -717,6 +741,9 @@ struct GameSounds: ViewModifier {
             }
             .onChange(of: store.mutateEvent) { _, _ in
                 sounds.play(.powerup, volume: 0.5)
+            }
+            .onChange(of: store.crateOpenEvent) { _, _ in
+                sounds.play(store.lastCrateFind.isPrize ? .bonus : .boom)
             }
             .onChange(of: store.mode) { _, _ in
                 sounds.play(.mode, volume: 0.8)
@@ -1218,5 +1245,38 @@ struct SpeedBolt: View {
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+}
+
+/// A monkey that jumps out of an opened crate: it springs up over the board, swings
+/// from side to side for a second, and is gone.
+struct MonkeyPop: View {
+    let side: CGFloat
+
+    /// 0 not out yet, 1 out and swinging, 2 gone.
+    @State private var stage = 0
+    @State private var isSwinging = false
+
+    var body: some View {
+        Text("\u{1F412}")
+            .font(.system(size: side * 0.5))
+            .rotationEffect(.degrees(isSwinging ? 18 : -18))
+            .offset(x: isSwinging ? side * 0.16 : -side * 0.16, y: stage == 1 ? 0 : side * 0.3)
+            .scaleEffect(stage == 1 ? 1 : 0.1)
+            .opacity(stage == 1 ? 1 : 0)
+            .task {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.5)) {
+                    stage = 1
+                }
+                withAnimation(.easeInOut(duration: 0.22).repeatForever(autoreverses: true)) {
+                    isSwinging = true
+                }
+                try? await Task.sleep(for: .milliseconds(1200))
+                withAnimation(.easeIn(duration: 0.25)) {
+                    stage = 2
+                }
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 }

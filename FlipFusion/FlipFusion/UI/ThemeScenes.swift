@@ -670,9 +670,13 @@ struct ThemeMoments: ViewModifier {
     let sounds: SoundPlayer
 
     @State private var momentID = 0
+    /// The scene whose moment is playing. Usually the theme's own; a shark out of a
+    /// crate brings its own.
+    @State private var playing = Skin.Backdrop.grid
 
     private func play() {
         guard SceneArt.hasMoment(Skin.current.backdrop) else { return }
+        playing = Skin.current.backdrop
         momentID += 1
         sounds.play(.boom, volume: 0.8)
         // The shark does not just show its teeth: as it covers the board it throws
@@ -694,7 +698,7 @@ struct ThemeMoments: ViewModifier {
         content
             .overlay {
                 if momentID > 0 {
-                    ThemeMoment(backdrop: Skin.current.backdrop)
+                    ThemeMoment(backdrop: playing)
                         .id(momentID)
                         .ignoresSafeArea()
                 }
@@ -714,6 +718,14 @@ struct ThemeMoments: ViewModifier {
             }
             .onChange(of: store.comboEvent) { _, _ in
                 play()
+            }
+            .onChange(of: store.crateOpenEvent) { _, _ in
+                // The shark out of a crate surfaces in any theme. The game has
+                // already taken its tiles.
+                if store.lastCrateFind == .shark {
+                    playing = .bubbles
+                    momentID += 1
+                }
             }
     }
 }

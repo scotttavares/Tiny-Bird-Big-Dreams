@@ -727,6 +727,58 @@ struct GameStoreTests {
         #expect(fusion.mutateEvent > 0)
     }
 
+    @Test func openingACrateIsAGambleThatUsesAMove() {
+        let defaults = freshDefaults()
+        save(GameState(
+            tiles: tiles([[2, 4, 8, 16], [32, 64, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
+            score: 0,
+            movesUntilRotation: 2,
+            nextID: 20,
+            blocks: [Block(row: 3, col: 0, kind: .crate), Block(row: 3, col: 3, kind: .crate), Block(row: 2, col: 2, kind: .wall)]
+        ), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        // Nothing to open where there is no crate, or where there is a wall.
+        #expect(!store.openCrate(row: 0, col: 0))
+        #expect(!store.openCrate(row: 2, col: 2))
+
+        // A prize: coins, the crate is gone, and a move has been used.
+        #expect(store.openCrate(row: 3, col: 0, forcing: .coins(100)))
+        #expect(store.coins == 100)
+        #expect(store.crateOpenEvent == 1)
+        #expect(store.state.blocks.filter { $0.kind == .crate }.count == 1)
+        #expect(store.state.movesUntilRotation == 1)
+        #expect(store.state.tiles.count == 6)
+
+        // Trouble: a shark eats two tiles, and this second move turns the board.
+        #expect(store.openCrate(row: 3, col: 3, forcing: .shark))
+        #expect(store.lastCrateFind == .shark)
+        #expect(store.lastStirDropped == 2)
+        #expect(store.rotatePulse == 1)
+        #expect(store.state.movesUntilRotation == 2)
+        #expect(!store.state.blocks.contains { $0.kind == .crate })
+        // The two smallest tiles went; the rest are all still there.
+        #expect(store.state.tiles.map(\.value).reduce(0, +) >= 8 + 16 + 32 + 64)
+        #expect(GameEngine.isValid(store.state))
+    }
+
+    @Test func aMonkeyMixesTheBoardButTakesNothing() {
+        let defaults = freshDefaults()
+        save(GameState(
+            tiles: tiles([[2, 4, 8, 16], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
+            score: 0,
+            movesUntilRotation: 2,
+            nextID: 20,
+            blocks: [Block(row: 3, col: 0, kind: .crate)]
+        ), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.openCrate(row: 3, col: 0, forcing: .monkey))
+        #expect(store.lastStirDropped == 0)
+        #expect(store.state.tiles.map(\.value).sorted() == [2, 4, 8, 16])
+        #expect(GameEngine.isValid(store.state))
+        #expect(!GameStore.CrateFind.monkey.isPrize)
+        #expect(GameStore.CrateFind.gem.isPrize)
+    }
+
     @Test func aDeadBoardIsGameOverAndIgnoresSwipes() {
         let defaults = freshDefaults()
         let dead = GameState(tiles: tiles([[2, 4, 2, 4], [4, 2, 4, 2], [2, 4, 2, 4], [4, 2, 4, 2]]), score: 100, movesUntilRotation: 1, nextID: 20)

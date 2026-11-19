@@ -312,22 +312,17 @@ final class GameStore {
         mutateEvent += 1
     }
 
-    // MARK: The shark
+    // MARK: The shark and the monkey
 
     /// Goes up each time the board is stirred; `lastStirDropped` is how many tiles
     /// were knocked off it.
     private(set) var stirEvent = 0
     private(set) var lastStirDropped = 0
 
-    /// The Ocean theme's shark hits the board: every tile is thrown to a new cell and
-    /// up to `drop` of them are knocked off (stone blocks first, then the smallest
-    /// tiles, never leaving fewer than two). Returns false, and does nothing, while
-    /// a move is still playing or the game is over.
-    @discardableResult
-    func stirBoard(dropping drop: Int = 2) -> Bool {
-        guard !isAnimating, !isGameOver, state.tiles.count > 1 else { return false }
-
-        func stir() {
+    /// Throws every tile to a new cell and knocks up to `drop` of them off the board
+    /// (stone blocks first, then the smallest tiles, never leaving fewer than two).
+    private func scatterTiles(dropping drop: Int) {
+        func scatter() {
             let count = max(0, min(drop, state.tiles.count - 2))
             let doomed = state.tiles.sorted { first, second in
                 if (first.kind == .stone) != (second.kind == .stone) {
@@ -335,7 +330,6 @@ final class GameStore {
                 }
                 return first.value < second.value
             }.prefix(count)
-            bursts.removeAll()
             for tile in doomed {
                 nextBurstID += 1
                 bursts.append(Burst(id: nextBurstID, row: tile.row, col: tile.col, value: tile.value))
@@ -356,12 +350,145 @@ final class GameStore {
 
         if animated {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
-                stir()
+                scatter()
             }
         } else {
-            stir()
+            scatter()
         }
+    }
+
+    /// The Ocean theme's shark hits the board: the tiles are scattered and up to
+    /// `drop` are knocked off. Returns false, and does nothing, while a move is
+    /// still playing or the game is over.
+    @discardableResult
+    func stirBoard(dropping drop: Int = 2) -> Bool {
+        guard !isAnimating, !isGameOver, state.tiles.count > 1 else { return false }
+        bursts.removeAll()
+        scatterTiles(dropping: drop)
         finishMove()
+        return true
+    }
+
+    // MARK: Opening crates
+
+    /// What was inside a crate. Some finds are prizes; some are trouble.
+    enum CrateFind: Equatable, Sendable {
+        case coins(Int)
+        case gem
+        /// One free use of a booster.
+        case booster(Booster)
+        /// Double points for a while.
+        case fever
+        /// Seconds on the clock (the timed game only).
+        case time
+        /// A monkey jumps out and mixes the tiles up.
+        case monkey
+        /// A shark comes out, mixes the tiles up and eats two.
+        case shark
+        /// Two stone blocks fall onto the board.
+        case stones
+
+        /// True for the finds the player is glad of.
+        var isPrize: Bool {
+            switch self {
+            case .monkey, .shark, .stones: return false
+            default: return true
+            }
+        }
+    }
+
+    /// Goes up each time a crate is opened; `lastCrateFind` is what was in it.
+    private(set) var crateOpenEvent = 0
+    private(set) var lastCrateFind = CrateFind.coins(100)
+
+    /// Picks what is in a crate. Out of 100: 22 are 100 coins, 12 a gem, 12 a free
+    /// booster, 8 double points, 8 ten seconds (100 coins when there is no clock);
+    /// then 16 a monkey, 12 a shark and 10 two stone blocks.
+    private func rollCrate() -> CrateFind {
+        let roll = Int.random(in: 0..<100, using: &rng)
+        switch roll {
+        case ..<22: return .coins(100)
+        case ..<34: return .gem
+        case ..<46: return .booster(Booster.allCases.randomElement(using: &rng) ?? .flip)
+        case ..<54: return .fever
+        case ..<62: return mode == .timed ? .time : .coins(100)
+        case ..<78: return .monkey
+        case ..<90: return .shark
+        default: return .stones
+        }
+    }
+
+    /// Opens the crate in a cell (a tap on it). Opening a crate is a move: it counts
+    /// toward the next turn of the board, so it is a gamble even before the lid comes
+    /// off. Returns false, and does nothing, when there is no crate there, a move is
+    /// still playing, or the game is over. `forcing` fixes what is found (tests).
+    @discardableResult
+    func openCrate(row: Int, col: Int, forcing forced: CrateFind? = nil) -> Bool {
+        guard !isAnimating, !isGameOver,
+              let at = state.blocks.firstIndex(where: { $0.kind == .crate && $0.row == row && $0.col == col })
+        else { return false }
+
+        bursts.removeAll()
+        isTimerRunning = true
+        swipeInFlight = true
+        let find = forced ?? rollCrate()
+
+        func lift() {
+            state.blocks.remove(at: at)
+        }
+        if animated {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                lift()
+            }
+        } else {
+            lift()
+        }
+        nextBurstID += 1
+        bursts.append(Burst(id: nextBurstID, row: row, col: col, value: 64, isSuper: true))
+
+        switch find {
+        case .coins(let count):
+            coins += count
+        case .gem:
+            gems += 1
+        case .booster(let booster):
+            boosterCounts[booster, default: 0] += 1
+        case .fever:
+            isFever = true
+            feverLeft = Self.feverSeconds
+            feverEvent += 1
+        case .time:
+            secondsLeft = min(Self.roundSeconds, secondsLeft + Self.timeBonus)
+            wholeSecondsLeft = Int(secondsLeft.rounded(.up))
+        case .monkey:
+            scatterTiles(dropping: 0)
+        case .shark:
+            scatterTiles(dropping: 2)
+        case .stones:
+            spawnTile(forcing: .stone)
+            spawnTile(forcing: .stone)
+            shake(2)
+        }
+        lastCrateFind = find
+        crateOpenEvent += 1
+
+        state.movesUntilRotation -= 1
+        if state.movesUntilRotation <= 0 {
+            if animated {
+                isAnimating = true
+                Task { [weak self] in
+                    await self?.pause(0.6)
+                    await self?.rotateAnimated()
+                    self?.finishMove()
+                    self?.isAnimating = false
+                }
+            } else {
+                rotateImmediately()
+                finishMove()
+            }
+        } else {
+            finishMove()
+        }
         return true
     }
 

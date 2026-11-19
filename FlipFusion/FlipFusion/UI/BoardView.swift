@@ -123,6 +123,12 @@ struct BoardView: View {
                 ObstacleView(kind: block.kind, size: cell)
                     .rotationEffect(.degrees(-store.boardAngle))
                     .offset(x: point.x, y: point.y)
+                    // A tap opens a crate, for better or worse.
+                    .onTapGesture {
+                        if block.kind == .crate {
+                            store.openCrate(row: block.row, col: block.col)
+                        }
+                    }
                     .zIndex(1)
                     .transition(.scale(scale: 0.2).combined(with: .opacity))
             }
