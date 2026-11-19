@@ -10,16 +10,21 @@ struct RotationArrow: View {
     let isImminent: Bool
     /// True when the board will turn to the left: the arrow is drawn mirrored.
     var isReversed = false
+    /// How excited the game is: 0 calm, 1 warming up (a speed streak), 2 wild (double
+    /// points, a long streak or a nearly full board). The arrow moves slowly and
+    /// stays purple when calm; it speeds up and changes colour as things heat up.
+    var heat = 0
 
     @State private var pulse = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let hurry = isImminent
+        let warmth = heat
         TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduceMotion)) { timeline in
             let time = timeline.date.timeIntervalSinceReferenceDate
             Canvas { context, size in
-                RotationArrow.draw(in: &context, size: size, time: time, hurry: hurry)
+                RotationArrow.draw(in: &context, size: size, now: time, hurry: hurry, heat: warmth)
             }
         }
         // Room around the board for the arrow to overflow into.
@@ -59,7 +64,21 @@ struct RotationArrow: View {
     /// an arrowhead that swirls along the same path: most of the time it sweeps down
     /// the side of the board, every so often it flies a whole lap round it, and when
     /// the turn is one move away it laps without stopping.
-    nonisolated private static func draw(in context: inout GraphicsContext, size: CGSize, time: Double, hurry: Bool) {
+    nonisolated private static func draw(in context: inout GraphicsContext, size: CGSize, now: Double, hurry: Bool, heat: Int) {
+        // Calm play runs the arrow at well under half speed; it quickens with the game.
+        let speed = heat >= 2 ? 1.25 : (heat == 1 ? 0.75 : 0.4)
+        let time = now * speed
+        // Purple when calm, orange when warming up, every colour in turn when wild.
+        let spin = now * 0.6 - floor(now * 0.6)
+        var light = Theme.arrowLight
+        var dark = Theme.arrowDark
+        if heat >= 2 {
+            light = Color(hue: spin, saturation: 0.75, brightness: 1)
+            dark = Color(hue: spin, saturation: 0.95, brightness: 0.7)
+        } else if heat == 1 {
+            light = Color(hue: 0.09, saturation: 0.85, brightness: 1)
+            dark = Color(hue: 0.04, saturation: 0.95, brightness: 0.8)
+        }
         // The canvas is 1.3 boards wide, so one board side is size / 1.3.
         let board = size.width / 1.3
         let center = CGPoint(x: size.width / 2, y: size.height / 2)
@@ -109,7 +128,7 @@ struct RotationArrow: View {
             layer.addFilter(.blur(radius: board * 0.03))
             layer.stroke(
                 body,
-                with: .color(Theme.arrowLight.opacity(0.75 * strength)),
+                with: .color(light.opacity(0.75 * strength)),
                 style: StrokeStyle(lineWidth: thickness * 3.4, lineCap: .round, lineJoin: .round)
             )
             let glow = board * 0.07
@@ -129,8 +148,8 @@ struct RotationArrow: View {
             piece.addLine(to: point(headAt - tail * t1, center: center, reach: reach))
             let fade = (1 - t0) * (1 - t0) * strength
             let width = max(1, thickness * 2.3 * CGFloat(1 - t0 * 0.85))
-            context.stroke(piece, with: .color(Theme.arrowDark.opacity(fade)), style: StrokeStyle(lineWidth: width, lineCap: .round))
-            context.stroke(piece, with: .color(Theme.arrowLight.opacity(fade)), style: StrokeStyle(lineWidth: width * 0.68, lineCap: .round))
+            context.stroke(piece, with: .color(dark.opacity(fade)), style: StrokeStyle(lineWidth: width, lineCap: .round))
+            context.stroke(piece, with: .color(light.opacity(fade)), style: StrokeStyle(lineWidth: width * 0.68, lineCap: .round))
             context.stroke(piece, with: .color(Color.white.opacity(fade * 0.9)), style: StrokeStyle(lineWidth: max(1, width * 0.26), lineCap: .round))
         }
 
@@ -151,8 +170,8 @@ struct RotationArrow: View {
         // The comet's own arrowhead: dark rim, light body, white heart.
         let pulse = 1 + 0.08 * sin(time * (hurry ? 12 : 6))
         let half = board * 0.058 * CGFloat(pulse)
-        context.fill(arrowhead(at: headAt, center: center, reach: reach, half: half * 1.25), with: .color(Theme.arrowDark.opacity(strength)))
-        context.fill(arrowhead(at: headAt, center: center, reach: reach, half: half), with: .color(Theme.arrowLight.opacity(strength)))
+        context.fill(arrowhead(at: headAt, center: center, reach: reach, half: half * 1.25), with: .color(dark.opacity(strength)))
+        context.fill(arrowhead(at: headAt, center: center, reach: reach, half: half), with: .color(light.opacity(strength)))
         context.fill(arrowhead(at: headAt, center: center, reach: reach, half: half * 0.5), with: .color(Color.white.opacity(0.95 * strength)))
     }
 

@@ -92,7 +92,8 @@ struct GameScreen: View {
                     RotationArrow(
                         side: side,
                         isImminent: store.state.movesUntilRotation == 1 && !store.isGameOver,
-                        isReversed: store.state.counterClockwise
+                        isReversed: store.state.counterClockwise,
+                        heat: (store.isFever || store.isDanger || store.streak >= 3) ? 2 : (store.streak > 0 ? 1 : 0)
                     )
 
                     Celebration(store: store, side: side)
