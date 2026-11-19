@@ -608,12 +608,9 @@ extension SceneArt {
 
     // MARK: Moments
 
-    /// True for the themes that have a big moment of their own.
+    /// Every theme has a big moment of its own.
     static func hasMoment(_ backdrop: Skin.Backdrop) -> Bool {
-        switch backdrop {
-        case .bubbles, .embers, .snow, .grid: return true
-        default: return false
-        }
+        true
     }
 
     static func moment(_ backdrop: Skin.Backdrop, in context: inout GraphicsContext, size: CGSize, progress: Double) {
@@ -622,13 +619,17 @@ extension SceneArt {
         case .embers: eruption(&context, size: size, progress: progress)
         case .snow: blizzard(&context, size: size, progress: progress)
         case .grid: lasers(&context, size: size, progress: progress)
-        default: break
+        case .sun: flock(&context, size: size, progress: progress)
+        case .hearts: bubblePop(&context, size: size, progress: progress)
+        case .coins: coinRain(&context, size: size, progress: progress)
+        case .lights: fireworks(&context, size: size, progress: progress)
+        case .stars: warp(&context, size: size, progress: progress)
         }
     }
 }
 
 /// A theme's big moment, drawn once over the whole screen: the shark, the eruption,
-/// the blizzard or the lasers. Skipped when the phone is set to reduce motion.
+/// the fireworks and so on. Skipped when the phone is set to reduce motion.
 struct ThemeMoment: View {
     let backdrop: Skin.Backdrop
 

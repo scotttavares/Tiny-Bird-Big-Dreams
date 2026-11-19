@@ -97,6 +97,7 @@ enum SceneArt {
                   colors: [Color(hex: 0x8FF0FF), Color(hex: 0xFF7AD9)], sizes: 4...9, rising: true, pace: 0.6, twinkle: true)
         case .sun:
             sun(&context, size: size, time: time)
+            sunsetScene(&context, size: size, time: time)
             drift(&context, size: size, time: time, count: 14, mark: .dot,
                   colors: [Color(hex: 0xFFE26A), Color(hex: 0xFF9F6A)], sizes: 2...6, rising: true, pace: 0.5, twinkle: true)
         case .bubbles:
@@ -106,6 +107,7 @@ enum SceneArt {
             drift(&context, size: size, time: time, count: 16, mark: .dot,
                   colors: [Color(hex: 0x8FF0FF)], sizes: 2...5, rising: true, pace: 1.5, salt: 40)
         case .hearts:
+            candyScene(&context, size: size, time: time)
             drift(&context, size: size, time: time, count: 16, mark: .heart,
                   colors: [Color(hex: 0xFFB3E6), Color.white, Color(hex: 0xFF7AC8)], sizes: 10...24, rising: true, pace: 0.8)
             drift(&context, size: size, time: time, count: 12, mark: .dot,
@@ -122,6 +124,7 @@ enum SceneArt {
             drift(&context, size: size, time: time, count: 8, mark: .star,
                   colors: [Color.white], sizes: 8...14, rising: false, pace: 0.6, twinkle: true, salt: 40)
         case .coins:
+            mineScene(&context, size: size, time: time)
             drift(&context, size: size, time: time, count: 26, mark: .dot,
                   colors: [Color(hex: 0xFFE26A), Color(hex: 0xF0B41F)], sizes: 3...9, rising: false, pace: 1.3)
             drift(&context, size: size, time: time, count: 12, mark: .diamond,
@@ -129,9 +132,11 @@ enum SceneArt {
         case .lights:
             lights(&context, size: size, time: time)
             stars(&context, size: size, time: time, count: 30)
+            discoScene(&context, size: size, time: time)
         case .stars:
             stars(&context, size: size, time: time, count: 70)
             shootingStar(&context, size: size, time: time)
+            spaceScene(&context, size: size, time: time)
         }
     }
 

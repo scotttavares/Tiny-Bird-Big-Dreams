@@ -170,3 +170,13 @@ After playing build 25 the owner asked for much richer themes (fish and a shark 
 - **Nothing covers the board any more.** Messages appear over the title. The prize reel sits in a strip under the boosters. Call-out words sit at the board's top edge and last about half a second.
 - **Layout.** "Swipe. Merge. Rotate." is under the logo. The mode buttons are gone from the game screen: the strip under the boosters names the game in play (or counts down to the next shape) and opens the menu, whose first section lists the three games as cards.
 - **Game-over graffiti.** The card shows the theme's word at a slant ("Wipeout!", "Burned!", "Frozen!", "Game over, dude!" and so on) and its sparks scattered like stickers.
+
+## Scenes and moments for the other five themes (2026-11-19)
+
+The owner asked for the remaining themes to get full scenes and moments too (`UI/ThemeScenesMore.swift`). Every theme now has both.
+
+- **Sunset:** a glittering sea under the striped sun, two swaying palms, thin clouds, a few birds. Moment: the sun flares and a great flock sweeps across.
+- **Bubblegum:** pastel hills, rising balloons, falling sprinkles, gum bubbles that swell and pop. Moment: one enormous bubble swells over the screen and bursts.
+- **Gold Rush:** rocky ground with glinting veins of gold, a rail track, a mine cart heaped with gold rolling across. Moment: gold coins pour down, spinning.
+- **Party Lights:** a mirror ball throwing beams, a dance floor whose squares light in turn. Moment: fireworks.
+- **Galaxy:** drifting clouds of colour, a ringed planet with a moon, a flying saucer now and then. Moment: the stars stretch into streaks and a rocket flies across.
