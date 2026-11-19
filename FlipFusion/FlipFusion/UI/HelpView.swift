@@ -126,16 +126,16 @@ struct HelpView: View {
                 section("Levels") {
                     row(symbol: "chart.bar.fill", title: "Level up", text: "The bar under your score fills as you play. Each new level changes the board's shape and colour, spins the prize reel and, in the timed game, adds \(Int(GameStore.levelTimeBonus)) seconds.")
                     row(symbol: "gift.fill", title: "Prize reel", text: "Every new level wins coins, a free booster or gems. Now and then it stops on the jackpot: 5 gems.")
-                    tileRow(value: 2, kind: .stone, title: "Stone block", text: "From level 3. It never merges and gets in the way. A bomb's blast or the Sweep booster clears it.")
-                    row(symbol: "hare.fill", title: "Faster drops", text: "From level 4 a move sometimes drops two new tiles, more often the higher you go.")
+                    tileRow(value: 2, kind: .stone, title: "Stone block", text: "From level 2. It never merges and gets in the way. A bomb's blast or the Sweep booster clears it.")
+                    row(symbol: "hare.fill", title: "Faster drops", text: "From level 2 a move sometimes drops two new tiles, more often the higher you go. From level \(GameEngine.turnTileLevel) the timed game also drops a tile each time the board turns.")
                     row(symbol: "star.fill", title: "Stars", text: "A game earns one star at level 2, two at level 4 and three at level 6.")
                     row(symbol: "arrow.uturn.forward", title: "Keep going", text: "Once in a game that has ended, \(GameStore.continueCost) gems buy \(Int(GameStore.continueSeconds)) more seconds, or clear \(GameStore.continueClears) tiles when no move is left.")
                 }
 
                 section("Board shapes") {
-                    row(symbol: "square.grid.2x2.fill", title: "Walls", text: "Solid blocks on the board. Tiles stop beside them and cannot merge across them.")
-                    row(symbol: "circle.dashed", title: "Holes", text: "Dark pits in the board. Tiles stop at the edge of them. In Shape Shift, holes cut the whole board into a new outline.")
-                    row(symbol: "shippingbox.fill", title: "Crates", text: "They block like walls. A merge right beside one, or a bomb's blast, smashes it for \(GameStore.cratePoints) points. Or tap one to open it: that uses a move, and inside may be coins, a gem, a free booster or double points, or trouble: a monkey that mixes up the board, a shark that eats two tiles, a flying saucer whose aliens beam two tiles up, a T-rex that stamps three tiles down a size, or a load of rocks.")
+                    blockRow(.wall, title: "Walls", text: "Solid blocks on the board. Tiles stop beside them and cannot merge across them.")
+                    blockRow(.hole, title: "Holes", text: "Dark pits in the board. The first tile to slide or fall up to one drops in and is gone, stone blocks too, and it scores nothing. A hole closes after \(GameStore.holeAppetite) tiles. In Shape Shift, holes cut the whole board into a new outline and swallow nothing.")
+                    blockRow(.crate, title: "Crates", text: "They block like walls. A merge right beside one, or a bomb's blast, smashes it for \(GameStore.cratePoints) points. Or tap one to open it: that uses a move, and inside may be coins, a gem, a free booster or double points, or trouble: a monkey that mixes up the board, a shark that eats two tiles and bites a hole in the board, a flying saucer whose aliens beam two tiles up, a T-rex that bites a hole in the board and stamps three tiles down a size, or a load of rocks.")
                     row(symbol: "arrow.clockwise", title: "They turn too", text: "Walls, holes and crates turn with the board. A tile that is in the way when the shape changes jumps to an empty cell.")
                 }
 
@@ -199,6 +199,23 @@ struct HelpView: View {
                 .frame(width: 44, height: 44)
                 .background(Circle().fill(Theme.cellFill))
                 .accessibilityHidden(true)
+            words(title: title, text: text)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// A row whose picture is the obstacle itself, drawn as it is on the board.
+    private func blockRow(_ kind: BlockKind, title: String, text: String) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            Group {
+                if kind == .hole {
+                    PitView(size: 44)
+                } else {
+                    ObstacleView(kind: kind, size: 44)
+                }
+            }
+            .frame(width: 44, height: 44)
+            .accessibilityHidden(true)
             words(title: title, text: text)
         }
         .accessibilityElement(children: .combine)
