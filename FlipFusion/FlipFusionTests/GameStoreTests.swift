@@ -651,9 +651,11 @@ struct GameStoreTests {
             tries += 1
             #expect(GameEngine.isValid(store.state))
         }
-        #expect(store.rotatePulse == 6 || store.isGameOver)
+        let playedOut = store.rotatePulse == 6 || store.isGameOver
+        #expect(playedOut)
         // The direction in the game matches the changes announced so far.
-        #expect(store.state.counterClockwise == (store.directionEvent % 2 == 1))
+        let changedAnOddNumberOfTimes = store.directionEvent % 2 == 1
+        #expect(store.state.counterClockwise == changedAnOddNumberOfTimes)
         // The clock never runs, and the direction is saved with the game.
         #expect(!store.isTimeUp)
         let again = GameStore(defaults: defaults, animated: false)
@@ -694,7 +696,8 @@ struct GameStoreTests {
         var seen: Set<String> = []
         var value = 2
         while value <= 2048 {
-            #expect(seen.insert(Fruit.face(for: value)).inserted)
+            let isNew = seen.insert(Fruit.face(for: value)).inserted
+            #expect(isNew)
             value *= 2
         }
         #expect(seen.count == 11)
@@ -757,7 +760,11 @@ struct GameStoreTests {
         #expect(store.state.movesUntilRotation == 2)
         #expect(!store.state.blocks.contains { $0.kind == .crate })
         // The two smallest tiles went; the rest are all still there.
-        #expect(store.state.tiles.map(\.value).reduce(0, +) >= 8 + 16 + 32 + 64)
+        var total = 0
+        for tile in store.state.tiles {
+            total += tile.value
+        }
+        #expect(total >= 120)
         #expect(GameEngine.isValid(store.state))
     }
 
