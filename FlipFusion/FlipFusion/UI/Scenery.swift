@@ -106,35 +106,37 @@ enum SceneArt {
             drift(&context, size: size, time: time, count: 10, mark: .diamond,
                   colors: [Color(hex: 0x8FF0FF), Color(hex: 0xFF7AD9)], sizes: 4...9, rising: true, pace: 0.6, twinkle: true)
         case .sun:
-            sun(&context, size: size, time: time)
-            sunsetScene(&context, size: size, time: time)
+            if !painted {
+                sun(&context, size: size, time: time)
+            }
+            sunsetScene(&context, size: size, time: time, painted: painted)
             drift(&context, size: size, time: time, count: 14, mark: .dot,
                   colors: [Color(hex: 0xFFE26A), Color(hex: 0xFF9F6A)], sizes: 2...6, rising: true, pace: 0.5, twinkle: true)
         case .bubbles:
-            ocean(&context, size: size, time: time)
+            ocean(&context, size: size, time: time, painted: painted)
             drift(&context, size: size, time: time, count: 18, mark: .ring,
                   colors: [Color(hex: 0xBFF6FF), Color.white], sizes: 8...30, rising: true, pace: 1)
             drift(&context, size: size, time: time, count: 16, mark: .dot,
                   colors: [Color(hex: 0x8FF0FF)], sizes: 2...5, rising: true, pace: 1.5, salt: 40)
         case .hearts:
-            candyScene(&context, size: size, time: time)
+            candyScene(&context, size: size, time: time, painted: painted)
             drift(&context, size: size, time: time, count: 16, mark: .heart,
                   colors: [Color(hex: 0xFFB3E6), Color.white, Color(hex: 0xFF7AC8)], sizes: 10...24, rising: true, pace: 0.8)
             drift(&context, size: size, time: time, count: 12, mark: .dot,
                   colors: [Color.white], sizes: 2...5, rising: true, pace: 0.6, twinkle: true, salt: 40)
         case .embers:
             glow(&context, size: size, color: Color(hex: 0xFF5A1F), time: time)
-            volcano(&context, size: size, time: time)
+            volcano(&context, size: size, time: time, painted: painted)
             drift(&context, size: size, time: time, count: 34, mark: .dot,
                   colors: [Color(hex: 0xFFD23F), Color(hex: 0xFF7A2E), Color(hex: 0xFF4A2E)], sizes: 2...6, rising: true, pace: 2.2, twinkle: true)
         case .snow:
-            winter(&context, size: size, time: time)
+            winter(&context, size: size, time: time, painted: painted)
             drift(&context, size: size, time: time, count: 40, mark: .dot,
                   colors: [Color.white, Color(hex: 0xD6F3FF)], sizes: 2...7, rising: false, pace: 0.9)
             drift(&context, size: size, time: time, count: 8, mark: .star,
                   colors: [Color.white], sizes: 8...14, rising: false, pace: 0.6, twinkle: true, salt: 40)
         case .coins:
-            mineScene(&context, size: size, time: time)
+            mineScene(&context, size: size, time: time, painted: painted)
             drift(&context, size: size, time: time, count: 26, mark: .dot,
                   colors: [Color(hex: 0xFFE26A), Color(hex: 0xF0B41F)], sizes: 3...9, rising: false, pace: 1.3)
             drift(&context, size: size, time: time, count: 12, mark: .diamond,
@@ -142,11 +144,11 @@ enum SceneArt {
         case .lights:
             lights(&context, size: size, time: time)
             stars(&context, size: size, time: time, count: 30)
-            discoScene(&context, size: size, time: time)
+            discoScene(&context, size: size, time: time, painted: painted)
         case .stars:
             stars(&context, size: size, time: time, count: 70)
             shootingStar(&context, size: size, time: time)
-            spaceScene(&context, size: size, time: time)
+            spaceScene(&context, size: size, time: time, painted: painted)
         }
     }
 
@@ -456,7 +458,37 @@ struct StoneView: View {
         (0.30, 0.84, 0.035, true),
     ]
 
+    /// What the painted boulder (a plain grey rock) is tinted with for each look.
+    private var tint: Color {
+        switch look {
+        case .rock: return Color.white
+        case .sandstone: return Color(hex: 0xF2CC96)
+        case .coral: return Color(hex: 0xFFA0A8)
+        case .candy: return Color(hex: 0xF2B4FF)
+        case .magma: return Color(hex: 0x8A625A)
+        case .ice: return Color(hex: 0xC4E6FF)
+        case .nugget: return Color(hex: 0xFFD860)
+        case .mirror: return Color(hex: 0xBCAAFF)
+        case .moon: return Color(hex: 0xDCDCEA)
+        }
+    }
+
     var body: some View {
+        if ObstacleArt.has(ObstacleArt.rock) {
+            Image(ObstacleArt.rock)
+                .resizable()
+                .scaledToFit()
+                .colorMultiply(tint)
+                .padding(size * 0.02)
+                .frame(width: size, height: size)
+        } else {
+            drawn
+        }
+    }
+
+    /// The boulder drawn in code, for when there is no painted one.
+    @ViewBuilder
+    private var drawn: some View {
         let colors = palette
         let rock = Outline(points: Self.rim)
         let round = StrokeStyle(lineWidth: size * 0.09, lineCap: .round, lineJoin: .round)
@@ -519,6 +551,11 @@ struct StoneView: View {
 /// theme's id in the asset catalogue), filling whatever space it is given.
 struct PaintedBackdrop: View {
     let skin: Skin
+    /// The painting drifts and breathes very slowly, so the backdrop is never still.
+    var isLive = true
+
+    @State private var isDrifting = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     static func name(_ skin: Skin) -> String {
         "backdrop-" + skin.id
@@ -535,16 +572,40 @@ struct PaintedBackdrop: View {
                 Image(Self.name(skin))
                     .resizable()
                     .scaledToFill()
+                    .scaleEffect(isLive ? (isDrifting ? 1.06 : 1.03) : 1)
+                    .offset(x: isLive ? (isDrifting ? 6 : -6) : 0)
             }
-            // A little darker toward the top, where the score and title sit.
+            // Darker toward the top, where the score and title sit.
             .overlay {
                 LinearGradient(
-                    colors: [Color.black.opacity(0.3), Color.black.opacity(0.1), Color.black.opacity(0)],
+                    colors: [Color.black.opacity(0.42), Color.black.opacity(0.22), Color.black.opacity(0.08)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
             }
             .clipped()
+            .onAppear {
+                guard isLive, !reduceMotion else { return }
+                withAnimation(.easeInOut(duration: 14).repeatForever(autoreverses: true)) {
+                    isDrifting = true
+                }
+            }
             .accessibilityHidden(true)
+    }
+}
+
+/// Painted pictures of the things that stand on the board, when the asset catalogue
+/// has them: "obstacle-wall", "obstacle-crate", "obstacle-hole" and "obstacle-rock".
+enum ObstacleArt {
+    static let rock = "obstacle-rock"
+    static let hole = "obstacle-hole"
+
+    static func name(_ kind: BlockKind) -> String {
+        "obstacle-" + kind.rawValue
+    }
+
+    @MainActor
+    static func has(_ name: String) -> Bool {
+        UIImage(named: name) != nil
     }
 }

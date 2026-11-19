@@ -971,12 +971,12 @@ struct ObstacleView: View {
 
         Group {
             if kind == .crate {
-                crate
+                crateFace
                     .rotationEffect(.degrees(isMoving ? 2.5 : -2.5))
                     .offset(y: isMoving ? -size * 0.015 : size * 0.015)
                     .animation(.easeInOut(duration: 1.3).repeatForever(autoreverses: true), value: isMoving)
             } else {
-                wall
+                wallFace
                     .overlay {
                         // A slanted bar of light that slides across, again and again.
                         Rectangle()
@@ -1002,6 +1002,30 @@ struct ObstacleView: View {
         .shadow(color: Color.black.opacity(0.55), radius: size * 0.08, x: 0, y: size * 0.06)
         .accessibilityElement()
         .accessibilityLabel(Text(kind == .crate ? "crate" : "wall"))
+    }
+
+    /// The crate: the painted one when there is one, otherwise the one drawn here.
+    @ViewBuilder
+    private var crateFace: some View {
+        if ObstacleArt.has(ObstacleArt.name(.crate)) {
+            Image(ObstacleArt.name(.crate))
+                .resizable()
+                .scaledToFit()
+        } else {
+            crate
+        }
+    }
+
+    /// The wall: the painted one when there is one, otherwise the one drawn here.
+    @ViewBuilder
+    private var wallFace: some View {
+        if ObstacleArt.has(ObstacleArt.name(.wall)) {
+            Image(ObstacleArt.name(.wall))
+                .resizable()
+                .scaledToFit()
+        } else {
+            wall
+        }
     }
 
     /// One brick.
@@ -1102,7 +1126,14 @@ struct PitView: View {
     var body: some View {
         let mouth = RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
 
+        let isPainted = ObstacleArt.has(ObstacleArt.hole)
+
         ZStack {
+            if isPainted {
+                Image(ObstacleArt.hole)
+                    .resizable()
+                    .scaledToFit()
+            }
             // The pit: lighter walls near the rim, black at the bottom.
             mouth.fill(
                 RadialGradient(
@@ -1112,11 +1143,12 @@ struct PitView: View {
                     endRadius: size * 0.62
                 )
             )
+            .opacity(isPainted ? 0 : 1)
             // Rings sinking down it.
             ForEach(0..<2, id: \.self) { ring in
                 mouth
                     .strokeBorder(Color(hex: 0x8C7BFF, opacity: 0.55), lineWidth: max(1, size * 0.025))
-                    .scaleEffect(isFalling ? 0.08 : (ring == 0 ? 0.92 : 0.55))
+                    .scaleEffect(isFalling ? 0.08 : (ring == 0 ? 0.92 : 0.55) * (isPainted ? 0.7 : 1))
                     .opacity(isFalling ? 0 : 0.7)
             }
             // Specks spiralling in.
@@ -1125,7 +1157,7 @@ struct PitView: View {
                     .fill(speck % 2 == 0 ? Color.white : Color(hex: 0x8FF0FF))
                     .frame(width: size * 0.07, height: size * 0.07)
                     .scaleEffect(isFalling ? 0.1 : 1)
-                    .offset(x: isFalling ? 0 : size * 0.36)
+                    .offset(x: isFalling ? 0 : size * (isPainted ? 0.26 : 0.36))
                     .rotationEffect(.degrees(Double(speck) * 72 + (isFalling ? 320 : 0)))
                     .opacity(isFalling ? 0 : 0.9)
             }
@@ -1134,9 +1166,9 @@ struct PitView: View {
                 LinearGradient(colors: [Color.black.opacity(0.9), Color.white.opacity(0.45)], startPoint: .top, endPoint: .bottom),
                 lineWidth: max(2, size * 0.05)
             )
+            .opacity(isPainted ? 0 : 1)
         }
         .frame(width: size, height: size)
-        .clipShape(mouth)
         .onAppear {
             withAnimation(.easeIn(duration: 1.7).repeatForever(autoreverses: false)) {
                 isFalling = true

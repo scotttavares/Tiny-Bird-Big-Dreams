@@ -39,11 +39,13 @@ extension SceneArt {
 
     /// The sea under the setting sun, with light glittering on it, two palms, thin
     /// clouds and a few birds.
-    static func sunsetScene(_ context: inout GraphicsContext, size: CGSize, time: Double) {
+    static func sunsetScene(_ context: inout GraphicsContext, size: CGSize, time: Double, painted: Bool = false) {
         let w = Double(size.width)
         let h = Double(size.height)
-        let horizon = h * 0.9
+        // The painted sea starts a little higher than the drawn one.
+        let horizon = h * (painted ? 0.79 : 0.9)
 
+        if !painted {
         for cloud in 0..<3 {
             let x = fraction(time / (70 + 20 * Double(cloud)) + unit(cloud, 111)) * (w * 1.6) - w * 0.4
             let y = h * (0.1 + 0.09 * Double(cloud))
@@ -52,6 +54,8 @@ extension SceneArt {
         }
 
         context.fill(Path(CGRect(x: 0, y: horizon, width: w, height: h - horizon)), with: .color(Color(hex: 0x2A0A3A).opacity(0.85)))
+        }
+
         for glint in 0..<16 {
             let depth = Double(glint) / 16
             let y = horizon + (h - horizon) * (0.08 + 0.9 * depth)
@@ -65,8 +69,11 @@ extension SceneArt {
             context.stroke(dash, with: .color(tint.opacity(alpha)), style: StrokeStyle(lineWidth: 2, lineCap: .round))
         }
 
+        if !painted {
         palm(&context, x: w * 0.1, base: h, height: h * 0.2, lean: w * 0.07, time: time)
         palm(&context, x: w * 0.93, base: h, height: h * 0.16, lean: -w * 0.06, time: time + 2)
+
+        }
 
         for index in 0..<5 {
             let progress = fraction(time / (22 + 6 * unit(index, 112)) + unit(index, 113))
@@ -107,16 +114,19 @@ extension SceneArt {
 
     /// Soft pastel hills, rising balloons, falling sprinkles and gum bubbles that
     /// swell and pop.
-    static func candyScene(_ context: inout GraphicsContext, size: CGSize, time: Double) {
+    static func candyScene(_ context: inout GraphicsContext, size: CGSize, time: Double, painted: Bool = false) {
         let w = Double(size.width)
         let h = Double(size.height)
 
+        if !painted {
         let hills: [(x: Double, wide: Double, tall: Double, color: UInt32)] = [
             (0.15, 0.7, 0.16, 0xFF9FDC), (0.85, 0.75, 0.2, 0xC79BFF), (0.5, 0.8, 0.12, 0x9FE8FF),
         ]
         for hill in hills {
             let box = CGRect(x: w * hill.x - w * hill.wide / 2, y: h - h * hill.tall, width: w * hill.wide, height: h * hill.tall * 2)
             context.fill(Path(ellipseIn: box), with: .color(Color(hex: hill.color).opacity(0.5)))
+        }
+
         }
 
         let sprinkleColors: [Color] = [Color(hex: 0xFFE26A), Color(hex: 0x86F2BC), Color(hex: 0x8FF0FF), Color.white, Color(hex: 0xFF8AD8)]
@@ -214,11 +224,12 @@ extension SceneArt {
 
     /// Rocky ground with veins of gold that glint, a rail track, and a mine cart
     /// heaped with gold that rolls across.
-    static func mineScene(_ context: inout GraphicsContext, size: CGSize, time: Double) {
+    static func mineScene(_ context: inout GraphicsContext, size: CGSize, time: Double, painted: Bool = false) {
         let w = Double(size.width)
         let h = Double(size.height)
         let rail = h * 0.955
 
+        if !painted {
         let crags: [(x: Double, y: Double)] = [
             (0, 0.9), (0.08, 0.86), (0.16, 0.89), (0.27, 0.83), (0.36, 0.88), (0.5, 0.85),
             (0.62, 0.89), (0.73, 0.82), (0.84, 0.88), (0.93, 0.85), (1, 0.89),
@@ -245,6 +256,8 @@ extension SceneArt {
             let alpha = 0.3 + 0.7 * abs(sin(time * (1 + unit(vein, 143)) + Double(vein)))
             context.fill(path(.diamond, center: CGPoint(x: x, y: y), size: CGFloat(6 + 5 * unit(vein, 144))),
                          with: .color(Color(hex: 0xFFE26A).opacity(alpha)))
+        }
+
         }
 
         // The track.
@@ -325,7 +338,7 @@ extension SceneArt {
 
     /// A mirror ball throwing beams round the room, over a dance floor whose
     /// squares light up in turn.
-    static func discoScene(_ context: inout GraphicsContext, size: CGSize, time: Double) {
+    static func discoScene(_ context: inout GraphicsContext, size: CGSize, time: Double, painted: Bool = false) {
         let w = Double(size.width)
         let h = Double(size.height)
         let ballX = w / 2
@@ -344,6 +357,7 @@ extension SceneArt {
             context.fill(wedge, with: .color(color.opacity(0.08)))
         }
 
+        if !painted {
         // The dance floor.
         let floorTop = h * 0.88
         let columns = 6
@@ -362,6 +376,8 @@ extension SceneArt {
                 context.fill(Path(roundedRect: box, cornerRadius: 4),
                              with: .color(Color(hue: hue, saturation: 0.75, brightness: 1).opacity(lit ? 0.55 : 0.14)))
             }
+        }
+
         }
 
         // The mirror ball on its string.
@@ -441,10 +457,11 @@ extension SceneArt {
 
     /// Drifting clouds of colour, a ringed planet with a moon going round it, and a
     /// flying saucer that crosses the sky now and then.
-    static func spaceScene(_ context: inout GraphicsContext, size: CGSize, time: Double) {
+    static func spaceScene(_ context: inout GraphicsContext, size: CGSize, time: Double, painted: Bool = false) {
         let w = Double(size.width)
         let h = Double(size.height)
 
+        if !painted {
         context.drawLayer { layer in
             layer.addFilter(.blur(radius: CGFloat(w * 0.1)))
             let clouds: [(x: Double, y: Double, color: UInt32)] = [(0.75, 0.2, 0x7A4FFF), (0.3, 0.45, 0x1FB5B0), (0.8, 0.7, 0xE0409F)]
@@ -495,6 +512,8 @@ extension SceneArt {
         let moonX = planetX + cos(orbit) * radius * 2.1
         let moonY = planetY - radius * 0.5 + sin(orbit) * radius * 0.55
         context.fill(path(.dot, center: CGPoint(x: moonX, y: moonY), size: CGFloat(radius * 0.26)), with: .color(Color(hex: 0xDADAE6).opacity(0.9)))
+
+        }
 
         // A flying saucer crosses the top of the sky.
         let trip = fraction(time / 19)

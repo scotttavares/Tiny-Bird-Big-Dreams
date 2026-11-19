@@ -6,10 +6,11 @@ extension SceneArt {
     // MARK: Ocean
 
     /// Shafts of light, swaying weed, fish of three kinds and drifting jellyfish.
-    static func ocean(_ context: inout GraphicsContext, size: CGSize, time: Double) {
+    static func ocean(_ context: inout GraphicsContext, size: CGSize, time: Double, painted: Bool = false) {
         let w = Double(size.width)
         let h = Double(size.height)
 
+        if !painted {
         for ray in 0..<4 {
             let x = w * (0.12 + 0.25 * Double(ray)) + sin(time * 0.3 + Double(ray)) * 20
             var path = Path()
@@ -34,6 +35,8 @@ extension SceneArt {
             }
             let green = stalk % 2 == 0 ? Color(hex: 0x2FBF7F) : Color(hex: 0x1E8F6A)
             context.stroke(path, with: .color(green.opacity(0.6)), style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+        }
+
         }
 
         let colors: [Color] = [
@@ -228,12 +231,12 @@ extension SceneArt {
 
     // MARK: Lava
 
-    /// Where the lava comes out, as fractions of the screen.
-    private static let craterY = 0.76
+    /// How far down the screen the crater is: where it sits in the painted backdrop.
+    private static let craterY = 0.585
 
     /// A volcano with lava running down it, a pool of slow, bubbling lava along the
     /// bottom, and a small spurt from the crater every few seconds.
-    static func volcano(_ context: inout GraphicsContext, size: CGSize, time: Double) {
+    static func volcano(_ context: inout GraphicsContext, size: CGSize, time: Double, painted: Bool = false) {
         let w = Double(size.width)
         let h = Double(size.height)
         let top = h * craterY
@@ -252,6 +255,7 @@ extension SceneArt {
             )
         )
 
+        if !painted {
         var cone = Path()
         cone.move(to: CGPoint(x: -w * 0.05, y: h))
         cone.addLine(to: CGPoint(x: w * 0.22, y: h * 0.88))
@@ -309,6 +313,8 @@ extension SceneArt {
                 endPoint: CGPoint(x: 0, y: h)
             )
         )
+        }
+
         // Bubbles swell on the pool and pop.
         for bubble in 0..<6 {
             let life = fraction(time / (2.5 + unit(bubble, 55) * 2) + unit(bubble, 56))
@@ -394,11 +400,12 @@ extension SceneArt {
     // MARK: Frost
 
     /// Snowy pines, a blanket of snow along the bottom and a snowman.
-    static func winter(_ context: inout GraphicsContext, size: CGSize, time: Double) {
+    static func winter(_ context: inout GraphicsContext, size: CGSize, time: Double, painted: Bool = false) {
         let w = Double(size.width)
         let h = Double(size.height)
         let ground = h * 0.93
 
+        if !painted {
         for tree in 0..<6 {
             let x = w * (0.04 + 0.17 * Double(tree)) + unit(tree, 81) * 18
             let tall = h * (0.08 + 0.05 * unit(tree, 82))
@@ -440,6 +447,8 @@ extension SceneArt {
                 endPoint: CGPoint(x: 0, y: h)
             )
         )
+
+        }
 
         snowman(&context, x: w * 0.82, ground: ground + h * 0.006, unitSize: w * 0.06, time: time)
     }

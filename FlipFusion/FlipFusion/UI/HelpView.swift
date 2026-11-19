@@ -427,7 +427,7 @@ struct HelpView: View {
             .background {
                 ZStack {
                     if PaintedBackdrop.has(skin) {
-                        PaintedBackdrop(skin: skin)
+                        PaintedBackdrop(skin: skin, isLive: false)
                         SceneView(skin: skin, isPainted: true)
                     } else {
                         LinearGradient(
