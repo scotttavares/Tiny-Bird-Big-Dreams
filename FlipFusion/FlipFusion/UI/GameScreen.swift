@@ -339,6 +339,10 @@ struct GameScreen: View {
             return moves == 1 ? "Board changes in 1 move" : "Board changes in \(moves) moves"
         case .twist:
             return store.state.counterClockwise ? "Twist: next turn is left" : "Twist: next turn is right"
+        case .fruit:
+            return "Fruit Salad"
+        case .fusion:
+            return "Fusion: a tile changes every move"
         }
     }
 
@@ -371,6 +375,10 @@ struct GameScreen: View {
             show("Shape Shift: the board changes every \(GameEngine.movesPerShift) moves", seconds: 3)
         case .twist:
             show("Twist: the board may turn either way", seconds: 3)
+        case .fruit:
+            show("Fruit Salad: merge two of the same fruit", seconds: 3)
+        case .fusion:
+            show("Fusion: a tile changes after every move", seconds: 3)
         }
     }
 

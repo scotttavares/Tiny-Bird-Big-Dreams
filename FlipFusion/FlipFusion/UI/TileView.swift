@@ -7,6 +7,8 @@ struct TileView: View {
     let size: CGFloat
     /// The theme to draw the tile in. The menu draws tiles of themes not in use.
     var skin: Skin = Skin.current
+    /// The Fruit Salad game: show a fruit in place of the number.
+    var isFruit = false
 
     @State private var appeared = false
     /// Special tiles throb so they catch the eye.
@@ -54,10 +56,10 @@ struct TileView: View {
                 StoneView(size: size, look: skin.stone)
             } else if kind == .bomb {
                 // A bomb tile is a bomb, whatever the theme.
-                BombTile(value: value, size: size, fontSize: fontSize)
+                BombTile(value: value, size: size, fontSize: fontSize, label: isFruit ? Fruit.face(for: value) : nil)
                     .scaleEffect(throb ? 1.07 : 1)
             } else if kind == .time {
-                ClockTile(value: value, size: size, fontSize: fontSize)
+                ClockTile(value: value, size: size, fontSize: fontSize, label: isFruit ? Fruit.face(for: value) : nil)
                     .scaleEffect(throb ? 1.05 : 1)
             } else {
                 if isNeon {
@@ -91,8 +93,8 @@ struct TileView: View {
                     )
                 }
 
-                Text(String(value))
-                    .font(.system(size: fontSize, weight: .heavy, design: .rounded))
+                Text(isFruit ? Fruit.face(for: value) : String(value))
+                    .font(.system(size: isFruit ? size * 0.56 : fontSize, weight: .heavy, design: .rounded))
                     .foregroundStyle(Color.white)
                     .shadow(color: isNeon ? top : Color.black.opacity(0.28), radius: isNeon ? size * 0.09 : 1, x: 0, y: isNeon ? 0 : 1.5)
                     .lineLimit(1)
@@ -207,6 +209,8 @@ struct BombTile: View {
     let value: Int
     let size: CGFloat
     let fontSize: CGFloat
+    /// What to show in place of the number (a fruit), if anything.
+    var label: String?
 
     @State private var isLit = false
 
@@ -244,8 +248,8 @@ struct BombTile: View {
                 .rotationEffect(.degrees(-38))
                 .position(x: size * 0.27, y: size * 0.38)
 
-            Text(String(value))
-                .font(.system(size: fontSize * 0.86, weight: .heavy, design: .rounded))
+            Text(label ?? String(value))
+                .font(.system(size: label == nil ? fontSize * 0.86 : size * 0.4, weight: .heavy, design: .rounded))
                 .foregroundStyle(Color.white)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
@@ -276,6 +280,8 @@ struct ClockTile: View {
     let value: Int
     let size: CGFloat
     let fontSize: CGFloat
+    /// What to show in place of the number (a fruit), if anything.
+    var label: String?
 
     @State private var turn = 0.0
 
@@ -311,8 +317,8 @@ struct ClockTile: View {
                 .position(middle)
             Circle().fill(Color(hex: 0xE0321E)).frame(width: size * 0.08, height: size * 0.08).position(middle)
 
-            Text(String(value))
-                .font(.system(size: fontSize * 0.8, weight: .heavy, design: .rounded))
+            Text(label ?? String(value))
+                .font(.system(size: label == nil ? fontSize * 0.8 : size * 0.36, weight: .heavy, design: .rounded))
                 .foregroundStyle(Color(hex: 0x12206A))
                 .shadow(color: Color.white, radius: size * 0.03)
                 .shadow(color: Color.white, radius: size * 0.03)

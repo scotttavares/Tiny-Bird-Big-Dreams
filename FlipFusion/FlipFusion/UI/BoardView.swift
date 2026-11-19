@@ -129,7 +129,7 @@ struct BoardView: View {
 
             ForEach(store.displayTiles) { tile in
                 let point = origin(row: tile.row, col: tile.col)
-                TileView(value: tile.value, kind: tile.kind, size: cell)
+                TileView(value: tile.value, kind: tile.kind, size: cell, isFruit: store.mode == .fruit)
                     .rotationEffect(.degrees(-store.boardAngle))
                     .scaleEffect(store.poppedIDs.contains(tile.id) ? (Skin.current.isPremium ? 1.36 : 1.24) : 1)
                     .offset(x: point.x, y: point.y)

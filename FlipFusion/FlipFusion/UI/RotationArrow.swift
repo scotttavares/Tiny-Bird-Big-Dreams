@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// The purple arrow that sweeps clockwise around the board: it leaves the right end of
-/// the "ROTATES IN" pill, points down the board's right side, and trails off under the
-/// bottom edge. Drawn in a square the same size as the board; it overflows that square.
+/// The purple arrow round the board, showing which way it will turn. A faint arrow
+/// stays put beside the "ROTATES IN" pill and down the board's side; a glowing comet
+/// with an arrowhead swirls along it and now and then right round the board. Drawn in
+/// a square the same size as the board; it overflows that square.
 struct RotationArrow: View {
     let side: CGFloat
     /// True when the next move triggers the rotation.
@@ -53,6 +54,11 @@ struct RotationArrow: View {
         return CGPoint(x: center.x + reach * CGFloat(x), y: center.y + reach * CGFloat(y))
     }
 
+    /// Draws the arrow in two layers. Underneath, a faint arrow that never moves, so
+    /// the way the board will turn can always be read. Over it, a glowing comet with
+    /// an arrowhead that swirls along the same path: most of the time it sweeps down
+    /// the side of the board, every so often it flies a whole lap round it, and when
+    /// the turn is one move away it laps without stopping.
     nonisolated private static func draw(in context: inout GraphicsContext, size: CGSize, time: Double, hurry: Bool) {
         // The canvas is 1.3 boards wide, so one board side is size / 1.3.
         let board = size.width / 1.3
@@ -60,86 +66,130 @@ struct RotationArrow: View {
         let reach = board * 0.585
         let thickness = board * 0.02
 
-        // The arrowhead nods along the path, faster when the turn is one move away.
-        let nod = sin(time * (hurry ? 9 : 3.5)) * (hurry ? 4.0 : 2.5)
-        let startAngle = -70.0     // beside the right end of the pill
-        let headAngle = -24.0 + nod      // arrowhead, upper right of the board
-        let trailStart = -6.0
-        let trailEnd = 48.0        // the bottom-right corner, clear of the boosters
+        let startAngle = -70.0     // beside the end of the pill
+        let headAngle = -24.0      // the still arrowhead, at the board's upper corner
+        let trailEnd = 48.0        // the bottom corner, clear of the boosters
 
-        // The shaft from the pill to the arrowhead.
-        var shaft = Path()
+        // The still arrow.
+        var guide = Path()
         var angle = startAngle
-        shaft.move(to: point(angle, center: center, reach: reach))
-        while angle < headAngle - 6 {
+        guide.move(to: point(angle, center: center, reach: reach))
+        while angle < trailEnd {
             angle += 2
-            shaft.addLine(to: point(angle, center: center, reach: reach))
+            guide.addLine(to: point(angle, center: center, reach: reach))
         }
         context.stroke(
-            shaft,
-            with: .linearGradient(
-                Gradient(colors: [Theme.arrowDark, Theme.arrowLight]),
-                startPoint: point(startAngle, center: center, reach: reach),
-                endPoint: point(headAngle, center: center, reach: reach)
-            ),
+            guide,
+            with: .color(Theme.arrowLight.opacity(0.22)),
             style: StrokeStyle(lineWidth: thickness, lineCap: .round, lineJoin: .round)
         )
+        context.fill(
+            arrowhead(at: headAngle, center: center, reach: reach, half: board * 0.04),
+            with: .color(Theme.arrowLight.opacity(0.4))
+        )
 
-        // The arrowhead, pointing along the path.
-        let tip = point(headAngle + 5, center: center, reach: reach)
-        let back = point(headAngle - 7, center: center, reach: reach)
+        // Where the comet's head is, how long its tail is, and how bright it burns.
+        var headAt = startAngle
+        var tail = 60.0
+        var strength = 1.0
+        if hurry {
+            let lap = time / 1.15 - floor(time / 1.15)
+            headAt = startAngle + 360 * lap
+            tail = 120
+        } else {
+            let cycle = (time / 9 - floor(time / 9)) * 9
+            if cycle < 6.4 {
+                // A sweep down the side of the board, four times over.
+                let sweep = cycle / 1.6 - floor(cycle / 1.6)
+                let eased = sweep * sweep * (3 - 2 * sweep)
+                headAt = startAngle + (trailEnd - startAngle) * eased
+                tail = 14 + 50 * sin(sweep * Double.pi)
+                strength = 0.3 + 0.7 * sin(sweep * Double.pi)
+            } else {
+                // One whole lap round the board.
+                let lap = (cycle - 6.4) / 2.6
+                let eased = lap * lap * (3 - 2 * lap)
+                headAt = startAngle + 360 * eased
+                tail = 30 + 80 * sin(lap * Double.pi)
+            }
+        }
+
+        // The glow: the comet drawn fat and blurred, under everything else.
+        var body = Path()
+        body.move(to: point(headAt, center: center, reach: reach))
+        var back = 0.0
+        while back < tail {
+            back += 3
+            body.addLine(to: point(headAt - back, center: center, reach: reach))
+        }
+        let headSpot = point(headAt, center: center, reach: reach)
+        context.drawLayer { layer in
+            layer.addFilter(.blur(radius: board * 0.03))
+            layer.stroke(
+                body,
+                with: .color(Theme.arrowLight.opacity(0.75 * strength)),
+                style: StrokeStyle(lineWidth: thickness * 3.4, lineCap: .round, lineJoin: .round)
+            )
+            let glow = board * 0.07
+            layer.fill(
+                Path(ellipseIn: CGRect(x: headSpot.x - glow, y: headSpot.y - glow, width: glow * 2, height: glow * 2)),
+                with: .color(Color.white.opacity(0.6 * strength))
+            )
+        }
+
+        // The tail: a tube that thins and fades away from the head, with a bright core.
+        let steps = 30
+        for step in 0..<steps {
+            let t0 = Double(step) / Double(steps)
+            let t1 = Double(step + 1) / Double(steps)
+            var piece = Path()
+            piece.move(to: point(headAt - tail * t0, center: center, reach: reach))
+            piece.addLine(to: point(headAt - tail * t1, center: center, reach: reach))
+            let fade = (1 - t0) * (1 - t0) * strength
+            let width = max(1, thickness * 2.3 * CGFloat(1 - t0 * 0.85))
+            context.stroke(piece, with: .color(Theme.arrowDark.opacity(fade)), style: StrokeStyle(lineWidth: width, lineCap: .round))
+            context.stroke(piece, with: .color(Theme.arrowLight.opacity(fade)), style: StrokeStyle(lineWidth: width * 0.68, lineCap: .round))
+            context.stroke(piece, with: .color(Color.white.opacity(fade * 0.9)), style: StrokeStyle(lineWidth: max(1, width * 0.26), lineCap: .round))
+        }
+
+        // Sparks shed along the tail.
+        for spark in 0..<7 {
+            let seed = sin(Double(spark) * 12.9898) * 43758.5453
+            let along = seed - floor(seed)
+            let flicker = 0.5 + 0.5 * sin(time * 9 + Double(spark) * 2.1)
+            let drift = reach * CGFloat(1 + 0.035 * sin(time * 3 + Double(spark) * 1.7))
+            let spot = point(headAt - tail * along, center: center, reach: drift)
+            let dot = board * 0.012 * CGFloat(1 - along * 0.6)
+            context.fill(
+                Path(ellipseIn: CGRect(x: spot.x - dot, y: spot.y - dot, width: dot * 2, height: dot * 2)),
+                with: .color(Color.white.opacity(0.85 * flicker * (1 - along) * strength))
+            )
+        }
+
+        // The comet's own arrowhead: dark rim, light body, white heart.
+        let pulse = 1 + 0.08 * sin(time * (hurry ? 12 : 6))
+        let half = board * 0.058 * CGFloat(pulse)
+        context.fill(arrowhead(at: headAt, center: center, reach: reach, half: half * 1.25), with: .color(Theme.arrowDark.opacity(strength)))
+        context.fill(arrowhead(at: headAt, center: center, reach: reach, half: half), with: .color(Theme.arrowLight.opacity(strength)))
+        context.fill(arrowhead(at: headAt, center: center, reach: reach, half: half * 0.5), with: .color(Color.white.opacity(0.95 * strength)))
+    }
+
+    /// An arrowhead on the path at `degrees`, pointing the way the angles grow.
+    nonisolated private static func arrowhead(at degrees: Double, center: CGPoint, reach: CGFloat, half: CGFloat) -> Path {
+        let tip = point(degrees + 6, center: center, reach: reach)
+        let back = point(degrees - 6, center: center, reach: reach)
         let dx = tip.x - back.x
         let dy = tip.y - back.y
         let length = max(0.001, (dx * dx + dy * dy).squareRoot())
         let ux = dx / length
         let uy = dy / length
-        let half = board * 0.045
+        // The head is as long as it is wide, whatever the path is doing at that spot.
+        let tail = CGPoint(x: tip.x - ux * half * 2, y: tip.y - uy * half * 2)
         var head = Path()
         head.move(to: tip)
-        head.addLine(to: CGPoint(x: back.x - uy * half, y: back.y + ux * half))
-        head.addLine(to: CGPoint(x: back.x + uy * half, y: back.y - ux * half))
+        head.addLine(to: CGPoint(x: tail.x - uy * half, y: tail.y + ux * half))
+        head.addLine(to: CGPoint(x: tail.x + uy * half, y: tail.y - ux * half))
         head.closeSubpath()
-        context.fill(head, with: .color(Theme.arrowLight))
-
-        // The trail: widest at the bottom-right corner, thinning and fading to its end.
-        let steps = 60
-        for step in 0..<steps {
-            let t0 = Double(step) / Double(steps)
-            let t1 = Double(step + 1) / Double(steps)
-            let a0 = trailStart + (trailEnd - trailStart) * t0
-            let a1 = trailStart + (trailEnd - trailStart) * t1
-            var piece = Path()
-            piece.move(to: point(a0, center: center, reach: reach))
-            piece.addLine(to: point(a1, center: center, reach: reach))
-            // Swell up to a peak a third of the way along, then taper.
-            let swell: Double = t0 < 0.35 ? 0.55 + 0.45 * (t0 / 0.35) : 1.0 - 0.9 * ((t0 - 0.35) / 0.65)
-            // Light runs down the trail in waves.
-            let wave = 0.62 + 0.38 * sin(t0 * 13 - time * (hurry ? 11 : 6))
-            let alpha: Double = (t0 < 0.35 ? 0.95 : 0.95 - 0.75 * ((t0 - 0.35) / 0.65)) * wave
-            context.stroke(
-                piece,
-                with: .color(Theme.arrowLight.opacity(alpha)),
-                style: StrokeStyle(lineWidth: max(1, thickness * 1.5 * CGFloat(swell)), lineCap: .round)
-            )
-        }
-
-        // Beads of light travel the whole way round, from the pill to the trail's end.
-        let beads = hurry ? 5 : 3
-        for bead in 0..<beads {
-            let along = time * (hurry ? 0.9 : 0.45) + Double(bead) / Double(beads)
-            let travelled = along - floor(along)
-            let at = startAngle + (trailEnd - startAngle) * travelled
-            let spot = point(at, center: center, reach: reach)
-            let glow = board * 0.03 * CGFloat(1 - travelled * 0.5)
-            let fade = sin(travelled * Double.pi)
-            context.fill(
-                Path(ellipseIn: CGRect(x: spot.x - glow, y: spot.y - glow, width: glow * 2, height: glow * 2)),
-                with: .color(Theme.arrowLight.opacity(0.45 * fade))
-            )
-            context.fill(
-                Path(ellipseIn: CGRect(x: spot.x - glow * 0.45, y: spot.y - glow * 0.45, width: glow * 0.9, height: glow * 0.9)),
-                with: .color(Color.white.opacity(0.95 * fade))
-            )
-        }
+        return head
     }
 }

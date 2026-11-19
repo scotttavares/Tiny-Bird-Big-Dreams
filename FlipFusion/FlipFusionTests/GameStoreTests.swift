@@ -690,6 +690,43 @@ struct GameStoreTests {
         #expect(store.lastStirDropped == 0)
     }
 
+    @Test func everyTileValueHasItsOwnFruit() {
+        var seen: Set<String> = []
+        var value = 2
+        while value <= 2048 {
+            #expect(seen.insert(Fruit.face(for: value)).inserted)
+            value *= 2
+        }
+        #expect(seen.count == 11)
+        // Past the last fruit it stays a star, and nonsense values do not crash.
+        #expect(Fruit.face(for: 4096) == Fruit.face(for: 2048))
+        #expect(Fruit.face(for: 0) == Fruit.face(for: 2))
+    }
+
+    @Test func theFruitGameIsOpenToEveryoneAndFusionNeedsThreeThemes() {
+        let defaults = freshDefaults()
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.isUnlocked(.fruit))
+        #expect(!store.isUnlocked(.fusion))
+        store.switchMode(.fruit)
+        #expect(store.mode == .fruit)
+        #expect(!store.isTimeUp)
+
+        defaults.set(["sunset", "ocean", "lava"], forKey: "ff.skins")
+        defaults.set("fusion", forKey: "ff.mode")
+        let fusion = GameStore(defaults: defaults, animated: false)
+        #expect(fusion.mode == .fusion)
+        let directions: [Direction] = [.left, .down, .right, .up]
+        for turn in 0..<24 where !fusion.isGameOver {
+            fusion.swipe(directions[turn % 4])
+            // Tiles that change by themselves stay proper tiles.
+            #expect(GameEngine.isValid(fusion.state))
+        }
+        // At most one tile changes for each move made.
+        #expect(fusion.mutateEvent <= fusion.slidePulse)
+        #expect(fusion.mutateEvent > 0)
+    }
+
     @Test func aDeadBoardIsGameOverAndIgnoresSwipes() {
         let defaults = freshDefaults()
         let dead = GameState(tiles: tiles([[2, 4, 2, 4], [4, 2, 4, 2], [2, 4, 2, 4], [4, 2, 4, 2]]), score: 100, movesUntilRotation: 1, nextID: 20)

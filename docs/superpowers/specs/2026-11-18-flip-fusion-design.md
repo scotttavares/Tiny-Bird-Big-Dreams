@@ -206,3 +206,10 @@ At the owner's request the Ocean theme's shark now changes the game: as it cover
 The owner asked for premium art from an image connector and chose theme backdrops first. A theme may now have a painted backdrop: an image named `backdrop-<theme id>` in the asset catalogue (`PaintedBackdrop` in `UI/Scenery.swift`). When one exists it replaces the plain gradient behind the game and on the theme's card, and the animated scene draws only what moves. A theme without one looks as before.
 
 Only **Neon** has one so far (generated with the owner's OpenArt account, GPT Image 2.5 Sunburst, 9:16 at 2K, 10 credits). The account had 19 credits and the Higgsfield account none, so the other eight wait on more credits (about 80 at the same settings). A small preview is kept at `docs/flipfusion/backdrop-neon-preview.jpg`.
+
+## A swirling arrow, Fruit Salad and Fusion (2026-11-19)
+
+- **The arrow** is drawn in two layers. A faint arrow stays put so the direction of the next turn can always be read. Over it a glowing comet with an arrowhead swirls along the same path: it sweeps down the side of the board four times, then flies one whole lap round it, and laps without stopping when the turn is one move away. It has a blurred glow, a tube-like tail with a bright core, and sparks. Mirrored when the Twist game is turning left.
+- **Fruit Salad**, a fifth game mode, open to everyone: no clock, and every tile shows a fruit in place of its number (`Game/Fruit.swift`): cherries, strawberry, orange, lemon, apple, grapes, watermelon, pineapple, coconut, peach, then a star. The rules are unchanged; only the faces differ. The fruit are the system's own emoji.
+- **Fusion**, a sixth game mode, unlocked with three themes: no clock, and after every move one ordinary tile picked at random changes by itself. Six times in ten it doubles; otherwise it halves (a 2 stays a 2).
+- Every game without a clock except Shape Shift adds an extra tile after each turn, so each of them ends.

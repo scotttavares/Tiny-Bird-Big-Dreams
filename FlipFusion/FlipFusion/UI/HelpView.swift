@@ -29,8 +29,10 @@ struct HelpView: View {
                 section("Game modes") {
                     modeRow(.timed, symbol: "timer", title: "2 Minutes", text: "Two minutes on the clock, which starts on your first swipe. Level up and merge clock tiles to win more time.")
                     modeRow(.endless, symbol: "infinity", title: "Endless", text: "No clock. An extra tile lands after every rotation, and the game ends when no move is left.")
+                    modeRow(.fruit, symbol: "leaf.fill", title: "Fruit Salad", text: "No clock, and no numbers: every tile is a fruit. Two cherries make a strawberry, two strawberries an orange, and on up to a star.")
                     modeRow(.shift, symbol: "shuffle", title: "Shape Shift", text: "No clock. Every \(GameEngine.movesPerShift) moves the board itself becomes a new shape: a triangle, a circle, a ring, a cup and more. Unlocks with your first new theme.")
                     modeRow(.twist, symbol: "arrow.left.arrow.right", title: "Twist", text: "No clock. After any turn the board may start turning the other way, and the arrow shows which way is next. An extra tile lands after every turn. Unlocks with your second new theme.")
+                    modeRow(.fusion, symbol: "wand.and.stars", title: "Fusion", text: "No clock. After every move one tile changes by itself: it usually doubles, and sometimes halves. Unlocks with your third new theme.")
                     if let modeNotice {
                         Text(modeNotice)
                             .font(.system(size: 15, weight: .bold, design: .rounded))
@@ -219,8 +221,9 @@ struct HelpView: View {
         let card = RoundedRectangle(cornerRadius: 14, style: .continuous)
         return Button {
             if isLocked {
-                modeNotice = GameStore.themesNeeded(for: mode) > 1
-                    ? "\(title) unlocks once you have two new themes."
+                let needed = GameStore.themesNeeded(for: mode)
+                modeNotice = needed > 1
+                    ? "\(title) unlocks once you have \(needed) new themes."
                     : "\(title) unlocks with your first new theme."
             } else {
                 modeNotice = nil

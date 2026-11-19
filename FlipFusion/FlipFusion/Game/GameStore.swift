@@ -287,6 +287,31 @@ final class GameStore {
         }
     }
 
+    // MARK: The Fusion game
+
+    /// Goes up each time a tile changes by itself.
+    private(set) var mutateEvent = 0
+
+    /// The Fusion game: one ordinary tile, picked at random, changes by itself. Six
+    /// times in ten it doubles; otherwise it halves (a 2 stays a 2).
+    private func mutateTile() {
+        guard let pick = state.tiles.indices.filter({ state.tiles[$0].kind == .normal }).randomElement(using: &rng) else { return }
+        let old = state.tiles[pick].value
+        let new = Int.random(in: 0..<10, using: &rng) < 6 ? old * 2 : max(2, old / 2)
+        guard new != old else { return }
+        let tile = state.tiles[pick]
+        if animated {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+                state.tiles[pick].value = new
+            }
+        } else {
+            state.tiles[pick].value = new
+        }
+        nextBurstID += 1
+        bursts.append(Burst(id: nextBurstID, row: tile.row, col: tile.col, value: new))
+        mutateEvent += 1
+    }
+
     // MARK: The shark
 
     /// Goes up each time the board is stirred; `lastStirDropped` is how many tiles
@@ -425,9 +450,10 @@ final class GameStore {
     /// games, one for Shape Shift, two for Twist.
     nonisolated static func themesNeeded(for mode: Mode) -> Int {
         switch mode {
-        case .timed, .endless: return 0
+        case .timed, .endless, .fruit: return 0
         case .shift: return 1
         case .twist: return 2
+        case .fusion: return 3
         }
     }
 
@@ -513,6 +539,10 @@ final class GameStore {
         case shift
         /// No clock, and the board may turn left or right: the arrow shows which.
         case twist
+        /// No clock, and every tile shows a fruit in place of its number.
+        case fruit
+        /// No clock, and after every move one tile changes by itself.
+        case fusion
     }
 
     private(set) var mode: Mode
@@ -543,6 +573,8 @@ final class GameStore {
             case .endless: return "ff.endless.state"
             case .shift: return "ff.shift.state"
             case .twist: return "ff.twist.state"
+            case .fruit: return "ff.fruit.state"
+            case .fusion: return "ff.fusion.state"
             }
         }
 
@@ -552,6 +584,8 @@ final class GameStore {
             case .endless: return "ff.endless.best"
             case .shift: return "ff.shift.best"
             case .twist: return "ff.twist.best"
+            case .fruit: return "ff.fruit.best"
+            case .fusion: return "ff.fusion.best"
             }
         }
     }
@@ -1148,7 +1182,8 @@ final class GameStore {
             }
         }
         // The endless game gets an extra tile after every rotation, so the board fills.
-        if mode == .endless || mode == .twist {
+        // Every game without a clock, bar Shape Shift, gets an extra tile after a turn.
+        if mode != .timed, mode != .shift {
             spawnTile()
         }
         // In the Twist game, any turn may be followed by one the other way.
@@ -1164,6 +1199,9 @@ final class GameStore {
         let wasSwipe = swipeInFlight
         swipeInFlight = false
         reshapeIfNeeded(afterSwipe: wasSwipe)
+        if wasSwipe, mode == .fusion {
+            mutateTile()
+        }
         let wasOver = isGameOver
         isGameOver = !GameEngine.hasMove(state.tiles, blocked: blockedSet) || isTimeUp
         if isGameOver {

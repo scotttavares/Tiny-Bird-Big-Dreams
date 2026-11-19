@@ -715,6 +715,9 @@ struct GameSounds: ViewModifier {
             .onChange(of: store.directionEvent) { _, _ in
                 sounds.play(.mode)
             }
+            .onChange(of: store.mutateEvent) { _, _ in
+                sounds.play(.powerup, volume: 0.5)
+            }
             .onChange(of: store.mode) { _, _ in
                 sounds.play(.mode, volume: 0.8)
             }
