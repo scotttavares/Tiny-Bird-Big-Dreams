@@ -678,13 +678,13 @@ struct ThemeMoments: ViewModifier {
         // The shark does not just show its teeth: as it covers the board it throws
         // the tiles about and knocks a couple off.
         if Skin.current.backdrop == .bubbles {
-            let store = store
+            let game = store
             Task {
                 try? await Task.sleep(for: .milliseconds(800))
-                if !store.stirBoard() {
+                if !game.stirBoard() {
                     // A move was still playing: try once more when it has finished.
                     try? await Task.sleep(for: .milliseconds(600))
-                    store.stirBoard()
+                    game.stirBoard()
                 }
             }
         }
