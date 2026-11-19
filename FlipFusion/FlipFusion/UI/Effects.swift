@@ -620,6 +620,12 @@ struct GameBanners: ViewModifier {
             .onChange(of: store.directionEvent) { _, _ in
                 callout("Reversed!")
             }
+            .onChange(of: store.swallowEvent) { _, _ in
+                show(store.lastSwallowCount == 1 ? "The hole swallowed a tile" : "The holes swallowed \(store.lastSwallowCount) tiles", 1.4)
+            }
+            .onChange(of: store.holeClosedEvent) { _, _ in
+                show("The hole is full: it closed up", 1.6)
+            }
             .onChange(of: store.stirEvent) { _, _ in
                 // A crate says for itself what came out of it.
                 if store.lastStirDropped > 0, store.crateOpenEvent == 0 || store.lastCrateFind.isPrize {
@@ -761,6 +767,12 @@ struct GameSounds: ViewModifier {
             }
             .onChange(of: store.bombEvent) { _, _ in
                 sounds.play(.boom)
+            }
+            .onChange(of: store.swallowEvent) { _, _ in
+                sounds.play(.stomp, volume: 0.55)
+            }
+            .onChange(of: store.holeClosedEvent) { _, _ in
+                sounds.play(.bonus, volume: 0.7)
             }
             .onChange(of: store.timeBonusEvent) { _, _ in
                 sounds.play(.bonus)

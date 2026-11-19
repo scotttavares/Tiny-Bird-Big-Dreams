@@ -420,4 +420,28 @@ struct GameEngineTests {
         let badCounter = GameState(tiles: [Tile(id: 1, value: 2, row: 0, col: 0)], score: 0, movesUntilRotation: 0, nextID: 2)
         #expect(!GameEngine.isValid(badCounter))
     }
+
+    @Test func aHoleSwallowsTheFirstTileToReachIt() {
+        // Row 0: a hole at the left end, then a 2, a gap and a 4. Swiping left drops
+        // the 2 down the hole; the 4 stops beside it.
+        let row = [Tile(id: 1, value: 2, row: 0, col: 1), Tile(id: 2, value: 4, row: 0, col: 3)]
+        let hole = Cell(row: 0, col: 0)
+        let result = GameEngine.slide(row, .left, blocked: [hole], holes: [hole])
+        #expect(result.changed)
+        #expect(result.gained == 0)
+        #expect(result.swallowed.map(\.id) == [1])
+        #expect(result.removedIDs == [1])
+        #expect(result.tiles.count == 1)
+        #expect(result.tiles[0].id == 2)
+        #expect(result.tiles[0].col == 1)
+
+        // A plain blocked cell swallows nothing.
+        let plain = GameEngine.slide(row, .left, blocked: [hole])
+        #expect(plain.swallowed.isEmpty)
+        #expect(plain.tiles.count == 2)
+
+        // A full board has a move while a tile stands beside a hole.
+        let lone = [Tile(id: 1, value: 2, row: 0, col: 1)]
+        #expect(GameEngine.hasMove(lone, blocked: [hole], holes: [hole]))
+    }
 }

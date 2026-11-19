@@ -11,7 +11,10 @@ enum GameEngine {
     /// result doubles for each tile that joins: two 2s make a 4, three make an 8 and four
     /// make a 16 (a "super combo"). The tile they make does not merge again in that slide.
     /// No tile enters a `blocked` cell: tiles stop beside it and do not merge across it.
-    static func slide(_ tiles: [Tile], _ dir: Direction, blocked: Set<Cell> = []) -> StepResult {
+    /// The blocked cells in `holes` are hungry: the first tile to slide up to one falls
+    /// in and is gone, scoring nothing. A hole takes one tile a slide.
+    static func slide(_ tiles: [Tile], _ dir: Direction, blocked: Set<Cell> = [], holes: Set<Cell> = []) -> StepResult {
+        var swallowed: [Tile] = []
         var kept: [Tile] = []
         var ghosts: [Tile] = []
         var mergedIDs: Set<Int> = []
@@ -28,12 +31,21 @@ enum GameEngine {
                 .sorted { distanceFromWall(of: $0, dir) < distanceFromWall(of: $1, dir) }
 
             // How far along this line each blocked cell is, nearest the wall first.
-            let stops = blocked
-                .map { Tile(id: 0, value: 2, row: $0.row, col: $0.col) }
-                .filter { lineIndex(of: $0, dir) == line }
-                .map { distanceFromWall(of: $0, dir) }
-                .sorted()
+            var stops: [Int] = []
+            var holeStops: Set<Int> = []
+            for cell in blocked {
+                let probe = Tile(id: 0, value: 2, row: cell.row, col: cell.col)
+                guard lineIndex(of: probe, dir) == line else { continue }
+                let far = distanceFromWall(of: probe, dir)
+                stops.append(far)
+                if holes.contains(cell) {
+                    holeStops.insert(far)
+                }
+            }
+            stops.sort()
             var nextStop = 0
+            // A hole the next tile will slide into, by how far along the line it is.
+            var openHole: Int?
             // Where the next tile comes to rest.
             var nextDistance = 0
 
@@ -50,8 +62,22 @@ enum GameEngine {
                     if stops[nextStop] >= nextDistance {
                         nextDistance = stops[nextStop] + 1
                         runCount = 0
+                        openHole = holeStops.contains(stops[nextStop]) ? stops[nextStop] : nil
                     }
                     nextStop += 1
+                }
+                if let hole = openHole {
+                    // Nothing stands between this tile and the hole: down it goes.
+                    openHole = nil
+                    let cell = cellFor(line: line, distance: hole, dir)
+                    var fallen = tile
+                    fallen.row = cell.row
+                    fallen.col = cell.col
+                    ghosts.append(fallen)
+                    swallowed.append(fallen)
+                    removedIDs.insert(tile.id)
+                    changed = true
+                    continue
                 }
                 if runCount > 0, tile.kind != .stone, let last = placed.last, runValue == tile.value {
                     var survivor = last
@@ -128,7 +154,8 @@ enum GameEngine {
             gained: gained,
             changed: changed,
             effects: effects,
-            supers: supers
+            supers: supers,
+            swallowed: swallowed
         )
     }
 
@@ -173,13 +200,19 @@ enum GameEngine {
 
     static func rotateCounterClockwise(_ blocks: [Block]) -> [Block] {
         blocks.map { block in
-            Block(row: size - 1 - block.col, col: block.row, kind: block.kind)
+            var turned = block
+            turned.row = size - 1 - block.col
+            turned.col = block.row
+            return turned
         }
     }
 
     static func rotateClockwise(_ blocks: [Block]) -> [Block] {
         blocks.map { block in
-            Block(row: block.col, col: size - 1 - block.row, kind: block.kind)
+            var turned = block
+            turned.row = block.col
+            turned.col = size - 1 - block.row
+            return turned
         }
     }
 
@@ -195,12 +228,12 @@ enum GameEngine {
     /// Lets gravity pull the tiles down, pass after pass, until nothing more merges.
     /// Each returned pass changed the board. Merges in pass N score N times their value,
     /// so a chain reaction is worth more than the same merges made one at a time.
-    static func settle(_ tiles: [Tile], blocked: Set<Cell> = []) -> [StepResult] {
+    static func settle(_ tiles: [Tile], blocked: Set<Cell> = [], holes: Set<Cell> = []) -> [StepResult] {
         var passes: [StepResult] = []
         var current = tiles
         // A pass can only repeat after a merge, and there are at most 15 merges on 16 cells.
         while passes.count < size * size {
-            var pass = slide(current, .down, blocked: blocked)
+            var pass = slide(current, .down, blocked: blocked, holes: holes)
             guard pass.changed else { break }
             pass.gained *= passes.count + 1
             passes.append(pass)
@@ -396,8 +429,16 @@ enum GameEngine {
     }
 
     /// True while some swipe would change the board.
-    static func hasMove(_ tiles: [Tile], blocked: Set<Cell> = []) -> Bool {
+    static func hasMove(_ tiles: [Tile], blocked: Set<Cell> = [], holes: Set<Cell> = []) -> Bool {
         if tiles.count < size * size - blocked.count { return true }
+        // A tile beside a hungry hole can always be pushed down it.
+        for tile in tiles {
+            let around = [
+                Cell(row: tile.row - 1, col: tile.col), Cell(row: tile.row + 1, col: tile.col),
+                Cell(row: tile.row, col: tile.col - 1), Cell(row: tile.row, col: tile.col + 1),
+            ]
+            if around.contains(where: { holes.contains($0) }) { return true }
+        }
         // Stone blocks never merge, so they are left out.
         var values: [Cell: Int] = [:]
         for tile in tiles where tile.kind != .stone {

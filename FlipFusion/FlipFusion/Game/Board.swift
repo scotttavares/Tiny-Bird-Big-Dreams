@@ -71,6 +71,8 @@ struct Block: Hashable, Codable, Sendable {
     var row: Int
     var col: Int
     var kind: BlockKind
+    /// A hole only: how many tiles it has swallowed. Missing means none yet.
+    var fed: Int?
 
     var cell: Cell { Cell(row: row, col: col) }
 }
@@ -95,6 +97,9 @@ struct StepResult: Equatable, Sendable {
     /// Super combos: the id of each surviving tile that three or four tiles merged
     /// into, and how many.
     var supers: [Int: Int] = [:]
+    /// Tiles that fell down a hole in this step, placed in the hole's cell. They are
+    /// among the ghosts too, so the screen can slide them in before they vanish.
+    var swallowed: [Tile] = []
 }
 
 /// Everything needed to save and restore a game.

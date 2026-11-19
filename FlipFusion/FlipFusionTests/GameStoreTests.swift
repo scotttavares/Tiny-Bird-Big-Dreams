@@ -777,7 +777,9 @@ struct GameStoreTests {
         for tile in store.state.tiles {
             total += tile.value
         }
-        #expect(total >= 120)
+        // (Less anything the hole the shark bit then swallowed as the board turned.)
+        let kept = total + store.swallowedValue
+        #expect(kept >= 120)
         #expect(GameEngine.isValid(store.state))
     }
 
@@ -851,5 +853,27 @@ struct GameStoreTests {
         store.newGame()
         #expect(!store.isGameOver)
         #expect(store.state.tiles.count == 2)
+    }
+
+    @Test func aHoleClosesAfterThreeTiles() {
+        let defaults = freshDefaults()
+        var hungry = Block(row: 0, col: 0, kind: .hole)
+        hungry.fed = 2
+        save(GameState(
+            tiles: tiles([[0, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [8, 0, 0, 16]]),
+            score: 0,
+            movesUntilRotation: 2,
+            nextID: 20,
+            blocks: [hungry]
+        ), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        store.swipe(.left)
+        #expect(store.swallowEvent == 1)
+        #expect(store.lastSwallowCount == 1)
+        #expect(store.swallowedValue == 2)
+        // That was its third: the hole has closed.
+        #expect(store.holeClosedEvent == 1)
+        #expect(store.state.blocks.isEmpty)
+        #expect(store.state.score == 0)
     }
 }

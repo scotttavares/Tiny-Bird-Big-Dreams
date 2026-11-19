@@ -215,6 +215,42 @@ final class GameStore {
         Set(state.blocks.map(\.cell))
     }
 
+    /// The holes that swallow tiles. The outlines of the Shape Shift game are cut
+    /// from holes too, but those are the edge of the board and swallow nothing.
+    private var holeSet: Set<Cell> {
+        guard state.shapeID < GameEngine.firstSilhouette else { return [] }
+        return Set(state.blocks.filter { $0.kind == .hole }.map(\.cell))
+    }
+
+    /// A hole closes up once it has swallowed this many tiles.
+    static let holeAppetite = 3
+    /// Goes up each time a hole swallows something; `lastSwallowCount` is how many.
+    private(set) var swallowEvent = 0
+    private(set) var lastSwallowCount = 0
+    /// Goes up each time a hole has had its fill and closes.
+    private(set) var holeClosedEvent = 0
+    /// The value of every tile lost down a hole since the app started (tests).
+    private(set) var swallowedValue = 0
+
+    /// Tiles have fallen down holes: each hole counts what it ate and closes when full.
+    private func feedHoles(_ fallen: [Tile]) {
+        for tile in fallen {
+            swallowedValue += tile.value
+            nextBurstID += 1
+            bursts.append(Burst(id: nextBurstID, row: tile.row, col: tile.col, value: tile.value))
+            guard let at = state.blocks.firstIndex(where: { $0.kind == .hole && $0.row == tile.row && $0.col == tile.col }) else { continue }
+            let eaten = (state.blocks[at].fed ?? 0) + 1
+            if eaten >= Self.holeAppetite {
+                state.blocks.remove(at: at)
+                holeClosedEvent += 1
+            } else {
+                state.blocks[at].fed = eaten
+            }
+        }
+        lastSwallowCount = fallen.count
+        swallowEvent += 1
+    }
+
     /// Goes up each time the board changes shape.
     private(set) var shapeEvent = 0
     /// Goes up when crates are smashed; `lastCrateCount` is how many.
@@ -616,7 +652,7 @@ final class GameStore {
             secondsLeft = Self.continueSeconds
             wholeSecondsLeft = Int(Self.continueSeconds.rounded(.up))
         }
-        if !GameEngine.hasMove(state.tiles, blocked: blockedSet) {
+        if !GameEngine.hasMove(state.tiles, blocked: blockedSet, holes: holeSet) {
             let doomed = state.tiles.sorted { first, second in
                 if (first.kind == .stone) != (second.kind == .stone) {
                     return first.kind == .stone
@@ -910,7 +946,7 @@ final class GameStore {
         streak = 0
         streakLeft = 0
         isTimerRunning = false
-        isGameOver = !GameEngine.hasMove(state.tiles, blocked: blockedSet) || isTimeUp
+        isGameOver = !GameEngine.hasMove(state.tiles, blocked: blockedSet, holes: holeSet) || isTimeUp
         save()
     }
 
@@ -1025,7 +1061,7 @@ final class GameStore {
             save()
             return
         }
-        let result = GameEngine.slide(state.tiles, dir, blocked: blockedSet)
+        let result = GameEngine.slide(state.tiles, dir, blocked: blockedSet, holes: holeSet)
         guard result.changed else { return }
 
         bursts.removeAll()
@@ -1152,7 +1188,7 @@ final class GameStore {
     private func rotateImmediately() {
         rotatePulse += 1
         turnBoard()
-        let passes = GameEngine.settle(state.tiles, blocked: blockedSet)
+        let passes = GameEngine.settle(state.tiles, blocked: blockedSet, holes: holeSet)
         for pass in passes {
             apply(pass)
             ghosts = []
@@ -1202,7 +1238,7 @@ final class GameStore {
         // Let that swap reach the screen before gravity starts animating.
         await pause(0.05)
 
-        let passes = GameEngine.settle(state.tiles, blocked: blockedSet)
+        let passes = GameEngine.settle(state.tiles, blocked: blockedSet, holes: holeSet)
         for pass in passes {
             withAnimation(.easeIn(duration: Timing.fall)) {
                 apply(pass)
@@ -1267,6 +1303,9 @@ final class GameStore {
     private func apply(_ result: StepResult, isSwipe: Bool = false) {
         state.tiles = result.tiles
         ghosts = result.ghosts
+        if !result.swallowed.isEmpty {
+            feedHoles(result.swallowed)
+        }
         if isSwipe, !result.mergedIDs.isEmpty {
             // A merge soon after the last one builds the streak (and already counts
             // at the higher rate); every merge restarts the countdown.
@@ -1441,7 +1480,7 @@ final class GameStore {
             mutateTile()
         }
         let wasOver = isGameOver
-        isGameOver = !GameEngine.hasMove(state.tiles, blocked: blockedSet) || isTimeUp
+        isGameOver = !GameEngine.hasMove(state.tiles, blocked: blockedSet, holes: holeSet) || isTimeUp
         if isGameOver {
             isTimerRunning = false
             if !wasOver {
