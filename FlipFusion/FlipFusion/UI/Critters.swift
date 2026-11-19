@@ -12,6 +12,24 @@ enum Critter: String, Equatable, Sendable {
         pose == 0 ? "critter-" + rawValue : "critter-" + rawValue + "-2"
     }
 
+    /// How many frames of film the creature has: a short clip of it in action, cut
+    /// into pictures named "critter-", its name, "-f" and a two-figure number from 00.
+    /// None means it is animated from its two poses instead.
+    var filmFrames: Int {
+        self == .shark ? 25 : 0
+    }
+
+    /// The picture for one frame of the creature's film.
+    func filmName(frame: Int) -> String {
+        "critter-" + rawValue + (frame < 10 ? "-f0" : "-f") + String(frame)
+    }
+
+    /// True when the film is there to be played.
+    @MainActor
+    var hasFilm: Bool {
+        filmFrames > 0 && UIImage(named: filmName(frame: 0)) != nil
+    }
+
     var emoji: String {
         switch self {
         case .shark: return "\u{1F988}"
@@ -70,7 +88,12 @@ struct CritterAttack: View {
     var body: some View {
         Group {
             switch critter {
-            case .shark: SharkLunge(side: side, onHit: onHit)
+            case .shark:
+                if Critter.shark.hasFilm {
+                    SharkFilm(side: side, onHit: onHit)
+                } else {
+                    SharkLunge(side: side, onHit: onHit)
+                }
             case .monkey: MonkeyRampage(side: side, onHit: onHit)
             case .ufo: UFORaid(side: side, onHit: onHit)
             case .trex: TrexStomp(side: side, onHit: onHit)
@@ -79,6 +102,62 @@ struct CritterAttack: View {
         .frame(width: side, height: side)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+}
+
+/// A creature's film, played once from its first frame and held on its last.
+struct CritterFilm: View {
+    let critter: Critter
+    let width: CGFloat
+    /// Frames shown each second.
+    var speed = 11.0
+
+    @State private var start = Date()
+
+    var body: some View {
+        let began = start
+        let count = critter.filmFrames
+        let kind = critter
+        let rate = speed
+        TimelineView(.animation(minimumInterval: 1 / rate)) { timeline in
+            let passed = timeline.date.timeIntervalSince(began)
+            let frame = min(count - 1, max(0, Int(passed * rate)))
+            Image(kind.filmName(frame: frame))
+                .resizable()
+                .scaledToFit()
+                .frame(width: width)
+        }
+        .shadow(color: Color.black.opacity(0.5), radius: width * 0.04, x: 0, y: width * 0.03)
+    }
+}
+
+/// The shark, played from film: it bursts up from below the board, rears back,
+/// twists, dives at the tiles and snaps its jaws, then sinks away.
+struct SharkFilm: View {
+    let side: CGFloat
+    let onHit: (Int) -> Void
+
+    @State private var isUp = false
+    @State private var isGone = false
+
+    var body: some View {
+        CritterFilm(critter: .shark, width: side * 1.25)
+            .offset(y: isUp && !isGone ? side * 0.1 : side * 2.1)
+            .task {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                    isUp = true
+                }
+                // The film runs a little over two seconds; the jaws come together
+                // three times in it.
+                for bite in 1...3 {
+                    try? await Task.sleep(for: .milliseconds(bite == 1 ? 520 : 640))
+                    onHit(bite)
+                }
+                try? await Task.sleep(for: .milliseconds(520))
+                withAnimation(.easeIn(duration: 0.45)) {
+                    isGone = true
+                }
+            }
     }
 }
 

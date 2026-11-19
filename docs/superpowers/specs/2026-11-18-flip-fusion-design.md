@@ -245,3 +245,7 @@ The owner found the crate's shark and monkey "flat" and asked for 3D creatures t
 - **In time with the picture:** the board shakes and a sound plays at every bite, landing, beam and stomp (`GameStore.rattle`). New sounds from `scripts/make-critter-sounds.py`: chomp, monkey chatter, saucer hum, roar, stomp.
 - **Crate odds**, out of 100: prizes 62 as before; monkey 12, shark 9, UFO 6, T-rex 6, rocks 5.
 - The creatures appear over the tiles for one to two seconds. That is deliberate here, an exception to "nothing covers the tiles", because the owner asked for it.
+
+## Film animation, tried on the shark (2026-11-19)
+
+The owner asked how studios animate game characters and agreed to try one creature as a generated video. The shark's two poses were put on a green screen and given to Kling 3.0 as the first and last frame of a 3-second clip (75 credits). The clip was cut to 25 frames, the green keyed out, and the frames added as `critter-shark-f00` to `-f24` (about 3.5 MB). `CritterFilm` plays them at 11 frames a second and `SharkFilm` brings the shark up, shakes the board at each of three bites, and takes it away. If the frames are missing the two-pose `SharkLunge` is used. The monkey, the flying saucer and the T-rex are still two poses each, pending the owner's verdict on the shark. Previews: `docs/flipfusion/shark-film-preview.gif`.
