@@ -84,6 +84,11 @@ struct GameScreen: View {
                         DangerGlow(side: side)
                     }
 
+                    if store.streak > 0 {
+                        SpeedBolt(side: side)
+                            .id(store.streak)
+                    }
+
                     if Skin.current.backdrop == .snow {
                         SnowCap(side: side, shakeOff: store.rotatePulse)
                             .offset(y: -side * 0.545 + 2)

@@ -663,8 +663,8 @@ struct ThemeMoment: View {
     }
 }
 
-/// Plays the theme's big moment when the game earns it: a new level, a four-tile
-/// merge, or five merges before the board turns.
+/// Plays the theme's big moment when the game earns it: a new level, a chain, a
+/// four-tile merge, or five merges before the board turns.
 struct ThemeMoments: ViewModifier {
     let store: GameStore
     let sounds: SoundPlayer
@@ -698,6 +698,9 @@ struct ThemeMoments: ViewModifier {
                 if store.turnMerges >= 5 {
                     play()
                 }
+            }
+            .onChange(of: store.comboEvent) { _, _ in
+                play()
             }
     }
 }

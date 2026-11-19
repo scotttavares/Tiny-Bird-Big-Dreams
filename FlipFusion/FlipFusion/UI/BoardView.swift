@@ -29,16 +29,29 @@ struct BoardView: View {
         return nil
     }
 
+    /// The piece of the board a hole takes out: its cell and half the gap round it,
+    /// and right out to the board's edge when the cell is on the edge. Holes side by
+    /// side join up, so several of them change the outline of the board itself.
+    private func cutBox(_ hole: Block) -> CGRect {
+        let point = origin(row: hole.row, col: hole.col)
+        let last = GameEngine.size - 1
+        let left = hole.col == 0 ? 0 : point.x - gap / 2
+        let right = hole.col == last ? side : point.x + cell + gap / 2
+        let top = hole.row == 0 ? 0 : point.y - gap / 2
+        let bottom = hole.row == last ? side : point.y + cell + gap / 2
+        return CGRect(x: left, y: top, width: right - left, height: bottom - top)
+    }
+
     /// Everything of the board except its holes.
     private func boardMask(_ holes: [Block]) -> some View {
         ZStack(alignment: .topLeading) {
             Rectangle()
                 .frame(width: side, height: side)
             ForEach(holes, id: \.self) { hole in
-                let point = origin(row: hole.row, col: hole.col)
-                RoundedRectangle(cornerRadius: cell * 0.2, style: .continuous)
-                    .frame(width: cell, height: cell)
-                    .offset(x: point.x, y: point.y)
+                let box = cutBox(hole)
+                Rectangle()
+                    .frame(width: box.width, height: box.height)
+                    .offset(x: box.minX, y: box.minY)
                     .blendMode(.destinationOut)
             }
         }
@@ -49,6 +62,9 @@ struct BoardView: View {
     var body: some View {
         let boardShape = RoundedRectangle(cornerRadius: side * 0.07, style: .continuous)
         let holes = store.state.blocks.filter { $0.kind == .hole }
+        // In the Shape Shift game the holes cut the board into a new outline.
+        // Anywhere else a hole is a pit in the board.
+        let isOutline = GameEngine.silhouetteName(store.state.shapeID) != nil
         let holeCells = Set(holes.map(\.cell))
 
         ZStack(alignment: .topLeading) {
@@ -60,7 +76,7 @@ struct BoardView: View {
                 .overlay(boardShape.strokeBorder(store.isFever ? Theme.fusion[0] : Theme.boardStroke, lineWidth: store.isFever ? 3 : 1.5))
                 // A hole is cut right through the board: the backdrop shows through.
                 .mask {
-                    boardMask(holes)
+                    boardMask(isOutline ? holes : [])
                 }
                 .shadow(
                     color: (store.isFever ? Theme.fusion[0] : Theme.boardGlow).opacity(store.isFever ? 0.9 : 0.55),
@@ -74,9 +90,8 @@ struct BoardView: View {
                 let point = origin(row: index / GameEngine.size, col: index % GameEngine.size)
                 let cellShape = RoundedRectangle(cornerRadius: cell * 0.2, style: .continuous)
                 if holeCells.contains(Cell(row: index / GameEngine.size, col: index % GameEngine.size)) {
-                    // The rim of a hole.
-                    cellShape
-                        .strokeBorder(Theme.boardStroke, lineWidth: 2.5)
+                    // A hole has no cell: the board is cut away there.
+                    Color.clear
                         .frame(width: cell, height: cell)
                         .offset(x: point.x, y: point.y)
                 } else {
@@ -91,6 +106,16 @@ struct BoardView: View {
           .frame(width: side, height: side, alignment: .topLeading)
           .hueRotation(.degrees(Double((store.level - 1) % 9) * 40))
           .animation(.easeInOut(duration: 0.6), value: store.level)
+
+            if !isOutline {
+                ForEach(holes, id: \.self) { hole in
+                    let point = origin(row: hole.row, col: hole.col)
+                    PitView(size: cell)
+                        .offset(x: point.x, y: point.y)
+                        .zIndex(1)
+                        .transition(.scale(scale: 0.2).combined(with: .opacity))
+                }
+            }
 
             // Walls and crates stand on the board and keep their own colours.
             ForEach(store.state.blocks.filter { $0.kind != .hole }, id: \.self) { block in

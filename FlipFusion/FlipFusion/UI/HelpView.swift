@@ -29,7 +29,7 @@ struct HelpView: View {
                 section("Game modes") {
                     modeRow(.timed, symbol: "timer", title: "2 Minutes", text: "Two minutes on the clock, which starts on your first swipe. Level up and merge clock tiles to win more time.")
                     modeRow(.endless, symbol: "infinity", title: "Endless", text: "No clock. An extra tile lands after every rotation, and the game ends when no move is left.")
-                    modeRow(.shift, symbol: "shuffle", title: "Shape Shift", text: "No clock. Every \(GameEngine.movesPerShift) moves the board changes to a new shape picked at random. Unlocks with your first new theme.")
+                    modeRow(.shift, symbol: "shuffle", title: "Shape Shift", text: "No clock. Every \(GameEngine.movesPerShift) moves the board itself becomes a new shape: a triangle, a circle, a ring, a cup and more. Unlocks with your first new theme.")
                     if let modeNotice {
                         Text(modeNotice)
                             .font(.system(size: 15, weight: .bold, design: .rounded))
@@ -131,7 +131,7 @@ struct HelpView: View {
 
                 section("Board shapes") {
                     row(symbol: "square.grid.2x2.fill", title: "Walls", text: "Solid blocks on the board. Tiles stop beside them and cannot merge across them.")
-                    row(symbol: "circle.dashed", title: "Holes", text: "Gaps cut out of the board. Tiles stop beside them too.")
+                    row(symbol: "circle.dashed", title: "Holes", text: "Dark pits in the board. Tiles stop at the edge of them. In Shape Shift, holes cut the whole board into a new outline.")
                     row(symbol: "shippingbox.fill", title: "Crates", text: "They block like walls, but a merge right beside one, or a bomb's blast, smashes it for \(GameStore.cratePoints) points.")
                     row(symbol: "arrow.clockwise", title: "They turn too", text: "Walls, holes and crates turn with the board. A tile that is in the way when the shape changes jumps to an empty cell.")
                 }
@@ -142,14 +142,14 @@ struct HelpView: View {
                     row(symbol: BoosterBar.symbol(.fever), title: "Double", text: "Starts double points for \(Int(GameStore.feverSeconds)) seconds.")
                     row(symbol: BoosterBar.symbol(.arm), title: "Bombs", text: "Turns up to \(GameStore.armedTiles) of your tiles into bomb tiles.")
                     row(symbol: "circle.circle.fill", title: "Coins", text: "You start with \(GameStore.freeBoosters) free uses of each booster. After that a use costs coins, and you earn a coin for every \(GameStore.pointsPerCoin) points.")
-                    row(symbol: "bolt.fill", title: "Speed bonus", text: "Merge again within \(Int(GameStore.streakWindow)) seconds and your points multiply, up to x\(GameStore.maxStreak + 1).")
+                    row(symbol: "bolt.fill", title: "Speed bonus", text: "Merge again within \(Int(GameStore.streakWindow)) seconds and your points multiply, up to x\(GameStore.maxStreak + 1). Lightning strikes each time it goes up.")
                 }
 
                 section("Power-ups") {
                     tileRow(value: 2, kind: .time, title: "Clock tile", text: "Merge it to add \(Int(GameStore.timeBonus)) seconds to the clock. Timed game only.")
                     tileRow(value: 4, kind: .bomb, title: "Bomb tile", text: "Merge it to blast away every tile touching it. Each one scores its number, and a bomb caught in the blast goes off too.")
                     row(symbol: "flame.fill", title: "Double points", text: "A chain of \(GameStore.feverChain) or more doubles every point for \(Int(GameStore.feverSeconds)) seconds. The board glows pink while it lasts.")
-                    row(symbol: "gift.fill", title: "Chain reward", text: "Every chain also drops a clock or bomb tile onto the board.")
+                    row(symbol: "gift.fill", title: "Chain reward", text: "Every chain also drops a clock or bomb tile onto the board, with a flash, and sets off your theme's big moment.")
                 }
 
                 Button {

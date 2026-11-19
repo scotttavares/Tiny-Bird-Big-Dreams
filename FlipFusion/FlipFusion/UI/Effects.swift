@@ -554,10 +554,8 @@ struct GameBanners: ViewModifier {
     func body(content: Content) -> some View {
         content
             .onChange(of: store.comboEvent) { _, _ in
-                callout("Chain x\(store.lastCombo)!")
-                if store.isFever {
-                    show("Double points!", 1.6)
-                }
+                callout("Chain x\(store.lastCombo)! Double points!")
+                show("Chain reward: a power-up tile and double points", 2.2)
             }
             .onChange(of: store.timeBonusEvent) { _, _ in
                 show("+\(Int(GameStore.timeBonus)) seconds", 1.1)
@@ -604,7 +602,7 @@ struct GameBanners: ViewModifier {
             }
             .onChange(of: store.shapeEvent) { _, _ in
                 if store.mode == .shift {
-                    callout("Shape shift!")
+                    callout((GameEngine.silhouetteName(store.state.shapeID) ?? "Shape shift") + "!")
                 }
                 if !store.state.blocks.isEmpty {
                     if !seenBlocks {
@@ -693,6 +691,11 @@ struct GameSounds: ViewModifier {
             }
             .onChange(of: store.levelEvent) { _, _ in
                 sounds.play(.combo)
+            }
+            .onChange(of: store.streak) { old, new in
+                if new > old {
+                    sounds.play(.powerup, volume: 0.7)
+                }
             }
             .onChange(of: store.shapeEvent) { _, _ in
                 sounds.play(.mode, volume: 0.8)
@@ -912,35 +915,166 @@ struct StarRow: View {
     }
 }
 
-/// A wall or a crate standing on the board. (A hole is drawn by the board itself.)
+/// A wall or a crate standing on the board, drawn as a solid block: a lit top face
+/// above a front face of bricks or planks.
 struct ObstacleView: View {
     let kind: BlockKind
     let size: CGFloat
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: size * 0.2, style: .continuous)
-        let isCrate = kind == .crate
-        let top = isCrate ? Color(hex: 0xE8B06A) : Color(hex: 0x6E78A8)
-        let bottom = isCrate ? Color(hex: 0x8A5324) : Color(hex: 0x232A4F)
-
-        ZStack {
-            shape.fill(LinearGradient(colors: [top, bottom], startPoint: .top, endPoint: .bottom))
-            shape.strokeBorder(
-                LinearGradient(
-                    colors: [Color.white.opacity(0.7), Color.white.opacity(0.1)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                ),
-                lineWidth: max(1.5, size * 0.045)
-            )
-            Image(systemName: isCrate ? "shippingbox.fill" : "square.grid.2x2.fill")
-                .font(.system(size: size * 0.42, weight: .bold))
-                .foregroundStyle(Color.white.opacity(isCrate ? 0.85 : 0.4))
+        Group {
+            if kind == .crate {
+                crate
+            } else {
+                wall
+            }
         }
         .frame(width: size, height: size)
-        .shadow(color: Color.black.opacity(0.45), radius: size * 0.08, x: 0, y: size * 0.04)
+        .shadow(color: Color.black.opacity(0.55), radius: size * 0.08, x: 0, y: size * 0.06)
         .accessibilityElement()
-        .accessibilityLabel(Text(isCrate ? "crate" : "wall"))
+        .accessibilityLabel(Text(kind == .crate ? "crate" : "wall"))
+    }
+
+    /// One brick.
+    private func brick(_ width: CGFloat) -> some View {
+        RoundedRectangle(cornerRadius: size * 0.02, style: .continuous)
+            .fill(LinearGradient(colors: [Color(hex: 0xD0694A), Color(hex: 0x9A3F2A)], startPoint: .top, endPoint: .bottom))
+            .frame(width: width, height: size * 0.17)
+    }
+
+    /// A brick wall: a paler top, then three courses of bricks, the middle one offset.
+    private var wall: some View {
+        let block = RoundedRectangle(cornerRadius: size * 0.1, style: .continuous)
+        let mortar = size * 0.03
+        let inner = size * 0.88
+        let half = (inner - mortar) / 2
+        let quarter = (inner - 2 * mortar) / 4
+
+        return ZStack(alignment: .top) {
+            // The mortar shows between the bricks.
+            block.fill(Color(hex: 0x4A2218))
+            VStack(spacing: mortar) {
+                // The top of the wall, catching the light.
+                RoundedRectangle(cornerRadius: size * 0.05, style: .continuous)
+                    .fill(LinearGradient(colors: [Color(hex: 0xF2A882), Color(hex: 0xD98060)], startPoint: .top, endPoint: .bottom))
+                    .frame(width: inner, height: size * 0.2)
+                HStack(spacing: mortar) {
+                    brick(half)
+                    brick(half)
+                }
+                HStack(spacing: mortar) {
+                    brick(quarter)
+                    brick(quarter * 2)
+                    brick(quarter)
+                }
+                HStack(spacing: mortar) {
+                    brick(half)
+                    brick(half)
+                }
+            }
+            .padding(.top, size * 0.05)
+            block.strokeBorder(Color(hex: 0x2A120C), lineWidth: max(1.5, size * 0.03))
+        }
+        .clipShape(block)
+    }
+
+    /// A wooden crate: a paler lid, then a framed front with two crossed braces.
+    private var crate: some View {
+        let block = RoundedRectangle(cornerRadius: size * 0.08, style: .continuous)
+        let plank = max(2, size * 0.09)
+        let dark = Color(hex: 0x5A3214)
+        let brace = StrokeStyle(lineWidth: plank, lineCap: .butt)
+
+        return ZStack(alignment: .top) {
+            block.fill(dark)
+            VStack(spacing: size * 0.03) {
+                // The lid.
+                RoundedRectangle(cornerRadius: size * 0.04, style: .continuous)
+                    .fill(LinearGradient(colors: [Color(hex: 0xF7D08A), Color(hex: 0xE0A858)], startPoint: .top, endPoint: .bottom))
+                    .frame(width: size * 0.9, height: size * 0.19)
+                // The front.
+                ZStack {
+                    Rectangle()
+                        .fill(LinearGradient(colors: [Color(hex: 0xD99A4E), Color(hex: 0xA86A2A)], startPoint: .top, endPoint: .bottom))
+                    Outline(points: [CGPoint(x: 0, y: 0), CGPoint(x: 1, y: 1)], isClosed: false)
+                        .stroke(Color(hex: 0x8A521E), style: brace)
+                    Outline(points: [CGPoint(x: 1, y: 0), CGPoint(x: 0, y: 1)], isClosed: false)
+                        .stroke(Color(hex: 0x8A521E), style: brace)
+                    Rectangle()
+                        .strokeBorder(Color(hex: 0xC08040), lineWidth: plank)
+                    // A nail in each corner.
+                    ForEach(0..<4, id: \.self) { corner in
+                        Circle()
+                            .fill(Color(hex: 0x3A2010))
+                            .frame(width: size * 0.045, height: size * 0.045)
+                            .position(
+                                x: corner % 2 == 0 ? plank / 2 : size * 0.9 - plank / 2,
+                                y: corner < 2 ? plank / 2 : size * 0.66 - plank / 2
+                            )
+                    }
+                }
+                .frame(width: size * 0.9, height: size * 0.66)
+                .clipped()
+            }
+            .padding(.top, size * 0.04)
+            block.strokeBorder(Color(hex: 0x2E1808), lineWidth: max(1.5, size * 0.03))
+        }
+        .clipShape(block)
+    }
+}
+
+/// A hole in the board: a dark pit with a lit rim, rings that sink into it and
+/// specks that spiral down it and vanish.
+struct PitView: View {
+    let size: CGFloat
+
+    @State private var isFalling = false
+
+    var body: some View {
+        let mouth = RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
+
+        ZStack {
+            // The pit: lighter walls near the rim, black at the bottom.
+            mouth.fill(
+                RadialGradient(
+                    colors: [Color.black, Color.black, Color(hex: 0x1B1338), Color(hex: 0x3A2E6A)],
+                    center: .center,
+                    startRadius: 0,
+                    endRadius: size * 0.62
+                )
+            )
+            // Rings sinking down it.
+            ForEach(0..<2, id: \.self) { ring in
+                mouth
+                    .strokeBorder(Color(hex: 0x8C7BFF, opacity: 0.55), lineWidth: max(1, size * 0.025))
+                    .scaleEffect(isFalling ? 0.08 : (ring == 0 ? 0.92 : 0.55))
+                    .opacity(isFalling ? 0 : 0.7)
+            }
+            // Specks spiralling in.
+            ForEach(0..<5, id: \.self) { speck in
+                Circle()
+                    .fill(speck % 2 == 0 ? Color.white : Color(hex: 0x8FF0FF))
+                    .frame(width: size * 0.07, height: size * 0.07)
+                    .scaleEffect(isFalling ? 0.1 : 1)
+                    .offset(x: isFalling ? 0 : size * 0.36)
+                    .rotationEffect(.degrees(Double(speck) * 72 + (isFalling ? 320 : 0)))
+                    .opacity(isFalling ? 0 : 0.9)
+            }
+            // The rim: dark along the top inside edge, lit along the bottom.
+            mouth.strokeBorder(
+                LinearGradient(colors: [Color.black.opacity(0.9), Color.white.opacity(0.45)], startPoint: .top, endPoint: .bottom),
+                lineWidth: max(2, size * 0.05)
+            )
+        }
+        .frame(width: size, height: size)
+        .clipShape(mouth)
+        .onAppear {
+            withAnimation(.easeIn(duration: 1.7).repeatForever(autoreverses: false)) {
+                isFalling = true
+            }
+        }
+        .accessibilityElement()
+        .accessibilityLabel(Text("hole"))
     }
 }
 
@@ -998,6 +1132,46 @@ struct Graffiti: View {
         .onAppear {
             withAnimation(.spring(response: 0.4, dampingFraction: 0.5).delay(0.15)) {
                 isSprayed = true
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+/// The speed bonus going up: lightning strikes down the left edge of the board and
+/// speed lines streak across its top edge. Over in half a second, and clear of the tiles.
+struct SpeedBolt: View {
+    let side: CGFloat
+
+    @State private var isGone = false
+
+    private static let bolt: [CGPoint] = [
+        CGPoint(x: 0.55, y: 0), CGPoint(x: 0.1, y: 0.55), CGPoint(x: 0.45, y: 0.55), CGPoint(x: 0.3, y: 1),
+        CGPoint(x: 0.9, y: 0.4), CGPoint(x: 0.55, y: 0.4), CGPoint(x: 0.8, y: 0),
+    ]
+
+    var body: some View {
+        ZStack {
+            Outline(points: Self.bolt)
+                .fill(LinearGradient(colors: [Color.white, Color(hex: 0xFFE26A), Color(hex: 0xFF9F2E)], startPoint: .top, endPoint: .bottom))
+                .shadow(color: Color(hex: 0xFFE26A), radius: side * 0.04)
+                .frame(width: side * 0.15, height: side * 0.56)
+                .scaleEffect(isGone ? 1.15 : 0.9)
+                .position(x: -side * 0.035, y: side * 0.3)
+
+            ForEach(0..<5, id: \.self) { line in
+                Capsule()
+                    .fill(Color.white.opacity(0.85))
+                    .frame(width: side * (0.16 + 0.06 * CGFloat(line)), height: 3)
+                    .position(x: isGone ? side * 1.25 : -side * 0.25, y: -side * 0.012 - CGFloat(line) * 5)
+            }
+        }
+        .frame(width: side, height: side)
+        .opacity(isGone ? 0 : 1)
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.5)) {
+                isGone = true
             }
         }
         .allowsHitTesting(false)

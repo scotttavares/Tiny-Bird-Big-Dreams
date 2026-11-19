@@ -336,8 +336,16 @@ struct GameEngineTests {
     }
 
     @Test func everyBoardShapeIsSound() {
-        #expect(GameEngine.layouts.count == 31)
-        #expect(Set(GameEngine.layouts).count == 31)
+        #expect(GameEngine.layouts.count == 39)
+        #expect(Set(GameEngine.layouts).count == 39)
+        // The outlines of the Shape Shift game: all holes, each leaving room to play.
+        #expect(GameEngine.firstSilhouette + GameEngine.silhouetteNames.count == GameEngine.layouts.count)
+        #expect(GameEngine.silhouetteName(GameEngine.firstSilhouette) == "Triangle")
+        #expect(GameEngine.silhouetteName(3) == nil)
+        for outline in GameEngine.layouts[GameEngine.firstSilhouette...] {
+            #expect(outline.allSatisfy { $0.kind == .hole })
+            #expect(outline.count >= 4)
+        }
         // With a theme's two boards, levels 2 and 3 use them and the rest follow.
         #expect(GameEngine.layoutIndex(forLevel: 1, signature: [15, 16]) == 0)
         #expect(GameEngine.layoutIndex(forLevel: 2, signature: [15, 16]) == 15)
@@ -346,7 +354,7 @@ struct GameEngineTests {
         #expect(GameEngine.layouts[0].isEmpty)
         for layout in GameEngine.layouts.dropFirst() {
             #expect(!layout.isEmpty)
-            #expect(layout.count <= 3)
+            #expect(layout.count <= GameEngine.maxBlocks)
             #expect(Set(layout.map(\.cell)).count == layout.count)
             #expect(layout.allSatisfy { (0..<4).contains($0.row) && (0..<4).contains($0.col) })
         }

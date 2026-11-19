@@ -599,7 +599,9 @@ struct GameStoreTests {
         #expect(store.shapeEvent == 1)
         #expect(store.slidePulse == GameEngine.movesPerShift)
         #expect(!store.state.blocks.isEmpty)
-        #expect(store.state.shapeID >= 1)
+        // The board is now one of the outlines, cut out of it with holes.
+        #expect(GameEngine.silhouetteName(store.state.shapeID) != nil)
+        #expect(store.state.blocks.allSatisfy { $0.kind == .hole })
         #expect(store.state.movesUntilShift == GameEngine.movesPerShift)
         #expect(GameEngine.isValid(store.state))
         // The clock never runs in this game.

@@ -261,11 +261,13 @@ final class GameStore {
             state.movesUntilShift -= 1
             guard state.movesUntilShift <= 0 else { return }
             state.movesUntilShift = GameEngine.movesPerShift
-            // Any standard shape, or one of the boards of the theme in use.
-            let pool = Array(1...GameEngine.standardShapes) + Skin.current.boards
-            var pick = pool.randomElement(using: &rng) ?? 1
+            // A new outline for the board: a triangle, a ring, a cup and so on. Never
+            // the one it already has.
+            let first = GameEngine.firstSilhouette
+            let count = GameEngine.silhouetteNames.count
+            var pick = first + Int.random(in: 0..<count, using: &rng)
             if pick == state.shapeID {
-                pick = pick % GameEngine.standardShapes + 1
+                pick = first + (pick - first + 1) % count
             }
             target = pick
             turns = Int.random(in: 0..<4, using: &rng)
@@ -1056,7 +1058,14 @@ final class GameStore {
             // game, always a bomb in the endless one.
             let coin = Bool.random(using: &rng)
             let reward: TileKind = (mode == .timed && coin) ? .time : .bomb
+            let before = state.tiles.count
             spawnTile(forcing: reward)
+            // The reward lands with a big burst and a flash.
+            if state.tiles.count > before, let tile = state.tiles.last {
+                nextBurstID += 1
+                bursts.append(Burst(id: nextBurstID, row: tile.row, col: tile.col, value: 128, isSuper: true))
+                flashEvent += 1
+            }
         }
         // The endless game gets an extra tile after every rotation, so the board fills.
         if mode == .endless {

@@ -216,7 +216,7 @@ enum GameEngine {
     // MARK: Board shapes
 
     /// A board never has more obstacles than this.
-    static let maxBlocks = 4
+    static let maxBlocks = 6
     /// In the Shape Shift game the board changes shape after this many moves.
     static let movesPerShift = 4
 
@@ -259,7 +259,27 @@ enum GameEngine {
         [wall(0, 0), crate(1, 2), hole(3, 2)],
         [hole(0, 0), hole(3, 3), wall(1, 2)],
         [wall(1, 1), crate(2, 2), crate(0, 3)],
+        // From here on, the outlines of the Shape Shift game: holes that cut the
+        // board itself into a new shape. In the order of `silhouetteNames`.
+        [hole(0, 1), hole(0, 2), hole(0, 3), hole(1, 2), hole(1, 3), hole(2, 3)],
+        [hole(0, 0), hole(0, 3), hole(3, 0), hole(3, 3)],
+        [hole(1, 1), hole(1, 2), hole(2, 1), hole(2, 2)],
+        [hole(0, 2), hole(0, 3), hole(1, 2), hole(1, 3)],
+        [hole(1, 0), hole(2, 0), hole(3, 0), hole(1, 3), hole(2, 3), hole(3, 3)],
+        [hole(0, 1), hole(0, 2), hole(1, 1), hole(1, 2)],
+        [hole(1, 0), hole(2, 0), hole(1, 3), hole(2, 3)],
+        [hole(0, 2), hole(0, 3), hole(1, 3), hole(2, 0), hole(3, 0), hole(3, 1)],
     ]
+
+    /// Where the outlines of the Shape Shift game begin in `layouts`, and their names.
+    static let firstSilhouette = 31
+    static let silhouetteNames = ["Triangle", "Circle", "Ring", "Corner", "Tee", "Cup", "Beam", "Zigzag"]
+
+    /// The name of an outline, or nil for any other shape.
+    static func silhouetteName(_ shapeID: Int) -> String? {
+        let place = shapeID - firstSilhouette
+        return silhouetteNames.indices.contains(place) ? silhouetteNames[place] : nil
+    }
 
     /// How many shapes everyone has, after the open board. The rest belong to themes.
     static let standardShapes = 14

@@ -180,3 +180,13 @@ The owner asked for the remaining themes to get full scenes and moments too (`UI
 - **Gold Rush:** rocky ground with glinting veins of gold, a rail track, a mine cart heaped with gold rolling across. Moment: gold coins pour down, spinning.
 - **Party Lights:** a mirror ball throwing beams, a dance floor whose squares light in turn. Moment: fireworks.
 - **Galaxy:** drifting clouds of colour, a ringed planet with a moon, a flying saucer now and then. Moment: the stars stretch into streaks and a rocket flies across.
+
+## Real outlines, 3D obstacles, bomb and clock tiles, speed lightning (2026-11-19)
+
+More requests from the owner after playing build 27.
+
+- **Shape Shift changes the board's outline.** The owner found that the board "doesn't change to a new shape, it just rotates". Shape Shift now deals only **outlines**: eight layouts made entirely of holes (places 31 to 38 in `GameEngine.layouts`) that cut the board into a Triangle (10 cells), Circle, Ring, Corner, Tee (10 cells), Cup, Beam or Zigzag (12 cells unless noted), never the same one twice running, turned a random way. The call-out names the shape. In these layouts a hole takes out its cell and the gap round it, out to the board's edge, so the holes join up and the board's silhouette changes. A board has at most six blocks. A shape with fewer cells than there are tiles drops the tiles that have nowhere to go.
+- **Obstacles look like what they are.** A wall is a brick block with a lit top. A crate is a wooden crate with a lid, crossed braces and nails. A hole (outside Shape Shift) is a dark pit with a lit rim, rings that sink into it and specks that spiral down it. The rules have not changed: tiles still stop at the edge of a hole and do not fall in, because a hole that swallowed tiles would empty whole columns after every rotation.
+- **Bomb tile:** a round black bomb with its number on it and a fuse whose tip sparks. **Clock tile:** an alarm clock with its number on the face and a hand going round. Both look the same in every theme.
+- **Speed bonus:** each time it goes up, lightning strikes down the left edge of the board and speed lines streak across its top edge, with a sound.
+- **Chain reward:** the power-up tile lands with a big burst and a flash, the call-out says "Chain x2! Double points!", and the theme's big moment plays.
