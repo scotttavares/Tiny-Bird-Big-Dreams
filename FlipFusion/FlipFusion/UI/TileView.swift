@@ -51,7 +51,12 @@ struct TileView: View {
         let bottom = style.bottom
 
         ZStack {
-            if isStone {
+            if isStone, isFruit {
+                // In the Fruit Salad game the block that will not merge is a coconut.
+                Text("\u{1F965}")
+                    .font(.system(size: size * 0.74))
+                    .shadow(color: Color.black.opacity(0.45), radius: size * 0.05, x: 0, y: size * 0.05)
+            } else if isStone {
                 // A stone block is a boulder, not a tile, in every theme.
                 StoneView(size: size, look: skin.stone)
             } else if kind == .bomb {
