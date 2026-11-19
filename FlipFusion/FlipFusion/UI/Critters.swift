@@ -16,7 +16,7 @@ enum Critter: String, Equatable, Sendable {
     /// into pictures named "critter-", its name, "-f" and a two-figure number from 00.
     /// None means it is animated from its two poses instead.
     var filmFrames: Int {
-        self == .shark ? 25 : 0
+        self == .shark ? 84 : 0
     }
 
     /// The picture for one frame of the creature's film.
@@ -131,31 +131,33 @@ struct CritterFilm: View {
     }
 }
 
-/// The shark, played from film: it bursts up from below the board, rears back,
-/// twists, dives at the tiles and snaps its jaws, then sinks away.
+/// The shark, played from film: the whole animal swims in from the side, turns on
+/// the board and bites three times, then swims off the other way.
 struct SharkFilm: View {
     let side: CGFloat
     let onHit: (Int) -> Void
 
-    @State private var isUp = false
-    @State private var isGone = false
+    /// 0 before it arrives, 1 while it is over the board, 2 once it has gone.
+    @State private var stage = 0
 
     var body: some View {
-        CritterFilm(critter: .shark, width: side * 1.25)
-            .offset(y: isUp && !isGone ? side * 0.1 : side * 2.1)
+        let shift = stage == 0 ? -side * 1.9 : (stage == 1 ? 0 : side * 1.9)
+        CritterFilm(critter: .shark, width: side * 1.15, speed: 24)
+            .offset(x: shift, y: stage == 1 ? 0 : side * 0.25)
             .task {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
-                    isUp = true
+                withAnimation(.spring(response: 0.7, dampingFraction: 0.75)) {
+                    stage = 1
                 }
-                // The film runs a little over two seconds; the jaws come together
-                // three times in it.
+                // The film runs three and a half seconds; the jaws snap shut at
+                // these moments in it.
+                let waits = [1370, 880, 750]
                 for bite in 1...3 {
-                    try? await Task.sleep(for: .milliseconds(bite == 1 ? 520 : 640))
+                    try? await Task.sleep(for: .milliseconds(waits[bite - 1]))
                     onHit(bite)
                 }
-                try? await Task.sleep(for: .milliseconds(520))
-                withAnimation(.easeIn(duration: 0.45)) {
-                    isGone = true
+                try? await Task.sleep(for: .milliseconds(450))
+                withAnimation(.easeIn(duration: 0.5)) {
+                    stage = 2
                 }
             }
     }
