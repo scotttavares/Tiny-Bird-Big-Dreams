@@ -580,6 +580,7 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
 
 <section id="over" class="hidden" style="display:flex;flex-direction:column;align-items:center">
   <h2 id="overTitle" style="font-family:Caveat;font-size:46px;margin:6px 0"></h2>
+  <p class="record hidden" id="overWhy" role="status"></p>
   <div class="over"><figure><canvas id="ov0"></canvas><figcaption id="cap0">Player 1</figcaption></figure><figure><canvas id="ov1"></canvas><figcaption id="cap1">Player 2</figcaption></figure></div>
   <h3 style="font-family:Caveat;font-size:32px;margin:6px 0 2px">Medal ceremony</h3>
   <div id="medals" class="medals"></div>
@@ -4462,6 +4463,11 @@ function gameOver(winner, forfeit = false) {
     : vsCpu() ? (winner ? "The computer wins!" : "You win!") : `${players[winner].name} wins!`; setTimeout(() => sound("victory"), 900);
   [0, 1].forEach(i => { const c = $("cap" + i); c.textContent = `${players[i].name} (${inkName(INK[i])})` + (drumstickOn() ? ` · ${sideName(i)}` : ""); c.style.color = INK[i]; });
   $("replayView").classList.add("hidden"); $("videoNote").classList.add("hidden"); replayButtons(false);
+  const why = forfeit && onlineOn() ? onl.forfeitWhy : null, foeName = onlineOn() ? players[onl.them].name : "";
+  $("overWhy").textContent = why === "awol" ? `${foeName} went AWOL and left the battle.`
+    : why === "lost" ? `${foeName} lost the connection and didn't come back in time.`
+    : why === "me" ? "Your phone lost the connection and didn't get back in time." : "";
+  $("overWhy").classList.toggle("hidden", !why);
   $("rematchBtn").textContent = onlineOn() ? "Back to the lobby" : "Rematch"; $("menuBtn").textContent = onlineOn() ? "Leave the battle" : "Change settings";
   if (onlineOn()) return onlineOver(winner, forfeit); // medals, the record and the Big Reveal wait for the other phone's army
   gameOverTail(winner);
@@ -7917,7 +7923,7 @@ function onlineWaitStart() {
     $("onlineWaitText").textContent = hostGone
       ? `${name}, the host, lost the connection. Only the host can invite people, so nobody can bring them back: unless their phone reconnects in ${left}s, you win by forfeit.`
       : `${name} lost the connection. Waiting for them to come back... ${left}s`;
-    if (performance.now() >= onl.waitEnds) { onlineWaitEnd(); onlineForfeit(onl.seat); }
+    if (performance.now() >= onl.waitEnds) { onlineWaitEnd(); onlineForfeit(onl.seat, "lost"); }
   };
   el.classList.remove("hidden"); tick(); onl.timers.wait = setInterval(tick, 250);
 }
@@ -7976,8 +7982,11 @@ const onlineReturned = () => { if (onl.cut) { onl.cut = false; onl.cutBack = per
 net.on("left", e => { if (onlineOn() && !onl.over && e.pid && e.pid === onl.seats[onl.them]) { onl.cut = true; onlineWaitStart(); onl.silentWait = false; } });
 net.on("back", e => { if (onlineOn() && e.pid && e.pid === onl.seats[onl.them]) { onl.heard = performance.now(); onlineReturned(); onlineWaitEnd(); onlineResend(); } });
 net.on("hello", p => { if (onlineOn() && p && p.pid === onl.seats[onl.them]) { onl.heard = performance.now(); onlineReturned(); onlineWaitEnd(); onlineResend(); } });
-function onlineForfeit(winner) {
+// why (user, 2026-11-18: "will the other player be notified that the other player retreated?"): "awol" = they went AWOL,
+// "lost" = they lost the connection and never came back, "me" = this phone lost it. The over screen says which.
+function onlineForfeit(winner, why) {
   if (!onlineOn() || onl.over) return;
+  onl.forfeitWhy = why || null;
   clearInterval(turnTimer); turnEnds = 0; pending = flick = dotAim = null;
   gameOver(winner, true);
 }
@@ -7997,9 +8006,9 @@ net.on("over", d => {
   if (!onlineMine(d) || onl.over || d.forfeit !== true) return; // (otherwise this phone works out the end from the last result itself)
   // They gave up: always. They say they waited this phone out: only if this phone really lost the connection (it's down
   // now, or came back moments ago), so a connected opponent can't simply declare a win; otherwise this phone's own wait starts.
-  if (d.winner === onl.seat) onlineForfeit(d.winner);
+  if (d.winner === onl.seat) onlineForfeit(d.winner, "awol");
   else if (d.winner === onl.them) {
-    if (onl.cut || (onl.cutBack && performance.now() - onl.cutBack < ONLINE_CLAIM_MS)) onlineForfeit(d.winner);
+    if (onl.cut || (onl.cutBack && performance.now() - onl.cutBack < ONLINE_CLAIM_MS)) onlineForfeit(d.winner, "me");
     else { onlineWaitStart(); onl.silentWait = false; } // not accepted: they may have lost us while this phone never noticed, so this phone starts its own wait (no-op if running) rather than waiting forever
   }
 });
