@@ -7221,6 +7221,13 @@ function lobbyEnd(text, leave) {
   lob.seats = []; lob.spectators = []; lob.queue = []; lob.settings = null; lob.removed.clear(); onlineStart = null; lob.note = null;
   lob.wait.forEach(clearTimeout); lob.wait.clear(); lob.quit.clear(); lob.lastMatch = null;
   spectatorEnd(); bigRevealHide(); wheelReset();
+  // 1.1 (user, 2026-11-18: "when we leave lobby the screens go blank and freeze"): after a battle the lobby was the only
+  // page up (game and over already hidden), so closing it left nothing. With no battle running, HQ always comes back.
+  if (!onlineOn()) {
+    replayRun++; clearInterval(turnTimer); turnEnds = 0; phase = "menu"; pending = flick = dotAim = null;
+    ["game", "tent", "over", "replayView", "foldFx"].forEach(id => $(id).classList.add("hidden"));
+    $("menu").classList.remove("hidden"); window.scrollTo(0, 0);
+  }
   if (leave) net.leave();
   if (text) { onlineOpen = false; onlineStatus(text); $("online").classList.remove("hidden"); }
 }
