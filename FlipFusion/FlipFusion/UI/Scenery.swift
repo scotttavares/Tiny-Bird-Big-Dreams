@@ -64,15 +64,18 @@ struct TileOutline: InsettableShape {
 /// to reduce motion.
 struct SceneView: View {
     let skin: Skin
+    /// True when a painted picture is already behind this: only what moves is drawn.
+    var isPainted = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let backdrop = skin.backdrop
+        let painted = isPainted
         TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduceMotion)) { timeline in
             let time = timeline.date.timeIntervalSinceReferenceDate
             Canvas { context, size in
-                SceneArt.draw(backdrop, in: &context, size: size, time: time)
+                SceneArt.draw(backdrop, in: &context, size: size, time: time, painted: painted)
             }
         }
         .allowsHitTesting(false)
@@ -88,11 +91,18 @@ enum SceneArt {
         case dot, ring, heart, star, diamond
     }
 
-    static func draw(_ backdrop: Skin.Backdrop, in context: inout GraphicsContext, size: CGSize, time: Double) {
+    /// `painted` says a painted picture of the scene is already there, so the parts
+    /// that stand still (mountains, the grid) are left to it.
+    static func draw(_ backdrop: Skin.Backdrop, in context: inout GraphicsContext, size: CGSize, time: Double, painted: Bool = false) {
         switch backdrop {
         case .grid:
-            eighties(&context, size: size, time: time)
-            grid(&context, size: size, time: time)
+            if painted {
+                // Stars twinkling over the painted sky.
+                stars(&context, size: CGSize(width: size.width, height: size.height * 0.6), time: time, count: 26)
+            } else {
+                eighties(&context, size: size, time: time)
+                grid(&context, size: size, time: time)
+            }
             drift(&context, size: size, time: time, count: 10, mark: .diamond,
                   colors: [Color(hex: 0x8FF0FF), Color(hex: 0xFF7AD9)], sizes: 4...9, rising: true, pace: 0.6, twinkle: true)
         case .sun:
@@ -502,5 +512,39 @@ struct StoneView: View {
         }
         .frame(width: size * 0.9, height: size * 0.9, alignment: .top)
         .frame(width: size, height: size)
+    }
+}
+
+/// A theme's painted backdrop, when it has one (an image named "backdrop-" and the
+/// theme's id in the asset catalogue), filling whatever space it is given.
+struct PaintedBackdrop: View {
+    let skin: Skin
+
+    static func name(_ skin: Skin) -> String {
+        "backdrop-" + skin.id
+    }
+
+    /// True when the theme has a painted backdrop.
+    static func has(_ skin: Skin) -> Bool {
+        UIImage(named: name(skin)) != nil
+    }
+
+    var body: some View {
+        Color.black
+            .overlay {
+                Image(Self.name(skin))
+                    .resizable()
+                    .scaledToFill()
+            }
+            // A little darker toward the top, where the score and title sit.
+            .overlay {
+                LinearGradient(
+                    colors: [Color.black.opacity(0.3), Color.black.opacity(0.1), Color.black.opacity(0)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            }
+            .clipped()
+            .accessibilityHidden(true)
     }
 }

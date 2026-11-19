@@ -386,20 +386,28 @@ struct GameScreen: View {
 /// Deep navy backdrop with a soft blue glow behind the board.
 struct BackgroundView: View {
     var body: some View {
+        let skin = Skin.current
+        let isPainted = PaintedBackdrop.has(skin)
+
         ZStack {
-            LinearGradient(
-                colors: [Theme.backgroundTop, Theme.backgroundBottom],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            RadialGradient(
-                colors: [Theme.backgroundGlow.opacity(0.55), Theme.backgroundGlow.opacity(0)],
-                center: UnitPoint(x: 0.5, y: 0.5),
-                startRadius: 10,
-                endRadius: 380
-            )
-            // The moving backdrop of the theme in use.
-            SceneView(skin: Skin.current)
+            if isPainted {
+                // A painted picture of the theme's scene.
+                PaintedBackdrop(skin: skin)
+            } else {
+                LinearGradient(
+                    colors: [Theme.backgroundTop, Theme.backgroundBottom],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                RadialGradient(
+                    colors: [Theme.backgroundGlow.opacity(0.55), Theme.backgroundGlow.opacity(0)],
+                    center: UnitPoint(x: 0.5, y: 0.5),
+                    startRadius: 10,
+                    endRadius: 380
+                )
+            }
+            // Whatever moves in the theme in use.
+            SceneView(skin: skin, isPainted: isPainted)
         }
     }
 }

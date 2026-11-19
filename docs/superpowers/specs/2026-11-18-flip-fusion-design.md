@@ -200,3 +200,9 @@ More requests from the owner after playing build 27.
 ## The shark stirs the board (2026-11-19)
 
 At the owner's request the Ocean theme's shark now changes the game: as it covers the board (0.8 seconds into its moment) every tile is thrown to a random cell and up to two are knocked off, stone blocks first and then the smallest tiles, never leaving fewer than two (`GameStore.stirBoard`). If a move is still playing it tries once more 0.6 seconds later. This makes Ocean play differently from the other themes, on purpose.
+
+## Painted backdrops (2026-11-19)
+
+The owner asked for premium art from an image connector and chose theme backdrops first. A theme may now have a painted backdrop: an image named `backdrop-<theme id>` in the asset catalogue (`PaintedBackdrop` in `UI/Scenery.swift`). When one exists it replaces the plain gradient behind the game and on the theme's card, and the animated scene draws only what moves. A theme without one looks as before.
+
+Only **Neon** has one so far (generated with the owner's OpenArt account, GPT Image 2.5 Sunburst, 9:16 at 2K, 10 credits). The account had 19 credits and the Higgsfield account none, so the other eight wait on more credits (about 80 at the same settings). A small preview is kept at `docs/flipfusion/backdrop-neon-preview.jpg`.

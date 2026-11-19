@@ -423,12 +423,17 @@ struct HelpView: View {
             .frame(maxWidth: .infinity)
             .background {
                 ZStack {
-                    LinearGradient(
-                        colors: [Theme.chrome(0x1D2F8F, skin: skin), Theme.chrome(0x070A26, skin: skin)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    SceneView(skin: skin)
+                    if PaintedBackdrop.has(skin) {
+                        PaintedBackdrop(skin: skin)
+                        SceneView(skin: skin, isPainted: true)
+                    } else {
+                        LinearGradient(
+                            colors: [Theme.chrome(0x1D2F8F, skin: skin), Theme.chrome(0x070A26, skin: skin)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        SceneView(skin: skin)
+                    }
                 }
             }
             .clipShape(card)
