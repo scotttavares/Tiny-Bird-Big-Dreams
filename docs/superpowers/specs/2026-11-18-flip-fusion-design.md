@@ -146,3 +146,14 @@ The owner asked for boards of different shapes with walls and holes, then for "a
 - **When the shape changes**, a tile standing where a block now is jumps to a random empty cell, biggest tiles first. If the board has no empty cell, that tile is removed (rare: it needs a full board).
 - Games saved before this have no blocks and open as before.
 - Walls and holes follow the same rule on purpose; a hole that swallowed tiles would drain whole columns after every rotation on a board this small.
+
+## Themes bring boards, effects and a game; the intro keeps its look (2026-11-18)
+
+The owner asked that themes "unlock new board games and boards and better animations but cost more gems", and that the opening animation never change with the theme.
+
+- **Prices:** Sunset 40 gems, Ocean 80, Bubblegum 120, Lava 180, Frost 250 (670 in all; they were 15 to 120). Gold Rush, Party Lights and Galaxy are still won in play.
+- **Two boards per theme.** Each theme but Neon has two shapes of its own (`Skin.boards`, places 15 to 30 in `GameEngine.layouts`). With the theme on, levels 2 and 3 are played on them before the standard shapes, and the Shape Shift game deals them as well.
+- **Bigger effects** with any theme but Neon: merges throw six more sparks and a second ring, merged tiles pop larger, and confetti is made of the theme's own sparks.
+- **Shape Shift unlocks with the player's first theme beyond Neon**, bought or won (`GameStore.isUnlocked`). Until then its button shows a padlock and says how to open it. Gold Rush (score 2,000) opens it without spending anything.
+- **The intro** always plays in the original Neon look: its own backdrop, Neon tiles, plain round sparks.
+- The largest gem pack is 150 gems, so the dearest themes now take more than one pack. A bigger pack would need a new product in App Store Connect.

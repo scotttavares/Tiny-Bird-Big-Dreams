@@ -251,15 +251,16 @@ final class GameStore {
             state.movesUntilShift -= 1
             guard state.movesUntilShift <= 0 else { return }
             state.movesUntilShift = GameEngine.movesPerShift
-            let shapes = GameEngine.layouts.count - 1
-            var pick = Int.random(in: 1...shapes, using: &rng)
+            // Any standard shape, or one of the boards of the theme in use.
+            let pool = Array(1...GameEngine.standardShapes) + Skin.current.boards
+            var pick = pool.randomElement(using: &rng) ?? 1
             if pick == state.shapeID {
-                pick = pick % shapes + 1
+                pick = pick % GameEngine.standardShapes + 1
             }
             target = pick
             turns = Int.random(in: 0..<4, using: &rng)
         } else {
-            let wanted = GameEngine.layoutIndex(forLevel: level)
+            let wanted = GameEngine.layoutIndex(forLevel: level, signature: Skin.current.boards)
             if wanted != state.shapeID {
                 target = wanted
             }
@@ -348,6 +349,12 @@ final class GameStore {
     /// At the end of a game: one gem for every this many points, and more for a new best.
     static let pointsPerGem = 500
     static let gemsForBest = 2
+
+    /// The Shape Shift game opens with the player's first theme beyond the free one,
+    /// bought or won.
+    func isUnlocked(_ mode: Mode) -> Bool {
+        mode != .shift || !ownedSkins.isEmpty
+    }
 
     /// True when the theme is the player's to use.
     func owns(_ skin: Skin) -> Bool {
@@ -523,9 +530,13 @@ final class GameStore {
         }
         self.boosterCounts = counts
         self.gems = max(0, defaults.integer(forKey: Key.gems))
-        self.ownedSkins = Set(defaults.stringArray(forKey: Key.skins) ?? [])
+        let owned = Set(defaults.stringArray(forKey: Key.skins) ?? [])
+        self.ownedSkins = owned
 
-        let mode = Mode(rawValue: defaults.string(forKey: Key.mode) ?? "") ?? .timed
+        var mode = Mode(rawValue: defaults.string(forKey: Key.mode) ?? "") ?? .timed
+        if mode == .shift, owned.isEmpty {
+            mode = .timed
+        }
         let loaded = GameStore.load(mode, from: defaults)
         self.mode = mode
         self.state = loaded.state
@@ -539,7 +550,7 @@ final class GameStore {
 
     /// Changes the way to play. The game left behind is saved and waits for you.
     func switchMode(_ newMode: Mode) {
-        guard !isAnimating, newMode != mode else { return }
+        guard !isAnimating, newMode != mode, isUnlocked(newMode) else { return }
         save()
         mode = newMode
         defaults.set(newMode.rawValue, forKey: Key.mode)

@@ -71,7 +71,7 @@ struct HelpView: View {
                             .foregroundStyle(Theme.counter)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    Text("Every theme has its own moving backdrop, tile shape and sparks. Win gems with super combos, chains, level prizes, big scores and new best scores.")
+                    Text("Every theme has its own moving backdrop, tile shape and sparks. A new theme also brings two boards of its own and bigger effects, and your first one unlocks the Shape Shift game. Win gems with super combos, chains, level prizes, big scores and new best scores.")
                         .font(.system(size: 15, weight: .medium, design: .rounded))
                         .foregroundStyle(Theme.label)
                         .fixedSize(horizontal: false, vertical: true)
@@ -148,7 +148,7 @@ struct HelpView: View {
                 section("Game modes") {
                     row(symbol: "timer", title: "Timed", text: "Two minutes on the clock, which starts on your first swipe. Level up and merge clock tiles to win more time.")
                     row(symbol: "infinity", title: "Endless", text: "No clock. An extra tile lands after every rotation, and the game ends when no move is left.")
-                    row(symbol: "shuffle", title: "Shape Shift", text: "No clock. Every \(GameEngine.movesPerShift) moves the board changes to a new shape picked at random. The game ends when no move is left.")
+                    row(symbol: "shuffle", title: "Shape Shift", text: "Unlocks with your first new theme. No clock. Every \(GameEngine.movesPerShift) moves the board changes to a new shape picked at random. The game ends when no move is left.")
                     Text("Tap 2 Minutes, Endless or Shape Shift under the board to switch. Each mode keeps its own game and best score.")
                         .font(.system(size: 15, weight: .medium, design: .rounded))
                         .foregroundStyle(Theme.label)
@@ -370,6 +370,13 @@ struct HelpView: View {
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                     .frame(height: 32, alignment: .top)
+                if skin.isPremium {
+                    Text("+\(skin.boards.count) boards · bigger effects")
+                        .font(.system(size: 11, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Theme.counter)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
                 themeTag(skin, owned: owned, inUse: inUse)
             }
             .padding(.horizontal, 8)

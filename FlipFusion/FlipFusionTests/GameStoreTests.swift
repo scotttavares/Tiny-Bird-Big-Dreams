@@ -349,9 +349,13 @@ struct GameStoreTests {
 
     @Test func aThemeIsBoughtWithGems() {
         let defaults = freshDefaults()
-        defaults.set(20, forKey: "ff.gems")
+        defaults.set(45, forKey: "ff.gems")
         let store = GameStore(defaults: defaults, animated: false)
         let sunset = Skin.named("sunset")
+        // No theme yet, so no Shape Shift game.
+        #expect(!store.isUnlocked(.shift))
+        store.switchMode(.shift)
+        #expect(store.mode == .timed)
         #expect(store.owns(Skin.named("neon")))
         #expect(!store.owns(sunset))
         #expect(store.buy(sunset))
@@ -513,6 +517,12 @@ struct GameStoreTests {
         #expect(Skin.all[0].unlock == .free)
         // A saved theme that no longer exists falls back to the free one.
         #expect(Skin.named("no-such-theme").id == Skin.all[0].id)
+        // The free theme has no boards of its own; every other has two, shared with no one.
+        #expect(Skin.all[0].boards.isEmpty)
+        let own = Skin.all.dropFirst().flatMap(\.boards)
+        #expect(own.count == 16)
+        #expect(Set(own).count == 16)
+        #expect(own.allSatisfy { $0 > GameEngine.standardShapes && $0 < GameEngine.layouts.count })
     }
 
     @Test func biggerGemPacksShowTheirBonus() {
@@ -571,7 +581,11 @@ struct GameStoreTests {
     @Test func theShapeShiftGameChangesTheBoardEveryFewMoves() {
         let defaults = freshDefaults()
         defaults.set("shift", forKey: "ff.mode")
+        // Saved as the game in play, but with no theme it is not open yet.
+        #expect(GameStore(defaults: defaults, animated: false).mode == .timed)
+        defaults.set(["sunset"], forKey: "ff.skins")
         let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.isUnlocked(.shift))
         #expect(store.mode == .shift)
         #expect(store.state.blocks.isEmpty)
         #expect(!store.isTimeUp)

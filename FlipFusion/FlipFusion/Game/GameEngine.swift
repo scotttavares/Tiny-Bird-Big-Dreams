@@ -242,12 +242,38 @@ enum GameEngine {
         [wall(2, 0), wall(1, 3)],
         [hole(3, 0), wall(1, 1), crate(2, 2)],
         [crate(1, 1), crate(1, 2), crate(2, 1)],
+        // From here on, two boards for each theme, in the order of `Skin.all`.
+        [hole(3, 0), hole(3, 3)],
+        [wall(1, 1), hole(0, 3)],
+        [hole(0, 0), hole(0, 3), hole(3, 0)],
+        [crate(1, 1), crate(2, 2), hole(0, 3)],
+        [crate(1, 1), crate(2, 1)],
+        [crate(0, 0), crate(3, 3), crate(1, 2)],
+        [wall(1, 1), wall(1, 2), hole(3, 0)],
+        [wall(0, 1), wall(2, 2), crate(3, 0)],
+        [wall(1, 1), wall(1, 2)],
+        [hole(0, 0), wall(2, 2), wall(1, 3)],
+        [crate(1, 1), crate(1, 2), crate(2, 2)],
+        [crate(0, 3), crate(3, 0), wall(1, 1)],
+        [hole(1, 0), hole(2, 3)],
+        [wall(0, 0), crate(1, 2), hole(3, 2)],
+        [hole(0, 0), hole(3, 3), wall(1, 2)],
+        [wall(1, 1), crate(2, 2), crate(0, 3)],
     ]
 
-    /// Which shape a level is played on: the open board on level 1, then each shape
-    /// in turn, starting over when they run out.
-    static func layoutIndex(forLevel level: Int) -> Int {
-        level <= 1 ? 0 : 1 + (level - 2) % (layouts.count - 1)
+    /// How many shapes everyone has, after the open board. The rest belong to themes.
+    static let standardShapes = 14
+
+    /// Which shape a level is played on: the open board on level 1, then the boards
+    /// of the theme in use (`signature`), then each standard shape in turn, starting
+    /// over when they run out.
+    static func layoutIndex(forLevel level: Int, signature: [Int] = []) -> Int {
+        guard level > 1 else { return 0 }
+        let step = level - 2
+        if step < signature.count {
+            return signature[step]
+        }
+        return 1 + (step - signature.count) % standardShapes
     }
 
     /// The crates a slide smashes: any crate with a merge in the cell beside it

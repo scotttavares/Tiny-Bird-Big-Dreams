@@ -55,6 +55,8 @@ struct MergeBurst: View {
     /// The theme's own spark and tile shape.
     var spark: String = Skin.current.spark
     var shape: Skin.TileShape = Skin.current.shape
+    /// Themes beyond the free one throw more sparks and a second ring.
+    var flair: Bool = Skin.current.isPremium
 
     @State private var progress: CGFloat = 0
 
@@ -62,13 +64,19 @@ struct MergeBurst: View {
         let isBig = isBlast || isSuper
         let ringGrowth: CGFloat = isBlast ? 2.1 : (isSuper ? 1.3 : 0.5)
         let reach: CGFloat = isBlast ? size * 1.7 : (isSuper ? size * 1.4 : size * 0.8)
-        let sparks = isBig ? 14 : 8
+        let sparks = (isBig ? 14 : 8) + (flair ? 6 : 0)
         let sparkSize: CGFloat = isBig ? size * 0.22 : size * 0.15
 
         ZStack {
             TileOutline(shape: shape)
                 .strokeBorder(isBlast ? color : Color.white.opacity(0.9), lineWidth: isBlast ? 5 : 3)
                 .scaleEffect(1 + ringGrowth * progress)
+
+            if flair {
+                TileOutline(shape: shape)
+                    .strokeBorder(color.opacity(0.7), lineWidth: 2)
+                    .scaleEffect(1 + ringGrowth * 2.2 * progress)
+            }
 
             ForEach(0..<sparks, id: \.self) { index in
                 let angle = CGFloat(index) / CGFloat(sparks) * 2 * .pi
@@ -181,6 +189,8 @@ struct Flash: View {
 /// Coloured paper thrown out from the middle of the board.
 struct Confetti: View {
     let side: CGFloat
+    /// Themes beyond the free one throw their own sparks instead of paper.
+    var symbol: String? = Skin.current.isPremium ? Skin.current.spark : nil
 
     @State private var progress: CGFloat = 0
 
@@ -198,9 +208,17 @@ struct Confetti: View {
                 let angle = Double(index) * 2.399963
                 let reach = side * (0.35 + 0.04 * CGFloat((index * 37) % 10))
                 let spin = 360.0 + Double((index * 47) % 360)
-                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                    .fill(Self.colors[index % Self.colors.count])
-                    .frame(width: width, height: width * 1.8)
+                Group {
+                    if let symbol {
+                        Image(systemName: symbol)
+                            .font(.system(size: width * 2.2, weight: .bold))
+                            .foregroundStyle(Self.colors[index % Self.colors.count])
+                    } else {
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .fill(Self.colors[index % Self.colors.count])
+                            .frame(width: width, height: width * 1.8)
+                    }
+                }
                     .rotationEffect(.degrees(Double(progress) * spin))
                     .offset(
                         x: CGFloat(cos(angle)) * reach * progress,
@@ -269,6 +287,8 @@ struct BounceButtonStyle: ButtonStyle {
 struct ModeSwitch: View {
     let scale: CGFloat
     let mode: GameStore.Mode
+    /// Games the player has not unlocked yet: shown with a padlock.
+    var lockedModes: Set<GameStore.Mode> = []
     let onPick: (GameStore.Mode) -> Void
 
     var body: some View {
@@ -285,7 +305,7 @@ struct ModeSwitch: View {
             onPick(target)
         } label: {
             HStack(spacing: 5 * scale) {
-                Image(systemName: symbol)
+                Image(systemName: lockedModes.contains(target) ? "lock.fill" : symbol)
                     .font(.system(size: 12 * scale, weight: .heavy))
                 Text(title)
                     .font(.system(size: 14 * scale, weight: .heavy, design: .rounded))

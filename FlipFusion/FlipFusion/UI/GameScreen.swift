@@ -153,7 +153,7 @@ struct GameScreen: View {
                     .minimumScaleFactor(0.7)
                     .padding(.top, 12 * scale)
 
-                ModeSwitch(scale: scale, mode: store.mode) { mode in
+                ModeSwitch(scale: scale, mode: store.mode, lockedModes: store.isUnlocked(.shift) ? [] : [.shift]) { mode in
                     pickMode(mode)
                 }
                 .padding(.top, 12 * scale)
@@ -308,6 +308,10 @@ struct GameScreen: View {
 
     /// A tap on one of the two mode buttons under the tagline.
     private func pickMode(_ mode: GameStore.Mode) {
+        guard store.isUnlocked(mode) else {
+            show("Shape Shift unlocks with your first new theme", seconds: 2.8)
+            return
+        }
         guard !store.isAnimating, mode != store.mode else { return }
         withAnimation(.easeInOut(duration: 0.25)) {
             store.switchMode(mode)

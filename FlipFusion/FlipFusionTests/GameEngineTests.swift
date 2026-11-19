@@ -336,7 +336,13 @@ struct GameEngineTests {
     }
 
     @Test func everyBoardShapeIsSound() {
-        #expect(GameEngine.layouts.count == 15)
+        #expect(GameEngine.layouts.count == 31)
+        #expect(Set(GameEngine.layouts).count == 31)
+        // With a theme's two boards, levels 2 and 3 use them and the rest follow.
+        #expect(GameEngine.layoutIndex(forLevel: 1, signature: [15, 16]) == 0)
+        #expect(GameEngine.layoutIndex(forLevel: 2, signature: [15, 16]) == 15)
+        #expect(GameEngine.layoutIndex(forLevel: 3, signature: [15, 16]) == 16)
+        #expect(GameEngine.layoutIndex(forLevel: 4, signature: [15, 16]) == 1)
         #expect(GameEngine.layouts[0].isEmpty)
         for layout in GameEngine.layouts.dropFirst() {
             #expect(!layout.isEmpty)

@@ -88,35 +88,41 @@ struct Skin: Identifiable, Equatable, Sendable {
     let shape: TileShape
     /// The symbol that flies out of a merge.
     let spark: String
+    /// The theme's own board shapes (places in `GameEngine.layouts`). With the theme
+    /// on, levels 2 and 3 are played on them, and the Shape Shift game deals them too.
+    let boards: [Int]
+
+    /// Every theme but the free one brings its own boards and bigger effects.
+    var isPremium: Bool { unlock != .free }
 
     static let all: [Skin] = [
         Skin(id: "neon", name: "Neon", blurb: "The classic glow", unlock: .free,
              chromeHue: nil, chromeBrightness: 1, tiles: .original,
-             backdrop: .grid, shape: .rounded, spark: "sparkle"),
-        Skin(id: "sunset", name: "Sunset", blurb: "A striped sun going down", unlock: .gems(15),
+             backdrop: .grid, shape: .rounded, spark: "sparkle", boards: []),
+        Skin(id: "sunset", name: "Sunset", blurb: "A striped sun going down", unlock: .gems(40),
              chromeHue: 0.92, chromeBrightness: 1.05, tiles: .shifted(0.04),
-             backdrop: .sun, shape: .rounded, spark: "sun.max.fill"),
-        Skin(id: "ocean", name: "Ocean", blurb: "Bubble tiles under the sea", unlock: .gems(30),
+             backdrop: .sun, shape: .rounded, spark: "sun.max.fill", boards: [15, 16]),
+        Skin(id: "ocean", name: "Ocean", blurb: "Bubble tiles under the sea", unlock: .gems(80),
              chromeHue: 0.53, chromeBrightness: 0.95, tiles: .band(from: 0.42, to: 0.66),
-             backdrop: .bubbles, shape: .bubble, spark: "drop.fill"),
-        Skin(id: "bubblegum", name: "Bubblegum", blurb: "Jelly tiles and floating hearts", unlock: .gems(50),
+             backdrop: .bubbles, shape: .bubble, spark: "drop.fill", boards: [17, 18]),
+        Skin(id: "bubblegum", name: "Bubblegum", blurb: "Jelly tiles and floating hearts", unlock: .gems(120),
              chromeHue: 0.84, chromeBrightness: 1.25, tiles: .pastel,
-             backdrop: .hearts, shape: .jelly, spark: "heart.fill"),
-        Skin(id: "lava", name: "Lava", blurb: "Hot tiles and flying sparks", unlock: .gems(80),
+             backdrop: .hearts, shape: .jelly, spark: "heart.fill", boards: [19, 20]),
+        Skin(id: "lava", name: "Lava", blurb: "Hot tiles and flying sparks", unlock: .gems(180),
              chromeHue: 0.02, chromeBrightness: 0.8, tiles: .band(from: 0.93, to: 1.13),
-             backdrop: .embers, shape: .hex, spark: "flame.fill"),
-        Skin(id: "frost", name: "Frost", blurb: "Ice crystals in falling snow", unlock: .gems(120),
+             backdrop: .embers, shape: .hex, spark: "flame.fill", boards: [21, 22]),
+        Skin(id: "frost", name: "Frost", blurb: "Ice crystals in falling snow", unlock: .gems(250),
              chromeHue: 0.58, chromeBrightness: 1.15, tiles: .icy,
-             backdrop: .snow, shape: .crystal, spark: "snowflake"),
+             backdrop: .snow, shape: .crystal, spark: "snowflake", boards: [23, 24]),
         Skin(id: "gold", name: "Gold Rush", blurb: "Cut gems in a shower of gold", unlock: .score(2000),
              chromeHue: 0.09, chromeBrightness: 0.9, tiles: .band(from: 0.02, to: 0.16),
-             backdrop: .coins, shape: .gem, spark: "diamond.fill"),
+             backdrop: .coins, shape: .gem, spark: "diamond.fill", boards: [25, 26]),
         Skin(id: "party", name: "Party Lights", blurb: "Sweeping coloured lights", unlock: .level(7),
              chromeHue: 0.8, chromeBrightness: 0.75, tiles: .shifted(0.25),
-             backdrop: .lights, shape: .jelly, spark: "sparkles"),
+             backdrop: .lights, shape: .jelly, spark: "sparkles", boards: [27, 28]),
         Skin(id: "galaxy", name: "Galaxy", blurb: "Planet tiles and shooting stars", unlock: .megaCombo,
              chromeHue: 0.76, chromeBrightness: 0.7, tiles: .shifted(0.5),
-             backdrop: .stars, shape: .orb, spark: "star.fill"),
+             backdrop: .stars, shape: .orb, spark: "star.fill", boards: [29, 30]),
     ]
 
     static func named(_ id: String) -> Skin {

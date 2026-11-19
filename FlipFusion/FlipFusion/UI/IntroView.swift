@@ -64,7 +64,7 @@ struct IntroView: View {
                 .rotationEffect(.degrees(turn))
 
                 if isFused {
-                    MergeBurst(color: Theme.fusion[0], size: tile, isBlast: true, spark: "circle.fill", shape: .rounded)
+                    MergeBurst(color: Theme.fusion[0], size: tile, isBlast: true, spark: "circle.fill", shape: .rounded, flair: false)
                 }
 
                 VStack(spacing: 18 * scale) {
