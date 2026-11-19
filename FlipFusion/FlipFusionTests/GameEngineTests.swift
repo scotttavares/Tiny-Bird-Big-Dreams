@@ -253,12 +253,12 @@ struct GameEngineTests {
     }
 
     @Test func theGameGetsHarderWithTheLevel() {
-        #expect(GameEngine.stonesPerHundred(level: 2) == 0)
-        #expect(GameEngine.stonesPerHundred(level: 3) == 4)
-        #expect(GameEngine.stonesPerHundred(level: 30) == 14)
-        #expect(GameEngine.extraTilePerHundred(level: 3) == 0)
-        #expect(GameEngine.extraTilePerHundred(level: 4) == 10)
-        #expect(GameEngine.extraTilePerHundred(level: 30) == 40)
+        #expect(GameEngine.stonesPerHundred(level: 1) == 0)
+        #expect(GameEngine.stonesPerHundred(level: 3) == 8)
+        #expect(GameEngine.stonesPerHundred(level: 30) == 18)
+        #expect(GameEngine.extraTilePerHundred(level: 1) == 0)
+        #expect(GameEngine.extraTilePerHundred(level: 4) == 36)
+        #expect(GameEngine.extraTilePerHundred(level: 30) == 60)
     }
 
     @Test func thereAreNeverTooManyStoneBlocks() {

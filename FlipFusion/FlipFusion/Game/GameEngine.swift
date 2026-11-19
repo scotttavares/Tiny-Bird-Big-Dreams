@@ -380,17 +380,21 @@ enum GameEngine {
     }
 
     /// At most this many stone blocks sit on the board at once.
-    static let maxStones = 3
+    static let maxStones = 4
 
-    /// Out of every 100 new tiles, how many are stone blocks. None before level 3.
+    /// Out of every 100 new tiles, how many are stone blocks. None on level 1.
     static func stonesPerHundred(level: Int) -> Int {
-        level < 3 ? 0 : min(14, 4 + 2 * (level - 3))
+        level < 2 ? 0 : min(18, 5 + 3 * (level - 2))
     }
 
-    /// Out of every 100 moves, how many drop a second new tile. None before level 4.
+    /// Out of every 100 moves, how many drop a second new tile. None on level 1.
     static func extraTilePerHundred(level: Int) -> Int {
-        level < 4 ? 0 : min(40, 10 * (level - 3))
+        level < 2 ? 0 : min(60, 12 * (level - 1))
     }
+
+    /// From this level on, the timed game too gets an extra tile each time the board
+    /// turns, as the games without a clock always do.
+    static let turnTileLevel = 3
 
     /// Adds a new tile (a 2 nine times in ten, otherwise a 4) in a random empty cell.
     /// Now and then it is a clock tile or a bomb, and from level 3 a stone block.

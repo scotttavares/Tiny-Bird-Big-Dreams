@@ -504,6 +504,14 @@ final class GameStore {
         case monkey
         /// A shark comes out, mixes the tiles up and eats two.
         case shark
+
+        /// True for the animals and aliens.
+        var isCreature: Bool {
+            switch self {
+            case .monkey, .shark, .ufo, .trex: return true
+            default: return false
+            }
+        }
         /// A flying saucer hovers over the board and its aliens beam two tiles up.
         case ufo
         /// A T-rex stamps across, mixing the tiles up and stamping three down a size.
@@ -527,19 +535,30 @@ final class GameStore {
     /// Picks what is in a crate. Out of 100: 22 are 100 coins, 12 a gem, 12 a free
     /// booster, 8 double points, 8 ten seconds (100 coins when there is no clock);
     /// then 12 a monkey, 9 a shark, 6 a flying saucer, 6 a T-rex and 5 two stone blocks.
+    /// After a creature comes out of a crate, this many crates hold none.
+    static let creatureRest = 4
+    /// Crates opened since the last creature.
+    @ObservationIgnored private var cratesSinceCreature = GameStore.creatureRest
+
     private func rollCrate() -> CrateFind {
         let roll = Int.random(in: 0..<100, using: &rng)
         switch roll {
-        case ..<22: return .coins(100)
-        case ..<34: return .gem
-        case ..<46: return .booster(Booster.allCases.randomElement(using: &rng) ?? .flip)
-        case ..<54: return .fever
-        case ..<62: return mode == .timed ? .time : .coins(100)
-        case ..<74: return .monkey
-        case ..<83: return .shark
-        case ..<89: return .ufo
-        case ..<95: return .trex
+        case ..<26: return .coins(100)
+        case ..<40: return .gem
+        case ..<54: return .booster(Booster.allCases.randomElement(using: &rng) ?? .flip)
+        case ..<64: return .fever
+        case ..<74: return mode == .timed ? .time : .coins(100)
+        case ..<92: break
         default: return .stones
+        }
+        // A creature: 18 crates in 100 hold one, and never one of the next few crates
+        // after a creature has been out, so they stay a surprise.
+        guard cratesSinceCreature >= Self.creatureRest else { return .coins(100) }
+        switch roll {
+        case ..<79: return .monkey
+        case ..<83: return .shark
+        case ..<87: return .ufo
+        default: return .trex
         }
     }
 
@@ -592,7 +611,9 @@ final class GameStore {
         case .ufo:
             abductTiles(2)
         case .trex:
-            scatterTiles(dropping: 0)
+            // It throws the tiles about, bites a piece out of the board and stamps
+            // three tiles down.
+            scatterTiles(dropping: 0, chewing: 1)
             stompTiles(3)
         case .stones:
             spawnTile(forcing: .stone)
@@ -601,6 +622,7 @@ final class GameStore {
         }
         lastCrateFind = find
         crateOpenEvent += 1
+        cratesSinceCreature = find.isCreature ? 0 : cratesSinceCreature + 1
 
         state.movesUntilRotation -= 1
         if state.movesUntilRotation <= 0 {
@@ -1449,7 +1471,7 @@ final class GameStore {
         }
         // The endless game gets an extra tile after every rotation, so the board fills.
         // Every game without a clock, bar Shape Shift, gets an extra tile after a turn.
-        if mode != .timed, mode != .shift {
+        if mode != .shift, mode != .timed || level >= GameEngine.turnTileLevel {
             spawnTile()
         }
         // In the Twist game, any turn may be followed by one the other way.

@@ -43,11 +43,6 @@ struct GameScreen: View {
                         confirmNewGame = true
                     }
 
-                Text("Swipe. Merge. Rotate.")
-                    .font(.system(size: 14 * scale, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Theme.tagline)
-                    .padding(.top, -4 * scale)
-
                 ScoreCards(score: store.state.score, best: store.best, isFever: store.isFever, scale: scale)
                     .frame(width: side)
                     .overlay {
@@ -144,29 +139,10 @@ struct GameScreen: View {
                 }
                 .padding(.top, 14 * scale)
 
-                // Under the boosters: the level prize when one is won, otherwise which
-                // game this is (a tap opens the menu, where the games are). Nothing
-                // here ever covers the board.
+                // Under the boosters: the level prize when one is won, and nothing the
+                // rest of the time. Nothing here ever covers the board.
                 ZStack {
-                    Button {
-                        openHelp()
-                    } label: {
-                        HStack(spacing: 6 * scale) {
-                            Text(tagline)
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 12 * scale, weight: .heavy))
-                        }
-                        .font(.system(size: 17 * scale, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Theme.tagline)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                        .padding(.horizontal, 16 * scale)
-                        .frame(height: 36 * scale)
-                        .background(Capsule().fill(Theme.glassFill))
-                        .overlay(Capsule().strokeBorder(Theme.glassStroke, lineWidth: 1))
-                    }
-                    .buttonStyle(BounceButtonStyle())
-                    .accessibilityHint(Text("Opens the menu"))
+                    Color.clear
 
                     if store.prizeEvent > 0, !store.isGameOver {
                         PrizeReel(
