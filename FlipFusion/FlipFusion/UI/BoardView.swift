@@ -113,7 +113,7 @@ struct BoardView: View {
 
             ForEach(store.bursts) { burst in
                 let point = origin(row: burst.row, col: burst.col)
-                MergeBurst(color: Theme.tile(burst.value).top, size: cell, isBlast: burst.isBlast, isSuper: burst.isSuper, points: burst.points)
+                MergeBurst(color: Theme.tile(burst.value).top, size: cell, isBlast: burst.isBlast, isSuper: burst.isSuper, points: burst.points, heat: burst.heat)
                     .offset(x: point.x, y: point.y)
                     .zIndex(4)
             }

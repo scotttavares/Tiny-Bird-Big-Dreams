@@ -71,7 +71,17 @@ final class GameStore {
         var isSuper = false
         /// Points to float up from the cell (0 shows nothing).
         var points = 0
+        /// How many merges the player had made since the board last turned when this
+        /// one happened. The more, the bigger the burst.
+        var heat = 0
     }
+
+    /// Merges made by swipes since the board last turned. Each one makes the next
+    /// burst bigger; the turn sets it back to nothing.
+    private(set) var turnMerges = 0
+    /// Goes up each time a swipe takes `turnMerges` to this many or more.
+    private(set) var heatEvent = 0
+    static let heatCombo = 3
 
     @ObservationIgnored private var feverLeft: Double = 0
 
@@ -569,6 +579,7 @@ final class GameStore {
         poppedIDs = []
         bursts = []
         lastCombo = 0
+        turnMerges = 0
         boardAngle = 0
         isFever = false
         feverLeft = 0
@@ -724,6 +735,7 @@ final class GameStore {
         ghosts = []
         poppedIDs = []
         lastCombo = 0
+        turnMerges = 0
         boardAngle = 0
         isGameOver = false
         bursts = []
@@ -945,6 +957,13 @@ final class GameStore {
             flashEvent += 1
             power = 3
         }
+        if isSwipe, !result.mergedIDs.isEmpty {
+            turnMerges += result.mergedIDs.count
+            if turnMerges >= Self.heatCombo {
+                heatEvent += 1
+                power = max(power, turnMerges >= 5 ? 2 : 1)
+            }
+        }
         if !result.mergedIDs.isEmpty {
             let merged = result.tiles.filter { result.mergedIDs.contains($0.id) }
             lastMergeValue = merged.map(\.value).max() ?? 0
@@ -956,7 +975,8 @@ final class GameStore {
                     col: tile.col,
                     value: tile.value,
                     isSuper: result.supers[tile.id] != nil,
-                    points: tile.value * multiplier
+                    points: tile.value * multiplier,
+                    heat: isSwipe ? turnMerges : 0
                 ))
             }
             mergePulse += 1
@@ -1043,6 +1063,7 @@ final class GameStore {
             spawnTile()
         }
         state.movesUntilRotation = GameEngine.movesPerRotation
+        turnMerges = 0
     }
 
     private func finishMove() {

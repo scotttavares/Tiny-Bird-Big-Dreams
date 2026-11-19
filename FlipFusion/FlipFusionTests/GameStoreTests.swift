@@ -612,6 +612,21 @@ struct GameStoreTests {
         #expect(!store.state.blocks.isEmpty)
     }
 
+    @Test func mergesBeforeTheBoardTurnsBuildACombo() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[2, 2, 4, 4], [8, 8, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 2, nextID: 10), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.turnMerges == 0)
+        store.swipe(.left)
+        // Three merges in one swipe: a combo, and each burst carries the count.
+        #expect(store.turnMerges == 3)
+        #expect(store.heatEvent == 1)
+        #expect(store.bursts.filter { $0.heat == 3 }.count == 3)
+        // The turn starts the count again.
+        #expect(store.useBooster(.flip))
+        #expect(store.turnMerges == 0)
+    }
+
     @Test func aDeadBoardIsGameOverAndIgnoresSwipes() {
         let defaults = freshDefaults()
         let dead = GameState(tiles: tiles([[2, 4, 2, 4], [4, 2, 4, 2], [2, 4, 2, 4], [4, 2, 4, 2]]), score: 100, movesUntilRotation: 1, nextID: 20)

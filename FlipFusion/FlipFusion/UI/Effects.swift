@@ -57,15 +57,21 @@ struct MergeBurst: View {
     var shape: Skin.TileShape = Skin.current.shape
     /// Themes beyond the free one throw more sparks and a second ring.
     var flair: Bool = Skin.current.isPremium
+    /// Merges made since the board last turned: each one makes the burst bigger.
+    var heat = 0
 
     @State private var progress: CGFloat = 0
 
     var body: some View {
         let isBig = isBlast || isSuper
-        let ringGrowth: CGFloat = isBlast ? 2.1 : (isSuper ? 1.3 : 0.5)
-        let reach: CGFloat = isBlast ? size * 1.7 : (isSuper ? size * 1.4 : size * 0.8)
-        let sparks = (isBig ? 14 : 8) + (flair ? 6 : 0)
-        let sparkSize: CGFloat = isBig ? size * 0.22 : size * 0.15
+        // The second merge before a turn is a fifth bigger, the third two fifths, and
+        // so on up to double.
+        let extra = min(max(heat - 1, 0), 5)
+        let boost = 1 + CGFloat(extra) * 0.2
+        let ringGrowth: CGFloat = (isBlast ? 2.1 : (isSuper ? 1.3 : 0.5)) * boost
+        let reach: CGFloat = (isBlast ? size * 1.7 : (isSuper ? size * 1.4 : size * 0.8)) * boost
+        let sparks = (isBig ? 14 : 8) + (flair ? 6 : 0) + extra * 2
+        let sparkSize: CGFloat = (isBig ? size * 0.22 : size * 0.15) * (1 + CGFloat(extra) * 0.1)
 
         ZStack {
             TileOutline(shape: shape)
@@ -264,6 +270,12 @@ struct Celebration: View {
         }
         .onChange(of: store.levelEvent) { _, _ in
             confettiID += 1
+        }
+        .onChange(of: store.heatEvent) { _, _ in
+            // Five merges before the board turns earns confetti.
+            if store.turnMerges >= 5 {
+                confettiID += 1
+            }
         }
         .onChange(of: store.isGameOver) { _, isOver in
             // A new best score gets a send-off.
@@ -585,6 +597,9 @@ struct GameBanners: ViewModifier {
             }
             .onChange(of: store.continueEvent) { _, _ in
                 callout("Keep going!")
+            }
+            .onChange(of: store.heatEvent) { _, _ in
+                callout(store.turnMerges >= 5 ? "On fire! x\(store.turnMerges)" : "Combo x\(store.turnMerges)!")
             }
             .onChange(of: store.shapeEvent) { _, _ in
                 if store.mode == .shift {

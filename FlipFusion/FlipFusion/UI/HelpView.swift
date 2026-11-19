@@ -110,6 +110,7 @@ struct HelpView: View {
                     row(symbol: "hand.draw.fill", title: "Swipe", text: "Every tile slides as far as it can. Two tiles with the same number merge into one worth double.")
                     row(symbol: "arrow.clockwise", title: "Rotate", text: "After every two moves the board makes a quarter turn and gravity pulls the tiles down.")
                     row(symbol: "sparkles", title: "Super combo", text: "Line up three or four of the same tile and they all merge at once: three 2s make an 8, four make a 16, and each wins a gem or more.")
+                    row(symbol: "flame.fill", title: "Combo", text: "Every merge you make before the board turns makes the next burst bigger. Make \(GameStore.heatCombo) or more for a combo; the turn starts the count again.")
                     row(symbol: "link", title: "Chain", text: "When falling tiles merge, and those merge again, that is a chain. Each step of a chain scores more than the last.")
                 }
 
