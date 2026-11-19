@@ -16,7 +16,11 @@ enum Critter: String, Equatable, Sendable {
     /// into pictures named "critter-", its name, "-f" and a two-figure number from 00.
     /// None means it is animated from its two poses instead.
     var filmFrames: Int {
-        self == .shark ? 84 : 0
+        switch self {
+        case .shark: return 84
+        case .trex: return 100
+        default: return 0
+        }
     }
 
     /// The picture for one frame of the creature's film.
@@ -96,7 +100,12 @@ struct CritterAttack: View {
                 }
             case .monkey: MonkeyRampage(side: side, onHit: onHit)
             case .ufo: UFORaid(side: side, onHit: onHit)
-            case .trex: TrexStomp(side: side, onHit: onHit)
+            case .trex:
+                if Critter.trex.hasFilm {
+                    TrexFilm(side: side, onHit: onHit)
+                } else {
+                    TrexStomp(side: side, onHit: onHit)
+                }
             }
         }
         .frame(width: side, height: side)
@@ -128,6 +137,38 @@ struct CritterFilm: View {
                 .frame(width: width)
         }
         .shadow(color: Color.black.opacity(0.5), radius: width * 0.04, x: 0, y: width * 0.03)
+    }
+}
+
+/// The T-rex, played from film: it stamps in from the side, rears up and roars,
+/// then lunges down and bites at the board three times before stamping off.
+struct TrexFilm: View {
+    let side: CGFloat
+    let onHit: (Int) -> Void
+
+    /// 0 before it arrives, 1 while it is over the board, 2 once it has gone.
+    @State private var stage = 0
+
+    var body: some View {
+        let shift = stage == 0 ? side * 1.9 : (stage == 1 ? 0 : -side * 1.9)
+        CritterFilm(critter: .trex, width: side * 1.2, speed: 24)
+            .offset(x: shift, y: -side * 0.04)
+            .task {
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+                    stage = 1
+                }
+                // The film runs a little over four seconds; its jaws snap shut at
+                // these moments in it.
+                let waits = [2330, 750, 750]
+                for bite in 1...3 {
+                    try? await Task.sleep(for: .milliseconds(waits[bite - 1]))
+                    onHit(bite)
+                }
+                try? await Task.sleep(for: .milliseconds(340))
+                withAnimation(.easeIn(duration: 0.5)) {
+                    stage = 2
+                }
+            }
     }
 }
 
