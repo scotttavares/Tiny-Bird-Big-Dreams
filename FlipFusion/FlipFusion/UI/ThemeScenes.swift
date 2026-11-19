@@ -672,25 +672,61 @@ struct ThemeMoment: View {
     }
 }
 
-/// Plays the theme's big moment when the game earns it: a new level, a chain, a
-/// four-tile merge, or five merges before the board turns.
+/// Plays the theme's big moment when the game earns it (a new level, a chain, a
+/// four-tile merge, or five merges before the board turns), and lets the creatures
+/// out of the crates loose on the board.
 struct ThemeMoments: ViewModifier {
     let store: GameStore
     let sounds: SoundPlayer
 
     @State private var momentID = 0
-    /// The scene whose moment is playing. Usually the theme's own; a shark out of a
-    /// crate brings its own.
+    /// The scene whose moment is playing.
     @State private var playing = Skin.Backdrop.grid
+    @State private var critter = Critter.shark
+    @State private var critterID = 0
+
+    /// Sets a creature loose on the board.
+    private func release(_ kind: Critter) {
+        critter = kind
+        critterID += 1
+        switch kind {
+        case .shark: sounds.play(.boom, volume: 0.7)
+        case .monkey: sounds.play(.monkey)
+        case .ufo: sounds.play(.ufo)
+        case .trex: sounds.play(.roar)
+        }
+    }
+
+    /// A bite, a landing, a beam or a stomp: the board shakes and it is heard.
+    private func hit(_ number: Int) {
+        switch critter {
+        case .shark:
+            store.rattle(3)
+            sounds.play(.chomp)
+        case .monkey:
+            store.rattle(2)
+            sounds.play(.stomp, volume: 0.6)
+            if number == 3 {
+                sounds.play(.monkey)
+            }
+            // It throws the tiles about as it goes.
+            if number == 2 || number == 4 {
+                store.jumble()
+            }
+        case .ufo:
+            store.rattle(1)
+            sounds.play(.powerup, volume: 0.8)
+        case .trex:
+            store.rattle(3)
+            sounds.play(.stomp)
+        }
+    }
 
     private func play() {
-        guard SceneArt.hasMoment(Skin.current.backdrop) else { return }
-        playing = Skin.current.backdrop
-        momentID += 1
-        sounds.play(.boom, volume: 0.8)
-        // The shark does not just show its teeth: as it covers the board it throws
-        // the tiles about and knocks a couple off.
         if Skin.current.backdrop == .bubbles {
+            // The Ocean theme's moment is the shark itself. It does not just show its
+            // teeth: as it covers the board it throws the tiles about and takes two.
+            release(.shark)
             let game = store
             Task {
                 try? await Task.sleep(for: .milliseconds(800))
@@ -700,7 +736,12 @@ struct ThemeMoments: ViewModifier {
                     game.stirBoard()
                 }
             }
+            return
         }
+        guard SceneArt.hasMoment(Skin.current.backdrop) else { return }
+        playing = Skin.current.backdrop
+        momentID += 1
+        sounds.play(.boom, volume: 0.8)
     }
 
     func body(content: Content) -> some View {
@@ -710,6 +751,21 @@ struct ThemeMoments: ViewModifier {
                     ThemeMoment(backdrop: playing)
                         .id(momentID)
                         .ignoresSafeArea()
+                }
+            }
+            .overlay {
+                if critterID > 0 {
+                    GeometryReader { geo in
+                        // The board is where the game screen puts it: the same sums.
+                        let scale = min(geo.size.width / 393, geo.size.height / 760)
+                        let side = 322 * scale
+                        CritterAttack(critter: critter, side: side) { number in
+                            hit(number)
+                        }
+                        .position(x: geo.size.width / 2, y: geo.size.height / 2 + 37 * scale)
+                    }
+                    .id(critterID)
+                    .allowsHitTesting(false)
                 }
             }
             .onChange(of: store.levelEvent) { _, _ in
@@ -729,11 +785,13 @@ struct ThemeMoments: ViewModifier {
                 play()
             }
             .onChange(of: store.crateOpenEvent) { _, _ in
-                // The shark out of a crate surfaces in any theme. The game has
-                // already taken its tiles.
-                if store.lastCrateFind == .shark {
-                    playing = .bubbles
-                    momentID += 1
+                // The game has already done the damage; this is the show.
+                switch store.lastCrateFind {
+                case .monkey: release(.monkey)
+                case .shark: release(.shark)
+                case .ufo: release(.ufo)
+                case .trex: release(.trex)
+                default: break
                 }
             }
     }

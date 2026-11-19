@@ -135,7 +135,7 @@ struct HelpView: View {
                 section("Board shapes") {
                     row(symbol: "square.grid.2x2.fill", title: "Walls", text: "Solid blocks on the board. Tiles stop beside them and cannot merge across them.")
                     row(symbol: "circle.dashed", title: "Holes", text: "Dark pits in the board. Tiles stop at the edge of them. In Shape Shift, holes cut the whole board into a new outline.")
-                    row(symbol: "shippingbox.fill", title: "Crates", text: "They block like walls. A merge right beside one, or a bomb's blast, smashes it for \(GameStore.cratePoints) points. Or tap one to open it: that uses a move, and inside may be coins, a gem, a free booster or double points, or a monkey that mixes up the board, a shark that eats tiles, or a load of rocks.")
+                    row(symbol: "shippingbox.fill", title: "Crates", text: "They block like walls. A merge right beside one, or a bomb's blast, smashes it for \(GameStore.cratePoints) points. Or tap one to open it: that uses a move, and inside may be coins, a gem, a free booster or double points, or trouble: a monkey that mixes up the board, a shark that eats two tiles, a flying saucer whose aliens beam two tiles up, a T-rex that stamps three tiles down a size, or a load of rocks.")
                     row(symbol: "arrow.clockwise", title: "They turn too", text: "Walls, holes and crates turn with the board. A tile that is in the way when the shape changes jumps to an empty cell.")
                 }
 

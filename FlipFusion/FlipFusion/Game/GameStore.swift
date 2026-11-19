@@ -369,6 +369,63 @@ final class GameStore {
         return true
     }
 
+    /// How many tiles the flying saucer took, or the T-rex stamped on, last time.
+    private(set) var lastHazardCount = 0
+
+    /// The flying saucer beams up `count` tiles picked at random, never leaving
+    /// fewer than two on the board.
+    private func abductTiles(_ count: Int) {
+        let take = max(0, min(count, state.tiles.count - 2))
+        let chosen = state.tiles.shuffled(using: &rng).prefix(take)
+        let gone = Set(chosen.map(\.id))
+        for tile in chosen {
+            nextBurstID += 1
+            bursts.append(Burst(id: nextBurstID, row: tile.row, col: tile.col, value: tile.value, isSuper: true))
+        }
+        if animated {
+            withAnimation(.easeIn(duration: 0.3)) {
+                state.tiles.removeAll { gone.contains($0.id) }
+            }
+        } else {
+            state.tiles.removeAll { gone.contains($0.id) }
+        }
+        lastHazardCount = chosen.count
+        shake(2)
+    }
+
+    /// The T-rex stamps on up to `count` ordinary tiles worth 4 or more, picked at
+    /// random: each drops to half its value.
+    private func stompTiles(_ count: Int) {
+        let picks = state.tiles.indices
+            .filter { state.tiles[$0].kind == .normal && state.tiles[$0].value >= 4 }
+            .shuffled(using: &rng)
+            .prefix(count)
+        for index in picks {
+            state.tiles[index].value /= 2
+            let tile = state.tiles[index]
+            nextBurstID += 1
+            bursts.append(Burst(id: nextBurstID, row: tile.row, col: tile.col, value: tile.value, isBlast: true))
+        }
+        lastHazardCount = picks.count
+        shake(3)
+    }
+
+    /// Shakes the board. The creatures on screen call this in time with each bite,
+    /// landing and stomp.
+    func rattle(_ power: Int = 2) {
+        shake(min(3, max(1, power)))
+    }
+
+    /// Throws the tiles to new cells without taking any: the monkey does this as it
+    /// bounces about. Does nothing while a move is playing or the game is over.
+    @discardableResult
+    func jumble() -> Bool {
+        guard !isAnimating, !isGameOver, state.tiles.count > 1 else { return false }
+        scatterTiles(dropping: 0)
+        save()
+        return true
+    }
+
     // MARK: Opening crates
 
     /// What was inside a crate. Some finds are prizes; some are trouble.
@@ -385,13 +442,17 @@ final class GameStore {
         case monkey
         /// A shark comes out, mixes the tiles up and eats two.
         case shark
+        /// A flying saucer hovers over the board and its aliens beam two tiles up.
+        case ufo
+        /// A T-rex stamps across, mixing the tiles up and stamping three down a size.
+        case trex
         /// Two stone blocks fall onto the board.
         case stones
 
         /// True for the finds the player is glad of.
         var isPrize: Bool {
             switch self {
-            case .monkey, .shark, .stones: return false
+            case .monkey, .shark, .ufo, .trex, .stones: return false
             default: return true
             }
         }
@@ -403,7 +464,7 @@ final class GameStore {
 
     /// Picks what is in a crate. Out of 100: 22 are 100 coins, 12 a gem, 12 a free
     /// booster, 8 double points, 8 ten seconds (100 coins when there is no clock);
-    /// then 16 a monkey, 12 a shark and 10 two stone blocks.
+    /// then 12 a monkey, 9 a shark, 6 a flying saucer, 6 a T-rex and 5 two stone blocks.
     private func rollCrate() -> CrateFind {
         let roll = Int.random(in: 0..<100, using: &rng)
         switch roll {
@@ -412,8 +473,10 @@ final class GameStore {
         case ..<46: return .booster(Booster.allCases.randomElement(using: &rng) ?? .flip)
         case ..<54: return .fever
         case ..<62: return mode == .timed ? .time : .coins(100)
-        case ..<78: return .monkey
-        case ..<90: return .shark
+        case ..<74: return .monkey
+        case ..<83: return .shark
+        case ..<89: return .ufo
+        case ..<95: return .trex
         default: return .stones
         }
     }
@@ -464,6 +527,11 @@ final class GameStore {
             scatterTiles(dropping: 0)
         case .shark:
             scatterTiles(dropping: 2)
+        case .ufo:
+            abductTiles(2)
+        case .trex:
+            scatterTiles(dropping: 0)
+            stompTiles(3)
         case .stones:
             spawnTile(forcing: .stone)
             spawnTile(forcing: .stone)

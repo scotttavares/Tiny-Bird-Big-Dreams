@@ -768,6 +768,47 @@ struct GameStoreTests {
         #expect(GameEngine.isValid(store.state))
     }
 
+    @Test func aliensBeamUpTwoTilesAndATrexStampsThreeDown() {
+        let defaults = freshDefaults()
+        save(GameState(
+            tiles: tiles([[8, 16, 32, 64], [128, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
+            score: 0,
+            movesUntilRotation: 2,
+            nextID: 20,
+            blocks: [Block(row: 3, col: 0, kind: .crate), Block(row: 3, col: 3, kind: .crate)]
+        ), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+
+        // The T-rex first: nothing is lost, but three tiles are worth half.
+        #expect(store.openCrate(row: 3, col: 0, forcing: .trex))
+        #expect(store.lastHazardCount == 3)
+        #expect(store.state.tiles.count == 5)
+        var total = 0
+        for tile in store.state.tiles {
+            total += tile.value
+        }
+        #expect(total < 248)
+        #expect(total >= 124)
+        #expect(GameEngine.isValid(store.state))
+
+        // Then the aliens: two tiles go.
+        let before = store.state.tiles.count
+        #expect(store.openCrate(row: 3, col: 3, forcing: .ufo))
+        #expect(store.lastHazardCount == 2)
+        // The second crate was the second move, so the board turned as well; a turn
+        // only merges or keeps tiles, so there are never more than three fewer.
+        #expect(store.state.tiles.count <= before - 2)
+        #expect(GameEngine.isValid(store.state))
+        #expect(!GameStore.CrateFind.ufo.isPrize)
+        #expect(!GameStore.CrateFind.trex.isPrize)
+
+        // The monkey's bouncing about can be done at any quiet moment and loses nothing.
+        let held = store.state.tiles.count
+        #expect(store.jumble())
+        #expect(store.state.tiles.count == held)
+        #expect(GameEngine.isValid(store.state))
+    }
+
     @Test func aMonkeyMixesTheBoardButTakesNothing() {
         let defaults = freshDefaults()
         save(GameState(

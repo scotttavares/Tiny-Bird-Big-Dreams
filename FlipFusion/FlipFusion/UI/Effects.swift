@@ -645,6 +645,12 @@ struct GameBanners: ViewModifier {
                 case .shark:
                     callout("Shark!")
                     show(store.lastStirDropped == 1 ? "A shark came out and ate a tile" : "A shark came out and ate \(store.lastStirDropped) tiles", 2)
+                case .ufo:
+                    callout("UFO!")
+                    show(store.lastHazardCount == 1 ? "Aliens beamed up a tile" : "Aliens beamed up \(store.lastHazardCount) tiles", 2)
+                case .trex:
+                    callout("T-REX!")
+                    show(store.lastHazardCount == 1 ? "It stamped a tile down a size" : "It stamped \(store.lastHazardCount) tiles down a size", 2)
                 case .stones:
                     callout("Rock fall!")
                     show("The crate was full of rocks", 2)
@@ -743,7 +749,12 @@ struct GameSounds: ViewModifier {
                 sounds.play(.powerup, volume: 0.5)
             }
             .onChange(of: store.crateOpenEvent) { _, _ in
-                sounds.play(store.lastCrateFind.isPrize ? .bonus : .boom)
+                // The creatures make their own noise as they go.
+                if store.lastCrateFind.isPrize {
+                    sounds.play(.bonus)
+                } else if store.lastCrateFind == .stones {
+                    sounds.play(.boom)
+                }
             }
             .onChange(of: store.mode) { _, _ in
                 sounds.play(.mode, volume: 0.8)

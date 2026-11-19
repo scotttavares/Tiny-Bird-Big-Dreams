@@ -232,3 +232,16 @@ The owner topped up the OpenArt account and asked for premium art, with backgrou
 ## App icon (2026-11-19)
 
 The owner asked for a generated app icon. Three options were made (GPT Image 2.5 Sunburst, 1:1, high quality, 30 credits in all): four glossy tiles in a turning cluster with a glowing arrow swirling round them, on deep blue, with no numbers or words. The third is installed as `AppIcon.png`; all three are kept as `docs/flipfusion/icon-option-1.png` to `-3.png` so another can be swapped in. The icon it replaced (the same idea, drawn flat, with 2, 4, 8 and 16 on the tiles) is in the git history.
+
+## Creatures that wreck the board (2026-11-19)
+
+The owner found the crate's shark and monkey "flat" and asked for 3D creatures that are fully animated, wreck the board and make sounds, then added a UFO with aliens and a T-rex.
+
+- **Four creatures**, each a painted 3D character in two poses (`critter-<name>` and `critter-<name>-2`; Seedream 5.5, the second pose made from the first so the character matches). Flipping between the poses is the animation; moving, turning and squashing them is on top of that (`UI/Critters.swift`).
+  - **Shark:** bursts up from below the board, rears back with its jaws open and snaps them shut four times, twisting from side to side. It scatters the tiles and eats two. It is also the Ocean theme's big moment, in place of the drawn one.
+  - **Monkey:** springs out and bounces to five spots round the board, tucked in a somersault in the air and flung wide as it lands, throwing the tiles about twice on the way. It takes nothing.
+  - **UFO:** swoops in and hovers, its lights running round and its two aliens jumping about, and beams two tiles up, picked at random.
+  - **T-rex:** stamps across from right to left, changing legs and snapping its jaws with each step. It scatters the tiles and stamps three of them down to half their value.
+- **In time with the picture:** the board shakes and a sound plays at every bite, landing, beam and stomp (`GameStore.rattle`). New sounds from `scripts/make-critter-sounds.py`: chomp, monkey chatter, saucer hum, roar, stomp.
+- **Crate odds**, out of 100: prizes 62 as before; monkey 12, shark 9, UFO 6, T-rex 6, rocks 5.
+- The creatures appear over the tiles for one to two seconds. That is deliberate here, an exception to "nothing covers the tiles", because the owner asked for it.

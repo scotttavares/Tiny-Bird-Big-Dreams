@@ -8,6 +8,8 @@ final class SoundPlayer {
         case slide, merge1, merge2, merge3, merge4, merge5, merge6
         case rotate, chain, tick, over, start, boom, bonus, powerup, fever, mode
         case combo, hurry
+        /// The creatures out of the crates.
+        case chomp, monkey, ufo, roar, stomp
     }
 
     /// The background tunes. Each loops until another takes over.
