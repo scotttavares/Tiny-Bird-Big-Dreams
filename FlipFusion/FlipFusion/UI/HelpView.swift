@@ -247,13 +247,8 @@ struct HelpView: View {
 
     /// A row whose picture is a gold coin, as in the counter at the top of the game.
     private func coinRow(title: String, text: String) -> some View {
-        let gold = LinearGradient(colors: [Color(hex: 0xFFE26A), Color(hex: 0xFF9F2E)], startPoint: .top, endPoint: .bottom)
-        return HStack(alignment: .top, spacing: 14) {
-            Circle()
-                .fill(gold)
-                .overlay(Circle().strokeBorder(Color.white.opacity(0.6), lineWidth: 1.5))
-                .frame(width: 30, height: 30)
-                .shadow(color: Color(hex: 0xFFB02E).opacity(0.8), radius: 5)
+        HStack(alignment: .top, spacing: 14) {
+            CoinIcon(size: 40)
                 .frame(width: 44, height: 44)
                 .accessibilityHidden(true)
             words(title: title, text: text)

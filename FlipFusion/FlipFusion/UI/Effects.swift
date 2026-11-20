@@ -371,6 +371,27 @@ struct GameHaptics: ViewModifier {
     }
 }
 
+/// A coin: the painted gold one when the asset catalogue has it ("prop-coin"),
+/// otherwise a plain gold disc.
+struct CoinIcon: View {
+    let size: CGFloat
+
+    var body: some View {
+        if ObstacleArt.has("prop-coin") {
+            Image("prop-coin")
+                .resizable()
+                .scaledToFit()
+                .frame(width: size, height: size)
+                .shadow(color: Color(hex: 0xFFB02E).opacity(0.7), radius: size * 0.15)
+        } else {
+            Circle()
+                .fill(LinearGradient(colors: [Color(hex: 0xFFE26A), Color(hex: 0xF0A01F)], startPoint: .top, endPoint: .bottom))
+                .frame(width: size * 0.8, height: size * 0.8)
+                .overlay(Circle().strokeBorder(Color.white.opacity(0.6), lineWidth: 1))
+        }
+    }
+}
+
 /// The player's coins and gems, top-left of the screen.
 struct CoinCounter: View {
     let coins: Int
@@ -378,10 +399,7 @@ struct CoinCounter: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Circle()
-                .fill(LinearGradient(colors: [Color(hex: 0xFFE26A), Color(hex: 0xF0A01F)], startPoint: .top, endPoint: .bottom))
-                .frame(width: 18, height: 18)
-                .overlay(Circle().strokeBorder(Color.white.opacity(0.6), lineWidth: 1))
+            CoinIcon(size: 24)
             Text(coins.formatted(.number.grouping(.automatic)))
                 .font(.system(size: 15, weight: .heavy, design: .rounded))
                 .foregroundStyle(Color.white)
