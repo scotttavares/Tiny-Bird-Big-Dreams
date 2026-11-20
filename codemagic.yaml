@@ -518,10 +518,15 @@ workflows:
           # Codemagic's own counter for this app: it goes up by one on every build.
           BUILD=${PROJECT_BUILD_NUMBER:-${BUILD_NUMBER:-1}}
           echo "Build number: $BUILD"
-          xcode-project build-ipa \
+          if ! xcode-project build-ipa \
             --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME" \
-            --archive-xcargs "CURRENT_PROJECT_VERSION=$BUILD"
+            --archive-xcargs "CURRENT_PROJECT_VERSION=$BUILD"; then
+            # Say why: the reason is only in xcodebuild's own log.
+            echo "---- why the archive failed ----"
+            grep -hE "error:|rovisioning|ntitlement" /tmp/xcodebuild_logs/*.log | sort -u | head -n 40 || true
+            exit 1
+          fi
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
