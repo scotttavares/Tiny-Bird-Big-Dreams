@@ -678,6 +678,8 @@ struct ThemeMoment: View {
 struct ThemeMoments: ViewModifier {
     let store: GameStore
     let sounds: SoundPlayer
+    /// Where the board is on the screen.
+    var board = CGRect.zero
 
     @State private var momentID = 0
     /// The scene whose moment is playing.
@@ -753,16 +755,11 @@ struct ThemeMoments: ViewModifier {
                 }
             }
             .overlay {
-                if critterID > 0 {
-                    GeometryReader { geo in
-                        // The board is where the game screen puts it: the same sums.
-                        let scale = min(geo.size.width / 393, geo.size.height / 760)
-                        let side = 322 * scale
-                        CritterAttack(critter: critter, side: side, captives: store.lastAbducted, isFruit: store.mode == .fruit) { number in
-                            hit(number)
-                        }
-                        .position(x: geo.size.width / 2, y: geo.size.height / 2 + 37 * scale)
+                if critterID > 0, board.width > 0 {
+                    CritterAttack(critter: critter, side: board.width, captives: store.lastAbducted, isFruit: store.mode == .fruit) { number in
+                        hit(number)
                     }
+                    .position(x: board.midX, y: board.midY)
                     .id(critterID)
                     .allowsHitTesting(false)
                 }

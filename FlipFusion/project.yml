@@ -27,8 +27,10 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.tinybirdbigdreams.flipfusion
-        # iPhone only for 1.0.
-        TARGETED_DEVICE_FAMILY: "1"
+        # iPhone and iPad.
+        TARGETED_DEVICE_FAMILY: "1,2"
+        # The fold of an iPhone Duo is read with APIs that came with the iOS 27.1 SDK.
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) FLIPFUSION_DUO_SDK"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
     info:
@@ -46,6 +48,13 @@ targets:
         UIUserInterfaceStyle: Dark
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         # Only system crypto: no export-compliance questions on each TestFlight upload.
         ITSAppUsesNonExemptEncryption: false
 

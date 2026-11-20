@@ -24,150 +24,64 @@ struct GameScreen: View {
     @State private var toastSeconds = 1.1
     @State private var confirmNewGame = false
     @AppStorage(SoundPlayer.musicKey) private var musicOn = true
+    /// Where the board is on the screen, so the creatures can find it.
+    @State private var boardFrame = CGRect.zero
+    /// The fold across the screen while an iPhone Duo is partly folded, if any.
+    @State private var fold: CGRect?
 
     var body: some View {
         GeometryReader { geo in
-            // The mockup is drawn on a 393-point-wide phone; everything scales from that.
-            let scale = min(geo.size.width / 393, geo.size.height / 760)
-            let side = 322 * scale
+            // The mockup is drawn on a 393-point-wide phone; everything scales from
+            // that. A wide screen (an iPad or a phone on its side) puts the board
+            // beside the scores; a phone folded half open puts it on the upright half.
+            let plan = ScreenPlan(size: geo.size, fold: fold)
 
-            VStack(spacing: 0) {
-                Spacer(minLength: 0)
-
-                LogoView(scale: scale)
-                    .contentShape(Rectangle())
-                    .onLongPressGesture {
-                        confirmNewGame = true
+            Group {
+                switch plan.kind {
+                case .tall:
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 0)
+                        header(scale: plan.scale, side: plan.panelSide)
+                        boardArea(scale: plan.scale, side: plan.boardSide)
+                        controls(scale: plan.scale, side: plan.panelSide)
+                        Spacer(minLength: 0)
                     }
-                    .accessibilityAction(named: Text("New game")) {
-                        confirmNewGame = true
-                    }
-
-                ScoreCards(score: store.state.score, best: store.best, isFever: store.isFever, scale: scale)
-                    .frame(width: side)
-                    .overlay {
-                        TimerRing(store: store, scale: scale)
-                    }
-                    .overlay(alignment: .topLeading) {
-                        if store.gainEvent > 0 {
-                            GainPop(amount: store.lastGain, scale: scale)
-                                .frame(width: 122 * scale)
-                                .id(store.gainEvent)
+                case .wide:
+                    HStack(spacing: 0) {
+                        VStack(spacing: 0) {
+                            Spacer(minLength: 44)
+                            header(scale: plan.scale, side: plan.panelSide)
+                            controls(scale: plan.scale, side: plan.panelSide)
+                            Spacer(minLength: 0)
                         }
+                        .frame(width: plan.firstLength)
+                        Color.clear
+                            .frame(width: plan.gap)
+                        boardArea(scale: plan.scale, side: plan.boardSide)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
-                    .padding(.top, 9 * scale)
-
-                LevelBar(level: store.level, score: store.state.score, scale: scale)
-                    .frame(width: side)
-                    .padding(.top, 8 * scale)
-
-                RotatePill(moves: store.state.movesUntilRotation, scale: scale)
-                    .frame(width: side)
-                    .overlay(alignment: .leading) {
-                        if store.streak > 0 {
-                            StreakChip(multiplier: store.streak + 1, scale: scale)
-                                .transition(.scale.combined(with: .opacity))
+                case .laptop:
+                    VStack(spacing: 0) {
+                        boardArea(scale: plan.scale, side: plan.boardSide)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: plan.firstLength)
+                        Color.clear
+                            .frame(height: plan.gap)
+                        VStack(spacing: 0) {
+                            Spacer(minLength: 0)
+                            header(scale: plan.scale, side: plan.panelSide)
+                            controls(scale: plan.scale, side: plan.panelSide)
+                            Spacer(minLength: 0)
                         }
-                    }
-                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: store.streak)
-                    .padding(.top, 9 * scale)
-
-                ZStack {
-                    BoardView(store: store, side: side)
-
-                    if store.isDanger {
-                        DangerGlow(side: side)
-                    }
-
-                    if store.streak > 0 {
-                        SpeedBolt(side: side)
-                            .id(store.streak)
-                    }
-
-                    if Skin.current.backdrop == .snow {
-                        SnowCap(side: side, shakeOff: store.rotatePulse)
-                            .offset(y: -side * 0.545 + 2)
-                    }
-
-                    RotationArrow(
-                        side: side,
-                        isImminent: store.state.movesUntilRotation == 1 && !store.isGameOver,
-                        isReversed: store.state.counterClockwise,
-                        heat: (store.isFever || store.isDanger || store.streak >= 3) ? 2 : (store.streak > 0 ? 1 : 0)
-                    )
-
-                    Celebration(store: store, side: side)
-
-                    if let calloutText {
-                        Callout(text: calloutText, scale: scale)
-                            .offset(y: -side * 0.44)
-                            .id(calloutID)
-                    }
-
-                    if store.isGameOver {
-                        GameOverOverlay(
-                            title: store.isTimeUp ? "Time's Up" : "Game Over",
-                            score: store.state.score,
-                            level: store.level,
-                            isBest: store.state.score > 0 && store.state.score >= store.best,
-                            continueOffer: continueOffer,
-                            side: side,
-                            scale: scale,
-                            onPlayAgain: {
-                                withAnimation(.easeOut(duration: 0.2)) {
-                                    store.newGame()
-                                }
-                            },
-                            onContinue: {
-                                // Not enough gems: the menu has the gem shop.
-                                if !store.continueGame() {
-                                    openHelp()
-                                }
-                            },
-                            graffiti: Skin.current.overWord,
-                            spark: Skin.current.spark
-                        )
-                        .transition(.scale(scale: 0.8).combined(with: .opacity))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                 }
-                .frame(width: side, height: side)
-                .modifier(Shake(power: store.shakePower, animatableData: CGFloat(store.shakeEvent)))
-                .animation(.linear(duration: 0.4), value: store.shakeEvent)
-                .padding(.top, 14 * scale)
-
-                BoosterBar(store: store, scale: scale) { booster in
-                    store.useBooster(booster)
-                }
-                .padding(.top, 14 * scale)
-
-                // Under the boosters: the level prize when one is won, and nothing the
-                // rest of the time. Nothing here ever covers the board.
-                ZStack {
-                    Color.clear
-
-                    if store.prizeEvent > 0, !store.isGameOver {
-                        PrizeReel(
-                            prize: store.lastPrize,
-                            scale: scale,
-                            onTick: {
-                                sounds.play(.tick, volume: 0.45)
-                            },
-                            onStop: {
-                                sounds.play(store.lastPrize == GameStore.jackpot ? .fever : .bonus)
-                            }
-                        )
-                        .scaleEffect(0.84)
-                        .id(store.prizeEvent)
-                    }
-                }
-                .frame(width: side, height: 64 * scale)
-                .padding(.top, 8 * scale)
-
-                Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .modifier(FoldReader(fold: $fold))
             .id(skinID)
         }
+        .coordinateSpace(.named("game"))
         .background(BackgroundView().id(skinID).ignoresSafeArea())
         .contentShape(Rectangle())
         .gesture(
@@ -194,7 +108,7 @@ struct GameScreen: View {
             }
         ))
         .modifier(GameSounds(store: store, sounds: sounds))
-        .modifier(ThemeMoments(store: store, sounds: sounds))
+        .modifier(ThemeMoments(store: store, sounds: sounds, board: boardFrame))
         // Messages sit over the title, clear of the board.
         .overlay(alignment: .top) {
             if let toast {
@@ -282,6 +196,153 @@ struct GameScreen: View {
                 store.newGame()
             }
             Button("Keep Playing", role: .cancel) {}
+        }
+    }
+
+    /// The logo, the score cards, the level bar and the "ROTATES IN" pill.
+    private func header(scale: CGFloat, side: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            LogoView(scale: scale)
+                .contentShape(Rectangle())
+                .onLongPressGesture {
+                    confirmNewGame = true
+                }
+                .accessibilityAction(named: Text("New game")) {
+                    confirmNewGame = true
+                }
+
+            ScoreCards(score: store.state.score, best: store.best, isFever: store.isFever, scale: scale)
+                .frame(width: side)
+                .overlay {
+                    TimerRing(store: store, scale: scale)
+                }
+                .overlay(alignment: .topLeading) {
+                    if store.gainEvent > 0 {
+                        GainPop(amount: store.lastGain, scale: scale)
+                            .frame(width: 122 * scale)
+                            .id(store.gainEvent)
+                    }
+                }
+                .padding(.top, 9 * scale)
+
+            LevelBar(level: store.level, score: store.state.score, scale: scale)
+                .frame(width: side)
+                .padding(.top, 8 * scale)
+
+            RotatePill(moves: store.state.movesUntilRotation, scale: scale)
+                .frame(width: side)
+                .overlay(alignment: .leading) {
+                    if store.streak > 0 {
+                        StreakChip(multiplier: store.streak + 1, scale: scale)
+                            .transition(.scale.combined(with: .opacity))
+                    }
+                }
+                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: store.streak)
+                .padding(.top, 9 * scale)
+        }
+    }
+
+    /// The board and everything drawn over it.
+    private func boardArea(scale: CGFloat, side: CGFloat) -> some View {
+        ZStack {
+            BoardView(store: store, side: side)
+
+            if store.isDanger {
+                DangerGlow(side: side)
+            }
+
+            if store.streak > 0 {
+                SpeedBolt(side: side)
+                    .id(store.streak)
+            }
+
+            if Skin.current.backdrop == .snow {
+                SnowCap(side: side, shakeOff: store.rotatePulse)
+                    .offset(y: -side * 0.545 + 2)
+            }
+
+            RotationArrow(
+                side: side,
+                isImminent: store.state.movesUntilRotation == 1 && !store.isGameOver,
+                isReversed: store.state.counterClockwise,
+                heat: (store.isFever || store.isDanger || store.streak >= 3) ? 2 : (store.streak > 0 ? 1 : 0)
+            )
+
+            Celebration(store: store, side: side)
+
+            if let calloutText {
+                Callout(text: calloutText, scale: scale)
+                    .offset(y: -side * 0.44)
+                    .id(calloutID)
+            }
+
+            if store.isGameOver {
+                GameOverOverlay(
+                    title: store.isTimeUp ? "Time's Up" : "Game Over",
+                    score: store.state.score,
+                    level: store.level,
+                    isBest: store.state.score > 0 && store.state.score >= store.best,
+                    continueOffer: continueOffer,
+                    side: side,
+                    scale: scale,
+                    onPlayAgain: {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            store.newGame()
+                        }
+                    },
+                    onContinue: {
+                        // Not enough gems: the menu has the gem shop.
+                        if !store.continueGame() {
+                            openHelp()
+                        }
+                    },
+                    graffiti: Skin.current.overWord,
+                    spark: Skin.current.spark
+                )
+                .transition(.scale(scale: 0.8).combined(with: .opacity))
+            }
+        }
+        .frame(width: side, height: side)
+        .onGeometryChange(for: CGRect.self) { proxy in
+            proxy.frame(in: .named("game"))
+        } action: { frame in
+            boardFrame = frame
+        }
+        .modifier(Shake(power: store.shakePower, animatableData: CGFloat(store.shakeEvent)))
+        .animation(.linear(duration: 0.4), value: store.shakeEvent)
+        .padding(.top, 14 * scale)
+    }
+
+    /// The boosters, and the level prize under them.
+    private func controls(scale: CGFloat, side: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            BoosterBar(store: store, scale: scale) { booster in
+                store.useBooster(booster)
+            }
+            .padding(.top, 14 * scale)
+
+            // Under the boosters: the level prize when one is won, and nothing the
+            // rest of the time. Nothing here ever covers the board.
+            ZStack {
+                Color.clear
+
+                if store.prizeEvent > 0, !store.isGameOver {
+                    PrizeReel(
+                        prize: store.lastPrize,
+                        scale: scale,
+                        onTick: {
+                            sounds.play(.tick, volume: 0.45)
+                        },
+                        onStop: {
+                            sounds.play(store.lastPrize == GameStore.jackpot ? .fever : .bonus)
+                        }
+                    )
+                    .scaleEffect(0.84)
+                    .id(store.prizeEvent)
+                }
+            }
+            .frame(width: side, height: 64 * scale)
+            .padding(.top, 8 * scale)
         }
     }
 

@@ -444,4 +444,26 @@ struct GameEngineTests {
         let lone = [Tile(id: 1, value: 2, row: 0, col: 1)]
         #expect(GameEngine.hasMove(lone, blocked: [hole], holes: [hole]))
     }
+
+    @Test func theScreenArrangesItselfForTheSpaceItHas() {
+        // A phone held upright: one column, as the mockup is drawn.
+        let phone = ScreenPlan(size: CGSize(width: 393, height: 760))
+        #expect(phone.kind == .tall)
+        #expect(phone.scale == 1)
+        #expect(phone.boardSide == 322)
+
+        // An iPad on its side: the board beside the scores, and it fits the height.
+        let pad = ScreenPlan(size: CGSize(width: 1180, height: 820))
+        #expect(pad.kind == .wide)
+        #expect(pad.firstLength == 590)
+        #expect(pad.boardSide <= 820)
+
+        // A folding phone half open like a laptop: the board on the upright half.
+        let strip = CGRect(x: 0, y: 390, width: 600, height: 20)
+        let seated = ScreenPlan(size: CGSize(width: 600, height: 800), fold: strip)
+        #expect(seated.kind == .laptop)
+        #expect(seated.firstLength == 390)
+        #expect(seated.gap == 20)
+        #expect(seated.boardSide <= 390)
+    }
 }
