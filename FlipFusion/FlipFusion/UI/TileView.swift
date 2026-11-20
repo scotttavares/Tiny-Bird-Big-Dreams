@@ -66,7 +66,7 @@ struct TileView: View {
                     .scaleEffect(throb ? 1.07 : 1)
             } else if kind == .time, ObstacleArt.has("tile-clock-" + skin.id) {
                 ThemedSpecial(picture: "tile-clock-" + skin.id, text: isFruit ? Fruit.face(for: value) : String(value),
-                              size: size, fontSize: isFruit ? size * 0.4 : fontSize * 0.86)
+                              size: size, fontSize: isFruit ? size * 0.4 : fontSize * 0.86, isOnPale: true)
                     .scaleEffect(throb ? 1.05 : 1)
             } else if kind == .bomb {
                 // A bomb tile is a bomb, whatever the theme.
@@ -225,8 +225,12 @@ struct ThemedSpecial: View {
     let text: String
     let size: CGFloat
     let fontSize: CGFloat
+    /// True when the number sits on a pale face (a clock): it is drawn dark.
+    var isOnPale = false
 
     var body: some View {
+        let ink = isOnPale ? Color(hex: 0x14213D) : Color.white
+        let edge = isOnPale ? Color.white : Color.black
         ZStack {
             Image(picture)
                 .resizable()
@@ -235,9 +239,9 @@ struct ThemedSpecial: View {
                 .shadow(color: Color.black.opacity(0.4), radius: size * 0.04, x: 0, y: size * 0.03)
             Text(text)
                 .font(.system(size: fontSize, weight: .black, design: .rounded))
-                .foregroundStyle(Color.white)
-                .shadow(color: Color.black, radius: size * 0.015, x: 0, y: 0)
-                .shadow(color: Color.black.opacity(0.9), radius: size * 0.05, x: 0, y: size * 0.02)
+                .foregroundStyle(ink)
+                .shadow(color: edge, radius: size * 0.015, x: 0, y: 0)
+                .shadow(color: edge.opacity(0.9), radius: size * 0.05, x: 0, y: size * 0.02)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
                 .frame(width: size * 0.6)
