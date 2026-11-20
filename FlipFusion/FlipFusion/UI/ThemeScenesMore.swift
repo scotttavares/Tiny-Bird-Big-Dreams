@@ -394,7 +394,7 @@ extension SceneArt {
         context.stroke(string, with: .color(Color.white.opacity(0.4)), lineWidth: 1.5)
         // A painted ball, swinging gently; the drawn one stands in without it.
         let swing = sin(time * 0.7) * 0.06
-        if !prop(&context, "prop-mirrorball", x: ballX, y: ballY - radius * 1.15, width: radius * 2.5, anchor: 0, turn: swing) {
+        if !prop(&context, "prop-mirrorball", x: ballX, y: ballY - radius * 1.9, width: radius * 1.9, anchor: 0, turn: swing) {
             let ball = Path(ellipseIn: CGRect(x: ballX - radius, y: ballY - radius, width: radius * 2, height: radius * 2))
             context.fill(
                 ball,
