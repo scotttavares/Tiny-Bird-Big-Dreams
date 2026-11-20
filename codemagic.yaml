@@ -510,7 +510,8 @@ workflows:
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
             --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
-            --create
+            --create \
+            --delete-stale-profiles
           keychain add-certificates
           xcode-project use-profiles --project "$XCODE_PROJECT"
       - name: Build IPA
