@@ -157,6 +157,15 @@ struct GameScreen: View {
             if isOver, !seenHelp {
                 openHelp()
             }
+            if isOver {
+                GameCenter.shared.signIn()
+            }
+        }
+        .onChange(of: store.isGameOver) { _, isOver in
+            // A finished game goes on the worldwide leaderboard of its mode.
+            if isOver {
+                GameCenter.shared.report(score: store.state.score, mode: store.mode)
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {

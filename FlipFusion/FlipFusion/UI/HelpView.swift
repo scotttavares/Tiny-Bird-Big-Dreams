@@ -97,6 +97,16 @@ struct HelpView: View {
                     Toggle("Sound effects", isOn: $soundOn)
                     Toggle("Vibration", isOn: $hapticsOn)
                     Button {
+                        if !GameCenter.shared.showBoard(for: store.mode) {
+                            modeNotice = "Sign in to Game Center to see the leaderboards."
+                        }
+                    } label: {
+                        Label("World leaderboard", systemImage: "trophy.fill")
+                            .font(.system(size: 17, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Theme.flip[0])
+                    }
+                    .buttonStyle(.plain)
+                    Button {
                         dismiss()
                         onReplayIntro()
                     } label: {

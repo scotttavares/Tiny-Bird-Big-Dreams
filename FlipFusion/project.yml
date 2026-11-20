@@ -33,6 +33,10 @@ targets:
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) FLIPFUSION_DUO_SDK"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    entitlements:
+      path: FlipFusion/Resources/FlipFusion.entitlements
+      properties:
+        com.apple.developer.game-center: true
     info:
       path: FlipFusion/Resources/Info.plist
       properties:
