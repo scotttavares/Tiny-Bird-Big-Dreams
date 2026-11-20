@@ -260,17 +260,19 @@ extension SceneArt {
 
         }
 
-        // The track.
-        var track = Path()
-        track.move(to: CGPoint(x: 0, y: rail))
-        track.addLine(to: CGPoint(x: w, y: rail))
-        context.stroke(track, with: .color(Color(hex: 0x8A8F9C)), lineWidth: 3)
-        for sleeper in 0..<14 {
-            let x = w * (Double(sleeper) + 0.5) / 14
-            var tie = Path()
-            tie.move(to: CGPoint(x: x, y: rail + 2))
-            tie.addLine(to: CGPoint(x: x, y: rail + 9))
-            context.stroke(tie, with: .color(Color(hex: 0x5A3B22)), lineWidth: 5)
+        // The track: painted, with the drawn one standing in if the picture is missing.
+        if !prop(&context, "prop-track", x: w / 2, y: rail, width: w * 1.04, anchor: 0.3) {
+            var track = Path()
+            track.move(to: CGPoint(x: 0, y: rail))
+            track.addLine(to: CGPoint(x: w, y: rail))
+            context.stroke(track, with: .color(Color(hex: 0x8A8F9C)), lineWidth: 3)
+            for sleeper in 0..<14 {
+                let x = w * (Double(sleeper) + 0.5) / 14
+                var tie = Path()
+                tie.move(to: CGPoint(x: x, y: rail + 2))
+                tie.addLine(to: CGPoint(x: x, y: rail + 9))
+                context.stroke(tie, with: .color(Color(hex: 0x5A3B22)), lineWidth: 5)
+            }
         }
 
         // The cart rolls across, waits out of sight, and comes round again.
@@ -279,6 +281,11 @@ extension SceneArt {
         let cartW = w * 0.16
         let cartH = cartW * 0.5
         let x = (trip / 0.6) * (w + cartW * 2) - cartW
+        // A painted cart, jolting as it rolls.
+        let jolt = sin(time * 11) * 0.012
+        if prop(&context, "prop-minecart", x: x, y: rail + cartW * 0.05, width: cartW * 1.7, anchor: 1, turn: jolt) {
+            return
+        }
         let bottom = rail - cartW * 0.11
         // The heap of gold.
         for lump in 0..<6 {
@@ -385,30 +392,34 @@ extension SceneArt {
         string.move(to: CGPoint(x: ballX, y: 0))
         string.addLine(to: CGPoint(x: ballX, y: ballY - radius))
         context.stroke(string, with: .color(Color.white.opacity(0.4)), lineWidth: 1.5)
-        let ball = Path(ellipseIn: CGRect(x: ballX - radius, y: ballY - radius, width: radius * 2, height: radius * 2))
-        context.fill(
-            ball,
-            with: .radialGradient(
-                Gradient(colors: [Color.white, Color(hex: 0x9AA3C4), Color(hex: 0x3A3F5A)]),
-                center: CGPoint(x: ballX - radius * 0.3, y: ballY - radius * 0.3),
-                startRadius: 0,
-                endRadius: CGFloat(radius * 1.3)
+        // A painted ball, swinging gently; the drawn one stands in without it.
+        let swing = sin(time * 0.7) * 0.06
+        if !prop(&context, "prop-mirrorball", x: ballX, y: ballY - radius * 1.15, width: radius * 2.5, anchor: 0, turn: swing) {
+            let ball = Path(ellipseIn: CGRect(x: ballX - radius, y: ballY - radius, width: radius * 2, height: radius * 2))
+            context.fill(
+                ball,
+                with: .radialGradient(
+                    Gradient(colors: [Color.white, Color(hex: 0x9AA3C4), Color(hex: 0x3A3F5A)]),
+                    center: CGPoint(x: ballX - radius * 0.3, y: ballY - radius * 0.3),
+                    startRadius: 0,
+                    endRadius: CGFloat(radius * 1.3)
+                )
             )
-        )
-        // Its little mirrors: rings round it and lines down it.
-        for ring in 1...3 {
-            let offset = radius * (Double(ring) - 2) * 0.5
-            let half = sqrt(max(0, radius * radius - offset * offset))
-            var line = Path()
-            line.move(to: CGPoint(x: ballX - half, y: ballY + offset))
-            line.addLine(to: CGPoint(x: ballX + half, y: ballY + offset))
-            context.stroke(line, with: .color(Color.black.opacity(0.3)), lineWidth: 1)
-        }
-        for slice in 0..<5 {
-            let across = fraction(time * 0.15 + Double(slice) / 5)
-            let wide = radius * 2 * abs(cos(across * Double.pi))
-            context.stroke(Path(ellipseIn: CGRect(x: ballX - wide / 2, y: ballY - radius, width: wide, height: radius * 2)),
-                           with: .color(Color.black.opacity(0.25)), lineWidth: 1)
+            // Its little mirrors: rings round it and lines down it.
+            for ring in 1...3 {
+                let offset = radius * (Double(ring) - 2) * 0.5
+                let half = sqrt(max(0, radius * radius - offset * offset))
+                var line = Path()
+                line.move(to: CGPoint(x: ballX - half, y: ballY + offset))
+                line.addLine(to: CGPoint(x: ballX + half, y: ballY + offset))
+                context.stroke(line, with: .color(Color.black.opacity(0.3)), lineWidth: 1)
+            }
+            for slice in 0..<5 {
+                let across = fraction(time * 0.15 + Double(slice) / 5)
+                let wide = radius * 2 * abs(cos(across * Double.pi))
+                context.stroke(Path(ellipseIn: CGRect(x: ballX - wide / 2, y: ballY - radius, width: wide, height: radius * 2)),
+                               with: .color(Color.black.opacity(0.25)), lineWidth: 1)
+            }
         }
         for spark in 0..<7 {
             let around = fraction(time * 0.3 + unit(spark, 161))
@@ -522,15 +533,18 @@ extension SceneArt {
             let x = across * (w + 120) - 60
             let y = h * 0.16 + sin(time * 2.5) * 8
             let wide = w * 0.14
-            context.fill(Path(ellipseIn: CGRect(x: x - wide * 0.28, y: y - wide * 0.3, width: wide * 0.56, height: wide * 0.4)),
-                         with: .color(Color(hex: 0x8FF0FF).opacity(0.75)))
-            context.fill(Path(ellipseIn: CGRect(x: x - wide / 2, y: y - wide * 0.12, width: wide, height: wide * 0.26)),
-                         with: .color(Color(hex: 0x9AA3C4)))
-            for light in 0..<4 {
-                let on = (Int(floor(time * 4)) + light) % 2 == 0
-                let lightX = x - wide * 0.33 + wide * 0.22 * Double(light)
-                context.fill(path(.dot, center: CGPoint(x: lightX, y: y + wide * 0.02), size: CGFloat(wide * 0.07)),
-                             with: .color((on ? Color(hex: 0xFFE26A) : Color(hex: 0xFF7AD9)).opacity(0.95)))
+            // The painted saucer, tipping as it flies; the drawn one stands in without it.
+            if !prop(&context, "critter-ufo", x: x, y: y, width: wide * 1.5, turn: sin(time * 2.5) * 0.1) {
+                context.fill(Path(ellipseIn: CGRect(x: x - wide * 0.28, y: y - wide * 0.3, width: wide * 0.56, height: wide * 0.4)),
+                             with: .color(Color(hex: 0x8FF0FF).opacity(0.75)))
+                context.fill(Path(ellipseIn: CGRect(x: x - wide / 2, y: y - wide * 0.12, width: wide, height: wide * 0.26)),
+                             with: .color(Color(hex: 0x9AA3C4)))
+                for light in 0..<4 {
+                    let on = (Int(floor(time * 4)) + light) % 2 == 0
+                    let lightX = x - wide * 0.33 + wide * 0.22 * Double(light)
+                    context.fill(path(.dot, center: CGPoint(x: lightX, y: y + wide * 0.02), size: CGFloat(wide * 0.07)),
+                                 with: .color((on ? Color(hex: 0xFFE26A) : Color(hex: 0xFF7AD9)).opacity(0.95)))
+                }
             }
         }
     }

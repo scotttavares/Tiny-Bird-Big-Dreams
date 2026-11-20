@@ -50,8 +50,15 @@ extension SceneArt {
             let span = w + length * 4
             let x = goesRight ? span * progress - length * 2 : w + length * 2 - span * progress
             let y = h * (0.12 + 0.7 * unit(index, 44)) + sin(time * 0.9 + Double(index)) * 8
-            fish(&context, x: x, y: y, length: length, color: colors[index % colors.count],
-                 goesRight: goesRight, wag: sin(time * 7 + Double(index)), kind: index % 3)
+            // A painted fish, nosing up and down as it swims; the drawn one stands
+            // in if the picture is missing.
+            let wiggle = sin(time * 3 + Double(index)) * 0.09
+            let name = "prop-fish-" + String(index % 3 + 1)
+            let isDrawn = prop(&context, name, x: x, y: y, width: length * 2.1, flipped: !goesRight, turn: wiggle)
+            if !isDrawn {
+                fish(&context, x: x, y: y, length: length, color: colors[index % colors.count],
+                     goesRight: goesRight, wag: sin(time * 7 + Double(index)), kind: index % 3)
+            }
         }
 
         for index in 0..<2 {
@@ -59,7 +66,10 @@ extension SceneArt {
             let x = w * (0.2 + 0.6 * unit(index, 48)) + sin(time * 0.5 + Double(index) * 2) * 16
             let y = h * (1.1 - 1.25 * progress)
             let radius = 16 + 3 * sin(time * 2.2 + Double(index))
-            jellyfish(&context, x: x, y: y, radius: radius, time: time + Double(index))
+            let sway = sin(time * 1.1 + Double(index) * 2) * 0.1
+            if !prop(&context, "prop-jellyfish", x: x, y: y, width: radius * 3.6, anchor: 0.2, turn: sway, opacity: 0.92) {
+                jellyfish(&context, x: x, y: y, radius: radius, time: time + Double(index))
+            }
         }
     }
 
@@ -450,7 +460,11 @@ extension SceneArt {
 
         }
 
-        snowman(&context, x: w * 0.82, ground: ground + h * 0.006, unitSize: w * 0.06, time: time)
+        // A painted snowman, rocking a little in the wind.
+        let rock = sin(time * 1.3) * 0.035
+        if !prop(&context, "prop-snowman", x: w * 0.82, y: ground + h * 0.012, width: w * 0.2, anchor: 1, turn: rock) {
+            snowman(&context, x: w * 0.82, ground: ground + h * 0.006, unitSize: w * 0.06, time: time)
+        }
     }
 
     static func snowman(_ context: inout GraphicsContext, x: Double, ground: Double, unitSize: Double, time: Double) {

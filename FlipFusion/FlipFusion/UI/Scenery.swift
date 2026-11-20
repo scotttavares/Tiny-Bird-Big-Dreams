@@ -164,6 +164,30 @@ enum SceneArt {
         }
     }
 
+    /// Draws a painted prop (a picture in the asset catalogue) `width` points wide.
+    /// `anchor` says which part of its height sits at `y`: 0.5 its middle, 1 its
+    /// foot. `turn` tilts it (in radians) about that point. Returns false, having
+    /// drawn nothing, when there is no such picture, so the drawn one can stand in.
+    @discardableResult
+    static func prop(
+        _ context: inout GraphicsContext,
+        _ name: String,
+        x: Double, y: Double, width: Double,
+        anchor: Double = 0.5, flipped: Bool = false, turn: Double = 0, opacity: Double = 1
+    ) -> Bool {
+        guard UIImage(named: name) != nil else { return false }
+        let picture = context.resolve(Image(name))
+        guard picture.size.width > 0 else { return false }
+        let height = width * Double(picture.size.height) / Double(picture.size.width)
+        var layer = context
+        layer.opacity = opacity
+        layer.translateBy(x: CGFloat(x), y: CGFloat(y))
+        layer.scaleBy(x: flipped ? -1 : 1, y: 1)
+        layer.rotate(by: .radians(turn))
+        layer.draw(picture, in: CGRect(x: -width / 2, y: -height * anchor, width: width, height: height))
+        return true
+    }
+
     /// A number from 0 up to 1 that is always the same for the same speck and salt.
     static func unit(_ index: Int, _ salt: Int) -> Double {
         let value = sin(Double(index) * 12.9898 + Double(salt) * 78.233) * 43758.5453
