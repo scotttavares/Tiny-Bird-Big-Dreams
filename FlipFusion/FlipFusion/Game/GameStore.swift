@@ -414,6 +414,75 @@ final class GameStore {
         return true
     }
 
+    // MARK: Wild weather
+
+    /// What a theme's weather can do to the board, in the themes that have any.
+    enum Storm: Equatable, Sendable {
+        /// Rainforest: a downpour washes every tile to a new cell.
+        case downpour
+        /// Jurassic: a falling star smashes a tile and leaves a crater.
+        case meteors
+        /// Galaxy: an asteroid shower knocks two tiles off the board.
+        case asteroids
+        /// Frost: a blizzard blows every tile to a new cell.
+        case blizzard
+        /// Lava: the volcano throws two lumps of rock onto the board.
+        case eruption
+    }
+
+    nonisolated static func storm(forTheme id: String) -> Storm? {
+        switch id {
+        case "rainforest": return .downpour
+        case "jurassic": return .meteors
+        case "galaxy": return .asteroids
+        case "frost": return .blizzard
+        case "lava": return .eruption
+        default: return nil
+        }
+    }
+
+    /// Goes up each time the weather hits the board; `lastStorm` is what it was.
+    private(set) var stormEvent = 0
+    private(set) var lastStorm = Storm.downpour
+    /// The weather's chance, in a hundred, of turning on the board at a big moment.
+    static let stormPerHundred = 25
+
+    /// Asks whether the theme's weather turns on the board now. Like the shark, it
+    /// is rare: once a game at most, and then one time in four that it could.
+    func stormComes() -> Bool {
+        guard !sharkHasCome, !isGameOver, Self.storm(forTheme: Skin.current.id) != nil else { return false }
+        guard Int.random(in: 0..<100, using: &rng) < Self.stormPerHundred else { return false }
+        sharkHasCome = true
+        return true
+    }
+
+    /// The weather hits the board. Returns false, and does nothing, while a move is
+    /// still playing, the game is over, or the theme has no weather. `forcing`
+    /// picks the weather whatever the theme (tests).
+    @discardableResult
+    func stormStrikes(forcing forced: Storm? = nil) -> Bool {
+        guard !isAnimating, !isGameOver, state.tiles.count > 1,
+              let storm = forced ?? Self.storm(forTheme: Skin.current.id)
+        else { return false }
+        bursts.removeAll()
+        switch storm {
+        case .downpour, .blizzard:
+            scatterTiles(dropping: 0)
+        case .meteors:
+            scatterTiles(dropping: 1, chewing: 1)
+        case .asteroids:
+            scatterTiles(dropping: 2)
+        case .eruption:
+            spawnTile(forcing: .stone)
+            spawnTile(forcing: .stone)
+            shake(3)
+        }
+        lastStorm = storm
+        stormEvent += 1
+        finishMove()
+        return true
+    }
+
     /// How many cells the shark bit out of the board last time.
     private(set) var lastChewCount = 0
 

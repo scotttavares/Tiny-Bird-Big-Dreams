@@ -915,4 +915,32 @@ struct GameStoreTests {
         #expect(store.gems == gems + 1)
         #expect(GameStore.CrateFind.beast(.pinata).isPrize)
     }
+
+    @Test func wildWeatherHitsTheBoard() {
+        let defaults = freshDefaults()
+        save(GameState(
+            tiles: tiles([[2, 4, 8, 16], [32, 64, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
+            score: 0,
+            movesUntilRotation: 2,
+            nextID: 20
+        ), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        // An asteroid shower knocks the two smallest tiles off.
+        #expect(store.stormStrikes(forcing: .asteroids))
+        #expect(store.stormEvent == 1)
+        #expect(store.lastStorm == .asteroids)
+        #expect(store.state.tiles.map(\.value).sorted() == [8, 16, 32, 64])
+        // A downpour moves tiles and takes none.
+        #expect(store.stormStrikes(forcing: .downpour))
+        #expect(store.state.tiles.count == 4)
+        // An eruption lands two lumps of rock.
+        #expect(store.stormStrikes(forcing: .eruption))
+        #expect(store.state.tiles.filter { $0.kind == .stone }.count == 2)
+        // A falling star takes a tile and leaves a crater.
+        #expect(store.stormStrikes(forcing: .meteors))
+        #expect(store.state.blocks.filter { $0.kind == .hole }.count == 1)
+        #expect(GameEngine.isValid(store.state))
+        #expect(GameStore.storm(forTheme: "galaxy") == .asteroids)
+        #expect(GameStore.storm(forTheme: "neon") == nil)
+    }
 }

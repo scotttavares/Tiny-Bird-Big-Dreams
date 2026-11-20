@@ -628,9 +628,28 @@ struct GameBanners: ViewModifier {
             }
             .onChange(of: store.stirEvent) { _, _ in
                 // A crate says for itself what came out of it.
-                if store.lastStirDropped > 0, store.crateOpenEvent == 0 || store.lastCrateFind.isPrize {
+                if store.lastStirDropped > 0, Skin.current.id == "ocean", store.crateOpenEvent == 0 || store.lastCrateFind.isPrize {
                     callout("Shark attack!")
                     show(store.lastStirDropped == 1 ? "The shark took a tile" : "The shark took \(store.lastStirDropped) tiles", 1.6)
+                }
+            }
+            .onChange(of: store.stormEvent) { _, _ in
+                switch store.lastStorm {
+                case .downpour:
+                    callout("Downpour!")
+                    show("The rain washed your tiles about", 2)
+                case .meteors:
+                    callout("Falling star!")
+                    show("It smashed a tile and left a crater", 2)
+                case .asteroids:
+                    callout("Asteroids!")
+                    show(store.lastStirDropped == 1 ? "They knocked a tile off the board" : "They knocked \(store.lastStirDropped) tiles off the board", 2)
+                case .blizzard:
+                    callout("Blizzard!")
+                    show("The wind blew your tiles about", 2)
+                case .eruption:
+                    callout("Eruption!")
+                    show("Two lumps of rock landed on the board", 2)
                 }
             }
             .onChange(of: store.crateOpenEvent) { _, _ in

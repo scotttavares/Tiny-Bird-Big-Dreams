@@ -692,7 +692,10 @@ extension SceneArt {
         case .hearts: bubblePop(&context, size: size, progress: progress)
         case .coins: coinRain(&context, size: size, progress: progress)
         case .lights: fireworks(&context, size: size, progress: progress)
-        case .stars: warp(&context, size: size, progress: progress)
+        case .stars:
+            // Light speed, straight into an asteroid shower.
+            warp(&context, size: size, progress: progress)
+            meteors(&context, size: size, progress: progress)
         case .fireflies: downpour(&context, size: size, progress: progress)
         case .ash: meteors(&context, size: size, progress: progress)
         }
@@ -825,6 +828,18 @@ struct ThemeMoments: ViewModifier {
         playing = Skin.current.backdrop
         momentID += 1
         sounds.play(.boom, volume: 0.8)
+        // Now and then the weather does more than look wild: it hits the board.
+        if store.stormComes() {
+            let game = store
+            Task {
+                try? await Task.sleep(for: .milliseconds(700))
+                if !game.stormStrikes() {
+                    // A move was still playing: try once more when it has finished.
+                    try? await Task.sleep(for: .milliseconds(600))
+                    game.stormStrikes()
+                }
+            }
+        }
     }
 
     func body(content: Content) -> some View {
