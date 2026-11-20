@@ -222,6 +222,8 @@ final class GameStore {
         return Set(state.blocks.filter { $0.kind == .hole }.map(\.cell))
     }
 
+    /// A board has at most this many holes that swallow tiles.
+    static let maxHoles = 2
     /// A hole closes up once it has swallowed this many tiles.
     static let holeAppetite = 3
     /// Goes up each time a hole swallows something; `lastSwallowCount` is how many.
@@ -266,6 +268,16 @@ final class GameStore {
     /// jumps to an empty cell (the biggest tiles first); if there is none, it goes.
     private func reshape(to index: Int, turns: Int) {
         var blocks = GameEngine.layouts[index]
+        // Holes swallow tiles, so a board has two at most: any more open on it are
+        // left out. The outlines of the Shape Shift game are all holes and keep them.
+        if GameEngine.silhouetteName(index) == nil {
+            var holes = 0
+            blocks.removeAll { block in
+                guard block.kind == .hole else { return false }
+                holes += 1
+                return holes > Self.maxHoles
+            }
+        }
         for _ in 0..<turns {
             blocks = GameEngine.rotateClockwise(blocks)
         }
@@ -363,6 +375,8 @@ final class GameStore {
             // changes shape. Never on a board that already has its fill of obstacles.
             var bitten = 0
             for _ in 0..<bites where state.blocks.count < GameEngine.maxBlocks {
+                // Two holes on a board are plenty.
+                guard state.blocks.filter({ $0.kind == .hole }).count < Self.maxHoles else { break }
                 guard let cell = GameEngine.emptyCells([], blocked: blockedSet).randomElement(using: &rng) else { break }
                 state.blocks.append(Block(row: cell.row, col: cell.col, kind: .hole))
                 bitten += 1
