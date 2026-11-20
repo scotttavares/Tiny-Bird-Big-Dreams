@@ -39,10 +39,16 @@ struct GameScreen: View {
             Group {
                 switch plan.kind {
                 case .tall:
+                    // Spare height is shared out between the parts, so nothing is
+                    // squeezed up at the top with a gap left at the bottom.
                     VStack(spacing: 0) {
                         Spacer(minLength: 0)
                         header(scale: plan.scale, side: plan.panelSide)
+                        Spacer(minLength: 0)
+                            .frame(maxHeight: 34 * plan.scale)
                         boardArea(scale: plan.scale, side: plan.boardSide)
+                        Spacer(minLength: 0)
+                            .frame(maxHeight: 34 * plan.scale)
                         controls(scale: plan.scale, side: plan.panelSide)
                         Spacer(minLength: 0)
                     }

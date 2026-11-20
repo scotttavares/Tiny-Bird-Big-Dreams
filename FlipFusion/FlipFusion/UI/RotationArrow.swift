@@ -167,12 +167,35 @@ struct RotationArrow: View {
             )
         }
 
-        // The comet's own arrowhead: dark rim, light body, white heart.
+        // The comet's head: a glossy ball of light with a chevron flying just ahead
+        // of it, pointing the way the board will turn.
         let pulse = 1 + 0.08 * sin(time * (hurry ? 12 : 6))
-        let half = board * 0.058 * CGFloat(pulse)
-        context.fill(arrowhead(at: headAt, center: center, reach: reach, half: half * 1.25), with: .color(dark.opacity(strength)))
-        context.fill(arrowhead(at: headAt, center: center, reach: reach, half: half), with: .color(light.opacity(strength)))
-        context.fill(arrowhead(at: headAt, center: center, reach: reach, half: half * 0.5), with: .color(Color.white.opacity(0.95 * strength)))
+        let radius = board * 0.05 * CGFloat(pulse)
+        let ahead = point(headAt + 6, center: center, reach: reach)
+        let behind = point(headAt - 6, center: center, reach: reach)
+        let gapX = ahead.x - behind.x
+        let gapY = ahead.y - behind.y
+        let gap = max(0.001, (gapX * gapX + gapY * gapY).squareRoot())
+        let ux = gapX / gap
+        let uy = gapY / gap
+
+        let ball = CGRect(x: headSpot.x - radius, y: headSpot.y - radius, width: radius * 2, height: radius * 2)
+        let shine = Gradient(colors: [Color.white.opacity(strength), light.opacity(strength), dark.opacity(strength)])
+        let lit = CGPoint(x: headSpot.x - radius * 0.35, y: headSpot.y - radius * 0.35)
+        context.fill(Path(ellipseIn: ball), with: .radialGradient(shine, center: lit, startRadius: 0, endRadius: radius * 1.35))
+        context.stroke(Path(ellipseIn: ball), with: .color(Color.white.opacity(0.55 * strength)), lineWidth: max(1, radius * 0.1))
+
+        let tip = CGPoint(x: headSpot.x + ux * radius * 2.3, y: headSpot.y + uy * radius * 2.3)
+        let root = CGPoint(x: headSpot.x + ux * radius * 1.35, y: headSpot.y + uy * radius * 1.35)
+        let spread = radius * 0.85
+        var chevron = Path()
+        chevron.move(to: CGPoint(x: root.x - uy * spread, y: root.y + ux * spread))
+        chevron.addLine(to: tip)
+        chevron.addLine(to: CGPoint(x: root.x + uy * spread, y: root.y - ux * spread))
+        let rim = StrokeStyle(lineWidth: radius * 0.62, lineCap: .round, lineJoin: .round)
+        let core = StrokeStyle(lineWidth: radius * 0.34, lineCap: .round, lineJoin: .round)
+        context.stroke(chevron, with: .color(dark.opacity(strength)), style: rim)
+        context.stroke(chevron, with: .color(Color.white.opacity(strength)), style: core)
     }
 
     /// An arrowhead on the path at `degrees`, pointing the way the angles grow.
