@@ -4,7 +4,7 @@ import UIKit
 /// Apple's Game Center: signs the player in and keeps the worldwide leaderboards,
 /// one for each game mode, holding every player's best score.
 @MainActor
-final class GameCenter: NSObject, GKGameCenterControllerDelegate {
+final class GameCenter: NSObject, @preconcurrency GKGameCenterControllerDelegate {
     static let shared = GameCenter()
 
     /// The leaderboard for a game mode, as it is named in App Store Connect.
@@ -40,9 +40,7 @@ final class GameCenter: NSObject, GKGameCenterControllerDelegate {
     func report(score: Int, mode: GameStore.Mode) {
         guard isSignedIn, score > 0 else { return }
         let board = GameCenter.boardID(for: mode)
-        Task {
-            try? await GKLeaderboard.submitScore(score, context: 0, player: GKLocalPlayer.local, leaderboardIDs: [board])
-        }
+        GKLeaderboard.submitScore(score, context: 0, player: GKLocalPlayer.local, leaderboardIDs: [board]) { _ in }
     }
 
     /// Opens the worldwide leaderboard of a game mode. Returns false when the
@@ -64,10 +62,8 @@ final class GameCenter: NSObject, GKGameCenterControllerDelegate {
         return true
     }
 
-    nonisolated func gameCenterViewControllerDidFinish(_ gameCenterViewController: GKGameCenterViewController) {
-        MainActor.assumeIsolated {
-            gameCenterViewController.dismiss(animated: true)
-        }
+    func gameCenterViewControllerDidFinish(_ gameCenterViewController: GKGameCenterViewController) {
+        gameCenterViewController.dismiss(animated: true)
     }
 
     /// The screen on top right now, to present Game Center's screens from.
