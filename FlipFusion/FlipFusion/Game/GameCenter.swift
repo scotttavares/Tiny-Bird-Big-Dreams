@@ -7,9 +7,13 @@ import UIKit
 final class GameCenter: NSObject, @preconcurrency GKGameCenterControllerDelegate {
     static let shared = GameCenter()
 
-    /// The leaderboard for a game mode, as it is named in App Store Connect.
-    nonisolated static func boardID(for mode: GameStore.Mode) -> String {
-        "flipfusion.best." + mode.rawValue
+    /// The leaderboard for a game mode, as it is named in App Store Connect, or nil
+    /// for a mode that has none yet. So far the 2 Minutes and Endless games have one.
+    nonisolated static func boardID(for mode: GameStore.Mode) -> String? {
+        switch mode {
+        case .timed, .endless: return "flipfusion.best." + mode.rawValue
+        default: return nil
+        }
     }
 
     private var hasAsked = false
@@ -38,8 +42,7 @@ final class GameCenter: NSObject, @preconcurrency GKGameCenterControllerDelegate
     /// Sends a finished game's score to its mode's leaderboard. Game Center keeps
     /// each player's best, so a lower score changes nothing.
     func report(score: Int, mode: GameStore.Mode) {
-        guard isSignedIn, score > 0 else { return }
-        let board = GameCenter.boardID(for: mode)
+        guard isSignedIn, score > 0, let board = GameCenter.boardID(for: mode) else { return }
         GKLeaderboard.submitScore(score, context: 0, player: GKLocalPlayer.local, leaderboardIDs: [board]) { _ in }
     }
 
@@ -53,7 +56,7 @@ final class GameCenter: NSObject, @preconcurrency GKGameCenterControllerDelegate
             return false
         }
         let screen = GKGameCenterViewController(
-            leaderboardID: GameCenter.boardID(for: mode),
+            leaderboardID: GameCenter.boardID(for: mode) ?? "flipfusion.best.timed",
             playerScope: .global,
             timeScope: .allTime
         )
