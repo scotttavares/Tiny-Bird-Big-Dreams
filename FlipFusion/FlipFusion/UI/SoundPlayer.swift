@@ -10,6 +10,8 @@ final class SoundPlayer {
         case combo, hurry
         /// The creatures out of the crates.
         case chomp, monkey, ufo, roar, stomp
+        /// The shark's whole attack: the surge out of the water, the growl, the bites.
+        case shark
     }
 
     /// The background tunes. Each loops until another takes over.

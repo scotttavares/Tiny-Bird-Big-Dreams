@@ -690,7 +690,7 @@ struct ThemeMoments: ViewModifier {
         critter = kind
         critterID += 1
         switch kind {
-        case .shark: sounds.play(.boom, volume: 0.7)
+        case .shark: sounds.play(.shark)
         case .monkey: sounds.play(.monkey)
         case .ufo: sounds.play(.ufo)
         case .trex: sounds.play(.roar)
@@ -702,13 +702,10 @@ struct ThemeMoments: ViewModifier {
         switch critter {
         case .shark:
             store.rattle(3)
-            sounds.play(.chomp)
+            sounds.play(.chomp, volume: 0.5)
         case .monkey:
             store.rattle(2)
             sounds.play(.stomp, volume: 0.6)
-            if number == 3 {
-                sounds.play(.monkey)
-            }
             // It throws the tiles about as it goes.
             if number == 2 || number == 4 {
                 store.jumble()
