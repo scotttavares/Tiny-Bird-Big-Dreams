@@ -447,7 +447,7 @@ struct GameEngineTests {
 
     @Test func theScreenArrangesItselfForTheSpaceItHas() {
         // A phone held upright: one column, as the mockup is drawn.
-        let phone = ScreenPlan(size: CGSize(width: 393, height: 760))
+        let phone = ScreenPlan(size: CGSize(width: 393, height: 800))
         #expect(phone.kind == .tall)
         #expect(phone.scale == 1)
         #expect(phone.boardSide == 322)

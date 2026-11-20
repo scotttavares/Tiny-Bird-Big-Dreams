@@ -42,6 +42,13 @@ struct GameScreen: View {
                     // Spare height is shared out between the parts, so nothing is
                     // squeezed up at the top with a gap left at the bottom.
                     VStack(spacing: 0) {
+                        // The top row belongs to the coin counter and the menu button:
+                        // the title never slides up under them. The prize strip under
+                        // the boosters is mostly empty, so the top takes twice the
+                        // bottom's share of what is left over.
+                        Color.clear
+                            .frame(height: 44)
+                        Spacer(minLength: 0)
                         Spacer(minLength: 0)
                         header(scale: plan.scale, side: plan.panelSide)
                         Spacer(minLength: 0)

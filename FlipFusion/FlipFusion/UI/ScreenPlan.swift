@@ -58,7 +58,8 @@ struct ScreenPlan: Equatable {
             panelSide = 322 * scale
         } else {
             kind = .tall
-            scale = min(width / 393, height / 760)
+            // 44 points at the top are kept for the coin counter and the menu.
+            scale = min(width / 393, (height - 44) / 716)
             boardSide = 322 * scale
             panelSide = boardSide
         }
