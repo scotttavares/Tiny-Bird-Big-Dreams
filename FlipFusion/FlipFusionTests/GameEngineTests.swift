@@ -254,8 +254,8 @@ struct GameEngineTests {
 
     @Test func theGameGetsHarderWithTheLevel() {
         #expect(GameEngine.stonesPerHundred(level: 1) == 0)
-        #expect(GameEngine.stonesPerHundred(level: 3) == 8)
-        #expect(GameEngine.stonesPerHundred(level: 30) == 18)
+        #expect(GameEngine.stonesPerHundred(level: 3) == 6)
+        #expect(GameEngine.stonesPerHundred(level: 30) == 12)
         #expect(GameEngine.extraTilePerHundred(level: 1) == 0)
         #expect(GameEngine.extraTilePerHundred(level: 4) == 36)
         #expect(GameEngine.extraTilePerHundred(level: 30) == 60)

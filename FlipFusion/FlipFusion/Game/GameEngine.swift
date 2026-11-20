@@ -384,12 +384,14 @@ enum GameEngine {
         return level
     }
 
-    /// At most this many stone blocks sit on the board at once.
-    static let maxStones = 4
+    /// At most this many stone blocks sit on the board at once. Every wall, hole and
+    /// crate on the board takes one off that, down to a single stone, so a board
+    /// that is already cluttered does not fill with rocks as well.
+    static let maxStones = 3
 
     /// Out of every 100 new tiles, how many are stone blocks. None on level 1.
     static func stonesPerHundred(level: Int) -> Int {
-        level < 2 ? 0 : min(18, 5 + 3 * (level - 2))
+        level < 2 ? 0 : min(12, 4 + 2 * (level - 2))
     }
 
     /// Out of every 100 moves, how many drop a second new tile. None on level 1.
@@ -424,7 +426,7 @@ enum GameEngine {
         } else if roll < timeTilesPerHundred + bombTilesPerHundred {
             kind = .bomb
         } else if roll < timeTilesPerHundred + bombTilesPerHundred + stonesPerHundred,
-                  state.tiles.filter({ $0.kind == .stone }).count < maxStones {
+                  state.tiles.filter({ $0.kind == .stone }).count < max(1, maxStones - state.blocks.count) {
             kind = .stone
         }
         if let forcedKind {
