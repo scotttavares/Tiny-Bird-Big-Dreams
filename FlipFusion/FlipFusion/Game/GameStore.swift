@@ -554,11 +554,17 @@ final class GameStore {
         // A creature: 18 crates in 100 hold one, and never one of the next few crates
         // after a creature has been out, so they stay a surprise.
         guard cratesSinceCreature >= Self.creatureRest else { return .coins(100) }
-        switch roll {
-        case ..<79: return .monkey
-        case ..<83: return .shark
-        case ..<87: return .ufo
-        default: return .trex
+        return Self.creatures(forTheme: Skin.current.id).randomElement(using: &rng) ?? .coins(100)
+    }
+
+    /// The creatures that live in a theme's crates: the shark in the sea, the flying
+    /// saucer in space. Themes with no creature of their own yet share the monkey
+    /// and the T-rex.
+    nonisolated static func creatures(forTheme id: String) -> [CrateFind] {
+        switch id {
+        case "ocean": return [.shark]
+        case "galaxy": return [.ufo]
+        default: return [.monkey, .trex]
         }
     }
 
