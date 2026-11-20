@@ -87,6 +87,10 @@ struct CritterSprite: View {
 struct CritterAttack: View {
     let critter: Critter
     let side: CGFloat
+    /// The tiles the flying saucer takes, where they stood on the board.
+    var captives: [Tile] = []
+    /// The Fruit Salad game: tiles show fruit.
+    var isFruit = false
     let onHit: (Int) -> Void
 
     var body: some View {
@@ -99,7 +103,7 @@ struct CritterAttack: View {
                     SharkLunge(side: side, onHit: onHit)
                 }
             case .monkey: MonkeyRampage(side: side, onHit: onHit)
-            case .ufo: UFORaid(side: side, onHit: onHit)
+            case .ufo: UFORaid(side: side, captives: captives, isFruit: isFruit, onHit: onHit)
             case .trex:
                 if Critter.trex.hasFilm {
                     TrexFilm(side: side, onHit: onHit)
@@ -322,7 +326,23 @@ struct MonkeyRampage: View {
 /// and the aliens jumping about inside, shines its beam down twice, and shoots off.
 struct UFORaid: View {
     let side: CGFloat
+    /// The tiles it takes, where they stood on the board.
+    var captives: [Tile] = []
+    var isFruit = false
     let onHit: (Int) -> Void
+
+    /// How many of the captives have been beamed up so far.
+    @State private var lifted = 0
+
+    /// Where a board cell's centre is, measured from the centre of the board.
+    private func spot(row: Int, col: Int) -> CGSize {
+        let inset = side * 0.04
+        let gap = side * 0.028
+        let cell = (side - 2 * inset - 3 * gap) / 4
+        let x = inset + CGFloat(col) * (cell + gap) + cell / 2 - side / 2
+        let y = inset + CGFloat(row) * (cell + gap) + cell / 2 - side / 2
+        return CGSize(width: x, height: y)
+    }
 
     /// 0 on its way in, 1 hovering, 2 gone.
     @State private var stage = 0
@@ -351,6 +371,21 @@ struct UFORaid: View {
                 .offset(y: -side * 0.44 + (isBobbing ? -7 : 7))
         }
         .offset(x: stage == 0 ? -side * 1.3 : (stage == 2 ? side * 1.4 : 0), y: stage == 1 ? 0 : -side * 0.6)
+        .background {
+            // The tiles it takes: each waits where it stood, then rises up the beam,
+            // spinning and shrinking, into the saucer.
+            ZStack {
+                ForEach(Array(captives.enumerated()), id: \.element.id) { place, tile in
+                    let isUp = place < lifted
+                    let home = spot(row: tile.row, col: tile.col)
+                    TileView(value: tile.value, kind: tile.kind, size: side * 0.2, isFruit: isFruit)
+                        .rotationEffect(.degrees(isUp ? 300 : 0))
+                        .scaleEffect(isUp ? 0.12 : 1)
+                        .opacity(isUp ? 0 : 1)
+                        .offset(x: isUp ? 0 : home.width, y: isUp ? -side * 0.42 : home.height)
+                }
+            }
+        }
         .task {
             // The lights and the aliens never stop moving.
             while !Task.isCancelled {
@@ -371,7 +406,11 @@ struct UFORaid: View {
                     isBeaming = true
                 }
                 onHit(flash)
-                try? await Task.sleep(for: .milliseconds(380))
+                // One tile goes up with each flash; the last flash takes any left.
+                withAnimation(.easeIn(duration: 0.55)) {
+                    lifted = flash == 2 ? captives.count : min(flash, captives.count)
+                }
+                try? await Task.sleep(for: .milliseconds(620))
                 withAnimation(.easeIn(duration: 0.12)) {
                     isBeaming = false
                 }

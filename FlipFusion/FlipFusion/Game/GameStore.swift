@@ -436,14 +436,14 @@ final class GameStore {
 
     /// The flying saucer beams up `count` tiles picked at random, never leaving
     /// fewer than two on the board.
+    private(set) var lastAbducted: [Tile] = []
+
     private func abductTiles(_ count: Int) {
         let take = max(0, min(count, state.tiles.count - 2))
         let chosen = state.tiles.shuffled(using: &rng).prefix(take)
         let gone = Set(chosen.map(\.id))
-        for tile in chosen {
-            nextBurstID += 1
-            bursts.append(Burst(id: nextBurstID, row: tile.row, col: tile.col, value: tile.value, isSuper: true))
-        }
+        // The screen shows these rising up the beam, from where they stood.
+        lastAbducted = Array(chosen)
         if animated {
             withAnimation(.easeIn(duration: 0.3)) {
                 state.tiles.removeAll { gone.contains($0.id) }
