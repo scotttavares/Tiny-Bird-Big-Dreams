@@ -69,8 +69,14 @@ final class GameCenter: NSObject, @preconcurrency GKGameCenterControllerDelegate
         gameCenterViewController.dismiss(animated: true)
     }
 
+    /// Asks the player to sign in again (they turned it down, or were signed out).
+    func askAgain() {
+        hasAsked = false
+        signIn()
+    }
+
     /// The screen on top right now, to present Game Center's screens from.
-    private static func topController() -> UIViewController? {
+    static func topController() -> UIViewController? {
         let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
         let window = scenes.flatMap(\.windows).first { $0.isKeyWindow } ?? scenes.flatMap(\.windows).first
         var top = window?.rootViewController

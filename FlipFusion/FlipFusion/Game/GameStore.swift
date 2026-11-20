@@ -797,7 +797,40 @@ final class GameStore {
 
     /// True when the game has ended and has not been carried on yet.
     var canContinue: Bool {
-        isGameOver && !isAnimating && continuesUsed == 0 && state.score > 0
+        isGameOver && !isAnimating && continuesUsed == 0 && state.score > 0 && !isVersus
+    }
+
+    // MARK: Head to head
+
+    /// True while a head-to-head game against another player is on. Such a game
+    /// cannot be carried on with gems: both players get the same two minutes.
+    private(set) var isVersus = false
+
+    /// Starts a head-to-head game: the two-minute game, from the tiles both players
+    /// were dealt, with the clock running from the start.
+    func startVersus(with dealt: [Tile]) {
+        if mode != .timed {
+            switchMode(.timed)
+        }
+        newGame()
+        var next = state.nextID
+        var tiles: [Tile] = []
+        for tile in dealt {
+            tiles.append(Tile(id: next, value: tile.value, row: tile.row, col: tile.col, kind: tile.kind))
+            next += 1
+        }
+        if !tiles.isEmpty {
+            state.tiles = tiles
+            state.nextID = next
+        }
+        isVersus = true
+        isTimerRunning = true
+        save()
+    }
+
+    /// Ends the head-to-head game; the board is left as it is.
+    func endVersus() {
+        isVersus = false
     }
 
     /// Spends gems to carry on with a game that has ended. Time's up: the clock gets

@@ -943,4 +943,21 @@ struct GameStoreTests {
         #expect(GameStore.storm(forTheme: "galaxy") == .asteroids)
         #expect(GameStore.storm(forTheme: "neon") == nil)
     }
+
+    @Test func aHeadToHeadGameStartsFromTheDealtBoardWithTheClockRunning() {
+        let store = GameStore(defaults: freshDefaults(), animated: false)
+        let dealt = tiles([[0, 0, 4, 0], [0, 0, 0, 0], [0, 2, 0, 0], [0, 0, 0, 0]])
+        store.startVersus(with: dealt)
+        #expect(store.isVersus)
+        #expect(store.mode == .timed)
+        #expect(store.state.score == 0)
+        #expect(store.state.tiles.map(\.value).sorted() == [2, 4])
+        #expect(store.isTimerRunning)
+        // It cannot be carried on with gems, even when time runs out.
+        store.tick(GameStore.roundSeconds + 1)
+        #expect(store.isGameOver)
+        #expect(!store.canContinue)
+        store.endVersus()
+        #expect(!store.isVersus)
+    }
 }

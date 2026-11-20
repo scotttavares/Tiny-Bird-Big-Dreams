@@ -107,6 +107,16 @@ struct HelpView: View {
                     }
                     .buttonStyle(.plain)
                     Button {
+                        if !Versus.shared.find() {
+                            modeNotice = "Sign in to Game Center to play head to head."
+                        }
+                    } label: {
+                        Label("Play head to head", systemImage: "person.2.fill")
+                            .font(.system(size: 17, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Theme.flip[0])
+                    }
+                    .buttonStyle(.plain)
+                    Button {
                         dismiss()
                         onReplayIntro()
                     } label: {

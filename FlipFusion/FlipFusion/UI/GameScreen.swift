@@ -165,6 +165,26 @@ struct GameScreen: View {
             // A finished game goes on the worldwide leaderboard of its mode.
             if isOver {
                 GameCenter.shared.report(score: store.state.score, mode: store.mode)
+                Versus.shared.send(score: store.state.score, over: true)
+            }
+        }
+        .onChange(of: store.state.score) { _, score in
+            Versus.shared.send(score: score, over: false)
+        }
+        .onChange(of: Versus.shared.startEvent) { _, _ in
+            // Matched with another player: shut the menu and deal the shared board.
+            showHelp = false
+            store.startVersus(with: Versus.shared.startTiles)
+        }
+        .onChange(of: Versus.shared.phase) { _, phase in
+            if phase == .idle {
+                store.endVersus()
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if Versus.shared.phase != .idle {
+                VersusBar(versus: Versus.shared, myScore: store.state.score, isOver: store.isGameOver)
+                    .padding(.bottom, 6)
             }
         }
         .onChange(of: scenePhase) { _, phase in
@@ -470,6 +490,63 @@ struct BackgroundView: View {
             // Whatever moves in the theme in use.
             SceneView(skin: skin, isPainted: isPainted)
         }
+    }
+}
+
+/// The strip at the foot of the screen during a head-to-head game: the other
+/// player's name and score, the result once both games are over, and a way out.
+struct VersusBar: View {
+    let versus: Versus
+    let myScore: Int
+    let isOver: Bool
+
+    private var line: String {
+        if versus.phase == .starting {
+            return "Matched with " + versus.rivalName + "..."
+        }
+        let score = versus.rivalScore.formatted()
+        if isOver, versus.rivalDone {
+            if myScore > versus.rivalScore {
+                return "You win! " + versus.rivalName + ": " + score
+            }
+            if myScore < versus.rivalScore {
+                return versus.rivalName + " wins with " + score
+            }
+            return "A draw at " + score
+        }
+        if versus.rivalLeft {
+            return versus.rivalName + " left at " + score
+        }
+        if isOver {
+            return "Waiting for " + versus.rivalName + ": " + score
+        }
+        return versus.rivalName + ": " + score
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "person.2.fill")
+                .font(.system(size: 13, weight: .bold))
+            Text(line)
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Button {
+                versus.leave()
+            } label: {
+                Text("Leave")
+                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .padding(.horizontal, 10)
+                    .frame(height: 26)
+                    .background(Capsule().fill(Color.white.opacity(0.2)))
+            }
+            .buttonStyle(.plain)
+        }
+        .foregroundStyle(Color.white)
+        .padding(.horizontal, 14)
+        .frame(height: 40)
+        .background(Capsule().fill(Color.black.opacity(0.6)))
+        .overlay(Capsule().strokeBorder(Theme.glassStroke, lineWidth: 1))
     }
 }
 
