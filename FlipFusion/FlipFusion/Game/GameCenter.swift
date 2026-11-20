@@ -7,13 +7,10 @@ import UIKit
 final class GameCenter: NSObject, @preconcurrency GKGameCenterControllerDelegate {
     static let shared = GameCenter()
 
-    /// The leaderboard for a game mode, as it is named in App Store Connect, or nil
-    /// for a mode that has none yet. So far the 2 Minutes and Endless games have one.
+    /// The leaderboard for a game mode, as it is named in App Store Connect. Every
+    /// mode has one.
     nonisolated static func boardID(for mode: GameStore.Mode) -> String? {
-        switch mode {
-        case .timed, .endless: return "flipfusion.best." + mode.rawValue
-        default: return nil
-        }
+        "flipfusion.best." + mode.rawValue
     }
 
     private var hasAsked = false

@@ -534,9 +534,14 @@ extension SceneArt {
             let y = h * 0.16 + sin(time * 2.5) * 8
             let wide = w * 0.14
             // The painted saucer, tipping as it flies; the drawn one stands in without it.
-            // Its two pictures are shown in turn, so the lights chase and the crew move.
+            // A little film of the saucer with its alien waving, played round and round
+            // as it flies by. Without the film, its two pictures are shown in turn.
+            let frame = Int(floor(time * 12)) % 50
+            let film = "prop-alien-f" + (frame < 10 ? "0" : "") + String(frame)
             let pose = Int(floor(time * 3)) % 2 == 0 ? "critter-ufo" : "critter-ufo-2"
-            if !prop(&context, pose, x: x, y: y, width: wide * 1.5, turn: sin(time * 2.5) * 0.1) {
+            let tilt = sin(time * 2.5) * 0.1
+            let isFilmed = prop(&context, film, x: x, y: y, width: wide * 1.9, turn: tilt)
+            if !isFilmed, !prop(&context, pose, x: x, y: y, width: wide * 1.5, turn: tilt) {
                 context.fill(Path(ellipseIn: CGRect(x: x - wide * 0.28, y: y - wide * 0.3, width: wide * 0.56, height: wide * 0.4)),
                              with: .color(Color(hex: 0x8FF0FF).opacity(0.75)))
                 context.fill(Path(ellipseIn: CGRect(x: x - wide / 2, y: y - wide * 0.12, width: wide, height: wide * 0.26)),
