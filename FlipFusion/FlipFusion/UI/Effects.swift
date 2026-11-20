@@ -446,6 +446,44 @@ struct StreakChip: View {
     }
 }
 
+/// A booster's button face: the theme's own painted button when the asset
+/// catalogue has it ("booster-", the booster, a dash and the theme's id), otherwise
+/// the coloured square with its symbol.
+struct BoosterIcon: View {
+    let booster: GameStore.Booster
+    let side: CGFloat
+
+    /// The booster's name in picture names.
+    static func art(_ booster: GameStore.Booster) -> String {
+        switch booster {
+        case .flip: return "booster-flip"
+        case .sweep: return "booster-sweep"
+        case .fever: return "booster-fever"
+        case .arm: return "booster-arm"
+        }
+    }
+
+    var body: some View {
+        let tones = BoosterBar.colors(booster)
+        let shape = RoundedRectangle(cornerRadius: side * 0.3, style: .continuous)
+        if ObstacleArt.hasThemed(BoosterIcon.art(booster)) {
+            Image(ObstacleArt.themed(BoosterIcon.art(booster)))
+                .resizable()
+                .scaledToFit()
+                .frame(width: side, height: side)
+                .shadow(color: tones[1].opacity(0.6), radius: side * 0.12)
+        } else {
+            Image(systemName: BoosterBar.symbol(booster))
+                .font(.system(size: side * 0.41, weight: .heavy))
+                .foregroundStyle(Color.white)
+                .frame(width: side, height: side)
+                .background(shape.fill(LinearGradient(colors: tones, startPoint: .top, endPoint: .bottom)))
+                .overlay(shape.strokeBorder(Color.white.opacity(0.55), lineWidth: 1.5))
+                .shadow(color: tones[1].opacity(0.7), radius: side * 0.13)
+        }
+    }
+}
+
 /// The three boosters under the board. Each shows how many free uses are left,
 /// or its price in coins once they are gone.
 struct BoosterBar: View {
@@ -489,19 +527,7 @@ struct BoosterBar: View {
                     onTap(booster)
                 } label: {
                     VStack(spacing: 3 * scale) {
-                        Image(systemName: Self.symbol(booster))
-                            .font(.system(size: 22 * scale, weight: .heavy))
-                            .foregroundStyle(Color.white)
-                            .frame(width: 54 * scale, height: 54 * scale)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16 * scale, style: .continuous)
-                                    .fill(LinearGradient(colors: Self.colors(booster), startPoint: .top, endPoint: .bottom))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16 * scale, style: .continuous)
-                                    .strokeBorder(Color.white.opacity(0.55), lineWidth: 1.5)
-                            )
-                            .shadow(color: Self.colors(booster)[1].opacity(0.7), radius: 7 * scale)
+                        BoosterIcon(booster: booster, side: 54 * scale)
                             .overlay(alignment: .topTrailing) {
                                 // Free uses left, or the price in coins.
                                 Text(count > 0 ? "\(count)" : "\(booster.price)")

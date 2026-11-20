@@ -59,6 +59,15 @@ struct TileView: View {
             } else if isStone {
                 // A stone block is a boulder, not a tile, in every theme.
                 StoneView(size: size, look: skin.stone)
+            } else if kind == .bomb, ObstacleArt.has("tile-bomb-" + skin.id) {
+                // The theme's own bomb, with the tile's number on it.
+                ThemedSpecial(picture: "tile-bomb-" + skin.id, text: isFruit ? Fruit.face(for: value) : String(value),
+                              size: size, fontSize: isFruit ? size * 0.4 : fontSize * 0.86)
+                    .scaleEffect(throb ? 1.07 : 1)
+            } else if kind == .time, ObstacleArt.has("tile-clock-" + skin.id) {
+                ThemedSpecial(picture: "tile-clock-" + skin.id, text: isFruit ? Fruit.face(for: value) : String(value),
+                              size: size, fontSize: isFruit ? size * 0.4 : fontSize * 0.86)
+                    .scaleEffect(throb ? 1.05 : 1)
             } else if kind == .bomb {
                 // A bomb tile is a bomb, whatever the theme.
                 BombTile(value: value, size: size, fontSize: fontSize, label: isFruit ? Fruit.face(for: value) : nil)
@@ -206,6 +215,35 @@ struct TileView: View {
             .frame(width: size, height: size)
             .clipShape(outline)
         }
+    }
+}
+
+/// A special tile drawn from a theme's own picture, with the tile's number (or
+/// fruit) over the middle of it, outlined so it reads on any picture.
+struct ThemedSpecial: View {
+    let picture: String
+    let text: String
+    let size: CGFloat
+    let fontSize: CGFloat
+
+    var body: some View {
+        ZStack {
+            Image(picture)
+                .resizable()
+                .scaledToFit()
+                .frame(width: size, height: size)
+                .shadow(color: Color.black.opacity(0.4), radius: size * 0.04, x: 0, y: size * 0.03)
+            Text(text)
+                .font(.system(size: fontSize, weight: .black, design: .rounded))
+                .foregroundStyle(Color.white)
+                .shadow(color: Color.black, radius: size * 0.015, x: 0, y: 0)
+                .shadow(color: Color.black.opacity(0.9), radius: size * 0.05, x: 0, y: size * 0.02)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .frame(width: size * 0.6)
+                .offset(y: size * 0.06)
+        }
+        .frame(width: size, height: size)
     }
 }
 

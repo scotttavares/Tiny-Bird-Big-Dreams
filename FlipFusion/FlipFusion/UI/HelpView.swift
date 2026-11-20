@@ -229,16 +229,8 @@ struct HelpView: View {
 
     /// A row whose picture is the booster's own button.
     private func boosterRow(_ booster: GameStore.Booster, title: String, text: String) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 13, style: .continuous)
-        let tones = BoosterBar.colors(booster)
-        return HStack(alignment: .top, spacing: 14) {
-            Image(systemName: BoosterBar.symbol(booster))
-                .font(.system(size: 19, weight: .heavy))
-                .foregroundStyle(Color.white)
-                .frame(width: 44, height: 44)
-                .background(shape.fill(LinearGradient(colors: tones, startPoint: .top, endPoint: .bottom)))
-                .overlay(shape.strokeBorder(Color.white.opacity(0.55), lineWidth: 1.5))
-                .shadow(color: tones[1].opacity(0.7), radius: 5)
+        HStack(alignment: .top, spacing: 14) {
+            BoosterIcon(booster: booster, side: 44)
                 .accessibilityHidden(true)
             words(title: title, text: text)
         }
