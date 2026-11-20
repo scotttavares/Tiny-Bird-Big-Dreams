@@ -660,6 +660,18 @@ struct GameBanners: ViewModifier {
                 case .stones:
                     callout("Rock fall!")
                     show("The crate was full of rocks", 2)
+                case .beast(let kind):
+                    callout(kind.title + "!")
+                    switch kind {
+                    case .robot: show("The robot wired \(store.lastHazardCount) tiles as bombs", 2)
+                    case .crab: show("The crab pinched a tile", 2)
+                    case .gummy: show("It left two sticky lumps on the board", 2)
+                    case .dragon: show("The dragon burned \(store.lastStirDropped) tiles", 2)
+                    case .yeti: show("The yeti stamped \(store.lastHazardCount) tiles down a size", 2)
+                    case .mole: show("The mole dug \(store.lastChewCount) holes in the board", 2)
+                    case .pinata: show("It burst: \(GameStore.pinataCoins) coins and a gem", 2)
+                    default: break
+                    }
                 }
             }
             .onChange(of: store.specialSpawnEvent) { _, _ in

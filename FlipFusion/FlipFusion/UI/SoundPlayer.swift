@@ -32,6 +32,8 @@ final class SoundPlayer {
         case gold = "music-gold"
         case party = "music-party"
         case galaxy = "music-galaxy"
+        case rainforest = "music-rainforest"
+        case jurassic = "music-jurassic"
     }
 
     /// A few copies of each sound, so the same one can overlap itself.

@@ -309,6 +309,11 @@ enum GameEngine {
         [wall(0, 0), crate(1, 2), hole(3, 2)],
         [hole(0, 0), hole(3, 3), wall(1, 2)],
         [wall(1, 1), crate(2, 2), crate(0, 3)],
+        // The Rainforest theme's two boards, then the Jurassic theme's two.
+        [crate(0, 0), crate(3, 3), wall(1, 2), hole(2, 1)],
+        [wall(0, 3), wall(3, 0), crate(1, 1), crate(2, 2), hole(0, 0)],
+        [hole(1, 1), hole(2, 2), crate(0, 3), wall(3, 0)],
+        [wall(1, 0), wall(2, 3), crate(0, 1), crate(3, 2), hole(1, 2)],
         // From here on, the outlines of the Shape Shift game: holes that cut the
         // board itself into a new shape. In the order of `silhouetteNames`.
         [hole(0, 1), hole(0, 2), hole(0, 3), hole(1, 2), hole(1, 3), hole(2, 3)],
@@ -322,7 +327,7 @@ enum GameEngine {
     ]
 
     /// Where the outlines of the Shape Shift game begin in `layouts`, and their names.
-    static let firstSilhouette = 31
+    static let firstSilhouette = 35
     static let silhouetteNames = ["Triangle", "Circle", "Ring", "Corner", "Tee", "Cup", "Beam", "Zigzag"]
 
     /// The name of an outline, or nil for any other shape.

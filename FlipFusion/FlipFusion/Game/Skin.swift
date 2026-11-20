@@ -53,6 +53,10 @@ struct Skin: Identifiable, Equatable, Sendable {
         case lights
         /// Twinkling stars and shooting stars.
         case stars
+        /// Fireflies drifting through the trees.
+        case fireflies
+        /// Glowing ash drifting up from a far volcano.
+        case ash
     }
 
     /// The outline of every tile.
@@ -110,9 +114,15 @@ struct Skin: Identifiable, Equatable, Sendable {
         Skin(id: "bubblegum", name: "Bubblegum", blurb: "Jelly tiles and floating hearts", unlock: .gems(120),
              chromeHue: 0.84, chromeBrightness: 1.25, tiles: .pastel,
              backdrop: .hearts, shape: .jelly, spark: "heart.fill", boards: [19, 20]),
+        Skin(id: "rainforest", name: "Rainforest", blurb: "Fireflies, a downpour and a monkey in the crates", unlock: .gems(150),
+             chromeHue: 0.4, chromeBrightness: 0.85, tiles: .band(from: 0.2, to: 0.46),
+             backdrop: .fireflies, shape: .rounded, spark: "leaf.fill", boards: [31, 32]),
         Skin(id: "lava", name: "Lava", blurb: "Hot tiles and flying sparks", unlock: .gems(180),
              chromeHue: 0.02, chromeBrightness: 0.8, tiles: .band(from: 0.93, to: 1.13),
              backdrop: .embers, shape: .hex, spark: "flame.fill", boards: [21, 22]),
+        Skin(id: "jurassic", name: "Jurassic", blurb: "A lost valley, falling stars and a T-rex in the crates", unlock: .gems(200),
+             chromeHue: 0.07, chromeBrightness: 0.8, tiles: .band(from: 0.04, to: 0.3),
+             backdrop: .ash, shape: .gem, spark: "pawprint.fill", boards: [33, 34]),
         Skin(id: "frost", name: "Frost", blurb: "Ice crystals in falling snow", unlock: .gems(250),
              chromeHue: 0.58, chromeBrightness: 1.15, tiles: .icy,
              backdrop: .snow, shape: .crystal, spark: "snowflake", boards: [23, 24]),
@@ -150,6 +160,7 @@ struct Skin: Identifiable, Equatable, Sendable {
         case "gold": return .nugget
         case "party": return .mirror
         case "galaxy": return .moon
+        case "jurassic": return .sandstone
         default: return .rock
         }
     }
@@ -165,6 +176,8 @@ struct Skin: Identifiable, Equatable, Sendable {
         case "gold": return "Busted!"
         case "party": return "Lights out!"
         case "galaxy": return "Lost in space!"
+        case "rainforest": return "Lost in the jungle!"
+        case "jurassic": return "Extinct!"
         default: return "Game over, dude!"
         }
     }

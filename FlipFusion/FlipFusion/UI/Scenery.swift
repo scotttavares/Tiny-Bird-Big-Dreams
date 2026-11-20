@@ -145,6 +145,18 @@ enum SceneArt {
             lights(&context, size: size, time: time)
             stars(&context, size: size, time: time, count: 30)
             discoScene(&context, size: size, time: time, painted: painted)
+        case .fireflies:
+            // Fireflies wandering up through the trees, winking as they go.
+            drift(&context, size: size, time: time, count: 24, mark: .dot,
+                  colors: [Color(hex: 0xE8FF7A), Color(hex: 0x9CFFB0)], sizes: 3...7, rising: true, pace: 0.3, twinkle: true)
+            drift(&context, size: size, time: time, count: 8, mark: .dot,
+                  colors: [Color(hex: 0xFFF3A0)], sizes: 6...10, rising: false, pace: 0.15, twinkle: true, salt: 40)
+        case .ash:
+            // Glowing ash and sparks carried up on the warm air.
+            drift(&context, size: size, time: time, count: 26, mark: .dot,
+                  colors: [Color(hex: 0xFFB36A), Color(hex: 0xFFE2B0)], sizes: 2...5, rising: true, pace: 0.45, twinkle: true)
+            drift(&context, size: size, time: time, count: 6, mark: .diamond,
+                  colors: [Color(hex: 0xFF7A3A)], sizes: 4...8, rising: true, pace: 0.7, twinkle: true, salt: 40)
         case .stars:
             stars(&context, size: size, time: time, count: 70)
             shootingStar(&context, size: size, time: time)

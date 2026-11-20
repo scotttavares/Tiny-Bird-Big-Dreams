@@ -348,8 +348,8 @@ struct GameEngineTests {
     }
 
     @Test func everyBoardShapeIsSound() {
-        #expect(GameEngine.layouts.count == 39)
-        #expect(Set(GameEngine.layouts).count == 39)
+        #expect(GameEngine.layouts.count == 43)
+        #expect(Set(GameEngine.layouts).count == 43)
         // The outlines of the Shape Shift game: all holes, each leaving room to play.
         #expect(GameEngine.firstSilhouette + GameEngine.silhouetteNames.count == GameEngine.layouts.count)
         #expect(GameEngine.silhouetteName(GameEngine.firstSilhouette) == "Triangle")

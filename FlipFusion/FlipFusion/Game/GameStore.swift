@@ -218,7 +218,7 @@ final class GameStore {
     /// The holes that swallow tiles. The outlines of the Shape Shift game are cut
     /// from holes too, but those are the edge of the board and swallow nothing.
     private var holeSet: Set<Cell> {
-        guard state.shapeID < GameEngine.firstSilhouette else { return [] }
+        guard GameEngine.silhouetteName(state.shapeID) == nil else { return [] }
         return Set(state.blocks.filter { $0.kind == .hole }.map(\.cell))
     }
 
@@ -508,10 +508,14 @@ final class GameStore {
         /// True for the animals and aliens.
         var isCreature: Bool {
             switch self {
-            case .monkey, .shark, .ufo, .trex: return true
+            case .monkey, .shark, .ufo, .trex, .beast: return true
             default: return false
             }
         }
+
+        /// One of the creatures that belong to a single theme: the robot, the crab,
+        /// the gum monster, the dragon, the yeti, the mole or the pinata.
+        case beast(Critter)
         /// A flying saucer hovers over the board and its aliens beam two tiles up.
         case ufo
         /// A T-rex stamps across, mixing the tiles up and stamping three down a size.
@@ -523,6 +527,8 @@ final class GameStore {
         var isPrize: Bool {
             switch self {
             case .monkey, .shark, .ufo, .trex, .stones: return false
+            // The pinata is the one creature that is good news.
+            case .beast(let kind): return kind == .pinata
             default: return true
             }
         }
@@ -564,7 +570,63 @@ final class GameStore {
         switch id {
         case "ocean": return [.shark]
         case "galaxy": return [.ufo]
-        default: return [.monkey, .trex]
+        case "rainforest": return [.monkey]
+        case "jurassic": return [.trex]
+        case "neon": return [.beast(.robot)]
+        case "sunset": return [.beast(.crab)]
+        case "bubblegum": return [.beast(.gummy)]
+        case "lava": return [.beast(.dragon)]
+        case "frost": return [.beast(.yeti)]
+        case "gold": return [.beast(.mole)]
+        case "party": return [.beast(.pinata)]
+        default: return [.monkey]
+        }
+    }
+
+    /// Coins the pinata showers when it bursts.
+    static let pinataCoins = 150
+
+    /// What each theme's own creature does to the board.
+    private func unleash(_ kind: Critter) {
+        switch kind {
+        case .robot:
+            // It wires up two ordinary tiles as bombs.
+            let picks = state.tiles.indices
+                .filter { state.tiles[$0].kind == .normal }
+                .shuffled(using: &rng)
+                .prefix(2)
+            for index in picks {
+                state.tiles[index].kind = .bomb
+                let tile = state.tiles[index]
+                nextBurstID += 1
+                bursts.append(Burst(id: nextBurstID, row: tile.row, col: tile.col, value: 64))
+            }
+            lastHazardCount = picks.count
+            shake(2)
+        case .crab:
+            // It pinches one tile and scuttles through the rest.
+            scatterTiles(dropping: 1)
+        case .gummy:
+            // It leaves two sticky lumps that will not merge.
+            spawnTile(forcing: .stone)
+            spawnTile(forcing: .stone)
+            shake(2)
+        case .dragon:
+            // It burns three tiles away.
+            scatterTiles(dropping: 3)
+        case .yeti:
+            // It stamps four tiles down a size.
+            stompTiles(4)
+        case .mole:
+            // It digs two holes in the board.
+            scatterTiles(dropping: 0, chewing: 2)
+        case .pinata:
+            // It bursts: coins and a gem, and the tiles are thrown about.
+            coins += Self.pinataCoins
+            gems += 1
+            scatterTiles(dropping: 0)
+        case .shark, .monkey, .ufo, .trex:
+            break
         }
     }
 
@@ -625,6 +687,8 @@ final class GameStore {
             spawnTile(forcing: .stone)
             spawnTile(forcing: .stone)
             shake(2)
+        case .beast(let kind):
+            unleash(kind)
         }
         lastCrateFind = find
         crateOpenEvent += 1

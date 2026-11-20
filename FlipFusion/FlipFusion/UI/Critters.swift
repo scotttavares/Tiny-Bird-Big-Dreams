@@ -6,6 +6,34 @@ import SwiftUI
 /// them is what makes it bite, flail or stomp. Without pictures it is an emoji.
 enum Critter: String, Equatable, Sendable {
     case shark, monkey, ufo, trex
+    /// One for each of the other themes: Neon, Sunset, Bubblegum, Lava, Frost,
+    /// Gold Rush and Party Lights.
+    case robot, crab, gummy, dragon, yeti, mole, pinata
+
+    /// What it is called on screen.
+    var title: String {
+        switch self {
+        case .shark: return "Shark"
+        case .monkey: return "Monkey"
+        case .ufo: return "UFO"
+        case .trex: return "T-rex"
+        case .robot: return "Robot"
+        case .crab: return "Giant crab"
+        case .gummy: return "Gum monster"
+        case .dragon: return "Dragon"
+        case .yeti: return "Yeti"
+        case .mole: return "Mole"
+        case .pinata: return "Pinata"
+        }
+    }
+
+    /// Frames of its film shown each second.
+    var filmSpeed: Double {
+        switch self {
+        case .shark, .trex: return 24
+        default: return 12
+        }
+    }
 
     /// The picture of a pose: 0 is the first, anything else the second.
     func imageName(pose: Int) -> String {
@@ -19,6 +47,7 @@ enum Critter: String, Equatable, Sendable {
         switch self {
         case .shark: return 84
         case .trex: return 100
+        case .robot, .crab, .gummy, .dragon, .yeti, .mole, .pinata: return 50
         default: return 0
         }
     }
@@ -40,6 +69,13 @@ enum Critter: String, Equatable, Sendable {
         case .monkey: return "\u{1F412}"
         case .ufo: return "\u{1F6F8}"
         case .trex: return "\u{1F996}"
+        case .robot: return "\u{1F916}"
+        case .crab: return "\u{1F980}"
+        case .gummy: return "\u{1F47E}"
+        case .dragon: return "\u{1F409}"
+        case .yeti: return "\u{1F479}"
+        case .mole: return "\u{1F9AB}"
+        case .pinata: return "\u{1FA85}"
         }
     }
 }
@@ -104,6 +140,8 @@ struct CritterAttack: View {
                 }
             case .monkey: MonkeyRampage(side: side, onHit: onHit)
             case .ufo: UFORaid(side: side, captives: captives, isFruit: isFruit, onHit: onHit)
+            case .robot, .crab, .gummy, .dragon, .yeti, .mole, .pinata:
+                FilmAttack(critter: critter, side: side, onHit: onHit)
             case .trex:
                 if Critter.trex.hasFilm {
                     TrexFilm(side: side, onHit: onHit)
@@ -141,6 +179,39 @@ struct CritterFilm: View {
                 .frame(width: width)
         }
         .shadow(color: Color.black.opacity(0.5), radius: width * 0.04, x: 0, y: width * 0.03)
+    }
+}
+
+/// Any creature that has a film: it comes in from the side, plays its film over the
+/// board with three hits spread through it, and leaves by the other side.
+struct FilmAttack: View {
+    let critter: Critter
+    let side: CGFloat
+    let onHit: (Int) -> Void
+
+    /// 0 before it arrives, 1 while it is over the board, 2 once it has gone.
+    @State private var stage = 0
+
+    var body: some View {
+        let away = side * 1.9
+        let shift = stage == 0 ? -away : (stage == 1 ? 0 : away)
+        CritterFilm(critter: critter, width: side * 1.1, speed: critter.filmSpeed)
+            .offset(x: shift)
+            .task {
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.72)) {
+                    stage = 1
+                }
+                let seconds = Double(critter.filmFrames) / critter.filmSpeed
+                let quarter = Int(seconds * 250)
+                for hit in 1...3 {
+                    try? await Task.sleep(for: .milliseconds(quarter))
+                    onHit(hit)
+                }
+                try? await Task.sleep(for: .milliseconds(quarter))
+                withAnimation(.easeIn(duration: 0.5)) {
+                    stage = 2
+                }
+            }
     }
 }
 

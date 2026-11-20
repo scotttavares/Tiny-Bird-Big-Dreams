@@ -72,6 +72,10 @@ THEMES = {
                   lead="square", arp=16, bass="octave", drums="disco"),
     "galaxy": dict(bpm=88, chords=[AM, F, DM, E, AM, F, G, E], motifs=("float", "rise"),
                    lead="pad", arp=8, bass="long", drums="sparse"),
+    "rainforest": dict(bpm=104, chords=[DM, C, BB, C, DM, F, C, AM], motifs=("bounce", "call"),
+                       lead="bell", arp=8, bass="trot", drums="soft"),
+    "jurassic": dict(bpm=96, chords=[EM, C, D, EM, AM, C, D, E], motifs=("fall", "rise"),
+                     lead="saw", arp=8, bass="pound", drums="pound", low=True),
 }
 
 

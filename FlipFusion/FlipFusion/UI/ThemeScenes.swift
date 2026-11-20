@@ -527,6 +527,52 @@ extension SceneArt {
         }
     }
 
+    // MARK: Rainforest and Jurassic
+
+    /// The Rainforest's moment: a sudden tropical downpour, with a flash of lightning.
+    static func downpour(_ context: inout GraphicsContext, size: CGSize, progress: Double) {
+        let w = Double(size.width)
+        let h = Double(size.height)
+        let strength = sin(min(1, max(0, progress)) * Double.pi)
+        let flash = progress > 0.3 && progress < 0.38 ? 0.35 : 0.0
+        context.fill(Path(CGRect(x: 0, y: 0, width: w, height: h)), with: .color(Color.white.opacity(flash + 0.08 * strength)))
+        for drop in 0..<170 {
+            let x = unit(drop, 301) * w * 1.2 - w * 0.1
+            let y = fraction(unit(drop, 302) + progress * (2.2 + unit(drop, 303))) * h
+            let length = 16 + 30 * unit(drop, 304)
+            var streak = Path()
+            streak.move(to: CGPoint(x: x, y: y))
+            streak.addLine(to: CGPoint(x: x - length * 0.18, y: y + length))
+            context.stroke(streak, with: .color(Color(hex: 0xBFEFFF).opacity(0.8 * strength)),
+                           style: StrokeStyle(lineWidth: CGFloat(1 + 1.6 * unit(drop, 305)), lineCap: .round))
+        }
+    }
+
+    /// The Jurassic moment: falling stars streak across the sky, and the valley glows.
+    static func meteors(_ context: inout GraphicsContext, size: CGSize, progress: Double) {
+        let w = Double(size.width)
+        let h = Double(size.height)
+        let strength = sin(min(1, max(0, progress)) * Double.pi)
+        context.fill(Path(CGRect(x: 0, y: 0, width: w, height: h)), with: .color(Color(hex: 0xFF8A3A).opacity(0.2 * strength)))
+        for rock in 0..<9 {
+            let delay = unit(rock, 311) * 0.5
+            let along = (progress - delay) / 0.5
+            guard along > 0, along < 1 else { continue }
+            let startX = w * (0.2 + 1.0 * unit(rock, 312))
+            let startY = -h * 0.1
+            let x = startX - w * 0.9 * along
+            let y = startY + h * 1.1 * along
+            let tail = 70 + 90 * unit(rock, 313)
+            var streak = Path()
+            streak.move(to: CGPoint(x: x, y: y))
+            streak.addLine(to: CGPoint(x: x + tail * 0.63, y: y - tail * 0.77))
+            let width = CGFloat(3 + 5 * unit(rock, 314))
+            context.stroke(streak, with: .color(Color(hex: 0xFF7A2A).opacity(0.75)), style: StrokeStyle(lineWidth: width * 1.8, lineCap: .round))
+            context.stroke(streak, with: .color(Color(hex: 0xFFE9A8)), style: StrokeStyle(lineWidth: width, lineCap: .round))
+            context.fill(path(.dot, center: CGPoint(x: x, y: y), size: width * 3), with: .color(Color.white))
+        }
+    }
+
     // MARK: 80s Neon
 
     /// Stars, a wire-frame mountain range on the horizon and slowly turning neon triangles.
@@ -633,6 +679,8 @@ extension SceneArt {
         case .coins: coinRain(&context, size: size, progress: progress)
         case .lights: fireworks(&context, size: size, progress: progress)
         case .stars: warp(&context, size: size, progress: progress)
+        case .fireflies: downpour(&context, size: size, progress: progress)
+        case .ash: meteors(&context, size: size, progress: progress)
         }
     }
 }
@@ -696,6 +744,11 @@ struct ThemeMoments: ViewModifier {
         case .monkey: sounds.play(.monkey)
         case .ufo: sounds.play(.ufo)
         case .trex: sounds.play(.roar)
+        case .dragon, .yeti: sounds.play(.roar)
+        case .robot: sounds.play(.ufo)
+        case .crab, .mole: sounds.play(.boom, volume: 0.6)
+        case .gummy: sounds.play(.powerup)
+        case .pinata: sounds.play(.fever)
         }
     }
 
@@ -718,6 +771,21 @@ struct ThemeMoments: ViewModifier {
         case .trex:
             store.rattle(3)
             sounds.play(.stomp)
+        case .yeti, .dragon, .mole:
+            store.rattle(3)
+            sounds.play(.stomp)
+        case .crab:
+            store.rattle(2)
+            sounds.play(.chomp, volume: 0.7)
+        case .robot:
+            store.rattle(2)
+            sounds.play(.powerup, volume: 0.8)
+        case .gummy:
+            store.rattle(2)
+            sounds.play(.stomp, volume: 0.6)
+        case .pinata:
+            store.rattle(1)
+            sounds.play(.bonus, volume: 0.8)
         }
     }
 
@@ -787,6 +855,7 @@ struct ThemeMoments: ViewModifier {
                 case .shark: release(.shark)
                 case .ufo: release(.ufo)
                 case .trex: release(.trex)
+                case .beast(let kind): release(kind)
                 default: break
                 }
             }

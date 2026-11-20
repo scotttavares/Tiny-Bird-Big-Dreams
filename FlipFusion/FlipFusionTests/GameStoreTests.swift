@@ -520,7 +520,7 @@ struct GameStoreTests {
     }
 
     @Test func everyThemeHasItsOwnIdAndName() {
-        #expect(Skin.all.count == 9)
+        #expect(Skin.all.count == 11)
         #expect(Set(Skin.all.map(\.id)).count == Skin.all.count)
         #expect(Set(Skin.all.map(\.name)).count == Skin.all.count)
         #expect(Skin.all[0].unlock == .free)
@@ -529,8 +529,8 @@ struct GameStoreTests {
         // The free theme has no boards of its own; every other has two, shared with no one.
         #expect(Skin.all[0].boards.isEmpty)
         let own = Skin.all.dropFirst().flatMap(\.boards)
-        #expect(own.count == 16)
-        #expect(Set(own).count == 16)
+        #expect(own.count == 20)
+        #expect(Set(own).count == 20)
         #expect(own.allSatisfy { $0 > GameEngine.standardShapes && $0 < GameEngine.layouts.count })
     }
 
@@ -875,5 +875,44 @@ struct GameStoreTests {
         #expect(store.holeClosedEvent == 1)
         #expect(store.state.blocks.isEmpty)
         #expect(store.state.score == 0)
+    }
+
+    @Test func everyThemeHasACreatureOfItsOwn() {
+        var seen: [GameStore.CrateFind] = []
+        for skin in Skin.all {
+            let found = GameStore.creatures(forTheme: skin.id)
+            #expect(found.count == 1)
+            #expect(found.allSatisfy { $0.isCreature })
+            seen.append(contentsOf: found)
+        }
+        // Eleven themes, eleven different creatures.
+        #expect(seen.count == 11)
+        for index in seen.indices {
+            #expect(!seen[..<index].contains(seen[index]))
+        }
+    }
+
+    @Test func aMoleDigsHolesAndAPinataPaysOut() {
+        let defaults = freshDefaults()
+        save(GameState(
+            tiles: tiles([[2, 4, 8, 16], [32, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
+            score: 0,
+            movesUntilRotation: 2,
+            nextID: 20,
+            blocks: [Block(row: 3, col: 0, kind: .crate), Block(row: 3, col: 3, kind: .crate)]
+        ), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.openCrate(row: 3, col: 0, forcing: .beast(.mole)))
+        #expect(store.lastChewCount == 2)
+        #expect(store.state.blocks.filter { $0.kind == .hole }.count == 2)
+        #expect(store.state.tiles.count == 5)
+        #expect(!GameStore.CrateFind.beast(.mole).isPrize)
+
+        let coins = store.coins
+        let gems = store.gems
+        #expect(store.openCrate(row: 3, col: 3, forcing: .beast(.pinata)))
+        #expect(store.coins == coins + GameStore.pinataCoins)
+        #expect(store.gems == gems + 1)
+        #expect(GameStore.CrateFind.beast(.pinata).isPrize)
     }
 }
