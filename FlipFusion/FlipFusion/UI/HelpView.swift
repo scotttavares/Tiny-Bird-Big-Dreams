@@ -27,12 +27,15 @@ struct HelpView: View {
                     .accessibilityAddTraits(.isHeader)
 
                 section("Game modes") {
-                    modeRow(.timed, symbol: "timer", title: "2 Minutes", text: "Two minutes on the clock, which starts on your first swipe. Level up and merge clock tiles to win more time.")
-                    modeRow(.endless, symbol: "infinity", title: "Endless", text: "No clock. An extra tile lands after every rotation, and the game ends when no move is left.")
-                    modeRow(.fruit, symbol: "leaf.fill", title: "Fruit Salad", text: "No clock, and no numbers: every tile is a fruit. Two cherries make a strawberry, two strawberries an orange, and on up to a star.")
-                    modeRow(.shift, symbol: "shuffle", title: "Shape Shift", text: "No clock. Every \(GameEngine.movesPerShift) moves the board itself becomes a new shape: a triangle, a circle, a ring, a cup and more. Unlocks with your first new theme.")
-                    modeRow(.twist, symbol: "arrow.left.arrow.right", title: "Twist", text: "No clock. After any turn the board may start turning the other way, and the arrow shows which way is next. An extra tile lands after every turn. Unlocks with your second new theme.")
-                    modeRow(.fusion, symbol: "wand.and.stars", title: "Fusion", text: "No clock. After every move one tile changes by itself: it usually doubles, and sometimes halves. Unlocks with your third new theme.")
+                    // A compact grid: an icon, the name and one short line for each game.
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                        modeTile(.timed, symbol: "timer", title: "2 Minutes", line: "Beat the clock")
+                        modeTile(.endless, symbol: "infinity", title: "Endless", line: "No clock")
+                        modeTile(.fruit, symbol: "leaf.fill", title: "Fruit Salad", line: "Fruit, not numbers")
+                        modeTile(.shift, symbol: "shuffle", title: "Shape Shift", line: "The board changes shape")
+                        modeTile(.twist, symbol: "arrow.left.arrow.right", title: "Twist", line: "It turns both ways")
+                        modeTile(.fusion, symbol: "wand.and.stars", title: "Fusion", line: "Tiles change by themselves")
+                    }
                     if let modeNotice {
                         Text(modeNotice)
                             .font(.system(size: 15, weight: .bold, design: .rounded))
@@ -297,6 +300,61 @@ struct HelpView: View {
     }
 
     /// One game in the list: tap it to play it.
+    /// One game in the grid: tap it to play it. A locked one says what unlocks it.
+    private func modeTile(_ mode: GameStore.Mode, symbol: String, title: String, line: String) -> some View {
+        let isOn = store.mode == mode
+        let isLocked = !store.isUnlocked(mode)
+        let needed = GameStore.themesNeeded(for: mode)
+        let under = isLocked ? (needed > 1 ? "Needs \(needed) themes" : "Needs 1 theme") : line
+        let card = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        return Button {
+            if isLocked {
+                modeNotice = needed > 1
+                    ? "\(title) unlocks once you have \(needed) new themes."
+                    : "\(title) unlocks with your first new theme."
+            } else {
+                modeNotice = nil
+                store.switchMode(mode)
+            }
+        } label: {
+            VStack(spacing: 6) {
+                Image(systemName: isLocked ? "lock.fill" : symbol)
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(isOn ? Color.white : Theme.flip[0])
+                    .frame(width: 48, height: 48)
+                    .background(Circle().fill(isOn ? Theme.pillTop : Theme.cellFill))
+                Text(title)
+                    .font(.system(size: 17, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Text(under)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(Theme.label)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .frame(minHeight: 32, alignment: .top)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 8)
+            .background(card.fill(Theme.cellFill.opacity(isOn ? 0.9 : 0.4)))
+            .overlay(card.strokeBorder(isOn ? Color(hex: 0x86F2BC) : Theme.glassStroke, lineWidth: isOn ? 2 : 1))
+            .overlay(alignment: .topTrailing) {
+                if isOn {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(Color(hex: 0x86F2BC))
+                        .padding(8)
+                }
+            }
+            .opacity(isLocked ? 0.7 : 1)
+        }
+        .buttonStyle(BounceButtonStyle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("\(title). \(under)." + (isOn ? " Playing now." : "")))
+    }
+
     private func modeRow(_ mode: GameStore.Mode, symbol: String, title: String, text: String) -> some View {
         let isOn = store.mode == mode
         let isLocked = !store.isUnlocked(mode)
