@@ -1254,7 +1254,8 @@ struct Graffiti: View {
 
     var body: some View {
         ZStack {
-            ForEach(0..<Self.marks.count, id: \.self) { index in
+            // The scattered symbols made the card too busy: the word stands alone.
+            ForEach(0..<0, id: \.self) { index in
                 let mark = Self.marks[index]
                 Image(systemName: symbol)
                     .font(.system(size: side * mark.size, weight: .black))

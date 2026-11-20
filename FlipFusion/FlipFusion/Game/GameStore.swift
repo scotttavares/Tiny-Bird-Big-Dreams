@@ -235,11 +235,13 @@ final class GameStore {
     private(set) var swallowedValue = 0
 
     /// Tiles have fallen down holes: each hole counts what it ate and closes when full.
+    /// The tiles going down a hole in the step being shown: the board draws them
+    /// spinning and shrinking as they slide in.
+    private(set) var swallowedIDs: Set<Int> = []
+
     private func feedHoles(_ fallen: [Tile]) {
         for tile in fallen {
             swallowedValue += tile.value
-            nextBurstID += 1
-            bursts.append(Burst(id: nextBurstID, row: tile.row, col: tile.col, value: tile.value))
             guard let at = state.blocks.firstIndex(where: { $0.kind == .hole && $0.row == tile.row && $0.col == tile.col }) else { continue }
             let eaten = (state.blocks[at].fed ?? 0) + 1
             if eaten >= Self.holeAppetite {
@@ -1511,6 +1513,7 @@ final class GameStore {
     private func apply(_ result: StepResult, isSwipe: Bool = false) {
         state.tiles = result.tiles
         ghosts = result.ghosts
+        swallowedIDs = Set(result.swallowed.map(\.id))
         if !result.swallowed.isEmpty {
             feedHoles(result.swallowed)
         }

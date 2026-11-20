@@ -188,6 +188,54 @@ enum SceneArt {
         return true
     }
 
+    /// Draws a painted creature so that it ripples as it moves. The picture is cut
+    /// into strips and each is nudged by a wave running along it, so a fish bends
+    /// from nose to tail and a jellyfish trails its tentacles: it is not one stiff
+    /// picture sliding about. `alongBody` true is for a fish (drawn facing right, the
+    /// wave growing toward its tail); false is for a jellyfish (the wave growing
+    /// down its tentacles). Returns false when there is no such picture.
+    @discardableResult
+    static func swimmer(
+        _ context: inout GraphicsContext,
+        _ name: String,
+        x: Double, y: Double, width: Double,
+        flipped: Bool = false, alongBody: Bool = true, time: Double, phase: Double = 0, opacity: Double = 1
+    ) -> Bool {
+        guard UIImage(named: name) != nil else { return false }
+        let picture = context.resolve(Image(name))
+        guard picture.size.width > 0 else { return false }
+        let height = width * Double(picture.size.height) / Double(picture.size.width)
+        var layer = context
+        layer.opacity = opacity
+        layer.translateBy(x: CGFloat(x), y: CGFloat(y))
+        layer.scaleBy(x: flipped ? -1 : 1, y: 1)
+        let whole = CGRect(x: -width / 2, y: -height / 2, width: width, height: height)
+        let strips = 14
+        for strip in 0..<strips {
+            let from = Double(strip) / Double(strips)
+            let to = Double(strip + 1) / Double(strips)
+            let middle = (from + to) / 2
+            var part = layer
+            if alongBody {
+                // 0 is the tail (left of the picture), 1 the nose.
+                let loose = (1 - middle) * (1 - middle)
+                let sway = sin(time * 7 + phase - middle * 4.5) * height * 0.13 * loose
+                let band = CGRect(x: -width / 2 + width * from - 0.5, y: -height, width: width * (to - from) + 1, height: height * 2)
+                part.clip(to: Path(band))
+                part.translateBy(x: 0, y: CGFloat(sway))
+            } else {
+                // 0 is the top of the dome, 1 the tips of the tentacles.
+                let loose = middle * middle
+                let sway = sin(time * 2.6 + phase - middle * 4) * width * 0.16 * loose
+                let band = CGRect(x: -width, y: -height / 2 + height * from - 0.5, width: width * 2, height: height * (to - from) + 1)
+                part.clip(to: Path(band))
+                part.translateBy(x: CGFloat(sway), y: 0)
+            }
+            part.draw(picture, in: whole)
+        }
+        return true
+    }
+
     /// A number from 0 up to 1 that is always the same for the same speck and salt.
     static func unit(_ index: Int, _ salt: Int) -> Double {
         let value = sin(Double(index) * 12.9898 + Double(salt) * 78.233) * 43758.5453

@@ -54,7 +54,8 @@ extension SceneArt {
             // in if the picture is missing.
             let wiggle = sin(time * 3 + Double(index)) * 0.09
             let name = "prop-fish-" + String(index % 3 + 1)
-            let isDrawn = prop(&context, name, x: x, y: y, width: length * 2.1, flipped: !goesRight, turn: wiggle)
+            let isDrawn = swimmer(&context, name, x: x, y: y + wiggle * length, width: length * 2.1,
+                                  flipped: !goesRight, time: time, phase: Double(index) * 1.7)
             if !isDrawn {
                 fish(&context, x: x, y: y, length: length, color: colors[index % colors.count],
                      goesRight: goesRight, wag: sin(time * 7 + Double(index)), kind: index % 3)
@@ -67,7 +68,11 @@ extension SceneArt {
             let y = h * (1.1 - 1.25 * progress)
             let radius = 16 + 3 * sin(time * 2.2 + Double(index))
             let sway = sin(time * 1.1 + Double(index) * 2) * 0.1
-            if !prop(&context, "prop-jellyfish", x: x, y: y, width: radius * 3.6, anchor: 0.2, turn: sway, opacity: 0.92) {
+            // It pulses as it rises, and its tentacles trail behind.
+            let pulse = 1 + 0.06 * sin(time * 2.6 + Double(index))
+            let isPainted = swimmer(&context, "prop-jellyfish", x: x + sway * radius, y: y + radius * 2, width: radius * 3.6 * pulse,
+                                    alongBody: false, time: time, phase: Double(index) * 2, opacity: 0.92)
+            if !isPainted {
                 jellyfish(&context, x: x, y: y, radius: radius, time: time + Double(index))
             }
         }

@@ -303,12 +303,14 @@ struct GameScreen: View {
                     .offset(y: -side * 0.545 + 2)
             }
 
+            if !store.isGameOver {
             RotationArrow(
                 side: side,
                 isImminent: store.state.movesUntilRotation == 1 && !store.isGameOver,
                 isReversed: store.state.counterClockwise,
                 heat: (store.isFever || store.isDanger || store.streak >= 3) ? 2 : (store.streak > 0 ? 1 : 0)
             )
+            }
 
             Celebration(store: store, side: side)
 
@@ -602,7 +604,7 @@ struct GameOverOverlay: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: side * 0.07, style: .continuous)
-                .fill(Color(hex: 0x070A26, opacity: 0.86))
+                .fill(Color(hex: 0x070A26, opacity: 0.97))
 
             Graffiti(word: graffiti, symbol: spark, side: side)
 

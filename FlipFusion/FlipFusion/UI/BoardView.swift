@@ -135,9 +135,13 @@ struct BoardView: View {
 
             ForEach(store.displayTiles) { tile in
                 let point = origin(row: tile.row, col: tile.col)
+                // A tile going down a hole swirls in: it spins, shrinks and fades as it slides.
+                let isSunk = store.swallowedIDs.contains(tile.id)
+                let pop: CGFloat = store.poppedIDs.contains(tile.id) ? (Skin.current.isPremium ? 1.36 : 1.24) : 1
                 TileView(value: tile.value, kind: tile.kind, size: cell, isFruit: store.mode == .fruit)
-                    .rotationEffect(.degrees(-store.boardAngle))
-                    .scaleEffect(store.poppedIDs.contains(tile.id) ? (Skin.current.isPremium ? 1.36 : 1.24) : 1)
+                    .rotationEffect(.degrees(-store.boardAngle + (isSunk ? 540 : 0)))
+                    .scaleEffect(isSunk ? 0.06 : pop)
+                    .opacity(isSunk ? 0.3 : 1)
                     .offset(x: point.x, y: point.y)
                     .zIndex(store.isGhost(tile) ? 1 : 2)
             }
