@@ -149,15 +149,15 @@ struct HelpView: View {
                 section("Levels") {
                     row(symbol: "chart.bar.fill", title: "Level up", text: "The bar under your score fills as you play. Each new level changes the board's shape and colour, spins the prize reel and, in the timed game, adds \(Int(GameStore.levelTimeBonus)) seconds.")
                     row(symbol: "gift.fill", title: "Prize reel", text: "Every new level wins coins, a free booster or gems. Now and then it stops on the jackpot: 5 gems.")
-                    tileRow(value: 2, kind: .stone, title: "Stone block", text: "From level 2. It never merges and gets in the way. A bomb's blast or the Sweep booster clears it.")
+                    tileRow(value: 2, kind: .stone, title: "Blockers", text: "From level 2. A rock, or your theme's own blocker: coral, an asteroid, a block of ice. It never merges and gets in the way. A bomb's blast or the Sweep booster clears it.")
                     row(symbol: "hare.fill", title: "Faster drops", text: "From level 2 a move sometimes drops two new tiles, more often the higher you go. From level \(GameEngine.turnTileLevel) the timed game also drops a tile each time the board turns.")
                     row(symbol: "star.fill", title: "Stars", text: "A game earns one star at level 2, two at level 4 and three at level 6.")
                     row(symbol: "arrow.uturn.forward", title: "Keep going", text: "Once in a game that has ended, \(GameStore.continueCost) gems buy \(Int(GameStore.continueSeconds)) more seconds, or clear \(GameStore.continueClears) tiles when no move is left.")
                 }
 
-                section("Board shapes") {
-                    blockRow(.wall, title: "Walls", text: "Solid blocks on the board. Tiles stop beside them and cannot merge across them.")
-                    blockRow(.hole, title: "Holes", text: "Dark pits in the board. The first tile to slide or fall up to one drops in and is gone, stone blocks too, and it scores nothing. A hole closes after \(GameStore.holeAppetite) tiles. In Shape Shift, holes cut the whole board into a new outline and swallow nothing.")
+                section("Special objects") {
+                    blockRow(.wall, title: "Walls", text: "Solid blocks. Tiles stop beside them and cannot merge across them. Every theme has its own.")
+                    blockRow(.hole, title: "Holes", text: "Pits in the board, different in every theme: a whirlpool, a black hole, a tar pit. The first tile to slide or fall up to one drops in and is gone, stone blocks too, and it scores nothing. A hole closes after \(GameStore.holeAppetite) tiles. In Shape Shift, holes cut the whole board into a new outline and swallow nothing.")
                     blockRow(.crate, title: "Crates", text: "They block like walls. A merge right beside one, or a bomb's blast, smashes it for \(GameStore.cratePoints) points. Or tap one to open it: that uses a move, and inside may be coins, a gem, a free booster or double points, or trouble: a load of rocks, or the creature that lives in your theme. Every theme has its own: a robot, a crab, a shark, a gum monster, a monkey, a dragon, a T-rex, a yeti, a mole, a pinata or a flying saucer, each with its own trick.")
                     row(symbol: "arrow.clockwise", title: "They turn too", text: "Walls, holes and crates turn with the board. A tile that is in the way when the shape changes jumps to an empty cell.")
                 }

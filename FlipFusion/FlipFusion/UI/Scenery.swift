@@ -558,7 +558,15 @@ struct StoneView: View {
     }
 
     var body: some View {
-        if ObstacleArt.has(ObstacleArt.rock) {
+        if ObstacleArt.hasThemed(ObstacleArt.rock) {
+            // The theme's own blocker: coral in the sea, an asteroid in space.
+            Image(ObstacleArt.themed(ObstacleArt.rock))
+                .resizable()
+                .scaledToFit()
+                .padding(size * 0.02)
+                .frame(width: size, height: size)
+                .shadow(color: Color.black.opacity(0.4), radius: size * 0.04, x: 0, y: size * 0.03)
+        } else if ObstacleArt.has(ObstacleArt.rock) {
             Image(ObstacleArt.rock)
                 .resizable()
                 .scaledToFit()
@@ -691,5 +699,20 @@ enum ObstacleArt {
     @MainActor
     static func has(_ name: String) -> Bool {
         UIImage(named: name) != nil
+    }
+
+    /// The theme's own version of a picture when there is one (its name with a dash
+    /// and the theme's id on the end: "obstacle-hole-ocean" is the whirlpool),
+    /// otherwise the plain one.
+    @MainActor
+    static func themed(_ name: String) -> String {
+        let own = name + "-" + Skin.current.id
+        return has(own) ? own : name
+    }
+
+    /// True when the theme has its own version of a picture.
+    @MainActor
+    static func hasThemed(_ name: String) -> Bool {
+        has(name + "-" + Skin.current.id)
     }
 }

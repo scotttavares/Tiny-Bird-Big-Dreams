@@ -1062,7 +1062,7 @@ struct ObstacleView: View {
     @ViewBuilder
     private var crateFace: some View {
         if ObstacleArt.has(ObstacleArt.name(.crate)) {
-            Image(ObstacleArt.name(.crate))
+            Image(ObstacleArt.themed(ObstacleArt.name(.crate)))
                 .resizable()
                 .scaledToFit()
         } else {
@@ -1074,7 +1074,7 @@ struct ObstacleView: View {
     @ViewBuilder
     private var wallFace: some View {
         if ObstacleArt.has(ObstacleArt.name(.wall)) {
-            Image(ObstacleArt.name(.wall))
+            Image(ObstacleArt.themed(ObstacleArt.name(.wall)))
                 .resizable()
                 .scaledToFit()
         } else {
@@ -1184,7 +1184,7 @@ struct PitView: View {
 
         ZStack {
             if isPainted {
-                Image(ObstacleArt.hole)
+                Image(ObstacleArt.themed(ObstacleArt.hole))
                     .resizable()
                     .scaledToFit()
             }
