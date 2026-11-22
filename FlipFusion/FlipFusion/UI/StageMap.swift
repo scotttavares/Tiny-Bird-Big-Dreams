@@ -153,7 +153,7 @@ struct StageMapView: View {
 
     var body: some View {
         let last = max(12, stage + 7)
-        let goal = GameStore.stageGoal(stage).formatted(.number.grouping(.automatic))
+        let goal = GameStore.goalWords(GameStore.goal(forStage: stage))
         let reached = stage
         let rowHeight = Self.rowHeight
 
@@ -173,7 +173,7 @@ struct StageMapView: View {
             .padding(.top, 18)
 
             VStack(spacing: 3) {
-                Text("Stage \(stage): reach \(goal) before time runs out")
+                Text("Stage \(stage): " + goal)
                     .font(.system(size: 15, weight: .heavy, design: .rounded))
                     .foregroundStyle(Theme.counter)
                 if let words = GameStore.twistWords(GameStore.twist(forStage: stage)) {
@@ -237,12 +237,14 @@ struct StageMapView: View {
             .frame(width: side, height: side)
             .shadow(color: isNow ? Theme.flip[1].opacity(0.9) : Color.clear, radius: 12)
             .overlay(alignment: .topTrailing) {
-                if isChest || twist != .plain {
-                    Image(systemName: isChest ? "gift.fill" : Self.symbol(twist))
+                // Clearing this stage opens something new.
+                let opens = GameStore.opens(atStage: number + 1) != nil
+                if isChest || opens || twist != .plain {
+                    Image(systemName: opens ? "lock.open.fill" : (isChest ? "gift.fill" : Self.symbol(twist)))
                         .font(.system(size: 11, weight: .heavy))
                         .foregroundStyle(Color.white)
                         .frame(width: 24, height: 24)
-                        .background(Circle().fill(isChest ? Color(hex: 0xE8961F) : Color(hex: 0x5B4BD6)))
+                        .background(Circle().fill(opens ? Color(hex: 0x2FAE6B) : (isChest ? Color(hex: 0xE8961F) : Color(hex: 0x5B4BD6))))
                         .overlay(Circle().strokeBorder(Color.white.opacity(0.6), lineWidth: 1))
                         .offset(x: 8, y: -6)
                 }
@@ -257,7 +259,7 @@ struct StageMapView: View {
                     }
                 }
             } else {
-                Text(GameStore.stageGoal(number).formatted(.number.grouping(.automatic)))
+                Text(GameStore.goalShort(GameStore.goal(forStage: number)))
                     .font(.system(size: 11, weight: .heavy, design: .rounded))
                     .foregroundStyle(isNow ? Theme.counter : Theme.label.opacity(0.7))
             }

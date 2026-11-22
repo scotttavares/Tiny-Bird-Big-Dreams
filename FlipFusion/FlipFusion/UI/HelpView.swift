@@ -29,7 +29,7 @@ struct HelpView: View {
                 section("Game modes") {
                     // A compact grid: an icon, the name and one short line for each game.
                     LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                        modeTile(.timed, symbol: "timer", title: "2 Minutes", line: "Beat each stage's score")
+                        modeTile(.timed, symbol: "flag.checkered", title: "Stages", line: "Beat each stage's goal")
                         modeTile(.endless, symbol: "infinity", title: "Endless", line: "No clock")
                         modeTile(.fruit, symbol: "leaf.fill", title: "Fruit Salad", line: "Fruit, not numbers")
                         modeTile(.shift, symbol: "shuffle", title: "Shape Shift", line: "The board changes shape")
@@ -305,14 +305,11 @@ struct HelpView: View {
     private func modeTile(_ mode: GameStore.Mode, symbol: String, title: String, line: String) -> some View {
         let isOn = store.mode == mode
         let isLocked = !store.isUnlocked(mode)
-        let needed = GameStore.themesNeeded(for: mode)
-        let under = isLocked ? (needed > 1 ? "Needs \(needed) themes" : "Needs 1 theme") : line
+        let under = isLocked ? lockLine(mode) : line
         let card = RoundedRectangle(cornerRadius: 16, style: .continuous)
         return Button {
             if isLocked {
-                modeNotice = needed > 1
-                    ? "\(title) unlocks once you have \(needed) new themes."
-                    : "\(title) unlocks with your first new theme."
+                modeNotice = lockNotice(mode, title: title)
             } else {
                 modeNotice = nil
                 store.switchMode(mode)
@@ -362,10 +359,7 @@ struct HelpView: View {
         let card = RoundedRectangle(cornerRadius: 14, style: .continuous)
         return Button {
             if isLocked {
-                let needed = GameStore.themesNeeded(for: mode)
-                modeNotice = needed > 1
-                    ? "\(title) unlocks once you have \(needed) new themes."
-                    : "\(title) unlocks with your first new theme."
+                modeNotice = lockNotice(mode, title: title)
             } else {
                 modeNotice = nil
                 store.switchMode(mode)
@@ -394,6 +388,27 @@ struct HelpView: View {
         .buttonStyle(BounceButtonStyle())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("\(title). \(text)" + (isOn ? " Playing now." : "") + (isLocked ? " Locked." : "")))
+    }
+
+    /// Why a game is locked, in a few words and in a sentence.
+    private func lockLine(_ mode: GameStore.Mode) -> String {
+        let stage = GameStore.stageNeeded(for: mode)
+        if store.stage < stage {
+            return "Opens at stage \(stage)"
+        }
+        let needed = GameStore.themesNeeded(for: mode)
+        return needed > 1 ? "Needs \(needed) themes" : "Needs 1 theme"
+    }
+
+    private func lockNotice(_ mode: GameStore.Mode, title: String) -> String {
+        let stage = GameStore.stageNeeded(for: mode)
+        if store.stage < stage {
+            return "\(title) opens when you reach stage \(stage). Keep clearing stages!"
+        }
+        let needed = GameStore.themesNeeded(for: mode)
+        return needed > 1
+            ? "\(title) unlocks once you have \(needed) new themes."
+            : "\(title) unlocks with your first new theme."
     }
 
     private func gem(size: CGFloat) -> some View {

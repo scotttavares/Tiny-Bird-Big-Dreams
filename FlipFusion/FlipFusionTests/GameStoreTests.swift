@@ -220,6 +220,8 @@ struct GameStoreTests {
     @Test func eachModeKeepsItsOwnGameAndBestScore() {
         let defaults = freshDefaults()
         save(GameState(tiles: tiles([[4, 4, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 2, nextID: 10), to: defaults)
+        // The endless game opens at stage 5.
+        defaults.set(5, forKey: "ff.stage")
         let store = GameStore(defaults: defaults, animated: false)
         #expect(store.mode == .timed)
         store.swipe(.left)
@@ -244,6 +246,7 @@ struct GameStoreTests {
     @Test func theEndlessGameHasNoClockAndGetsAnExtraTileAfterARotation() {
         let defaults = freshDefaults()
         defaults.set("endless", forKey: "ff.mode")
+        defaults.set(5, forKey: "ff.stage")
         // One lone tile, one move from a rotation: nothing can merge.
         defaults.set(
             try! JSONEncoder().encode(GameState(tiles: tiles([[0, 8, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 1, nextID: 10)),
@@ -462,14 +465,14 @@ struct GameStoreTests {
 
     @Test func reachingTheGoalClearsTheStageAndWinsLoot() {
         let defaults = freshDefaults()
-        save(GameState(tiles: tiles([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 396, movesUntilRotation: 2, nextID: 10), to: defaults)
+        save(GameState(tiles: tiles([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 246, movesUntilRotation: 2, nextID: 10), to: defaults)
         defaults.set(90.0, forKey: "ff.time")
         let store = GameStore(defaults: defaults, animated: false)
         #expect(store.stage == 1)
-        #expect(store.stageGoal == 400)
+        #expect(store.stageGoal == 250)
         #expect(!store.isGameOver)
         store.swipe(.left)
-        #expect(store.state.score == 400)
+        #expect(store.state.score == 250)
         #expect(store.isStageWon)
         #expect(store.isGameOver)
         #expect(!store.canContinue)
@@ -514,7 +517,7 @@ struct GameStoreTests {
     }
 
     @Test func laterStagesAskForMoreAndPayMore() {
-        #expect(GameStore.stageGoal(1) == 400)
+        #expect(GameStore.stageGoal(1) == 250)
         #expect(GameStore.stageGoal(2) == 750)
         #expect(GameStore.stageGoal(5) == 2400)
         #expect(GameStore.stageLoot(1).coins == 45)
@@ -527,6 +530,101 @@ struct GameStoreTests {
         #expect(GameStore.stageStars(secondsLeft: 70) == 3)
         #expect(GameStore.stageStars(secondsLeft: 30) == 2)
         #expect(GameStore.stageStars(secondsLeft: 5) == 1)
+    }
+
+    @Test func stagesTakeTurnsWithGoals() {
+        #expect(GameStore.goal(forStage: 1) == .score(250))
+        #expect(GameStore.goal(forStage: 3) == .score(1200))
+        #expect(GameStore.goal(forStage: 4) == .merges(24))
+        #expect(GameStore.goal(forStage: 5) == .score(2400))
+        #expect(GameStore.goal(forStage: 6) == .moves(score: 750, moves: 42))
+        #expect(GameStore.goal(forStage: 7) == .chains(3))
+        #expect(GameStore.goal(forStage: 9) == .tile(128))
+        // A stage with no clock is never a sprint.
+        #expect(GameStore.isMovesStage(14))
+        #expect(GameStore.twist(forStage: 14) == .plain)
+        #expect(GameStore.stageHint(1) != nil)
+        #expect(GameStore.stageHint(4) == nil)
+    }
+
+    @Test func aMergeStageCountsMergesAndOpensTheEndlessGame() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 2, nextID: 10), to: defaults)
+        defaults.set(4, forKey: "ff.stage")
+        defaults.set(23, forKey: "ff.stage.count")
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(!store.isUnlocked(.endless))
+        #expect(store.stageProgress == 23)
+        #expect(store.stageTarget == 24)
+        store.swipe(.left)
+        #expect(store.isStageWon)
+        #expect(store.isGameOver)
+        #expect(store.stage == 5)
+        #expect(store.playedStage == 4)
+        #expect(store.lastLoot.opened != nil)
+        #expect(store.isUnlocked(.endless))
+        // The count starts again with the next stage.
+        store.newGame()
+        #expect(store.stageProgress == 0)
+        #expect(store.playedStage == 5)
+    }
+
+    @Test func aTileStageIsClearedByMakingTheTile() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[64, 64, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 2, nextID: 10), to: defaults)
+        defaults.set(9, forKey: "ff.stage")
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.playedGoal == .tile(128))
+        #expect(!store.isStageWon)
+        store.swipe(.left)
+        #expect(store.isStageWon)
+        #expect(store.stage == 10)
+    }
+
+    @Test func aMoveStageHasNoClockAndEndsWhenTheMovesRunOut() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[2, 4, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 100, movesUntilRotation: 2, nextID: 10), to: defaults)
+        defaults.set(6, forKey: "ff.stage")
+        defaults.set(2, forKey: "ff.stage.moves")
+        defaults.set(GameStore.continueCost, forKey: "ff.gems")
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(!store.hasClock)
+        #expect(store.movesLeft == 2)
+        store.swipe(.down)
+        #expect(store.movesLeft == 1)
+        // The clock does not run the game down.
+        store.tick(GameStore.roundSeconds + 1)
+        #expect(!store.isGameOver)
+        store.swipe(.right)
+        #expect(store.movesLeft == 0)
+        #expect(store.isOutOfMoves)
+        #expect(store.isGameOver)
+        #expect(!store.isStageWon)
+        #expect(store.stage == 6)
+        // Carrying on gives more moves.
+        #expect(store.continueGame())
+        #expect(store.movesLeft == GameStore.continueMoves)
+        #expect(!store.isGameOver)
+        // A new game of the stage starts with all its moves.
+        store.newGame()
+        #expect(store.movesLeft == 42)
+    }
+
+    @Test func coinsBuyBoostersAndGems() {
+        let defaults = freshDefaults()
+        defaults.set(1000, forKey: "ff.coins")
+        let store = GameStore(defaults: defaults, animated: false)
+        let flips = store.boosterCounts[.flip] ?? 0
+        #expect(store.buy(.flips))
+        #expect(store.coins == 1000 - GameStore.Booster.flip.price * 2)
+        #expect(store.boosterCounts[.flip] == flips + 3)
+        #expect(store.buy(.gem))
+        #expect(store.gems == 1)
+        #expect(store.coins == 200)
+        // Not enough left for anything more.
+        #expect(!store.buy(.sweeps))
+        #expect(store.coins == 200)
+        #expect(GameStore(defaults: defaults, animated: false).boosterCounts[.flip] == flips + 3)
     }
 
     @Test func oneTileCanBeMovedOnItsOwn() {
@@ -879,6 +977,9 @@ struct GameStoreTests {
 
     @Test func theFruitGameIsOpenToEveryoneAndFusionNeedsThreeThemes() {
         let defaults = freshDefaults()
+        // Fruit Salad opens at stage 8.
+        #expect(!GameStore(defaults: defaults, animated: false).isUnlocked(.fruit))
+        defaults.set(8, forKey: "ff.stage")
         let store = GameStore(defaults: defaults, animated: false)
         #expect(store.isUnlocked(.fruit))
         #expect(!store.isUnlocked(.fusion))

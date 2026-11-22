@@ -6,7 +6,8 @@ struct TimerRing: View {
     let scale: CGFloat
 
     var body: some View {
-        let isEndless = store.mode != .timed
+        let isEndless = !store.hasClock
+        let countsMoves = store.hasStages && store.isMovesGoal
         let left = store.secondsLeft
         let fraction: CGFloat = isEndless ? 1 : CGFloat(max(0, min(1, left / GameStore.roundSeconds)))
         let whole = Int(left.rounded(.up))
@@ -22,7 +23,17 @@ struct TimerRing: View {
                 .stroke(tint, style: StrokeStyle(lineWidth: 4 * scale, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .shadow(color: tint.opacity(0.8), radius: 4 * scale)
-            if isEndless {
+            if countsMoves {
+                // No clock in a stage played against a count of moves.
+                VStack(spacing: -2 * scale) {
+                    Text("\(max(0, store.movesLeft))")
+                        .font(.system(size: 18 * scale, weight: .heavy, design: .rounded))
+                        .monospacedDigit()
+                    Text("moves")
+                        .font(.system(size: 8 * scale, weight: .heavy, design: .rounded))
+                }
+                .foregroundStyle(store.movesLeft <= 5 ? Theme.timerLow : Color.white)
+            } else if isEndless {
                 // No clock in the endless game.
                 Image(systemName: "infinity")
                     .font(.system(size: 19 * scale, weight: .heavy))
@@ -38,7 +49,7 @@ struct TimerRing: View {
         .scaleEffect(beat ? 1.1 : 1)
         .animation(.easeInOut(duration: 0.3), value: whole)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(isEndless ? "No clock in this game" : "\(whole) seconds left"))
+        .accessibilityLabel(Text(countsMoves ? "\(max(0, store.movesLeft)) moves left" : (isEndless ? "No clock in this game" : "\(whole) seconds left")))
     }
 }
 
@@ -872,16 +883,18 @@ struct GameSounds: ViewModifier {
     }
 }
 
-/// "STAGE 3", a bar that fills as the score climbs toward the stage's goal, and the
-/// goal itself. This is the thing to beat in the two-minute game.
+/// "STAGE 3", a bar that fills as the game closes on the stage's goal, and the
+/// goal itself. This is the thing to beat in the stage game.
 struct StageBar: View {
     let stage: Int
-    let score: Int
-    let goal: Int
+    /// How far toward the goal the game is, from 0 to 1.
+    let fraction: Double
+    /// The goal in a word or two: "1,200", "Make 128", "7/24 merges".
+    let label: String
     let scale: CGFloat
 
     var body: some View {
-        let fraction = CGFloat(max(0, min(1, Double(score) / Double(max(1, goal)))))
+        let fraction = CGFloat(max(0, min(1, self.fraction)))
         let isNear = fraction >= 0.8
 
         HStack(spacing: 8 * scale) {
@@ -907,16 +920,16 @@ struct StageBar: View {
             HStack(spacing: 3 * scale) {
                 Image(systemName: "flag.checkered")
                     .font(.system(size: 11 * scale, weight: .heavy))
-                Text(goal.formatted(.number.grouping(.automatic)))
+                Text(label)
                     .font(.system(size: 13 * scale, weight: .heavy, design: .rounded))
             }
             .foregroundStyle(Theme.label)
             .fixedSize()
         }
         .frame(height: 14 * scale)
-        .animation(.easeOut(duration: 0.3), value: score)
+        .animation(.easeOut(duration: 0.3), value: fraction)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("Stage \(stage). \(score) of \(goal) points"))
+        .accessibilityLabel(Text("Stage \(stage). Goal: \(label). \(Int(fraction * 100)) percent there"))
     }
 }
 

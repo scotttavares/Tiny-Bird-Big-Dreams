@@ -217,6 +217,8 @@ final class GameStore {
         var isChest = false
         /// How many stages in a row have been cleared, this one included.
         var streak = 0
+        /// What clearing this stage opened, in words, or nil.
+        var opened: String?
     }
 
     /// The stage of the two-minute game the player is on. Every stage has a score
@@ -231,6 +233,184 @@ final class GameStore {
     private(set) var stageEvent = 0
     private(set) var lastLoot = StageLoot()
     @ObservationIgnored private var stagePaid = false
+
+    /// What a stage asks for. Stages take turns, so no two in a row play alike.
+    enum StageGoal: Equatable, Sendable {
+        /// Reach a score before the clock runs out.
+        case score(Int)
+        /// Make a tile this big before the clock runs out.
+        case tile(Int)
+        /// Make this many merges before the clock runs out.
+        case merges(Int)
+        /// Make this many chains: merges that follow one another as the board turns.
+        case chains(Int)
+        /// Reach a score in a number of moves. There is no clock.
+        case moves(score: Int, moves: Int)
+    }
+
+    /// True for the stages played against a count of moves, with no clock.
+    nonisolated static func isMovesStage(_ stage: Int) -> Bool {
+        stage >= 4 && stage % 5 != 0 && stage % 4 == 2
+    }
+
+    /// The goal of a stage. The first three are plain scores, to learn on; every
+    /// fifth (a chest stage) is a score too; the rest take turns.
+    nonisolated static func goal(forStage stage: Int) -> StageGoal {
+        let score = stageGoal(stage)
+        if stage < 4 || stage % 5 == 0 {
+            return .score(score)
+        }
+        switch stage % 4 {
+        case 0:
+            return .merges(min(70, 16 + 2 * stage))
+        case 1:
+            return .tile(stage < 12 ? 128 : (stage < 28 ? 256 : 512))
+        case 2:
+            return .moves(score: max(300, score / 4 / 50 * 50), moves: min(80, 36 + stage))
+        default:
+            return .chains(min(8, 2 + stage / 6))
+        }
+    }
+
+    /// A goal as a sentence: "Reach 1,200 points".
+    nonisolated static func goalWords(_ goal: StageGoal) -> String {
+        switch goal {
+        case .score(let score):
+            return "Reach " + score.formatted(.number.grouping(.automatic)) + " points"
+        case .tile(let value):
+            return "Make a \(value) tile"
+        case .merges(let count):
+            return "Make \(count) merges"
+        case .chains(let count):
+            return "Make \(count) chains"
+        case .moves(let score, let moves):
+            return "Score " + score.formatted(.number.grouping(.automatic)) + " in \(moves) moves"
+        }
+    }
+
+    /// A goal in a word or two, for the stage map.
+    nonisolated static func goalShort(_ goal: StageGoal) -> String {
+        switch goal {
+        case .score(let score):
+            return score.formatted(.number.grouping(.automatic))
+        case .tile(let value):
+            return "\(value) tile"
+        case .merges(let count):
+            return "\(count) merges"
+        case .chains(let count):
+            return "\(count) chains"
+        case .moves(let score, let moves):
+            return score.formatted(.number.grouping(.automatic)) + " in \(moves)"
+        }
+    }
+
+    /// A line of teaching for the first three stages, or nil.
+    nonisolated static func stageHint(_ stage: Int) -> String? {
+        switch stage {
+        case 1: return "Swipe to slide the tiles. Two the same merge!"
+        case 2: return "Every 2 moves the board turns and the tiles fall"
+        case 3: return "Stuck? Tap a booster under the board"
+        default: return nil
+        }
+    }
+
+    /// What reaching a stage opens, in words, or nil.
+    nonisolated static func opens(atStage stage: Int) -> String? {
+        switch stage {
+        case 5: return "Endless game unlocked! Find it in the menu"
+        case 8: return "Fruit Salad game unlocked! Find it in the menu"
+        case 10: return "Head to head unlocked! Tap the two players up top"
+        default: return nil
+        }
+    }
+
+    /// The merges or chains made in this game, or its biggest tile, whichever the
+    /// stage is counting.
+    private(set) var stageCount = 0
+    /// Moves left in a stage played against a count of moves.
+    private(set) var movesLeft = 0
+
+    /// The stage of the game on the board: the one just cleared, until the next begins.
+    var playedStage: Int { stagePaid ? max(1, stage - 1) : stage }
+    var playedGoal: StageGoal { Self.goal(forStage: playedStage) }
+
+    var isMovesGoal: Bool {
+        if case .moves = playedGoal {
+            return true
+        }
+        return false
+    }
+
+    /// How far the game has come toward its goal, and how far it has to go.
+    var stageProgress: Int {
+        switch playedGoal {
+        case .score, .moves: return state.score
+        case .tile, .merges, .chains: return stageCount
+        }
+    }
+
+    var stageTarget: Int {
+        switch playedGoal {
+        case .score(let score): return score
+        case .tile(let value): return value
+        case .merges(let count): return count
+        case .chains(let count): return count
+        case .moves(let score, _): return score
+        }
+    }
+
+    /// The same as a share from 0 to 1. Tiles double, so a 64 is most of the way to a 128.
+    var stageFraction: Double {
+        let target = Double(max(1, stageTarget))
+        if case .tile = playedGoal {
+            return min(1, log2(Double(max(1, stageCount))) / max(1, log2(target)))
+        }
+        return min(1, max(0, Double(stageProgress) / target))
+    }
+
+    /// True while a clock is running the game down.
+    var hasClock: Bool { mode == .timed && !(hasStages && isMovesGoal) }
+
+    /// True when a stage played against a count of moves has used them all.
+    var isOutOfMoves: Bool { hasStages && !isStageWon && isMovesGoal && movesLeft <= 0 }
+
+    /// The score that clears the stage being played, when it is a score that does.
+    private var scoreTarget: Int? {
+        switch Self.goal(forStage: stage) {
+        case .score(let score): return score
+        case .moves(let score, _): return score
+        case .tile, .merges, .chains: return nil
+        }
+    }
+
+    /// Counts what the stage is asking for, and clears the stage when there is enough.
+    private func advanceStage(merges: Int = 0, chains: Int = 0, tile: Int = 0) {
+        guard hasStages, !isStageWon else { return }
+        let target: Int
+        switch Self.goal(forStage: stage) {
+        case .score, .moves:
+            return
+        case .tile(let value):
+            stageCount = max(stageCount, tile)
+            target = value
+        case .merges(let count):
+            stageCount += merges
+            target = count
+        case .chains(let count):
+            stageCount += chains
+            target = count
+        }
+        if stageCount >= target {
+            isStageWon = true
+        }
+    }
+
+    /// A move in a stage played against a count of moves uses one up.
+    private func spendStageMove() {
+        if hasStages, !isStageWon, Self.isMovesStage(stage) {
+            movesLeft -= 1
+        }
+    }
 
     /// What makes a stage play differently from the one before it.
     enum Twist: String, Sendable {
@@ -257,7 +437,8 @@ final class GameStore {
         switch stage % 3 {
         case 0: return .rocky
         case 1: return stage >= 7 ? .quickTurn : .plain
-        default: return stage >= 6 ? .sprint : .plain
+        // A stage with no clock cannot be a sprint.
+        default: return stage >= 6 && !isMovesStage(stage) ? .sprint : .plain
         }
     }
 
@@ -268,7 +449,7 @@ final class GameStore {
     nonisolated static func twistWords(_ twist: Twist) -> String? {
         switch twist {
         case .plain: return nil
-        case .breather: return "Breather: a lower score and a free bomb"
+        case .breather: return "Breather: an easier goal and a free bomb"
         case .rocky: return "Rocky start: two blockers on the board"
         case .quickTurn: return "The board turns after every move"
         case .sprint: return "Sprint: only 90 seconds"
@@ -346,8 +527,12 @@ final class GameStore {
     /// The two-minute game is played in stages; a head-to-head game is not.
     var hasStages: Bool { mode == .timed && !isVersus }
 
-    /// The score that clears a stage: 400, 750, 1,200, 1,750 and on up.
+    /// The score that clears a score stage: 250, 750, 1,200, 1,750 and on up.
     nonisolated static func stageGoal(_ stage: Int) -> Int {
+        // The first stage is a quick win.
+        if stage <= 1 {
+            return 250
+        }
         let steps = max(1, stage) - 1
         let goal = 400 + 300 * steps + 50 * steps * steps
         // A breather asks for a quarter less, to the nearest 50.
@@ -381,7 +566,12 @@ final class GameStore {
         guard !stagePaid else { return }
         stagePaid = true
         var loot = Self.stageLoot(stage)
-        loot.stars = Self.stageStars(secondsLeft: secondsLeft)
+        if case .moves(_, let moves) = Self.goal(forStage: stage) {
+            // No clock: the stars are for the moves left over.
+            loot.stars = movesLeft * 3 >= moves ? 3 : (movesLeft * 6 >= moves ? 2 : 1)
+        } else {
+            loot.stars = Self.stageStars(secondsLeft: secondsLeft)
+        }
         stageStreak += 1
         loot.streak = stageStreak
         // Three stars pay half as much again; a winning run adds a tenth a stage, up to half.
@@ -404,6 +594,7 @@ final class GameStore {
         stageStars[stage - 1] = max(stageStars[stage - 1], loot.stars)
         defaults.set(stageStars, forKey: Key.stageStars)
         stage += 1
+        lastLoot.opened = Self.opens(atStage: stage)
         stageEvent += 1
         defaults.set(stage, forKey: Key.stage)
         defaults.set(stageStreak, forKey: Key.stageStreak)
@@ -942,6 +1133,7 @@ final class GameStore {
         bursts.removeAll()
         isTimerRunning = true
         swipeInFlight = true
+        spendStageMove()
         let find = forced ?? rollCrate()
 
         func lift() {
@@ -1021,6 +1213,7 @@ final class GameStore {
     /// board with no move left.
     static let continueSeconds: Double = 30
     static let continueClears = 6
+    static let continueMoves = 10
     private(set) var continuesUsed = 0
     /// Goes up each time a finished game is carried on.
     private(set) var continueEvent = 0
@@ -1081,6 +1274,9 @@ final class GameStore {
             secondsLeft = Self.continueSeconds
             wholeSecondsLeft = Int(Self.continueSeconds.rounded(.up))
         }
+        if isOutOfMoves {
+            movesLeft = Self.continueMoves
+        }
         if !GameEngine.hasMove(state.tiles, blocked: blockedSet, holes: holeSet) {
             let doomed = state.tiles.sorted { first, second in
                 if (first.kind == .stone) != (second.kind == .stone) {
@@ -1129,7 +1325,77 @@ final class GameStore {
     /// The Shape Shift game opens with the player's first theme beyond the free one,
     /// bought or won.
     func isUnlocked(_ mode: Mode) -> Bool {
-        ownedSkins.count >= Self.themesNeeded(for: mode)
+        Self.isOpen(mode, stage: stage, themes: ownedSkins.count)
+    }
+
+    /// A game is open once the player has reached its stage and has its themes.
+    nonisolated static func isOpen(_ mode: Mode, stage: Int, themes: Int) -> Bool {
+        stage >= stageNeeded(for: mode) && themes >= themesNeeded(for: mode)
+    }
+
+    /// The stage a game opens at: the stage game is all there is to begin with.
+    nonisolated static func stageNeeded(for mode: Mode) -> Int {
+        switch mode {
+        case .endless: return 5
+        case .fruit: return 8
+        case .timed, .shift, .twist, .fusion: return 1
+        }
+    }
+
+    /// Head-to-head games open at this stage.
+    static let versusStage = 10
+    var isVersusOpen: Bool { stage >= Self.versusStage }
+
+    // MARK: The coin shop
+
+    /// Something coins buy.
+    enum ShopItem: String, CaseIterable, Identifiable, Sendable {
+        case flips, sweeps, fevers, bombs, mixed, gem
+
+        var id: String { rawValue }
+
+        /// The booster a pack of three is made of, or nil.
+        var booster: Booster? {
+            switch self {
+            case .flips: return .flip
+            case .sweeps: return .sweep
+            case .fevers: return .fever
+            case .bombs: return .arm
+            case .mixed, .gem: return nil
+            }
+        }
+
+        /// Three boosters for the price of two; one of each for less than that; a gem.
+        var price: Int {
+            switch self {
+            case .flips, .sweeps, .fevers, .bombs: return (booster?.price ?? 0) * 2
+            case .mixed: return 550
+            case .gem: return 500
+            }
+        }
+    }
+
+    /// Goes up each time something is bought with coins.
+    private(set) var shopEvent = 0
+
+    /// Buys something with coins. Returns false (and changes nothing) when the
+    /// coins are short.
+    @discardableResult
+    func buy(_ item: ShopItem) -> Bool {
+        guard coins >= item.price else { return false }
+        coins -= item.price
+        if let booster = item.booster {
+            boosterCounts[booster, default: 0] += 3
+        } else if item == .mixed {
+            for booster in Booster.allCases {
+                boosterCounts[booster, default: 0] += 1
+            }
+        } else {
+            earnGems(1)
+        }
+        shopEvent += 1
+        save()
+        return true
     }
 
     /// How many themes beyond the free one a game needs: none for the first two
@@ -1254,6 +1520,8 @@ final class GameStore {
         static let stageStars = "ff.stage.stars"
         static let dailyDay = "ff.daily.day"
         static let dailyStreak = "ff.daily.streak"
+        static let stageCount = "ff.stage.count"
+        static let stageMoves = "ff.stage.moves"
 
         static func booster(_ booster: Booster) -> String {
             "ff.booster." + booster.rawValue
@@ -1343,7 +1611,8 @@ final class GameStore {
         self.ownedSkins = owned
 
         var mode = Mode(rawValue: defaults.string(forKey: Key.mode) ?? "") ?? .timed
-        if owned.count < GameStore.themesNeeded(for: mode) {
+        let savedStage = max(1, defaults.integer(forKey: Key.stage))
+        if !GameStore.isOpen(mode, stage: savedStage, themes: owned.count) {
             mode = .timed
         }
         let loaded = GameStore.load(mode, from: defaults)
@@ -1359,6 +1628,13 @@ final class GameStore {
         self.isGameOver = !GameEngine.hasMove(loaded.state.tiles, blocked: Set(loaded.state.blocks.map(\.cell))) || (mode == .timed && loaded.seconds <= 0) || wasWon
         self.isStageWon = wasWon
         self.stagePaid = wasWon
+        self.stageCount = max(0, defaults.integer(forKey: Key.stageCount))
+        if case .moves(_, let moves) = GameStore.goal(forStage: wasWon ? max(1, savedStage - 1) : savedStage) {
+            self.movesLeft = (defaults.object(forKey: Key.stageMoves) as? Int) ?? moves
+        }
+        if self.isOutOfMoves {
+            self.isGameOver = true
+        }
     }
 
     /// Changes the way to play. The game left behind is saved and waits for you.
@@ -1391,7 +1667,7 @@ final class GameStore {
         isTimerRunning = false
         isStageWon = newMode == .timed && defaults.bool(forKey: Key.stageWon)
         stagePaid = isStageWon
-        isGameOver = !GameEngine.hasMove(state.tiles, blocked: blockedSet, holes: holeSet) || isTimeUp || isStageWon
+        isGameOver = !GameEngine.hasMove(state.tiles, blocked: blockedSet, holes: holeSet) || isTimeUp || isStageWon || isOutOfMoves
         save()
     }
 
@@ -1532,6 +1808,7 @@ final class GameStore {
         slidePulse += 1
         isTimerRunning = true
         swipeInFlight = true
+        spendStageMove()
 
         if animated {
             isAnimating = true
@@ -1558,6 +1835,7 @@ final class GameStore {
         slidePulse += 1
         isTimerRunning = true
         swipeInFlight = true
+        spendStageMove()
 
         if animated {
             isAnimating = true
@@ -1601,6 +1879,11 @@ final class GameStore {
         state = fresh
         level = 1
         singleMovesLeft = Self.freeSingleMoves
+        stageCount = 0
+        movesLeft = 0
+        if mode == .timed, case .moves(_, let moves) = Self.goal(forStage: stage) {
+            movesLeft = moves
+        }
         if mode == .timed {
             isStageWon = false
             stagePaid = false
@@ -1655,7 +1938,7 @@ final class GameStore {
             }
         }
         // Only the timed game has a clock to run down.
-        guard mode == .timed, secondsLeft > 0 else { return }
+        guard hasClock, secondsLeft > 0 else { return }
         secondsLeft = max(0, secondsLeft - seconds)
         let whole = Int(secondsLeft.rounded(.up))
         if whole != wholeSecondsLeft {
@@ -1788,7 +2071,7 @@ final class GameStore {
         let points = gained * scoreMultiplier
         guard points > 0 else { return }
         // Crossing the stage's score clears the stage; the move in hand finishes first.
-        if hasStages, !isStageWon, state.score < stageGoal, state.score + points >= stageGoal {
+        if hasStages, !isStageWon, let target = scoreTarget, state.score < target, state.score + points >= target {
             isStageWon = true
         }
         state.score += points
@@ -1877,6 +2160,7 @@ final class GameStore {
         if !result.mergedIDs.isEmpty {
             let merged = result.tiles.filter { result.mergedIDs.contains($0.id) }
             lastMergeValue = merged.map(\.value).max() ?? 0
+            advanceStage(merges: merged.count, tile: lastMergeValue)
             for tile in merged {
                 nextBurstID += 1
                 bursts.append(Burst(
@@ -1931,7 +2215,7 @@ final class GameStore {
         let tile = GameEngine.spawn(
             in: &state,
             using: &rng,
-            allowTime: mode == .timed,
+            allowTime: hasClock,
             forcedKind: kind,
             stonesPerHundred: GameEngine.stonesPerHundred(level: hazardLevel)
         )
@@ -1960,6 +2244,7 @@ final class GameStore {
         }
         if lastCombo >= 2 {
             comboEvent += 1
+            advanceStage(chains: 1)
             // Only a long chain is worth a gem.
             if lastCombo >= 3 {
                 earnGems(Self.gemsForChain)
@@ -2011,7 +2296,7 @@ final class GameStore {
             mutateTile()
         }
         let wasOver = isGameOver
-        isGameOver = !GameEngine.hasMove(state.tiles, blocked: blockedSet, holes: holeSet) || isTimeUp || isStageWon
+        isGameOver = !GameEngine.hasMove(state.tiles, blocked: blockedSet, holes: holeSet) || isTimeUp || isStageWon || isOutOfMoves
         if isGameOver {
             isTimerRunning = false
             if !wasOver {
@@ -2039,6 +2324,8 @@ final class GameStore {
         defaults.set(best, forKey: Key.best(mode))
         if mode == .timed {
             defaults.set(secondsLeft, forKey: Key.time)
+            defaults.set(stageCount, forKey: Key.stageCount)
+            defaults.set(movesLeft, forKey: Key.stageMoves)
         }
         defaults.set(coins, forKey: Key.coins)
         defaults.set(gems, forKey: Key.gems)

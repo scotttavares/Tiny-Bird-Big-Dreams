@@ -28,6 +28,7 @@ struct GameScreen: View {
     @State private var oneArmed = false
     @State private var showDaily = false
     @State private var showMap = false
+    @State private var showShop = false
     @AppStorage(SoundPlayer.musicKey) private var musicOn = true
     /// Where the board is on the screen, so the creatures can find it.
     @State private var boardFrame = CGRect.zero
@@ -148,10 +149,18 @@ struct GameScreen: View {
             sounds.setTrack(newTrack)
         }
         .overlay(alignment: .topLeading) {
-            CoinCounter(coins: store.coins, gems: store.gems)
-                .id(skinID)
-                .padding(.leading, 16)
-                .padding(.top, 6)
+            // The coins open the shop where they are spent.
+            Button {
+                store.pauseTimer()
+                showShop = true
+            } label: {
+                CoinCounter(coins: store.coins, gems: store.gems)
+            }
+            .buttonStyle(BounceButtonStyle())
+            .accessibilityHint(Text("Opens the coin shop"))
+            .id(skinID)
+            .padding(.leading, 16)
+            .padding(.top, 6)
         }
         .overlay(alignment: .topTrailing) {
           HStack(spacing: 0) {
@@ -179,7 +188,9 @@ struct GameScreen: View {
             // A live game against another player.
             Button {
                 store.pauseTimer()
-                if !Versus.shared.find() {
+                if !store.isVersusOpen {
+                    show("Head to head opens at stage \(GameStore.versusStage)", seconds: 2.2)
+                } else if !Versus.shared.find() {
                     show("Sign in to Game Center to play head to head", seconds: 2)
                 }
             } label: {
@@ -219,13 +230,14 @@ struct GameScreen: View {
             HelpView(store: store, shop: shop, onReplayIntro: onReplayIntro)
         }
         .onChange(of: isIntroOver, initial: true) { _, isOver in
-            if isOver, !seenHelp {
-                openHelp()
-            }
             if isOver {
+                // The first stages teach the game as it is played: no page of rules first.
+                seenHelp = true
                 GameCenter.shared.signIn()
-                if store.isDailyReady() {
+                if store.stage > 1, store.isDailyReady() {
                     showDaily = true
+                } else if store.hasStages, !store.isGameOver {
+                    show(startWords, seconds: 3.2)
                 }
             }
         }
@@ -249,14 +261,17 @@ struct GameScreen: View {
             }
         }
         .sheet(isPresented: $showMap) {
-            StageMapView(stage: store.isStageWon ? store.stage - 1 : store.stage, stars: store.stageStars)
+            StageMapView(stage: store.playedStage, stars: store.stageStars)
+        }
+        .sheet(isPresented: $showShop) {
+            ShopView(store: store, sounds: sounds)
         }
         .onChange(of: store.isGameOver) { _, isOver in
             // A finished game goes on the worldwide leaderboard of its mode.
             oneArmed = false
-            // A new stage with a twist says so as it starts.
-            if !isOver, let words = GameStore.twistWords(store.twist) {
-                show("Stage \(store.stage). " + words, seconds: 2.4)
+            // A new stage says what it asks for as it starts.
+            if !isOver, store.hasStages {
+                show(startWords, seconds: 3)
             }
             if isOver {
                 GameCenter.shared.report(score: store.state.score, mode: store.mode)
@@ -284,7 +299,7 @@ struct GameScreen: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
-                if isIntroOver, store.isDailyReady() {
+                if isIntroOver, store.stage > 1, store.isDailyReady() {
                     showDaily = true
                 }
                 sounds.refreshMusic()
@@ -361,12 +376,11 @@ struct GameScreen: View {
             Group {
                 if store.hasStages {
                     // A cleared stage keeps its own full bar until the next one starts.
-                    let shown = store.isStageWon ? store.stage - 1 : store.stage
                     Button {
                         store.pauseTimer()
                         showMap = true
                     } label: {
-                        StageBar(stage: shown, score: store.state.score, goal: GameStore.stageGoal(shown), scale: scale)
+                        StageBar(stage: store.playedStage, fraction: store.stageFraction, label: stageLabel, scale: scale)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -456,7 +470,7 @@ struct GameScreen: View {
 
             if store.isGameOver {
                 GameOverOverlay(
-                    title: store.isStageWon ? "Stage \(store.stage - 1) Cleared!" : (store.isTimeUp ? "Time's Up" : "Game Over"),
+                    title: store.isStageWon ? "Stage \(store.stage - 1) Cleared!" : (store.isTimeUp ? "Time's Up" : (store.isOutOfMoves ? "Out of Moves" : "Game Over")),
                     score: store.state.score,
                     level: stageStarLevel,
                     note: stageNote,
@@ -551,17 +565,64 @@ struct GameScreen: View {
             if loot.streak >= 2 {
                 words += "  ·  \(loot.streak) in a row"
             }
+            if let opened = loot.opened {
+                words = opened + "\n" + words
+            }
             return words
         }
-        let short = store.stageGoal - store.state.score
+        let target = store.stageTarget
+        let short = target - store.stageProgress
         guard short > 0 else { return nil }
-        let goal = store.stageGoal.formatted(.number.grouping(.automatic))
+        let unit: String
+        switch store.playedGoal {
+        case .tile(let value):
+            if store.stageProgress * 2 >= value {
+                return "So close! You made a \(store.stageProgress), one step from the \(value)"
+            }
+            return "Stage \(store.stage) needs a \(value) tile"
+        case .merges:
+            unit = " merges"
+        case .chains:
+            unit = " chains"
+        case .score, .moves:
+            unit = ""
+        }
+        let goal = target.formatted(.number.grouping(.automatic))
         let gap = short.formatted(.number.grouping(.automatic))
         // A near miss is called out: it is the best reason to go again.
-        if short * 5 <= store.stageGoal {
-            return "So close! Only \(gap) short of \(goal)"
+        if short * 5 <= target {
+            return "So close! Only \(gap)\(unit) short of \(goal)"
         }
-        return "Stage \(store.stage) needs \(goal): \(gap) to go"
+        return "Stage \(store.stage) needs \(goal)\(unit): \(gap) to go"
+    }
+
+    /// The goal at the end of the stage bar, with the count so far where there is one.
+    private var stageLabel: String {
+        switch store.playedGoal {
+        case .score(let score):
+            return score.formatted(.number.grouping(.automatic))
+        case .tile(let value):
+            return "Make \(value)"
+        case .merges(let count):
+            return "\(min(store.stageProgress, count))/\(count) merges"
+        case .chains(let count):
+            return "\(min(store.stageProgress, count))/\(count) chains"
+        case .moves(let score, _):
+            return score.formatted(.number.grouping(.automatic)) + " in \(max(0, store.movesLeft)) moves"
+        }
+    }
+
+    /// What a stage says as it starts: a line of teaching on the first three, then
+    /// the goal and any twist.
+    private var startWords: String {
+        if let hint = GameStore.stageHint(store.stage) {
+            return hint
+        }
+        var words = "Stage \(store.stage): " + GameStore.goalWords(store.playedGoal)
+        if let twist = GameStore.twistWords(store.twist) {
+            words += "\n" + twist
+        }
+        return words
     }
 
     private func openHelp() {
@@ -606,6 +667,9 @@ struct GameScreen: View {
     /// carried on (it already was, or nothing was scored).
     private var continueOffer: String? {
         guard store.canContinue else { return nil }
+        if store.isOutOfMoves {
+            return "+\(GameStore.continueMoves) moves"
+        }
         if store.isTimeUp {
             return "+\(Int(GameStore.continueSeconds)) seconds"
         }
@@ -806,7 +870,7 @@ struct GameOverOverlay: View {
                         .font(.system(size: 14 * scale, weight: .heavy, design: .rounded))
                         .foregroundStyle(Theme.counter)
                         .multilineTextAlignment(.center)
-                        .lineLimit(2)
+                        .lineLimit(3)
                         .minimumScaleFactor(0.7)
                 }
 
