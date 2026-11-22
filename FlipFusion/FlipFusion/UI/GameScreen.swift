@@ -176,6 +176,27 @@ struct GameScreen: View {
             .id(skinID)
             .accessibilityLabel(Text("World leaderboard"))
 
+            // A live game against another player.
+            Button {
+                store.pauseTimer()
+                if !Versus.shared.find() {
+                    show("Sign in to Game Center to play head to head", seconds: 2)
+                }
+            } label: {
+                Image(systemName: "person.2.fill")
+                    .font(.system(size: 15, weight: .heavy))
+                    .foregroundStyle(Theme.flip[0])
+                    .frame(width: 38, height: 38)
+                    .background(Circle().fill(Theme.glassFill))
+                    .overlay(Circle().strokeBorder(Theme.glassStroke, lineWidth: 1))
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 3)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(BounceButtonStyle())
+            .id(skinID)
+            .accessibilityLabel(Text("Play head to head"))
+
             Button {
                 openHelp()
             } label: {
