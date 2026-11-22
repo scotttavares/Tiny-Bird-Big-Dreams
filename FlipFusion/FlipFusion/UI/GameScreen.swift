@@ -154,6 +154,28 @@ struct GameScreen: View {
                 .padding(.top, 6)
         }
         .overlay(alignment: .topTrailing) {
+          HStack(spacing: 0) {
+            // The worldwide leaderboard of the game being played, one tap away.
+            Button {
+                store.pauseTimer()
+                if !GameCenter.shared.showBoard(for: store.mode) {
+                    show("Sign in to Game Center to see the leaderboard", seconds: 2)
+                }
+            } label: {
+                Image(systemName: "trophy.fill")
+                    .font(.system(size: 16, weight: .heavy))
+                    .foregroundStyle(Theme.counter)
+                    .frame(width: 38, height: 38)
+                    .background(Circle().fill(Theme.glassFill))
+                    .overlay(Circle().strokeBorder(Theme.glassStroke, lineWidth: 1))
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 3)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(BounceButtonStyle())
+            .id(skinID)
+            .accessibilityLabel(Text("World leaderboard"))
+
             Button {
                 openHelp()
             } label: {
@@ -168,8 +190,9 @@ struct GameScreen: View {
             }
             .buttonStyle(BounceButtonStyle())
             .id(skinID)
-            .padding(.trailing, 10)
             .accessibilityLabel(Text("Menu"))
+          }
+          .padding(.trailing, 10)
         }
         .sheet(isPresented: $showHelp) {
             HelpView(store: store, shop: shop, onReplayIntro: onReplayIntro)
