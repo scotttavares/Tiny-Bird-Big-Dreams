@@ -539,9 +539,15 @@ struct BoosterBar: View {
                                     .overlay(Capsule().strokeBorder(Color.white.opacity(0.7), lineWidth: 1))
                                     .offset(x: 9 * scale, y: -8 * scale)
                             }
+                        // White on a dark pill, so it reads over any backdrop.
                         Text(Self.name(booster))
-                            .font(.system(size: 12 * scale, weight: .bold, design: .rounded))
-                            .foregroundStyle(Theme.label)
+                            .font(.system(size: 12 * scale, weight: .heavy, design: .rounded))
+                            .foregroundStyle(Color.white)
+                            .lineLimit(1)
+                            .fixedSize()
+                            .padding(.horizontal, 8 * scale)
+                            .padding(.vertical, 3 * scale)
+                            .background(Capsule().fill(Color.black.opacity(0.55)))
                     }
                     .opacity(usable ? 1 : 0.45)
                 }
