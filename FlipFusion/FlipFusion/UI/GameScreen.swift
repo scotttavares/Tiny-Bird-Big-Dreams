@@ -29,6 +29,7 @@ struct GameScreen: View {
     @State private var showDaily = false
     @State private var showMap = false
     @State private var showShop = false
+    @State private var showQuests = false
     @AppStorage(SoundPlayer.musicKey) private var musicOn = true
     /// Where the board is on the screen, so the creatures can find it.
     @State private var boardFrame = CGRect.zero
@@ -164,6 +165,35 @@ struct GameScreen: View {
         }
         .overlay(alignment: .topTrailing) {
           HStack(spacing: 0) {
+            // Today's quests, the coin jar and the stars.
+            Button {
+                store.pauseTimer()
+                showQuests = true
+            } label: {
+                Image(systemName: "checklist")
+                    .font(.system(size: 15, weight: .heavy))
+                    .foregroundStyle(Color(hex: 0x86F2BC))
+                    .frame(width: 38, height: 38)
+                    .background(Circle().fill(Theme.glassFill))
+                    .overlay(Circle().strokeBorder(Theme.glassStroke, lineWidth: 1))
+                    .overlay(alignment: .topTrailing) {
+                        if store.questsWaiting > 0 {
+                            Text("\(store.questsWaiting)")
+                                .font(.system(size: 11, weight: .black, design: .rounded))
+                                .foregroundStyle(Color.white)
+                                .frame(width: 17, height: 17)
+                                .background(Circle().fill(Color(hex: 0xFF4D6D)))
+                                .offset(x: 3, y: -3)
+                        }
+                    }
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 3)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(BounceButtonStyle())
+            .id(skinID)
+            .accessibilityLabel(Text("Daily quests and rewards"))
+
             // The worldwide leaderboard of the game being played, one tap away.
             Button {
                 store.pauseTimer()
@@ -265,6 +295,13 @@ struct GameScreen: View {
         }
         .sheet(isPresented: $showShop) {
             ShopView(store: store, sounds: sounds)
+        }
+        .sheet(isPresented: $showQuests) {
+            QuestsView(store: store, sounds: sounds)
+        }
+        .onChange(of: store.questEvent) { _, _ in
+            sounds.play(.bonus, volume: 0.7)
+            show(store.lastQuestWords + "\nCollect it in Rewards", seconds: 2.4)
         }
         .onChange(of: store.isGameOver) { _, isOver in
             // A finished game goes on the worldwide leaderboard of its mode.
@@ -475,6 +512,9 @@ struct GameScreen: View {
                     level: stageStarLevel,
                     note: stageNote,
                     playLabel: store.isStageWon ? "Next Stage" : (store.hasStages ? "Try Again" : "Play Again"),
+                    bonus: store.isStageWon && store.lastLoot.stage == store.stage - 1 ? store.lastLoot.bonus : 0,
+                    bonusLabel: store.isMovesGoal ? "Moves left" : "Time left",
+                    tease: nextTease,
                     isBest: store.state.score > 0 && store.state.score >= store.best,
                     continueOffer: continueOffer,
                     side: side,
@@ -495,6 +535,14 @@ struct GameScreen: View {
                     spark: Skin.current.spark
                 )
                 .transition(.scale(scale: 0.8).combined(with: .opacity))
+
+                // A cleared stage goes out with a burst over the card.
+                if store.isStageWon {
+                    Confetti(side: side)
+                        .id(store.stageEvent)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
             }
         }
         .frame(width: side, height: side)
@@ -565,6 +613,12 @@ struct GameScreen: View {
             if loot.streak >= 2 {
                 words += "  ·  \(loot.streak) in a row"
             }
+            if loot.jar > 0 {
+                words += ", jar +\(loot.jar)"
+            }
+            if loot.starCoins > 0 {
+                words = "Star chest: +\(loot.starCoins) coins, +\(loot.starGems) gems\n" + words
+            }
             if let opened = loot.opened {
                 words = opened + "\n" + words
             }
@@ -596,6 +650,30 @@ struct GameScreen: View {
         return "Stage \(store.stage) needs \(goal)\(unit): \(gap) to go"
     }
 
+    /// What is coming, on the end card: the nearest unlock or big chest, and the jar.
+    private var nextTease: String? {
+        guard store.hasStages else { return nil }
+        // After a win this is the stage to play next; after a miss, the one to retry.
+        let next = store.stage
+        var words: String
+        let gates = [(5, "Endless"), (8, "Fruit Salad"), (10, "Head to head")]
+        if let gate = gates.first(where: { $0.0 > next && $0.0 - next <= 2 }) {
+            let away = gate.0 - next
+            words = (away == 1 ? "1 more stage" : "\(away) more stages") + " to unlock " + gate.1
+        } else {
+            let away = (5 - next % 5) % 5
+            if away == 0 {
+                words = store.isStageWon ? "Next up: a big chest stage" : "Clear this stage for the big chest"
+            } else {
+                words = (away == 1 ? "1 stage" : "\(away) stages") + " to the big chest"
+            }
+        }
+        if store.jar > 0 {
+            words += "  ·  jar: \(store.jar) coins"
+        }
+        return words
+    }
+
     /// The goal at the end of the stage bar, with the count so far where there is one.
     private var stageLabel: String {
         switch store.playedGoal {
@@ -621,6 +699,8 @@ struct GameScreen: View {
         var words = "Stage \(store.stage): " + GameStore.goalWords(store.playedGoal)
         if let twist = GameStore.twistWords(store.twist) {
             words += "\n" + twist
+        } else if GameStore.streakBombs(store.stageStreak) > 0 {
+            words += "\n\(store.stageStreak) wins in a row: free bomb!"
         }
         return words
     }
@@ -822,6 +902,35 @@ struct ToastView: View {
     }
 }
 
+/// "Time left +32": the coins for what was left over, counted up one step at a time.
+struct BonusCount: View {
+    let total: Int
+    let label: String
+    let scale: CGFloat
+
+    @State private var shown = 0
+
+    var body: some View {
+        HStack(spacing: 5 * scale) {
+            CoinIcon(size: 16 * scale)
+            Text("\(label): +\(shown)")
+                .font(.system(size: 15 * scale, weight: .heavy, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(Color.white)
+        }
+        .task {
+            // Wait for the card to land, then count.
+            try? await Task.sleep(for: .milliseconds(450))
+            for step in 1...24 {
+                try? await Task.sleep(for: .milliseconds(45))
+                shown = total * step / 24
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("\(label) bonus: \(total) coins"))
+    }
+}
+
 /// Covers the board when time runs out or no move is left.
 struct GameOverOverlay: View {
     let title: String
@@ -831,6 +940,11 @@ struct GameOverOverlay: View {
     /// One more line under the score: a stage's loot, or how far short the game fell.
     var note: String?
     var playLabel = "Play Again"
+    /// Coins for the time or moves left over, counted up on the card. 0 hides it.
+    var bonus = 0
+    var bonusLabel = "Time left"
+    /// What is coming next, in small words under the note.
+    var tease: String?
     let isBest: Bool
     /// What "Keep going" gives, such as "+30 seconds". nil hides the button.
     let continueOffer: String?
@@ -872,6 +986,19 @@ struct GameOverOverlay: View {
                         .multilineTextAlignment(.center)
                         .lineLimit(3)
                         .minimumScaleFactor(0.7)
+                }
+
+                if bonus > 0 {
+                    BonusCount(total: bonus, label: bonusLabel, scale: scale)
+                }
+
+                if let tease {
+                    Text(tease)
+                        .font(.system(size: 12 * scale, weight: .bold, design: .rounded))
+                        .foregroundStyle(Theme.label)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
                 }
 
                 Button(action: onPlayAgain) {

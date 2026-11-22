@@ -627,6 +627,83 @@ struct GameStoreTests {
         #expect(GameStore(defaults: defaults, animated: false).boosterCounts[.flip] == flips + 3)
     }
 
+    @Test func dailyQuestsCountPlayAndPayWhenCollected() {
+        #expect(GameStore.quests(day: 0).map(\.kind) == [.merges, .chains, .stages])
+        #expect(GameStore.quests(day: 1).map(\.kind) != GameStore.quests(day: 0).map(\.kind))
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 2, nextID: 10), to: defaults)
+        defaults.set(0, forKey: "ff.quest.day")
+        defaults.set([59, 4, 2], forKey: "ff.quest.counts")
+        let store = GameStore(defaults: defaults, animated: false)
+        store.today = { 0 }
+        #expect(store.questsWaiting == 2)
+        // Nothing to collect on a quest that is not finished.
+        #expect(!store.claimQuest(0))
+        store.swipe(.left)
+        #expect(store.questProgress[0] == 60)
+        #expect(store.questEvent == 1)
+        #expect(store.questsWaiting == 3)
+        #expect(store.coins == 0)
+        #expect(store.claimQuest(0))
+        #expect(store.coins == 40)
+        #expect(!store.claimQuest(0))
+        #expect(store.claimQuest(1))
+        #expect(store.claimQuest(2))
+        // All three: the bonus and a gem.
+        #expect(store.coins == 40 + 40 + 50 + GameStore.questBonus)
+        #expect(store.gems == 1)
+        #expect(store.questsWaiting == 0)
+        // A new day starts the quests again.
+        store.today = { 1 }
+        #expect(store.questProgress == [0, 0, 0])
+        #expect(store.questsWaiting == 0)
+    }
+
+    @Test func aChestStagePaysTheJarAndTheTimeLeft() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 2396, movesUntilRotation: 2, nextID: 10), to: defaults)
+        defaults.set(5, forKey: "ff.stage")
+        defaults.set(80, forKey: "ff.jar")
+        defaults.set(90.0, forKey: "ff.time")
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.jar == 80)
+        store.swipe(.left)
+        #expect(store.isStageWon)
+        #expect(store.lastLoot.isChest)
+        #expect(store.lastLoot.jar == 80)
+        #expect(store.lastLoot.bonus == 45)
+        #expect(store.jar == 0)
+        #expect(store.coins >= store.lastLoot.coins + 45 + 80)
+    }
+
+    @Test func aWinningRunStartsWithABombAndStarsOpenAChest() {
+        #expect(GameStore.streakBombs(2) == 0)
+        #expect(GameStore.streakBombs(3) == 1)
+        #expect(GameStore.streakBombs(5) == 2)
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 2, nextID: 10), to: defaults)
+        defaults.set(4, forKey: "ff.stage")
+        defaults.set(23, forKey: "ff.stage.count")
+        defaults.set(2, forKey: "ff.stage.streak")
+        defaults.set([3, 3, 3], forKey: "ff.stage.stars")
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.starTotal == 9)
+        #expect(store.nextStarMark == 10)
+        store.swipe(.left)
+        #expect(store.isStageWon)
+        // Twelve stars: the first star chest.
+        #expect(store.starTotal == 12)
+        #expect(store.lastLoot.starCoins == 150)
+        #expect(store.lastLoot.starGems == 3)
+        #expect(store.nextStarMark == 25)
+        // Three wins in a row: the next stage starts with a bomb.
+        #expect(store.stageStreak == 3)
+        store.newGame()
+        // The two tiles a game starts with may be bombs too.
+        #expect(store.state.tiles.filter { $0.kind == .bomb }.count >= 1)
+        #expect(store.state.tiles.count == 3)
+    }
+
     @Test func oneTileCanBeMovedOnItsOwn() {
         let defaults = freshDefaults()
         save(GameState(tiles: tiles([[2, 4, 0, 8], [0, 0, 0, 2], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 2, nextID: 20), to: defaults)

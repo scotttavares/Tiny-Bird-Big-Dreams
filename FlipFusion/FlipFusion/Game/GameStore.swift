@@ -219,6 +219,41 @@ final class GameStore {
         var streak = 0
         /// What clearing this stage opened, in words, or nil.
         var opened: String?
+        /// Coins for the time or the moves left over.
+        var bonus = 0
+        /// Coins out of the jar, which opens at a chest stage.
+        var jar = 0
+        /// A star chest, when this stage's stars reached one.
+        var starCoins = 0
+        var starGems = 0
+    }
+
+    // MARK: The coin jar, winning runs and star chests
+
+    /// Every coin scored in the stage game drops another into the jar. It opens at
+    /// each chest stage.
+    private(set) var jar = 0
+    static let jarLimit = 500
+    /// Coins for each move left over when a stage played against moves is cleared.
+    static let coinsPerMoveLeft = 5
+
+    /// A winning run starts each stage with a bomb; a run of five, with two.
+    nonisolated static func streakBombs(_ streak: Int) -> Int {
+        streak >= 5 ? 2 : (streak >= 3 ? 1 : 0)
+    }
+
+    /// The star totals that open a star chest, and what each chest holds.
+    static let starMarks = [10, 25, 50, 100, 150, 200]
+    static let starCoins = [150, 300, 500, 800, 1000, 1500]
+    static let starGems = [3, 5, 8, 12, 15, 20]
+    /// How many star chests have been opened.
+    private(set) var starChests = 0
+
+    var starTotal: Int { stageStars.reduce(0, +) }
+
+    /// The star total of the next star chest, or nil when all are open.
+    var nextStarMark: Int? {
+        starChests < Self.starMarks.count ? Self.starMarks[starChests] : nil
     }
 
     /// The stage of the two-minute game the player is on. Every stage has a score
@@ -524,6 +559,127 @@ final class GameStore {
         return gift
     }
 
+    // MARK: Daily quests
+
+    /// What a quest counts.
+    enum QuestKind: String, CaseIterable, Sendable {
+        case merges, chains, stages, boosters, bigTile
+    }
+
+    /// One of the day's three small jobs. Doing it earns coins to collect.
+    struct Quest: Equatable, Identifiable, Sendable {
+        let kind: QuestKind
+        let target: Int
+        let coins: Int
+
+        var id: String { kind.rawValue }
+
+        var words: String {
+            switch kind {
+            case .merges: return "Make \(target) merges"
+            case .chains: return "Make \(target) chains"
+            case .stages: return target == 1 ? "Clear a stage" : "Clear \(target) stages"
+            case .boosters: return "Use \(target) boosters"
+            case .bigTile: return "Make a \(target) tile"
+            }
+        }
+    }
+
+    /// Collecting all three of a day's quests adds this many coins, and a gem.
+    static let questBonus = 100
+
+    /// The three quests of a day. They change every day.
+    nonisolated static func quests(day: Int) -> [Quest] {
+        let kinds = QuestKind.allCases
+        var list: [Quest] = []
+        for index in 0..<3 {
+            switch kinds[(abs(day) + index) % kinds.count] {
+            case .merges: list.append(Quest(kind: .merges, target: 60, coins: 40))
+            case .chains: list.append(Quest(kind: .chains, target: 4, coins: 40))
+            case .stages: list.append(Quest(kind: .stages, target: 2, coins: 50))
+            case .boosters: list.append(Quest(kind: .boosters, target: 2, coins: 30))
+            case .bigTile: list.append(Quest(kind: .bigTile, target: 128, coins: 40))
+            }
+        }
+        return list
+    }
+
+    /// Today's day number. The tests put their own day here.
+    @ObservationIgnored var today: () -> Int = { GameStore.dayNumber() }
+
+    private(set) var questCounts = [0, 0, 0]
+    private(set) var questClaimed = [false, false, false]
+    private(set) var questDay = 0
+    /// Goes up each time a quest is finished.
+    private(set) var questEvent = 0
+    private(set) var lastQuestWords = ""
+
+    var quests: [Quest] { Self.quests(day: today()) }
+
+    /// How far each of today's quests has come.
+    var questProgress: [Int] { questDay == today() ? questCounts : [0, 0, 0] }
+
+    /// Which of today's quests have been collected.
+    var questsCollected: [Bool] { questDay == today() ? questClaimed : [false, false, false] }
+
+    /// How many finished quests are waiting to be collected.
+    var questsWaiting: Int {
+        let list = quests
+        let counts = questProgress
+        let claimed = questsCollected
+        var waiting = 0
+        for index in 0..<3 where counts[index] >= list[index].target && !claimed[index] {
+            waiting += 1
+        }
+        return waiting
+    }
+
+    private func saveQuests() {
+        defaults.set(questDay, forKey: Key.questDay)
+        defaults.set(questCounts, forKey: Key.questCounts)
+        defaults.set(questClaimed, forKey: Key.questClaimed)
+    }
+
+    /// Counts something toward today's quests.
+    private func noteQuest(_ kind: QuestKind, _ amount: Int) {
+        guard amount > 0 else { return }
+        let day = today()
+        if questDay != day {
+            questDay = day
+            questCounts = [0, 0, 0]
+            questClaimed = [false, false, false]
+        }
+        let list = Self.quests(day: day)
+        guard let index = list.firstIndex(where: { $0.kind == kind }) else { return }
+        let quest = list[index]
+        guard questCounts[index] < quest.target else { return }
+        questCounts[index] = kind == .bigTile ? max(questCounts[index], amount) : questCounts[index] + amount
+        if questCounts[index] >= quest.target {
+            lastQuestWords = "Quest done: " + quest.words
+            questEvent += 1
+        }
+        saveQuests()
+    }
+
+    /// Collects a finished quest's coins. The third one of the day adds the bonus.
+    /// Returns false (and changes nothing) when there is nothing to collect.
+    @discardableResult
+    func claimQuest(_ index: Int) -> Bool {
+        let list = quests
+        guard index >= 0, index < 3, questDay == today(),
+              questCounts[index] >= list[index].target, !questClaimed[index]
+        else { return false }
+        questClaimed[index] = true
+        coins += list[index].coins
+        if !questClaimed.contains(false) {
+            coins += Self.questBonus
+            earnGems(1)
+        }
+        saveQuests()
+        save()
+        return true
+    }
+
     /// The two-minute game is played in stages; a head-to-head game is not.
     var hasStages: Bool { mode == .timed && !isVersus }
 
@@ -582,9 +738,19 @@ final class GameStore {
             percent += 20
         }
         loot.coins = loot.coins * percent / 100
+        // What was left on the clock, or of the moves, is paid out in coins.
+        if case .moves = Self.goal(forStage: stage) {
+            loot.bonus = max(0, movesLeft) * Self.coinsPerMoveLeft
+        } else {
+            loot.bonus = Int(max(0, secondsLeft)) / 2
+        }
+        if loot.isChest {
+            loot.jar = jar
+            jar = 0
+        }
         let booster = Booster.allCases.randomElement(using: &rng) ?? .flip
         loot.booster = booster
-        coins += loot.coins
+        coins += loot.coins + loot.bonus + loot.jar
         gems += loot.gems
         boosterCounts[booster, default: 0] += loot.isChest ? 2 : 1
         lastLoot = loot
@@ -593,6 +759,17 @@ final class GameStore {
         }
         stageStars[stage - 1] = max(stageStars[stage - 1], loot.stars)
         defaults.set(stageStars, forKey: Key.stageStars)
+        // Enough stars open a star chest.
+        let total = stageStars.reduce(0, +)
+        while starChests < Self.starMarks.count, total >= Self.starMarks[starChests] {
+            lastLoot.starCoins += Self.starCoins[starChests]
+            lastLoot.starGems += Self.starGems[starChests]
+            coins += Self.starCoins[starChests]
+            gems += Self.starGems[starChests]
+            starChests += 1
+        }
+        defaults.set(starChests, forKey: Key.starChests)
+        noteQuest(.stages, 1)
         stage += 1
         lastLoot.opened = Self.opens(atStage: stage)
         stageEvent += 1
@@ -1238,7 +1415,7 @@ final class GameStore {
         newGame()
         // No stage twist in a head-to-head game: both players get the plain game.
         state.movesUntilRotation = GameEngine.movesPerRotation
-        state.tiles.removeAll { $0.kind == .stone }
+        state.tiles.removeAll { $0.kind == .stone || $0.kind == .bomb }
         secondsLeft = Self.roundSeconds
         wholeSecondsLeft = Int(Self.roundSeconds)
         var next = state.nextID
@@ -1522,6 +1699,11 @@ final class GameStore {
         static let dailyStreak = "ff.daily.streak"
         static let stageCount = "ff.stage.count"
         static let stageMoves = "ff.stage.moves"
+        static let jar = "ff.jar"
+        static let starChests = "ff.star.chests"
+        static let questDay = "ff.quest.day"
+        static let questCounts = "ff.quest.counts"
+        static let questClaimed = "ff.quest.claimed"
 
         static func booster(_ booster: Booster) -> String {
             "ff.booster." + booster.rawValue
@@ -1635,6 +1817,15 @@ final class GameStore {
         if self.isOutOfMoves {
             self.isGameOver = true
         }
+        self.jar = min(GameStore.jarLimit, max(0, defaults.integer(forKey: Key.jar)))
+        self.starChests = max(0, defaults.integer(forKey: Key.starChests))
+        self.questDay = defaults.integer(forKey: Key.questDay)
+        if let counts = defaults.array(forKey: Key.questCounts) as? [Int], counts.count == 3 {
+            self.questCounts = counts
+        }
+        if let claimed = defaults.array(forKey: Key.questClaimed) as? [Bool], claimed.count == 3 {
+            self.questClaimed = claimed
+        }
     }
 
     /// Changes the way to play. The game left behind is saved and waits for you.
@@ -1707,6 +1898,7 @@ final class GameStore {
         }
         lastBooster = booster
         boosterEvent += 1
+        noteQuest(.boosters, 1)
         bursts.removeAll()
         isTimerRunning = true
 
@@ -1874,6 +2066,10 @@ final class GameStore {
                 fresh.movesUntilRotation = 1
             case .sprint:
                 clock = Self.sprintSeconds
+            }
+            // A winning run starts the stage with a bomb or two.
+            for _ in 0..<Self.streakBombs(stageStreak) {
+                GameEngine.spawn(in: &fresh, using: &rng, forcedKind: .bomb)
             }
         }
         state = fresh
@@ -2081,7 +2277,11 @@ final class GameStore {
         lastGain = points
         gainEvent += 1
         coinBank += points
-        coins += coinBank / Self.pointsPerCoin
+        let earned = coinBank / Self.pointsPerCoin
+        coins += earned
+        if hasStages {
+            jar = min(Self.jarLimit, jar + earned)
+        }
         coinBank %= Self.pointsPerCoin
         let score = state.score
         unlockSkins { unlock in
@@ -2161,6 +2361,8 @@ final class GameStore {
             let merged = result.tiles.filter { result.mergedIDs.contains($0.id) }
             lastMergeValue = merged.map(\.value).max() ?? 0
             advanceStage(merges: merged.count, tile: lastMergeValue)
+            noteQuest(.merges, merged.count)
+            noteQuest(.bigTile, lastMergeValue)
             for tile in merged {
                 nextBurstID += 1
                 bursts.append(Burst(
@@ -2245,6 +2447,7 @@ final class GameStore {
         if lastCombo >= 2 {
             comboEvent += 1
             advanceStage(chains: 1)
+            noteQuest(.chains, 1)
             // Only a long chain is worth a gem.
             if lastCombo >= 3 {
                 earnGems(Self.gemsForChain)
@@ -2328,6 +2531,7 @@ final class GameStore {
             defaults.set(movesLeft, forKey: Key.stageMoves)
         }
         defaults.set(coins, forKey: Key.coins)
+        defaults.set(jar, forKey: Key.jar)
         defaults.set(gems, forKey: Key.gems)
         defaults.set(ownedSkins.sorted(), forKey: Key.skins)
         for (booster, count) in boosterCounts {
