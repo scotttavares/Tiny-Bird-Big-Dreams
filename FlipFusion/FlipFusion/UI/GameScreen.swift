@@ -242,6 +242,12 @@ struct GameScreen: View {
                 .transition(.opacity)
             }
         }
+        .onChange(of: showDaily) { _, isShown in
+            // The chest's film starts as the card appears; its sound starts with it.
+            if isShown {
+                sounds.play(.chest)
+            }
+        }
         .sheet(isPresented: $showMap) {
             StageMapView(stage: store.isStageWon ? store.stage - 1 : store.stage, stars: store.stageStars)
         }

@@ -12,6 +12,8 @@ final class SoundPlayer {
         case chomp, monkey, ufo, roar, stomp
         /// The shark's whole attack: the surge out of the water, the growl, the bites.
         case shark
+        /// The daily chest: a rattle, the lid bursting open, coins pouring out.
+        case chest
     }
 
     /// The background tunes. Each loops until another takes over.
