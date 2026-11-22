@@ -564,6 +564,60 @@ struct GameStoreTests {
         #expect(!GameEngine.slideOne(state.tiles, id: 999, .left).changed)
     }
 
+    @Test func theDailyChestGrowsOverARunOfDays() {
+        let defaults = freshDefaults()
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.isDailyReady(today: 100))
+        #expect(store.dailyDay(today: 100) == 1)
+        let first = store.claimDaily(today: 100)
+        #expect(first == GameStore.dailyGift(day: 1))
+        #expect(store.coins == 30)
+        // Once a day.
+        #expect(!store.isDailyReady(today: 100))
+        #expect(store.claimDaily(today: 100) == nil)
+        #expect(store.coins == 30)
+        // The next day is day 2; the run is remembered.
+        let relaunched = GameStore(defaults: defaults, animated: false)
+        #expect(relaunched.dailyDay(today: 101) == 2)
+        #expect(relaunched.claimDaily(today: 101) == GameStore.dailyGift(day: 2))
+        #expect(relaunched.dailyStreak == 2)
+        // A missed day starts the run again.
+        #expect(relaunched.dailyDay(today: 103) == 1)
+        #expect(relaunched.claimDaily(today: 103) == GameStore.dailyGift(day: 1))
+        #expect(relaunched.dailyStreak == 1)
+        #expect(GameStore.dailyGift(day: 7).gems == 5)
+        #expect(GameStore.dailyGift(day: 7).coins == 150)
+    }
+
+    @Test func stagesTakeTurnsWithTwists() {
+        #expect(GameStore.twist(forStage: 1) == .plain)
+        #expect(GameStore.twist(forStage: 3) == .rocky)
+        #expect(GameStore.twist(forStage: 4) == .breather)
+        #expect(GameStore.twist(forStage: 5) == .plain)
+        #expect(GameStore.twist(forStage: 7) == .quickTurn)
+        #expect(GameStore.twist(forStage: 11) == .sprint)
+        #expect(GameStore.stageGoal(4) == 1300)
+
+        let defaults = freshDefaults()
+        defaults.set(7, forKey: "ff.stage")
+        let quick = GameStore(defaults: defaults, animated: false)
+        quick.newGame()
+        #expect(quick.twist == .quickTurn)
+        #expect(quick.state.movesUntilRotation == 1)
+        #expect(GameEngine.isValid(quick.state))
+
+        defaults.set(3, forKey: "ff.stage")
+        let rocky = GameStore(defaults: defaults, animated: false)
+        rocky.newGame()
+        #expect(rocky.state.tiles.filter { $0.kind == .stone }.count == 2)
+        #expect(rocky.state.tiles.count == 4)
+
+        defaults.set(11, forKey: "ff.stage")
+        let sprint = GameStore(defaults: defaults, animated: false)
+        sprint.newGame()
+        #expect(sprint.secondsLeft == GameStore.sprintSeconds)
+    }
+
     @Test func aHighLevelUnlocksThePartyLightsTheme() {
         let defaults = freshDefaults()
         save(GameState(tiles: tiles([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 2696, movesUntilRotation: 2, nextID: 10), to: defaults)

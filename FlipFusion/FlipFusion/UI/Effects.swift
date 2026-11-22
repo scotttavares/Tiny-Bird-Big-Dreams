@@ -879,6 +879,9 @@ struct StageBar: View {
         let isNear = fraction >= 0.8
 
         HStack(spacing: 8 * scale) {
+            Image(systemName: "map.fill")
+                .font(.system(size: 11 * scale, weight: .heavy))
+                .foregroundStyle(Theme.counter)
             Text("STAGE \(stage)")
                 .font(.system(size: 12 * scale, weight: .black, design: .rounded))
                 .foregroundStyle(Theme.counter)

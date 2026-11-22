@@ -232,13 +232,126 @@ final class GameStore {
     private(set) var lastLoot = StageLoot()
     @ObservationIgnored private var stagePaid = false
 
+    /// What makes a stage play differently from the one before it.
+    enum Twist: String, Sendable {
+        case plain
+        /// A rest after hard stages: a lower score to reach and a bomb to start with.
+        case breather
+        /// Two blockers are on the board from the start.
+        case rocky
+        /// The board turns after every move.
+        case quickTurn
+        /// Less time on the clock.
+        case sprint
+    }
+
+    /// A sprint stage's clock.
+    static let sprintSeconds: Double = 90
+
+    /// The twist of a stage. The first two are plain; every fourth is a breather;
+    /// every fifth is a plain stage with a big chest; the rest take turns.
+    nonisolated static func twist(forStage stage: Int) -> Twist {
+        if stage < 3 { return .plain }
+        if stage % 4 == 0 { return .breather }
+        if stage % 5 == 0 { return .plain }
+        switch stage % 3 {
+        case 0: return .rocky
+        case 1: return stage >= 7 ? .quickTurn : .plain
+        default: return stage >= 6 ? .sprint : .plain
+        }
+    }
+
+    /// The twist of the game being played.
+    var twist: Twist { hasStages ? Self.twist(forStage: stage) : .plain }
+
+    /// A twist in a few words, or nil for a plain stage.
+    nonisolated static func twistWords(_ twist: Twist) -> String? {
+        switch twist {
+        case .plain: return nil
+        case .breather: return "Breather: a lower score and a free bomb"
+        case .rocky: return "Rocky start: two blockers on the board"
+        case .quickTurn: return "The board turns after every move"
+        case .sprint: return "Sprint: only 90 seconds"
+        }
+    }
+
+    /// The stars won on each stage cleared so far, stage 1 first.
+    private(set) var stageStars: [Int]
+
+    // MARK: The daily chest
+
+    /// What the daily chest holds. It grows over seven days in a row, then starts again.
+    struct DailyGift: Equatable, Sendable {
+        var day = 1
+        var coins = 0
+        var gems = 0
+        var booster: Booster?
+    }
+
+    /// Days in a row the chest has been opened.
+    private(set) var dailyStreak: Int
+    /// Goes up each time the chest is opened; `lastGift` is what was in it.
+    private(set) var dailyEvent = 0
+    private(set) var lastGift = DailyGift()
+
+    /// A number that goes up by one each calendar day.
+    nonisolated static func dayNumber(_ date: Date = Date()) -> Int {
+        Calendar.current.ordinality(of: .day, in: .era, for: date) ?? 0
+    }
+
+    /// The chest of day 1 to 7 of a run.
+    nonisolated static func dailyGift(day: Int) -> DailyGift {
+        let index = min(7, max(1, day))
+        let coins = [30, 40, 50, 60, 80, 100, 150][index - 1]
+        var gift = DailyGift(day: index, coins: coins, gems: index == 7 ? 5 : (index >= 4 ? 1 : 0))
+        if index == 3 {
+            gift.booster = .sweep
+        } else if index == 7 {
+            gift.booster = .arm
+        }
+        return gift
+    }
+
+    /// True when today's chest has not been opened yet.
+    func isDailyReady(today: Int = GameStore.dayNumber()) -> Bool {
+        defaults.integer(forKey: Key.dailyDay) != today
+    }
+
+    /// Which day of the run today's chest is: the next one when yesterday's was
+    /// opened, otherwise day 1 again.
+    func dailyDay(today: Int = GameStore.dayNumber()) -> Int {
+        defaults.integer(forKey: Key.dailyDay) == today - 1 ? dailyStreak % 7 + 1 : 1
+    }
+
+    /// Opens today's chest. Returns nil when it has been opened already.
+    @discardableResult
+    func claimDaily(today: Int = GameStore.dayNumber()) -> DailyGift? {
+        guard isDailyReady(today: today) else { return nil }
+        let day = dailyDay(today: today)
+        let gift = Self.dailyGift(day: day)
+        dailyStreak = defaults.integer(forKey: Key.dailyDay) == today - 1 ? dailyStreak + 1 : 1
+        coins += gift.coins
+        gems += gift.gems
+        if let booster = gift.booster {
+            boosterCounts[booster, default: 0] += 1
+        }
+        lastGift = gift
+        dailyEvent += 1
+        defaults.set(today, forKey: Key.dailyDay)
+        defaults.set(dailyStreak, forKey: Key.dailyStreak)
+        save()
+        return gift
+    }
+
     /// The two-minute game is played in stages; a head-to-head game is not.
     var hasStages: Bool { mode == .timed && !isVersus }
 
     /// The score that clears a stage: 400, 750, 1,200, 1,750 and on up.
     nonisolated static func stageGoal(_ stage: Int) -> Int {
         let steps = max(1, stage) - 1
-        return 400 + 300 * steps + 50 * steps * steps
+        let goal = 400 + 300 * steps + 50 * steps * steps
+        // A breather asks for a quarter less, to the nearest 50.
+        return twist(forStage: stage) == .breather ? (goal * 3 / 4) / 50 * 50 : goal
     }
 
     /// The score this game has to reach.
@@ -260,7 +373,7 @@ final class GameStore {
 
     /// How hard the board plays: the level of this game, raised by the stage.
     private var hazardLevel: Int {
-        level + (hasStages ? (stage - 1) / 2 : 0)
+        level + (hasStages && twist != .breather ? (stage - 1) / 2 : 0)
     }
 
     /// Hands over the loot of the stage just cleared and opens the next one.
@@ -285,6 +398,11 @@ final class GameStore {
         gems += loot.gems
         boosterCounts[booster, default: 0] += loot.isChest ? 2 : 1
         lastLoot = loot
+        while stageStars.count < stage {
+            stageStars.append(0)
+        }
+        stageStars[stage - 1] = max(stageStars[stage - 1], loot.stars)
+        defaults.set(stageStars, forKey: Key.stageStars)
         stage += 1
         stageEvent += 1
         defaults.set(stage, forKey: Key.stage)
@@ -925,6 +1043,11 @@ final class GameStore {
             switchMode(.timed)
         }
         newGame()
+        // No stage twist in a head-to-head game: both players get the plain game.
+        state.movesUntilRotation = GameEngine.movesPerRotation
+        state.tiles.removeAll { $0.kind == .stone }
+        secondsLeft = Self.roundSeconds
+        wholeSecondsLeft = Int(Self.roundSeconds)
         var next = state.nextID
         var tiles: [Tile] = []
         for tile in dealt {
@@ -1128,6 +1251,9 @@ final class GameStore {
         static let stage = "ff.stage"
         static let stageStreak = "ff.stage.streak"
         static let stageWon = "ff.stage.won"
+        static let stageStars = "ff.stage.stars"
+        static let dailyDay = "ff.daily.day"
+        static let dailyStreak = "ff.daily.streak"
 
         static func booster(_ booster: Booster) -> String {
             "ff.booster." + booster.rawValue
@@ -1211,6 +1337,8 @@ final class GameStore {
         self.gems = max(0, defaults.integer(forKey: Key.gems))
         self.stage = max(1, defaults.integer(forKey: Key.stage))
         self.stageStreak = max(0, defaults.integer(forKey: Key.stageStreak))
+        self.stageStars = (defaults.array(forKey: Key.stageStars) as? [Int]) ?? []
+        self.dailyStreak = max(0, defaults.integer(forKey: Key.dailyStreak))
         let owned = Set(defaults.stringArray(forKey: Key.skins) ?? [])
         self.ownedSkins = owned
 
@@ -1453,6 +1581,23 @@ final class GameStore {
         )
         GameEngine.spawn(in: &fresh, using: &rng, allowTime: mode == .timed)
         GameEngine.spawn(in: &fresh, using: &rng, allowTime: mode == .timed)
+        // The stage's twist sets the board and the clock up.
+        var clock = Self.roundSeconds
+        if mode == .timed {
+            switch Self.twist(forStage: stage) {
+            case .plain:
+                break
+            case .breather:
+                GameEngine.spawn(in: &fresh, using: &rng, forcedKind: .bomb)
+            case .rocky:
+                GameEngine.spawn(in: &fresh, using: &rng, forcedKind: .stone)
+                GameEngine.spawn(in: &fresh, using: &rng, forcedKind: .stone)
+            case .quickTurn:
+                fresh.movesUntilRotation = 1
+            case .sprint:
+                clock = Self.sprintSeconds
+            }
+        }
         state = fresh
         level = 1
         singleMovesLeft = Self.freeSingleMoves
@@ -1477,8 +1622,8 @@ final class GameStore {
         feverLeft = 0
         streak = 0
         streakLeft = 0
-        secondsLeft = Self.roundSeconds
-        wholeSecondsLeft = Int(Self.roundSeconds)
+        secondsLeft = clock
+        wholeSecondsLeft = Int(clock)
         isTimerRunning = false
         save()
     }
@@ -1843,7 +1988,7 @@ final class GameStore {
             state.counterClockwise.toggle()
             directionEvent += 1
         }
-        state.movesUntilRotation = GameEngine.movesPerRotation
+        state.movesUntilRotation = twist == .quickTurn ? 1 : GameEngine.movesPerRotation
         turnMerges = 0
     }
 

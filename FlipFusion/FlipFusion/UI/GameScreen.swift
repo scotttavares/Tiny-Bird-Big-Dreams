@@ -26,6 +26,8 @@ struct GameScreen: View {
     /// True after the "move one" button is tapped: the next swipe moves only the
     /// tile it starts on.
     @State private var oneArmed = false
+    @State private var showDaily = false
+    @State private var showMap = false
     @AppStorage(SoundPlayer.musicKey) private var musicOn = true
     /// Where the board is on the screen, so the creatures can find it.
     @State private var boardFrame = CGRect.zero
@@ -99,6 +101,8 @@ struct GameScreen: View {
         .gesture(
             DragGesture(minimumDistance: 16)
                 .onEnded { value in
+                    // The daily chest is open over the game: no swipes under it.
+                    if showDaily { return }
                     let move = value.translation
                     let dir: Direction
                     if abs(move.width) > abs(move.height) {
@@ -176,11 +180,34 @@ struct GameScreen: View {
             }
             if isOver {
                 GameCenter.shared.signIn()
+                if store.isDailyReady() {
+                    showDaily = true
+                }
             }
+        }
+        .overlay {
+            if showDaily {
+                let day = store.dailyDay()
+                DailyChestCard(gift: GameStore.dailyGift(day: day)) {
+                    store.claimDaily()
+                    sounds.play(.bonus)
+                    withAnimation(.easeOut(duration: 0.25)) {
+                        showDaily = false
+                    }
+                }
+                .transition(.opacity)
+            }
+        }
+        .sheet(isPresented: $showMap) {
+            StageMapView(stage: store.isStageWon ? store.stage - 1 : store.stage, stars: store.stageStars)
         }
         .onChange(of: store.isGameOver) { _, isOver in
             // A finished game goes on the worldwide leaderboard of its mode.
             oneArmed = false
+            // A new stage with a twist says so as it starts.
+            if !isOver, let words = GameStore.twistWords(store.twist) {
+                show("Stage \(store.stage). " + words, seconds: 2.4)
+            }
             if isOver {
                 GameCenter.shared.report(score: store.state.score, mode: store.mode)
                 Versus.shared.send(score: store.state.score, over: true)
@@ -207,6 +234,9 @@ struct GameScreen: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
+                if isIntroOver, store.isDailyReady() {
+                    showDaily = true
+                }
                 sounds.refreshMusic()
             } else {
                 store.pauseTimer()
@@ -282,7 +312,15 @@ struct GameScreen: View {
                 if store.hasStages {
                     // A cleared stage keeps its own full bar until the next one starts.
                     let shown = store.isStageWon ? store.stage - 1 : store.stage
-                    StageBar(stage: shown, score: store.state.score, goal: GameStore.stageGoal(shown), scale: scale)
+                    Button {
+                        store.pauseTimer()
+                        showMap = true
+                    } label: {
+                        StageBar(stage: shown, score: store.state.score, goal: GameStore.stageGoal(shown), scale: scale)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint(Text("Opens the stage map"))
                 } else {
                     LevelBar(level: store.level, score: store.state.score, scale: scale)
                 }
