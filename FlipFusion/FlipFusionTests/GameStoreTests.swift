@@ -529,6 +529,41 @@ struct GameStoreTests {
         #expect(GameStore.stageStars(secondsLeft: 5) == 1)
     }
 
+    @Test func oneTileCanBeMovedOnItsOwn() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[2, 4, 0, 8], [0, 0, 0, 2], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 2, nextID: 20), to: defaults)
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.singleMovesLeft == GameStore.freeSingleMoves)
+        // No tile there, and a tile with nowhere to go: nothing is spent.
+        #expect(!store.moveOne(row: 3, col: 0, .left))
+        #expect(!store.moveOne(row: 0, col: 0, .left))
+        #expect(store.singleMovesLeft == GameStore.freeSingleMoves)
+        // The 8 slides left until it meets the 4; nothing else moves.
+        #expect(store.moveOne(row: 0, col: 3, .left))
+        #expect(store.singleMovesLeft == GameStore.freeSingleMoves - 1)
+        #expect(store.state.movesUntilRotation == 1)
+        #expect(store.state.score == 0)
+        #expect(store.state.tiles.contains { $0.value == 8 && $0.row == 0 && $0.col == 2 })
+        #expect(store.state.tiles.contains { $0.value == 4 && $0.row == 0 && $0.col == 1 })
+        #expect(store.state.tiles.contains { $0.value == 2 && $0.row == 0 && $0.col == 0 })
+        #expect(store.state.tiles.contains { $0.value == 2 && $0.row == 1 && $0.col == 3 })
+        store.newGame()
+        #expect(store.singleMovesLeft == GameStore.freeSingleMoves)
+    }
+
+    @Test func aTileMovedOnItsOwnMergesWithItsEqual() {
+        let state = GameState(tiles: tiles([[2, 0, 0, 2], [4, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 2, nextID: 20)
+        let mover = state.tiles.first { $0.row == 0 && $0.col == 3 }!
+        let result = GameEngine.slideOne(state.tiles, id: mover.id, .left)
+        #expect(result.changed)
+        #expect(result.gained == 4)
+        #expect(result.tiles.count == 2)
+        #expect(result.tiles.contains { $0.value == 4 && $0.row == 0 && $0.col == 0 })
+        #expect(result.tiles.contains { $0.value == 4 && $0.row == 1 && $0.col == 0 })
+        // A tile that is not there changes nothing.
+        #expect(!GameEngine.slideOne(state.tiles, id: 999, .left).changed)
+    }
+
     @Test func aHighLevelUnlocksThePartyLightsTheme() {
         let defaults = freshDefaults()
         save(GameState(tiles: tiles([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 2696, movesUntilRotation: 2, nextID: 10), to: defaults)

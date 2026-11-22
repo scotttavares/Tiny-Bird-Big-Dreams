@@ -167,6 +167,7 @@ struct HelpView: View {
                     boosterRow(.sweep, title: "Sweep", text: "Clears every 2, 4 and stone block off the board.")
                     boosterRow(.fever, title: "Double", text: "Starts double points for \(Int(GameStore.feverSeconds)) seconds.")
                     boosterRow(.arm, title: "Bombs", text: "Turns up to \(GameStore.armedTiles) of your tiles into bomb tiles.")
+                    oneMoveRow(title: "Move one tile", text: "Tap the hand, then swipe a tile: only that tile slides. You get \(GameStore.freeSingleMoves) a game; after that one costs \(GameStore.singleMovePrice) coins.")
                     coinRow(title: "Coins", text: "You start with \(GameStore.freeBoosters) free uses of each booster. After that a use costs coins, and you earn a coin for every \(GameStore.pointsPerCoin) points.")
                     streakRow(title: "Speed bonus", text: "Merge again within \(Int(GameStore.streakWindow)) seconds and your points multiply, up to x\(GameStore.maxStreak + 1). Lightning strikes each time it goes up.")
                 }
@@ -249,6 +250,17 @@ struct HelpView: View {
     }
 
     /// A row whose picture is the speed-bonus chip that shows beside the board.
+    private func oneMoveRow(title: String, text: String) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            OneMoveButton(left: GameStore.freeSingleMoves, price: GameStore.singleMovePrice, isArmed: false, isEnabled: true, scale: 0.95) {}
+                .allowsHitTesting(false)
+                .frame(width: 44, height: 44)
+                .accessibilityHidden(true)
+            words(title: title, text: text)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
     private func streakRow(title: String, text: String) -> some View {
         HStack(alignment: .top, spacing: 14) {
             StreakChip(multiplier: 2, scale: 0.85)

@@ -1457,3 +1457,40 @@ struct MonkeyPop: View {
             .accessibilityHidden(true)
     }
 }
+
+/// The "move one" button beside the "ROTATES IN" pill. Tap it, then swipe a tile:
+/// only that tile moves. The badge shows the free moves left, or the price in coins.
+struct OneMoveButton: View {
+    let left: Int
+    let price: Int
+    let isArmed: Bool
+    let isEnabled: Bool
+    let scale: CGFloat
+    let action: () -> Void
+
+    var body: some View {
+        let face = isArmed ? Theme.flip : [Theme.pillTop, Theme.pillBottom]
+        Button(action: action) {
+            Image(systemName: "hand.point.up.left.fill")
+                .font(.system(size: 18 * scale, weight: .heavy))
+                .foregroundStyle(Color.white)
+                .frame(width: 42 * scale, height: 42 * scale)
+                .background(Circle().fill(LinearGradient(colors: face, startPoint: .top, endPoint: .bottom)))
+                .overlay(Circle().strokeBorder(isArmed ? Color.white : Theme.pillStroke, lineWidth: isArmed ? 2.5 : 1.5))
+                .shadow(color: Theme.flip[1].opacity(isArmed ? 0.9 : 0), radius: 9 * scale)
+                .overlay(alignment: .topTrailing) {
+                    Text(left > 0 ? "\(left)" : "\(price)")
+                        .font(.system(size: 10 * scale, weight: .black, design: .rounded))
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 5 * scale)
+                        .frame(minWidth: 18 * scale, minHeight: 18 * scale)
+                        .background(Capsule().fill(left > 0 ? Color(hex: 0xFF4D6D) : Color(hex: 0xC58A1A)))
+                        .offset(x: 6 * scale, y: -6 * scale)
+                }
+        }
+        .buttonStyle(BounceButtonStyle())
+        .opacity(isEnabled ? 1 : 0.45)
+        .disabled(!isEnabled)
+        .accessibilityLabel(Text(left > 0 ? "Move one tile, \(left) left" : "Move one tile for \(price) coins"))
+    }
+}

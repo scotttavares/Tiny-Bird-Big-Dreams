@@ -495,3 +495,42 @@ enum GameEngine {
         return true
     }
 }
+
+extension GameEngine {
+    /// Slides one tile on its own: every other tile stays where it is. The tile runs
+    /// until something stops it, merges with an equal tile it meets, and can fall
+    /// down a hole, just as it would in an ordinary slide.
+    static func slideOne(_ tiles: [Tile], id: Int, _ dir: Direction, blocked: Set<Cell> = [], holes: Set<Cell> = []) -> StepResult {
+        guard let mover = tiles.first(where: { $0.id == id }) else {
+            return StepResult(tiles: tiles, ghosts: [], mergedIDs: [], removedIDs: [], gained: 0, changed: false)
+        }
+        let line = lineIndex(of: mover, dir)
+        let far = distanceFromWall(of: mover, dir)
+        // The nearest tile in its way is the only one it could merge with.
+        let ahead = tiles
+            .filter { lineIndex(of: $0, dir) == line && distanceFromWall(of: $0, dir) < far }
+            .max { distanceFromWall(of: $0, dir) < distanceFromWall(of: $1, dir) }
+
+        var moving = [mover]
+        var stops = blocked
+        var pits = holes
+        if let ahead {
+            moving.append(ahead)
+            // That tile is held where it is by stopping up the cell beyond it.
+            let rest = distanceFromWall(of: ahead, dir)
+            if rest > 0 {
+                let beyond = cellFor(line: line, distance: rest - 1, dir)
+                stops.insert(beyond)
+                pits.remove(beyond)
+            }
+        }
+        let movingIDs = Set(moving.map(\.id))
+        let others = tiles.filter { !movingIDs.contains($0.id) }
+        for tile in others {
+            stops.insert(Cell(row: tile.row, col: tile.col))
+        }
+        var result = slide(moving, dir, blocked: stops, holes: pits)
+        result.tiles += others
+        return result
+    }
+}

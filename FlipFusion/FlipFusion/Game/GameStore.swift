@@ -1371,6 +1371,51 @@ final class GameStore {
 
     // MARK: Playing
 
+    // MARK: Moving one tile
+
+    /// Every game starts with this many moves of a single tile; after that one costs coins.
+    static let freeSingleMoves = 3
+    static let singleMovePrice = 100
+    private(set) var singleMovesLeft = GameStore.freeSingleMoves
+    /// Goes up each time a single tile is moved.
+    private(set) var singleMoveEvent = 0
+
+    var canMoveOne: Bool {
+        !isGameOver && (singleMovesLeft > 0 || coins >= Self.singleMovePrice)
+    }
+
+    /// Slides the tile in one cell on its own, leaving every other tile where it is.
+    /// It counts as a move. Returns false (and costs nothing) when there is no tile
+    /// there or it cannot go that way.
+    @discardableResult
+    func moveOne(row: Int, col: Int, _ dir: Direction) -> Bool {
+        guard !isAnimating, canMoveOne else { return false }
+        guard let tile = state.tiles.first(where: { $0.row == row && $0.col == col }) else { return false }
+        let result = GameEngine.slideOne(state.tiles, id: tile.id, dir, blocked: blockedSet, holes: holeSet)
+        guard result.changed else { return false }
+        if singleMovesLeft > 0 {
+            singleMovesLeft -= 1
+        } else {
+            coins -= Self.singleMovePrice
+        }
+        singleMoveEvent += 1
+
+        bursts.removeAll()
+        slidePulse += 1
+        isTimerRunning = true
+        swipeInFlight = true
+
+        if animated {
+            isAnimating = true
+            Task { [weak self] in
+                await self?.playAnimated(result)
+            }
+        } else {
+            playImmediately(result)
+        }
+        return true
+    }
+
     func swipe(_ dir: Direction) {
         guard !isAnimating, !isGameOver else { return }
         // A board with nothing on it has nothing to swipe: deal new tiles instead.
@@ -1410,6 +1455,7 @@ final class GameStore {
         GameEngine.spawn(in: &fresh, using: &rng, allowTime: mode == .timed)
         state = fresh
         level = 1
+        singleMovesLeft = Self.freeSingleMoves
         if mode == .timed {
             isStageWon = false
             stagePaid = false

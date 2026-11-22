@@ -23,6 +23,9 @@ struct GameScreen: View {
     @State private var toastID = 0
     @State private var toastSeconds = 1.1
     @State private var confirmNewGame = false
+    /// True after the "move one" button is tapped: the next swipe moves only the
+    /// tile it starts on.
+    @State private var oneArmed = false
     @AppStorage(SoundPlayer.musicKey) private var musicOn = true
     /// Where the board is on the screen, so the creatures can find it.
     @State private var boardFrame = CGRect.zero
@@ -97,10 +100,21 @@ struct GameScreen: View {
             DragGesture(minimumDistance: 16)
                 .onEnded { value in
                     let move = value.translation
+                    let dir: Direction
                     if abs(move.width) > abs(move.height) {
-                        store.swipe(move.width > 0 ? .right : .left)
+                        dir = move.width > 0 ? .right : .left
                     } else {
-                        store.swipe(move.height > 0 ? .down : .up)
+                        dir = move.height > 0 ? .down : .up
+                    }
+                    if oneArmed {
+                        // Only the tile under the start of the swipe moves.
+                        if let cell = boardCell(at: value.startLocation), store.moveOne(row: cell.row, col: cell.col, dir) {
+                            oneArmed = false
+                        } else {
+                            show("Start the swipe on the tile to move", seconds: 1.5)
+                        }
+                    } else {
+                        store.swipe(dir)
                     }
                 }
         )
@@ -166,6 +180,7 @@ struct GameScreen: View {
         }
         .onChange(of: store.isGameOver) { _, isOver in
             // A finished game goes on the worldwide leaderboard of its mode.
+            oneArmed = false
             if isOver {
                 GameCenter.shared.report(score: store.state.score, mode: store.mode)
                 Versus.shared.send(score: store.state.score, over: true)
@@ -283,9 +298,36 @@ struct GameScreen: View {
                             .transition(.scale.combined(with: .opacity))
                     }
                 }
+                .overlay(alignment: .trailing) {
+                    OneMoveButton(
+                        left: store.singleMovesLeft,
+                        price: GameStore.singleMovePrice,
+                        isArmed: oneArmed,
+                        isEnabled: store.canMoveOne,
+                        scale: scale
+                    ) {
+                        oneArmed.toggle()
+                        if oneArmed {
+                            show("Swipe one tile: only that tile moves", seconds: 1.6)
+                        }
+                    }
+                }
                 .animation(.spring(response: 0.3, dampingFraction: 0.6), value: store.streak)
                 .padding(.top, 9 * scale)
         }
+    }
+
+    /// The board cell under a point of the screen, or nil when it is off the board.
+    private func boardCell(at point: CGPoint) -> Cell? {
+        let side = boardFrame.width
+        guard side > 0 else { return nil }
+        let inset = side * 0.04
+        let gap = side * 0.028
+        let cell = (side - 2 * inset - 3 * gap) / 4
+        let col = Int(floor((point.x - boardFrame.minX - inset + gap / 2) / (cell + gap)))
+        let row = Int(floor((point.y - boardFrame.minY - inset + gap / 2) / (cell + gap)))
+        guard row >= 0, row < GameEngine.size, col >= 0, col < GameEngine.size else { return nil }
+        return Cell(row: row, col: col)
     }
 
     /// The board and everything drawn over it.
