@@ -470,7 +470,8 @@ struct GameScreen: View {
                             openHelp()
                         }
                     },
-                    graffiti: Skin.current.overWord,
+                    // The theme's losing word ("WIPEOUT!") is only for a loss; a win gets praise.
+                    graffiti: store.isStageWon ? ["AWESOME!", "NAILED IT!", "SUPERB!", "YOU DID IT!"][store.stage % 4] : Skin.current.overWord,
                     spark: Skin.current.spark
                 )
                 .transition(.scale(scale: 0.8).combined(with: .opacity))
