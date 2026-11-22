@@ -34,12 +34,34 @@ struct DailyChestCard: View {
                     .font(.system(size: 15, weight: .heavy, design: .rounded))
                     .foregroundStyle(Theme.label)
 
-                Image(systemName: "gift.fill")
-                    .font(.system(size: 64, weight: .bold))
-                    .foregroundStyle(LinearGradient(colors: [Color(hex: 0xFFE26A), Color(hex: 0xFF9F2E)], startPoint: .top, endPoint: .bottom))
-                    .shadow(color: Color(hex: 0xFFB02E).opacity(0.8), radius: 16)
-                    .scaleEffect(bob ? 1.08 : 0.96)
-                    .padding(.vertical, 4)
+                // The painted chest, glowing and gently bobbing, with rays turning behind it.
+                ZStack {
+                    ForEach(0..<8, id: \.self) { ray in
+                        Capsule()
+                            .fill(LinearGradient(colors: [Color(hex: 0xFFE26A, opacity: 0.55), Color(hex: 0xFFE26A, opacity: 0)], startPoint: .bottom, endPoint: .top))
+                            .frame(width: 16, height: 92)
+                            .offset(y: -46)
+                            .rotationEffect(.degrees(Double(ray) * 45))
+                    }
+                    .rotationEffect(.degrees(bob ? 22 : 0))
+                    Circle()
+                        .fill(Color(hex: 0xFFB02E, opacity: 0.35))
+                        .frame(width: 130, height: 130)
+                        .blur(radius: 24)
+                    if ObstacleArt.has("prop-chest") {
+                        Image("prop-chest")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 150, height: 150)
+                            .shadow(color: Color.black.opacity(0.5), radius: 8, x: 0, y: 6)
+                    } else {
+                        Image(systemName: "gift.fill")
+                            .font(.system(size: 64, weight: .bold))
+                            .foregroundStyle(LinearGradient(colors: [Color(hex: 0xFFE26A), Color(hex: 0xFF9F2E)], startPoint: .top, endPoint: .bottom))
+                    }
+                }
+                .frame(height: 160)
+                .scaleEffect(bob ? 1.05 : 0.97)
 
                 // Seven days: the ones behind you are lit, today glows.
                 HStack(spacing: 6) {
