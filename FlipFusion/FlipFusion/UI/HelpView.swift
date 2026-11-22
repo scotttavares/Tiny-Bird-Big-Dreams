@@ -213,6 +213,8 @@ struct HelpView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.glassFill))
         .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Theme.glassStroke, lineWidth: 1))
+        // Every picture in a section is the theme's own, so a new theme redraws them all.
+        .id(title + skinID)
     }
 
     private func row(symbol: String, title: String, text: String) -> some View {
