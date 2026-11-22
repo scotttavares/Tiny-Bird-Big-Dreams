@@ -6,8 +6,6 @@ struct DailyChestCard: View {
     let gift: GameStore.DailyGift
     let onCollect: () -> Void
 
-    @State private var bob = false
-
     private var words: String {
         var parts = ["+\(gift.coins) coins"]
         if gift.gems > 0 {
@@ -34,34 +32,28 @@ struct DailyChestCard: View {
                     .font(.system(size: 15, weight: .heavy, design: .rounded))
                     .foregroundStyle(Theme.label)
 
-                // The painted chest, glowing and gently bobbing, with rays turning behind it.
+                // The chest's film: it rattles, bursts open and spills its coins, then
+                // stays open. A still chest stands in when the film is not in the app.
                 ZStack {
-                    ForEach(0..<8, id: \.self) { ray in
-                        Capsule()
-                            .fill(LinearGradient(colors: [Color(hex: 0xFFE26A, opacity: 0.55), Color(hex: 0xFFE26A, opacity: 0)], startPoint: .bottom, endPoint: .top))
-                            .frame(width: 16, height: 92)
-                            .offset(y: -46)
-                            .rotationEffect(.degrees(Double(ray) * 45))
-                    }
-                    .rotationEffect(.degrees(bob ? 22 : 0))
                     Circle()
-                        .fill(Color(hex: 0xFFB02E, opacity: 0.35))
-                        .frame(width: 130, height: 130)
-                        .blur(radius: 24)
-                    if ObstacleArt.has("prop-chest") {
+                        .fill(Color(hex: 0xFFB02E, opacity: 0.3))
+                        .frame(width: 150, height: 150)
+                        .blur(radius: 28)
+                    if ObstacleArt.has("prop-chest-f00") {
+                        // Wider than the card, so the coins spill past its edges.
+                        ChestFilm(width: 320)
+                    } else if ObstacleArt.has("prop-chest") {
                         Image("prop-chest")
                             .resizable()
                             .scaledToFit()
                             .frame(width: 150, height: 150)
-                            .shadow(color: Color.black.opacity(0.5), radius: 8, x: 0, y: 6)
                     } else {
                         Image(systemName: "gift.fill")
                             .font(.system(size: 64, weight: .bold))
                             .foregroundStyle(LinearGradient(colors: [Color(hex: 0xFFE26A), Color(hex: 0xFF9F2E)], startPoint: .top, endPoint: .bottom))
                     }
                 }
-                .frame(height: 160)
-                .scaleEffect(bob ? 1.05 : 0.97)
+                .frame(height: 220)
 
                 // Seven days: the ones behind you are lit, today glows.
                 HStack(spacing: 6) {
@@ -102,11 +94,33 @@ struct DailyChestCard: View {
             .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).strokeBorder(Color.white.opacity(0.25), lineWidth: 1.5))
             .padding(.horizontal, 24)
         }
-        .onAppear {
-            withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
-                bob = true
-            }
+    }
+}
+
+/// The treasure chest's film, played once from the first frame: the chest rattles,
+/// bursts open and spills its coins, and the last frame stays on screen.
+struct ChestFilm: View {
+    let width: CGFloat
+    /// How many frames the film has, and how many are shown each second.
+    static let frames = 46
+    static let speed = 12.0
+
+    @State private var start = Date()
+
+    var body: some View {
+        let began = start
+        TimelineView(.animation(minimumInterval: 1 / ChestFilm.speed)) { timeline in
+            let passed = timeline.date.timeIntervalSince(began)
+            let frame = min(ChestFilm.frames - 1, max(0, Int(passed * ChestFilm.speed)))
+            Image("prop-chest-f" + (frame < 10 ? "0" : "") + String(frame))
+                .resizable()
+                .scaledToFit()
+                .frame(width: width)
         }
+        .onAppear {
+            start = Date()
+        }
+        .accessibilityHidden(true)
     }
 }
 
