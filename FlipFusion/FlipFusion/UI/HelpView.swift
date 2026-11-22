@@ -29,7 +29,7 @@ struct HelpView: View {
                 section("Game modes") {
                     // A compact grid: an icon, the name and one short line for each game.
                     LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                        modeTile(.timed, symbol: "timer", title: "2 Minutes", line: "Beat the clock")
+                        modeTile(.timed, symbol: "timer", title: "2 Minutes", line: "Beat each stage's score")
                         modeTile(.endless, symbol: "infinity", title: "Endless", line: "No clock")
                         modeTile(.fruit, symbol: "leaf.fill", title: "Fruit Salad", line: "Fruit, not numbers")
                         modeTile(.shift, symbol: "shuffle", title: "Shape Shift", line: "The board changes shape")

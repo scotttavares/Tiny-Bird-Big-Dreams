@@ -49,15 +49,11 @@ struct GameScreen: View {
                         Color.clear
                             .frame(height: 44)
                         Spacer(minLength: 0)
-                        Spacer(minLength: 0)
                         header(scale: plan.scale, side: plan.panelSide)
                         Spacer(minLength: 0)
-                            .frame(maxHeight: 34 * plan.scale)
                         boardArea(scale: plan.scale, side: plan.boardSide)
                         Spacer(minLength: 0)
-                            .frame(maxHeight: 34 * plan.scale)
                         controls(scale: plan.scale, side: plan.panelSide)
-                        Spacer(minLength: 0)
                     }
                 case .wide:
                     HStack(spacing: 0) {
@@ -267,9 +263,17 @@ struct GameScreen: View {
                 }
                 .padding(.top, 9 * scale)
 
-            LevelBar(level: store.level, score: store.state.score, scale: scale)
-                .frame(width: side)
-                .padding(.top, 8 * scale)
+            Group {
+                if store.hasStages {
+                    // A cleared stage keeps its own full bar until the next one starts.
+                    let shown = store.isStageWon ? store.stage - 1 : store.stage
+                    StageBar(stage: shown, score: store.state.score, goal: GameStore.stageGoal(shown), scale: scale)
+                } else {
+                    LevelBar(level: store.level, score: store.state.score, scale: scale)
+                }
+            }
+            .frame(width: side)
+            .padding(.top, 8 * scale)
 
             RotatePill(moves: store.state.movesUntilRotation, scale: scale)
                 .frame(width: side)
@@ -322,9 +326,11 @@ struct GameScreen: View {
 
             if store.isGameOver {
                 GameOverOverlay(
-                    title: store.isTimeUp ? "Time's Up" : "Game Over",
+                    title: store.isStageWon ? "Stage \(store.stage - 1) Cleared!" : (store.isTimeUp ? "Time's Up" : "Game Over"),
                     score: store.state.score,
-                    level: store.level,
+                    level: stageStarLevel,
+                    note: stageNote,
+                    playLabel: store.isStageWon ? "Next Stage" : (store.hasStages ? "Try Again" : "Play Again"),
                     isBest: store.state.score > 0 && store.state.score >= store.best,
                     continueOffer: continueOffer,
                     side: side,
@@ -385,9 +391,46 @@ struct GameScreen: View {
                     .id(store.prizeEvent)
                 }
             }
-            .frame(width: side, height: 64 * scale)
+            // The strip is short and the prize hangs below it, so the boosters sit
+            // low on the screen instead of leaving a gap under them.
+            .frame(width: side, height: 30 * scale, alignment: .top)
             .padding(.top, 8 * scale)
         }
+    }
+
+    /// The end card's stars: for the time left when a stage was cleared, otherwise
+    /// for the level the game reached.
+    private var stageStarLevel: Int {
+        guard store.isStageWon else { return store.hasStages ? 1 : store.level }
+        let stars = store.lastLoot.stage == store.stage - 1 ? store.lastLoot.stars : 1
+        return stars >= 3 ? 6 : (stars == 2 ? 4 : 2)
+    }
+
+    /// The line under the score on the end card: the loot of a cleared stage, or how
+    /// far a missed one fell short.
+    private var stageNote: String? {
+        guard store.hasStages else { return nil }
+        if store.isStageWon {
+            let loot = store.lastLoot
+            guard loot.stage == store.stage - 1 else { return nil }
+            var words = (loot.isChest ? "Big chest: " : "") + "+\(loot.coins) coins, +\(loot.gems) " + (loot.gems == 1 ? "gem" : "gems")
+            if let booster = loot.booster {
+                words += ", " + (loot.isChest ? "2 " : "") + BoosterBar.name(booster)
+            }
+            if loot.streak >= 2 {
+                words += "  ·  \(loot.streak) in a row"
+            }
+            return words
+        }
+        let short = store.stageGoal - store.state.score
+        guard short > 0 else { return nil }
+        let goal = store.stageGoal.formatted(.number.grouping(.automatic))
+        let gap = short.formatted(.number.grouping(.automatic))
+        // A near miss is called out: it is the best reason to go again.
+        if short * 5 <= store.stageGoal {
+            return "So close! Only \(gap) short of \(goal)"
+        }
+        return "Stage \(store.stage) needs \(goal): \(gap) to go"
     }
 
     private func openHelp() {
@@ -590,6 +633,9 @@ struct GameOverOverlay: View {
     let score: Int
     /// The level the game reached, which decides the stars.
     let level: Int
+    /// One more line under the score: a stage's loot, or how far short the game fell.
+    var note: String?
+    var playLabel = "Play Again"
     let isBest: Bool
     /// What "Keep going" gives, such as "+30 seconds". nil hides the button.
     let continueOffer: String?
@@ -616,14 +662,25 @@ struct GameOverOverlay: View {
                     .foregroundStyle(
                         LinearGradient(colors: Theme.fusion, startPoint: .leading, endPoint: .trailing)
                     )
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
                 Text((isBest ? "New best: \(score)" : "Score: \(score)") + "  ·  Level \(level)")
                     .font(.system(size: 18 * scale, weight: .bold, design: .rounded))
                     .foregroundStyle(isBest ? Theme.counter : Theme.tagline)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
 
+                if let note {
+                    Text(note)
+                        .font(.system(size: 14 * scale, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Theme.counter)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.7)
+                }
+
                 Button(action: onPlayAgain) {
-                    Text("Play Again")
+                    Text(playLabel)
                         .font(.system(size: 20 * scale, weight: .heavy, design: .rounded))
                         .foregroundStyle(Color.white)
                         .padding(.horizontal, 30 * scale)

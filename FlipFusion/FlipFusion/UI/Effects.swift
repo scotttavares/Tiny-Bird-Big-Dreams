@@ -860,8 +860,54 @@ struct GameSounds: ViewModifier {
                 }
             }
             .onChange(of: store.isGameOver) { _, isOver in
-                sounds.play(isOver ? .over : .start, volume: 0.9)
+                // A cleared stage ends on a win, not on the sad trombone.
+                sounds.play(isOver ? (store.isStageWon ? .fever : .over) : .start, volume: 0.9)
             }
+    }
+}
+
+/// "STAGE 3", a bar that fills as the score climbs toward the stage's goal, and the
+/// goal itself. This is the thing to beat in the two-minute game.
+struct StageBar: View {
+    let stage: Int
+    let score: Int
+    let goal: Int
+    let scale: CGFloat
+
+    var body: some View {
+        let fraction = CGFloat(max(0, min(1, Double(score) / Double(max(1, goal)))))
+        let isNear = fraction >= 0.8
+
+        HStack(spacing: 8 * scale) {
+            Text("STAGE \(stage)")
+                .font(.system(size: 12 * scale, weight: .black, design: .rounded))
+                .foregroundStyle(Theme.counter)
+                .fixedSize()
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Theme.cellFill)
+                    Capsule()
+                        .fill(LinearGradient(colors: isNear ? Theme.flip : Theme.fusion, startPoint: .leading, endPoint: .trailing))
+                        .frame(width: max(geo.size.height, geo.size.width * fraction))
+                        .shadow(color: Theme.fusion[0].opacity(0.8), radius: (isNear ? 7 : 4) * scale)
+                }
+            }
+            .frame(height: 11 * scale)
+            .overlay(Capsule().strokeBorder(Theme.glassStroke, lineWidth: 1))
+            HStack(spacing: 3 * scale) {
+                Image(systemName: "flag.checkered")
+                    .font(.system(size: 11 * scale, weight: .heavy))
+                Text(goal.formatted(.number.grouping(.automatic)))
+                    .font(.system(size: 13 * scale, weight: .heavy, design: .rounded))
+            }
+            .foregroundStyle(Theme.label)
+            .fixedSize()
+        }
+        .frame(height: 14 * scale)
+        .animation(.easeOut(duration: 0.3), value: score)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Stage \(stage). \(score) of \(goal) points"))
     }
 }
 

@@ -31,7 +31,7 @@ struct RotationArrow: View {
         .frame(width: side * 1.3, height: side * 1.3)
         .scaleEffect(x: isReversed ? -1 : 1, y: 1)
         .animation(.spring(response: 0.45, dampingFraction: 0.6), value: isReversed)
-        .shadow(color: Theme.arrowDark.opacity(0.9), radius: side * 0.03, x: 0, y: 0)
+        .shadow(color: (DecorStyle.forSkin(Skin.current.id)?.arrowDark ?? Theme.arrowDark).opacity(0.9), radius: side * 0.03, x: 0, y: 0)
         .opacity(isImminent ? (pulse ? 1.0 : 0.5) : 0.85)
         .onChange(of: isImminent, initial: true) { _, imminent in
             if imminent {
@@ -70,8 +70,9 @@ struct RotationArrow: View {
         let time = now * speed
         // Purple when calm, orange when warming up, every colour in turn when wild.
         let spin = now * 0.6 - floor(now * 0.6)
-        var light = Theme.arrowLight
-        var dark = Theme.arrowDark
+        let look = DecorStyle.forSkin(Skin.current.id)
+        var light = look?.arrowLight ?? Theme.arrowLight
+        var dark = look?.arrowDark ?? Theme.arrowDark
         if heat >= 2 {
             light = Color(hue: spin, saturation: 0.75, brightness: 1)
             dark = Color(hue: spin, saturation: 0.95, brightness: 0.7)
@@ -151,6 +152,23 @@ struct RotationArrow: View {
             context.stroke(piece, with: .color(dark.opacity(fade)), style: StrokeStyle(lineWidth: width, lineCap: .round))
             context.stroke(piece, with: .color(light.opacity(fade)), style: StrokeStyle(lineWidth: width * 0.68, lineCap: .round))
             context.stroke(piece, with: .color(Color.white.opacity(fade * 0.9)), style: StrokeStyle(lineWidth: max(1, width * 0.26), lineCap: .round))
+        }
+
+        // In a leafy theme the tail is a vine: leaves grow off it on both sides.
+        if let look, look.isLeafy {
+            for leaf in 0..<7 {
+                let along = (Double(leaf) + 0.6) / 7.5
+                let here = point(headAt - tail * along, center: center, reach: reach)
+                let next = point(headAt - tail * along + 2, center: center, reach: reach)
+                let heading = atan2(Double(next.y - here.y), Double(next.x - here.x))
+                let sideways = leaf % 2 == 0 ? 1.0 : -1.0
+                let sway = 0.12 * sin(time * 3 + Double(leaf))
+                var copy = context
+                copy.opacity = (1 - along * 0.7) * strength
+                copy.translateBy(x: here.x, y: here.y)
+                copy.rotate(by: .radians(heading + sideways * (1.0 + sway) + Double.pi / 2))
+                DecorArt.leaf(in: &copy, size: board * 0.062 * CGFloat(1 - along * 0.45), light: light, dark: dark)
+            }
         }
 
         // Sparks shed along the tail.

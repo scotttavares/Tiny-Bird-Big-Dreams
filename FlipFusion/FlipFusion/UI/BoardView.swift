@@ -104,8 +104,15 @@ struct BoardView: View {
             }
           }
           .frame(width: side, height: side, alignment: .topLeading)
-          .hueRotation(.degrees(Double((store.level - 1) % 9) * 40))
+          // A themed board keeps its theme's colours; the plain ones change with the level.
+          .hueRotation(.degrees(DecorStyle.forSkin(Skin.current.id) == nil ? Double((store.level - 1) % 9) * 40 : 0))
           .animation(.easeInOut(duration: 0.6), value: store.level)
+
+            // The theme's rim round the board: vines, coral, ice, flames.
+            if !isOutline, let style = DecorStyle.forSkin(Skin.current.id) {
+                BoardDecor(side: side, style: style)
+                    .offset(x: -side * BoardDecor.margin, y: -side * BoardDecor.margin)
+            }
 
             if !isOutline {
                 ForEach(holes, id: \.self) { hole in

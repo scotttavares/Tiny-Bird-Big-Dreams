@@ -116,7 +116,7 @@ final class GameStore {
 
     static let freeBoosters = 3
     /// Points needed to earn one coin.
-    static let pointsPerCoin = 20
+    static let pointsPerCoin = 50
     /// Merge again within this many seconds to keep the speed streak going.
     static let streakWindow: Double = 4
     static let maxStreak = 4
@@ -167,24 +167,24 @@ final class GameStore {
     static let jackpot = Prize.gems(5)
     /// The faces the reel flicks through before it stops.
     static let reelFaces: [Prize] = [
-        .coins(50), .gems(1), .booster(.arm), .coins(100), .gems(2), .booster(.sweep), jackpot, .booster(.fever),
+        .coins(20), .gems(1), .booster(.arm), .coins(40), .gems(2), .booster(.sweep), jackpot, .booster(.fever),
     ]
     /// Goes up each time a prize is won; `lastPrize` is the prize.
     private(set) var prizeEvent = 0
-    private(set) var lastPrize = Prize.coins(50)
+    private(set) var lastPrize = Prize.coins(20)
 
     /// Picks the prize for a new level and hands it over. Out of 100: 40 are 50 coins,
     /// 25 are 100 coins, 15 a free booster, 14 one gem, 5 two gems and 1 the jackpot.
     private func awardLevelPrize() {
         let roll = Int.random(in: 0..<100, using: &rng)
         let prize: Prize
-        if roll < 40 {
-            prize = .coins(50)
-        } else if roll < 65 {
-            prize = .coins(100)
+        if roll < 55 {
+            prize = .coins(20)
         } else if roll < 80 {
+            prize = .coins(40)
+        } else if roll < 91 {
             prize = .booster(Booster.allCases.randomElement(using: &rng) ?? .flip)
-        } else if roll < 94 {
+        } else if roll < 97 {
             prize = .gems(1)
         } else if roll < 99 {
             prize = .gems(2)
@@ -201,6 +201,102 @@ final class GameStore {
         }
         lastPrize = prize
         prizeEvent += 1
+    }
+
+    // MARK: Stages
+
+    /// What clearing a stage wins.
+    struct StageLoot: Equatable, Sendable {
+        var stage = 0
+        var coins = 0
+        var gems = 0
+        var booster: Booster?
+        /// One to three, for the time left on the clock.
+        var stars = 0
+        /// Every fifth stage is a big chest.
+        var isChest = false
+        /// How many stages in a row have been cleared, this one included.
+        var streak = 0
+    }
+
+    /// The stage of the two-minute game the player is on. Every stage has a score
+    /// to reach before the clock runs out; reaching it wins loot and opens the next,
+    /// harder one. Missing it means trying the same stage again.
+    private(set) var stage: Int
+    /// Stages cleared in a row without a miss. A run of them pays more coins.
+    private(set) var stageStreak: Int
+    /// True once this game has reached its stage's score.
+    private(set) var isStageWon = false
+    /// Goes up each time a stage is cleared; `lastLoot` is what it won.
+    private(set) var stageEvent = 0
+    private(set) var lastLoot = StageLoot()
+    @ObservationIgnored private var stagePaid = false
+
+    /// The two-minute game is played in stages; a head-to-head game is not.
+    var hasStages: Bool { mode == .timed && !isVersus }
+
+    /// The score that clears a stage: 400, 750, 1,200, 1,750 and on up.
+    nonisolated static func stageGoal(_ stage: Int) -> Int {
+        let steps = max(1, stage) - 1
+        return 400 + 300 * steps + 50 * steps * steps
+    }
+
+    /// The score this game has to reach.
+    var stageGoal: Int { Self.stageGoal(stage) }
+
+    /// The coins and gems a stage pays, before stars and streaks. Later stages pay
+    /// more, and every fifth stage is a big chest.
+    nonisolated static func stageLoot(_ stage: Int) -> StageLoot {
+        let isChest = stage > 0 && stage % 5 == 0
+        let coins = min(300, 30 + 15 * stage)
+        let gems = min(8, 1 + stage / 3)
+        return StageLoot(stage: stage, coins: isChest ? coins * 2 : coins, gems: isChest ? gems + 3 : gems, isChest: isChest)
+    }
+
+    /// Stars for the time left when the stage was cleared.
+    nonisolated static func stageStars(secondsLeft: Double) -> Int {
+        secondsLeft >= 60 ? 3 : (secondsLeft >= 25 ? 2 : 1)
+    }
+
+    /// How hard the board plays: the level of this game, raised by the stage.
+    private var hazardLevel: Int {
+        level + (hasStages ? (stage - 1) / 2 : 0)
+    }
+
+    /// Hands over the loot of the stage just cleared and opens the next one.
+    private func winStage() {
+        guard !stagePaid else { return }
+        stagePaid = true
+        var loot = Self.stageLoot(stage)
+        loot.stars = Self.stageStars(secondsLeft: secondsLeft)
+        stageStreak += 1
+        loot.streak = stageStreak
+        // Three stars pay half as much again; a winning run adds a tenth a stage, up to half.
+        var percent = 100 + 10 * min(5, stageStreak - 1)
+        if loot.stars == 3 {
+            percent += 50
+        } else if loot.stars == 2 {
+            percent += 20
+        }
+        loot.coins = loot.coins * percent / 100
+        let booster = Booster.allCases.randomElement(using: &rng) ?? .flip
+        loot.booster = booster
+        coins += loot.coins
+        gems += loot.gems
+        boosterCounts[booster, default: 0] += loot.isChest ? 2 : 1
+        lastLoot = loot
+        stage += 1
+        stageEvent += 1
+        defaults.set(stage, forKey: Key.stage)
+        defaults.set(stageStreak, forKey: Key.stageStreak)
+        defaults.set(true, forKey: Key.stageWon)
+    }
+
+    /// A stage was missed: the winning run is over.
+    private func loseStage() {
+        guard hasStages, !isStageWon, stageStreak != 0 else { return }
+        stageStreak = 0
+        defaults.set(0, forKey: Key.stageStreak)
     }
 
     /// True when the board is nearly full: the screen glows red and the music speeds up.
@@ -813,7 +909,7 @@ final class GameStore {
 
     /// True when the game has ended and has not been carried on yet.
     var canContinue: Bool {
-        isGameOver && !isAnimating && continuesUsed == 0 && state.score > 0 && !isVersus
+        isGameOver && !isAnimating && continuesUsed == 0 && state.score > 0 && !isVersus && !isStageWon
     }
 
     // MARK: Head to head
@@ -900,12 +996,12 @@ final class GameStore {
     private(set) var lastUnlockedSkin = ""
 
     /// Gems for a super combo of three tiles, of four, and for a chain.
-    static let gemsForSuper = 1
-    static let gemsForMega = 3
+    static let gemsForSuper = 0
+    static let gemsForMega = 1
     static let gemsForChain = 1
     /// At the end of a game: one gem for every this many points, and more for a new best.
-    static let pointsPerGem = 500
-    static let gemsForBest = 2
+    static let pointsPerGem = 2000
+    static let gemsForBest = 1
 
     /// The Shape Shift game opens with the player's first theme beyond the free one,
     /// bought or won.
@@ -1029,6 +1125,9 @@ final class GameStore {
         static let gems = "ff.gems"
         static let skins = "ff.skins"
         static let purchases = "ff.purchases"
+        static let stage = "ff.stage"
+        static let stageStreak = "ff.stage.streak"
+        static let stageWon = "ff.stage.won"
 
         static func booster(_ booster: Booster) -> String {
             "ff.booster." + booster.rawValue
@@ -1110,6 +1209,8 @@ final class GameStore {
         }
         self.boosterCounts = counts
         self.gems = max(0, defaults.integer(forKey: Key.gems))
+        self.stage = max(1, defaults.integer(forKey: Key.stage))
+        self.stageStreak = max(0, defaults.integer(forKey: Key.stageStreak))
         let owned = Set(defaults.stringArray(forKey: Key.skins) ?? [])
         self.ownedSkins = owned
 
@@ -1125,7 +1226,11 @@ final class GameStore {
         self.bestAtStart = loaded.best
         self.secondsLeft = loaded.seconds
         self.wholeSecondsLeft = Int(loaded.seconds.rounded(.up))
-        self.isGameOver = !GameEngine.hasMove(loaded.state.tiles, blocked: Set(loaded.state.blocks.map(\.cell))) || (mode == .timed && loaded.seconds <= 0)
+        // A game that cleared its stage stays finished until the next stage is begun.
+        let wasWon = mode == .timed && defaults.bool(forKey: Key.stageWon)
+        self.isGameOver = !GameEngine.hasMove(loaded.state.tiles, blocked: Set(loaded.state.blocks.map(\.cell))) || (mode == .timed && loaded.seconds <= 0) || wasWon
+        self.isStageWon = wasWon
+        self.stagePaid = wasWon
     }
 
     /// Changes the way to play. The game left behind is saved and waits for you.
@@ -1156,7 +1261,9 @@ final class GameStore {
         streak = 0
         streakLeft = 0
         isTimerRunning = false
-        isGameOver = !GameEngine.hasMove(state.tiles, blocked: blockedSet, holes: holeSet) || isTimeUp
+        isStageWon = newMode == .timed && defaults.bool(forKey: Key.stageWon)
+        stagePaid = isStageWon
+        isGameOver = !GameEngine.hasMove(state.tiles, blocked: blockedSet, holes: holeSet) || isTimeUp || isStageWon
         save()
     }
 
@@ -1303,6 +1410,11 @@ final class GameStore {
         GameEngine.spawn(in: &fresh, using: &rng, allowTime: mode == .timed)
         state = fresh
         level = 1
+        if mode == .timed {
+            isStageWon = false
+            stagePaid = false
+            defaults.set(false, forKey: Key.stageWon)
+        }
         sharkHasCome = false
         continuesUsed = 0
         paidScoreGems = 0
@@ -1330,6 +1442,15 @@ final class GameStore {
     /// Takes time off the clock. The screen calls this several times a second.
     func tick(_ seconds: Double) {
         guard isTimerRunning, !isGameOver, seconds > 0 else { return }
+        // The stage's score was reached outside a move: the game ends here.
+        if isStageWon, !isAnimating {
+            isTimerRunning = false
+            isGameOver = true
+            winStage()
+            rewardFinishedGame()
+            save()
+            return
+        }
         if isFever {
             feverLeft -= seconds
             if feverLeft <= 0 {
@@ -1353,6 +1474,7 @@ final class GameStore {
         if secondsLeft <= 0, !isAnimating {
             isTimerRunning = false
             isGameOver = true
+            loseStage()
             rewardFinishedGame()
             save()
         }
@@ -1474,6 +1596,10 @@ final class GameStore {
     private func addPoints(_ gained: Int) {
         let points = gained * scoreMultiplier
         guard points > 0 else { return }
+        // Crossing the stage's score clears the stage; the move in hand finishes first.
+        if hasStages, !isStageWon, state.score < stageGoal, state.score + points >= stageGoal {
+            isStageWon = true
+        }
         state.score += points
         if state.score > best {
             best = state.score
@@ -1616,7 +1742,7 @@ final class GameStore {
             using: &rng,
             allowTime: mode == .timed,
             forcedKind: kind,
-            stonesPerHundred: GameEngine.stonesPerHundred(level: level)
+            stonesPerHundred: GameEngine.stonesPerHundred(level: hazardLevel)
         )
         if let tile, tile.kind != .normal {
             lastSpecialKind = tile.kind
@@ -1627,7 +1753,7 @@ final class GameStore {
     /// From level 4 a move sometimes drops a second new tile, more often the higher
     /// the level. Never onto a board that is already nearly full.
     private func spawnExtraTile() {
-        let chance = GameEngine.extraTilePerHundred(level: level)
+        let chance = GameEngine.extraTilePerHundred(level: hazardLevel)
         guard chance > 0, GameEngine.emptyCells(state.tiles, blocked: blockedSet).count > 2 else { return }
         if Int.random(in: 0..<100, using: &rng) < chance {
             spawnTile()
@@ -1643,7 +1769,10 @@ final class GameStore {
         }
         if lastCombo >= 2 {
             comboEvent += 1
-            earnGems(Self.gemsForChain)
+            // Only a long chain is worth a gem.
+            if lastCombo >= 3 {
+                earnGems(Self.gemsForChain)
+            }
             shake(2)
             // A chain is rewarded with a power-up tile: a clock or a bomb in the timed
             // game, always a bomb in the endless one.
@@ -1660,7 +1789,7 @@ final class GameStore {
         }
         // The endless game gets an extra tile after every rotation, so the board fills.
         // Every game without a clock, bar Shape Shift, gets an extra tile after a turn.
-        if mode != .shift, mode != .timed || level >= GameEngine.turnTileLevel {
+        if mode != .shift, mode != .timed || hazardLevel >= GameEngine.turnTileLevel {
             spawnTile()
         }
         // In the Twist game, any turn may be followed by one the other way.
@@ -1691,10 +1820,15 @@ final class GameStore {
             mutateTile()
         }
         let wasOver = isGameOver
-        isGameOver = !GameEngine.hasMove(state.tiles, blocked: blockedSet, holes: holeSet) || isTimeUp
+        isGameOver = !GameEngine.hasMove(state.tiles, blocked: blockedSet, holes: holeSet) || isTimeUp || isStageWon
         if isGameOver {
             isTimerRunning = false
             if !wasOver {
+                if isStageWon {
+                    winStage()
+                } else {
+                    loseStage()
+                }
                 rewardFinishedGame()
             }
         }

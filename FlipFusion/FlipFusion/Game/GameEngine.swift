@@ -387,11 +387,11 @@ enum GameEngine {
     /// At most this many stone blocks sit on the board at once. Every wall, hole and
     /// crate on the board takes one off that, down to a single stone, so a board
     /// that is already cluttered does not fill with rocks as well.
-    static let maxStones = 3
+    static let maxStones = 2
 
     /// Out of every 100 new tiles, how many are stone blocks. None on level 1.
     static func stonesPerHundred(level: Int) -> Int {
-        level < 2 ? 0 : min(12, 4 + 2 * (level - 2))
+        level < 2 ? 0 : min(8, 2 + level)
     }
 
     /// Out of every 100 moves, how many drop a second new tile. None on level 1.

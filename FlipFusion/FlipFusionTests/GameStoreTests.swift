@@ -270,7 +270,7 @@ struct GameStoreTests {
         store.swipe(.left)          // 4+4 straight after: the streak begins, at x2
         #expect(store.streak == 1)
         #expect(store.state.score >= 4 + 16)
-        #expect(store.coins >= 1)
+        #expect(store.coins == store.state.score / GameStore.pointsPerCoin)
         store.tick(GameStore.streakWindow + 1)
         #expect(store.streak == 0)
     }
@@ -458,6 +458,75 @@ struct GameStoreTests {
         #expect(GameStore(defaults: defaults, animated: false).level == 2)
         store.newGame()
         #expect(store.level == 1)
+    }
+
+    @Test func reachingTheGoalClearsTheStageAndWinsLoot() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 396, movesUntilRotation: 2, nextID: 10), to: defaults)
+        defaults.set(90.0, forKey: "ff.time")
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.stage == 1)
+        #expect(store.stageGoal == 400)
+        #expect(!store.isGameOver)
+        store.swipe(.left)
+        #expect(store.state.score == 400)
+        #expect(store.isStageWon)
+        #expect(store.isGameOver)
+        #expect(!store.canContinue)
+        #expect(store.stage == 2)
+        #expect(store.stageEvent == 1)
+        #expect(store.lastLoot.stage == 1)
+        #expect(store.lastLoot.stars == 3)
+        #expect(store.lastLoot.streak == 1)
+        #expect(store.lastLoot.booster != nil)
+        #expect(store.gems >= store.lastLoot.gems)
+        #expect(store.coins >= store.lastLoot.coins)
+        // Paid once, and the stage is remembered.
+        let gems = store.gems
+        store.tick(5)
+        #expect(store.gems == gems)
+        let relaunched = GameStore(defaults: defaults, animated: false)
+        #expect(relaunched.stage == 2)
+        #expect(relaunched.isGameOver)
+        // The next stage starts from nothing, with a higher score to reach.
+        store.newGame()
+        #expect(!store.isGameOver)
+        #expect(!store.isStageWon)
+        #expect(store.state.score == 0)
+        #expect(store.stageGoal == 750)
+    }
+
+    @Test func runningOutOfTimeKeepsTheStageAndEndsTheRun() {
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[2, 4, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 100, movesUntilRotation: 2, nextID: 10), to: defaults)
+        defaults.set(3, forKey: "ff.stage")
+        defaults.set(2, forKey: "ff.stage.streak")
+        let store = GameStore(defaults: defaults, animated: false)
+        #expect(store.stage == 3)
+        #expect(store.stageGoal == 1200)
+        store.swipe(.down)
+        store.tick(GameStore.roundSeconds + 1)
+        #expect(store.isGameOver)
+        #expect(!store.isStageWon)
+        #expect(store.stage == 3)
+        #expect(store.stageStreak == 0)
+        #expect(store.stageEvent == 0)
+    }
+
+    @Test func laterStagesAskForMoreAndPayMore() {
+        #expect(GameStore.stageGoal(1) == 400)
+        #expect(GameStore.stageGoal(2) == 750)
+        #expect(GameStore.stageGoal(5) == 2400)
+        #expect(GameStore.stageLoot(1).coins == 45)
+        #expect(GameStore.stageLoot(1).gems == 1)
+        #expect(GameStore.stageLoot(4).gems == 2)
+        #expect(!GameStore.stageLoot(4).isChest)
+        #expect(GameStore.stageLoot(5).isChest)
+        #expect(GameStore.stageLoot(5).coins == 210)
+        #expect(GameStore.stageLoot(5).gems == 5)
+        #expect(GameStore.stageStars(secondsLeft: 70) == 3)
+        #expect(GameStore.stageStars(secondsLeft: 30) == 2)
+        #expect(GameStore.stageStars(secondsLeft: 5) == 1)
     }
 
     @Test func aHighLevelUnlocksThePartyLightsTheme() {
