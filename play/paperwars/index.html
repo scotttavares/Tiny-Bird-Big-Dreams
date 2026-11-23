@@ -84,7 +84,9 @@ button:disabled{opacity:.4;cursor:default}
 #story .facts li{display:flex;gap:10px;align-items:flex-start;margin:0 0 8px}
 #story .factIcon{flex:0 0 auto;font-size:24px;line-height:1.1;width:30px;text-align:center}
 #story .storyNote{font-size:16px;color:#6d6a62}
-#story .stampbtn{font-size:22px;padding:6px 14px 4px;margin-top:4px}
+/* user, 2026-11-23: the outlined DISMISSED! stamp was "hard to tell this was a button": a solid inked button with a pressed edge */
+#story .stampbtn{display:block;margin:12px auto 0;font-size:24px;padding:12px 28px 9px;color:#fffaf0;background:#b3261e;border:3px double #fffaf0;outline:2px solid #b3261e;box-shadow:0 4px 0 #7a1712,0 7px 14px #0003;-webkit-mask-image:none;mask-image:none;cursor:pointer}
+#story .stampbtn:active{transform:rotate(-3deg) translateY(3px);box-shadow:0 1px 0 #7a1712,0 2px 6px #0003}
 /* 1.1 (user, 2026-11-06: the Campaigns pill "was hard to see"): a filled blue button; True story and call sign stay secondary. */
 .campback{display:inline-flex;align-items:center;gap:6px;min-height:44px;margin:0;padding:6px 14px;font:700 21px/1 Caveat,cursive;color:#1f4fa8;background:#fffef9;border:2px solid #1f4fa8;border-radius:12px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 #campaignsBtn{font:700 19px/1 "Stardos Stencil","Special Elite",monospace;letter-spacing:.05em;text-transform:uppercase;color:#fff;background:#1f4fa8;border-color:#1f4fa8;padding:8px 18px 6px;box-shadow:2px 3px 0 #0f2d66}
@@ -3621,9 +3623,12 @@ function drawAirdrop(c, a) {
   const landed = t >= a.tLand, fold = landed ? Math.max(0, 1 - (t - a.tLand) / 350) : 1;
   c.save(); c.translate(a.pos.x, y); c.rotate(sway); c.translate(-a.pos.x, -y);
   if (!landed) { c.save(); c.globalAlpha = .45; c.fillStyle = CUTOUT_SHADOW; c.beginPath(); c.ellipse(a.pos.x + 4, a.pos.y + 44 * s, 10 * s * k, 3 * s * k, 0, 0, 7); c.fill(); c.restore(); }
-  const ink = a.ink || INK[players.indexOf(a.p)];
+  // The intro's airdrop has no battle behind it: before the first battle `players` doesn't exist yet (user, 2026-11-23:
+  // "the intro freezes ... when the paper plane gets half way", this threw and stopped the intro's animation).
+  const army = a.p && players ? players.indexOf(a.p) : -1;
+  const ink = a.ink || INK[army];
   drawParachute(c, a.pos.x, y, s, fold, ink);
-  drawSoldier(c, {...u, y}, ink, 1, a.p ? players.indexOf(a.p) : null);
+  drawSoldier(c, {...u, y}, ink, 1, army >= 0 ? army : null);
   c.restore();
   if (landed) { // a little pencil dust puff where he touches down
     const d = (t - a.tLand) / 450; c.save(); c.globalAlpha = Math.max(0, 1 - d); c.strokeStyle = PENCIL; c.lineWidth = 1.2;
