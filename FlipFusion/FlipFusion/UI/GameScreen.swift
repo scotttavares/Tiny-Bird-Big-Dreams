@@ -30,6 +30,9 @@ struct GameScreen: View {
     @State private var showMap = false
     /// True when the map is opened by a cleared stage: the marker walks to the next stop.
     @State private var mapWalks = false
+    /// The lesson of the first game's tutorial being shown, or nil when it is not on.
+    @State private var tutorialStep: Int?
+    @AppStorage(Tutorial.key) private var tutorialDone = false
     @State private var showShop = false
     @State private var showQuests = false
     @AppStorage(SoundPlayer.musicKey) private var musicOn = true
@@ -266,7 +269,15 @@ struct GameScreen: View {
                 // The first stages teach the game as it is played: no page of rules first.
                 seenHelp = true
                 GameCenter.shared.signIn()
-                if store.stage > 1, store.isDailyReady() {
+                // Anyone past the first stage has no need of the tutorial.
+                if store.stage > 1 {
+                    tutorialDone = true
+                }
+                if !tutorialDone, store.hasStages, !store.isGameOver {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                        tutorialStep = 0
+                    }
+                } else if store.stage > 1, store.isDailyReady() {
                     showDaily = true
                 } else if store.hasStages, !store.isGameOver {
                     show(startWords, seconds: 3.2)
@@ -315,6 +326,30 @@ struct GameScreen: View {
         .sheet(isPresented: $showShop) {
             ShopView(store: store, sounds: sounds)
         }
+        // The tutorial: each lesson ends when the player does what it teaches.
+        .overlay(alignment: tutorialStep == Tutorial.steps - 1 ? .top : .bottom) {
+            if let step = tutorialStep {
+                TutorialCard(step: step, onSkip: endTutorial, onDone: endTutorial)
+                    .padding(.horizontal, 18)
+                    .padding(.top, 54)
+                    .padding(.bottom, 14)
+            }
+        }
+        .onChange(of: store.slidePulse) { _, _ in
+            if tutorialStep == 0 {
+                tutorialTo(1)
+            }
+        }
+        .onChange(of: store.mergePulse) { _, _ in
+            if let step = tutorialStep, step <= 1 {
+                tutorialTo(2)
+            }
+        }
+        .onChange(of: store.rotatePulse) { _, _ in
+            if tutorialStep == 2 {
+                tutorialTo(3)
+            }
+        }
         .sheet(isPresented: $showQuests) {
             QuestsView(store: store, sounds: sounds)
         }
@@ -326,10 +361,11 @@ struct GameScreen: View {
             // A finished game goes on the worldwide leaderboard of its mode.
             oneArmed = false
             // A new stage says what it asks for as it starts.
-            if !isOver, store.hasStages {
+            if !isOver, store.hasStages, tutorialStep == nil {
                 show(startWords, seconds: 3)
             }
             if isOver {
+                endTutorial()
                 GameCenter.shared.report(score: store.state.score, mode: store.mode)
                 Versus.shared.send(score: store.state.score, over: true)
             }
@@ -380,7 +416,10 @@ struct GameScreen: View {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(100))
                 let now = Date()
-                store.tick(min(now.timeIntervalSince(last), 0.5))
+                // The clock waits while the tutorial is teaching.
+                if tutorialStep == nil {
+                    store.tick(min(now.timeIntervalSince(last), 0.5))
+                }
                 last = now
             }
         }
@@ -514,6 +553,11 @@ struct GameScreen: View {
                 isReversed: store.state.counterClockwise,
                 heat: (store.isFever || store.isDanger || store.streak >= 3) ? 2 : (store.streak > 0 ? 1 : 0)
             )
+            }
+
+            if let step = tutorialStep, !store.isGameOver {
+                TutorialPointer(step: step, side: side)
+                    .id(step)
             }
 
             Celebration(store: store, side: side)
@@ -728,6 +772,22 @@ struct GameScreen: View {
             words += "\n\(store.stageStreak) wins in a row: free bomb!"
         }
         return words
+    }
+
+    private func tutorialTo(_ step: Int) {
+        sounds.play(.tick, volume: 0.6)
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+            tutorialStep = step
+        }
+    }
+
+    /// The tutorial is over: finished, dismissed, or the game ended under it.
+    private func endTutorial() {
+        tutorialDone = true
+        guard tutorialStep != nil else { return }
+        withAnimation(.easeOut(duration: 0.25)) {
+            tutorialStep = nil
+        }
     }
 
     private func openHelp() {
