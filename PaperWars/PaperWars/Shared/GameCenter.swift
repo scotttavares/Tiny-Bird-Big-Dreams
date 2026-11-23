@@ -32,6 +32,11 @@ struct GameCenterRoster {
         return ids.filter { id in people.contains { $0.gamePlayerID == id } && seen.insert(id).inserted }
     }
 
+    /// Nobody else is connected. A match in this state is dead weight: GameKit doesn't bring a dropped player back into it
+    /// (logs, 2026-11-23: the other phone's match fails outright), and while this phone holds it, a fresh invite hangs on
+    /// "Connecting" and Invite friends adds people to it instead of starting a new match.
+    var isEmpty: Bool { people.isEmpty }
+
     mutating func reset() {
         people = []
         gone = []
@@ -336,7 +341,7 @@ final class GameCenter {
     /// Apple's invite screen. With no match yet it starts one (host); with a match it adds people to it, which is also
     /// how someone who dropped out of a 3–4 person match is brought back.
     private func openMatchmaker(_ op: GameBridge.GameCenterOp) {
-        let plan = GameCenterMatchmaking.plan(for: op, hasMatch: match != nil)
+        let plan = GameCenterMatchmaking.plan(for: op, hasMatch: match != nil && !roster.isEmpty)
         guard plan != .ignore else { GameCenterLog.add("invite screen: nothing to do (no match yet)"); return }
         guard case .ready = status else {
             GameCenterLog.add("invite screen: not signed in yet, \(status.logName)")
@@ -371,6 +376,10 @@ final class GameCenter {
             return
         }
         controller.matchmakerDelegate = relay
+        if match != nil, roster.isEmpty {
+            GameCenterLog.add("join screen: letting go of the old match first (nobody else was in it)")
+            dropMatch()
+        }
         if let old = matchmaker {
             GameCenterLog.add("join screen: closing the invite screen that was open")
             old.dismiss(animated: false)
@@ -469,6 +478,11 @@ final class GameCenter {
         GameCenterLog.add("\(person.alias) \(connected ? "connected" : "disconnected")")
         guard isCurrent(matchID) else { return }
         (connected ? roster.connected(person) : roster.disconnected(person.gamePlayerID)).forEach(emit)
+        // User, 2026-11-23: after Go AWOL "we both have to close out our apps then re open in order to connect".
+        if !connected, roster.isEmpty {
+            GameCenterLog.add("everyone else has left: letting the match go")
+            dropMatch()
+        }
     }
 
     fileprivate func matchFailed(_ matchID: ObjectIdentifier, _ error: String) {

@@ -88,6 +88,25 @@ struct GameCenterBridgeTests {
         #expect(roster.connected(b) == [.back("G:2"), .people([b])]) // the same player back in the match
     }
 
+    // User, 2026-11-23: after Go AWOL a new invite hung on "Connecting" because the phone left behind kept the old match.
+    // The match is let go once nobody else is in it, so Invite friends starts a fresh one.
+    @Test func testRosterIsEmptyOnlyWhenEveryoneElseHasLeft() {
+        var roster = GameCenterRoster()
+        roster.me = "G:1"
+        #expect(roster.isEmpty)
+        _ = roster.connected(.init(gamePlayerID: "G:1", alias: "Me")) // this phone's own player doesn't count
+        #expect(roster.isEmpty)
+        _ = roster.connected(.init(gamePlayerID: "G:2", alias: "B"))
+        _ = roster.connected(.init(gamePlayerID: "G:3", alias: "C"))
+        #expect(!roster.isEmpty)
+        _ = roster.disconnected("G:2")
+        #expect(!roster.isEmpty) // C is still here: keep the match (a spectator or a 3-4 person lobby)
+        _ = roster.disconnected("G:3")
+        #expect(roster.isEmpty)
+        // an empty match is treated as no match: Invite friends starts a new one instead of adding to the dead one
+        #expect(GameCenterMatchmaking.plan(for: .host(maxPlayers: 4), hasMatch: !roster.isEmpty) == .start(maxPlayers: 4))
+    }
+
     @Test func testInviteWithoutMatchDoesNothing() {
         // invite only adds people to a running match: it can never start one (only host can, after the Full Arsenal check)
         #expect(GameCenterMatchmaking.plan(for: .invite, hasMatch: false) == .ignore)
