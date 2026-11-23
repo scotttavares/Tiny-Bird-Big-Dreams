@@ -28,6 +28,8 @@ struct GameScreen: View {
     @State private var oneArmed = false
     @State private var showDaily = false
     @State private var showMap = false
+    /// True when the map is opened by a cleared stage: the marker walks to the next stop.
+    @State private var mapWalks = false
     @State private var showShop = false
     @State private var showQuests = false
     @AppStorage(SoundPlayer.musicKey) private var musicOn = true
@@ -290,8 +292,25 @@ struct GameScreen: View {
                 sounds.play(.chest)
             }
         }
-        .sheet(isPresented: $showMap) {
-            StageMapView(stage: store.playedStage, stars: store.stageStars)
+        .fullScreenCover(isPresented: $showMap, onDismiss: {
+            mapWalks = false
+        }) {
+            // After a game the map's button starts the next one; during a game it
+            // only goes back to it.
+            StageMapView(
+                stage: store.stage,
+                stars: store.stageStars,
+                hopFrom: mapWalks && store.isStageWon ? store.stage - 1 : nil,
+                playLabel: store.isGameOver ? (store.isStageWon ? "Play Stage \(store.stage)" : "Try Again") : "Keep Playing",
+                onPlay: store.isGameOver ? {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        store.newGame()
+                    }
+                } : nil,
+                onArrive: {
+                    sounds.play(.bonus, volume: 0.8)
+                }
+            )
         }
         .sheet(isPresented: $showShop) {
             ShopView(store: store, sounds: sounds)
@@ -520,8 +539,14 @@ struct GameScreen: View {
                     side: side,
                     scale: scale,
                     onPlayAgain: {
-                        withAnimation(.easeOut(duration: 0.2)) {
-                            store.newGame()
+                        // A cleared stage goes to the map, to watch the marker walk on.
+                        if store.isStageWon {
+                            mapWalks = true
+                            showMap = true
+                        } else {
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                store.newGame()
+                            }
                         }
                     },
                     onContinue: {
