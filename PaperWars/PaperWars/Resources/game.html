@@ -67,7 +67,6 @@ h1{font-family:Caveat,cursive;font-size:44px;margin:0;color:var(--blue);line-hei
 .turnhint{font:16px/1.2 "Patrick Hand",sans-serif;color:var(--muted);text-align:center}
 .turnhint:empty{display:none}
 .phone{position:relative;background:#1b1b1b;border-radius:30px;padding:9px;box-shadow:0 10px 30px #0003}
-.hinge{position:absolute;top:-7px;left:22%;right:22%;height:10px;border-radius:6px;background:#3a3a3a}
 canvas{display:block;border-radius:22px;touch-action:none;background:#fbf8ef}
 /* Hand-off screen: a WW1/WW2-style secret dossier (manila file, paper-clipped slip, rubber stamps). Sized with container units. */
 .cover{position:absolute;inset:9px;border-radius:22px;overflow:hidden;cursor:pointer;container-type:size;perspective:900px;background:#1b1b1b}
@@ -525,7 +524,7 @@ select{font:inherit;font-size:17px;border:2px solid var(--blue);background:var(-
   <div class="turnbar"><div id="turnBanner" class="turnbanner" aria-hidden="true"></div><div id="turnHint" class="turnhint" aria-hidden="true"></div></div>
   <div id="status" class="sr-only" role="status" aria-live="polite"></div>
   <div id="onlineWait" class="onlineWait hidden"></div>
-  <div class="phone"><div class="hinge"></div><canvas id="cv"></canvas>
+  <div class="phone"><canvas id="cv"></canvas>
     <div id="lastStand" class="lastStand hidden"><b>LAST STAND</b><small></small></div>
     <div id="cover" class="cover hidden"><div class="dossier">
       <div class="tab">FILE No. <span id="fileNo">PW-0417</span></div>
@@ -3175,7 +3174,7 @@ function paper(c, h = H) {
   c.strokeStyle = "#c9d8ea"; c.lineWidth = 1;
   for (let y = 36; y < h; y += 22) { c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); }
   c.strokeStyle = "#e7a3a3"; c.beginPath(); c.moveTo(34, 0); c.lineTo(34, h); c.stroke();
-  // (no dashed fold line: the hinge above the page already shows where the fold is; user, 2026-11-03)
+  // (no dashed fold line, user 2026-11-03; and no hinge bar above the page either: "weird grey line", user 2026-11-26)
 }
 function wobblyLine(c, x1, y1, x2, y2, r) {
   c.beginPath(); c.moveTo(x1 + (r() - .5), y1 + (r() - .5));
@@ -7030,6 +7029,13 @@ const netPids = a => Array.isArray(a) ? [...new Set(a.filter(p => typeof p === "
 
 // Game Center, through the iPhone app: posts {type: "gc", op, ...}; the app answers through window.gcEvent(evt).
 // Game Center aliases are typed by people, so they're dropped here: the game only ever shows call signs.
+// A line in the app's Game Center log (Settings > Game Center log). User, 2026-11-26: START BATTLE did nothing on the
+// phones but worked in every test, so the page now writes down its errors and each step of starting a battle there.
+function gcNote(text) {
+  try { const b = window.webkit && webkit.messageHandlers && webkit.messageHandlers.paperWars; if (b) b.postMessage({type: "gc", op: "note", text: String(text).slice(0, 300)}); } catch (e) {}
+}
+addEventListener("error", e => gcNote("error: " + (e.message || e.error) + " @" + (e.lineno || "?") + ":" + (e.colno || "?")));
+addEventListener("unhandledrejection", e => gcNote("error (promise): " + ((e.reason && e.reason.message) || e.reason)));
 function gameCenterNet() {
   const bridge = () => window.webkit && webkit.messageHandlers && webkit.messageHandlers.paperWars;
   const post = (op, extra) => { try { bridge().postMessage({type: "gc", op, ...extra}); } catch (e) {} };
@@ -7492,7 +7498,7 @@ function lobbyEnd(text, leave) {
     ["game", "tent", "over", "replayView", "foldFx"].forEach(id => $(id).classList.add("hidden"));
     $("menu").classList.remove("hidden"); window.scrollTo(0, 0);
   }
-  if (leave) net.leave();
+  if (leave) { gcNote("leaving the lobby" + (text ? ": " + text : "")); net.leave(); }
   if (text) { onlineOpen = false; onlineStatus(text); $("online").classList.remove("hidden"); }
 }
 // Everyone gets the same start: seats, battle orders (limited to what both seated players own, checked again on each
@@ -7503,11 +7509,18 @@ function lobbyStartMsg(d) {
 }
 // Task 7 plays the match from here.
 function startOnlineMatch(start) {
-  onlineStart = start; renderLobby();
-  const seat = start.seats.indexOf(lobbyMe());
-  if (start.seats.length !== 2 || (onl && onl.matchId === start.matchId) || (spec && spec.matchId === start.matchId)) return;
-  if (seat < 0) return spectatorBegin(start); // watching: both pages, only what both players know
-  onlineBegin(start, seat);
+  try {
+    onlineStart = start; renderLobby();
+    const seat = start.seats.indexOf(lobbyMe());
+    gcNote(`start ${start.matchId}: seat ${seat}, ${start.seats.length} seated, ${start.settings && start.settings.campaign}`);
+    if (start.seats.length !== 2 || (onl && onl.matchId === start.matchId) || (spec && spec.matchId === start.matchId)) { gcNote("start ignored"); return; }
+    if (seat < 0) return spectatorBegin(start); // watching: both pages, only what both players know
+    onlineBegin(start, seat);
+    gcNote(`start ${start.matchId}: battle up, ${phase}`);
+  } catch (e) {
+    gcNote("start failed: " + e.message + " " + String(e.stack || "").split(/\n/).slice(0, 3).join(" < "));
+    throw e;
+  }
 }
 // The battlefield for a start, one rule on every phone: a map this phone may play as it is, else one picked by the seed
 // from the maps everyone seated owns (a start whose paid map this phone had to drop still lands every phone on the same
@@ -7532,7 +7545,7 @@ $("lobbyLeave").onclick = () => {
 };
 $("lobbyStart").onclick = () => lobbyBeginMatch();
 function lobbyBeginMatch() { // (also a Revenge, an Again or the next challenger, from the Big Reveal)
-  if (!net.me().isHost || lob.seats.length !== 2) return;
+  if (!net.me().isHost || lob.seats.length !== 2) { gcNote(`START BATTLE: not now (host ${net.me().isHost}, ${lob.seats.length} seated)`); return; }
   const paid = lobbyPaid(lob.seats), settings = lobbyClean(lob.settings, paid), seed = Math.floor(Math.random() * 0x7fffffff);
   if (settings.map === "random") settings.map = matchMap("random", seed, paid); // picked here, so every phone fights on the same one
   const start = {t: "start", matchId: newPid().slice(0, 12), seats: lob.seats.slice(), settings, seed};

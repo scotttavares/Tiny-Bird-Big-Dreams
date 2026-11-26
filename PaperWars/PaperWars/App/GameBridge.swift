@@ -54,6 +54,9 @@ enum GameBridge {
         case leave
         /// Show the on-device Game Center log (`GameCenterLog`).
         case log
+        /// A line from the page for the Game Center log (errors and battle-start steps; user, 2026-11-26: START BATTLE did
+        /// nothing on device but worked in every test, so the page reports what happened). Trimmed to 300 characters.
+        case note(String)
 
         /// Game Center real-time matches here are 2 players plus up to 2 spectators.
         static let playerRange = 2...4
@@ -73,6 +76,9 @@ enum GameBridge {
                 self = .send(to: ids, data: data)
             case "leave": self = .leave
             case "log": self = .log
+            case "note":
+                guard let text = dict["text"] as? String, !text.isEmpty else { return nil }
+                self = .note(String(text.prefix(300)))
             default: return nil
             }
         }

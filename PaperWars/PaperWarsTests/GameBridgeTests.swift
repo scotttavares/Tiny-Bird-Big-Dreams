@@ -19,6 +19,10 @@ struct GameCenterBridgeTests {
         #expect(GameBridge.GameCenterOp(["type": "gc", "op": "invite"]) == .invite)
         #expect(GameBridge.GameCenterOp(["type": "gc", "op": "leave"]) == .leave)
         #expect(GameBridge.GameCenterOp(["type": "gc", "op": "log"]) == .log)
+        #expect(GameBridge.GameCenterOp(["type": "gc", "op": "note", "text": "start sent"]) == .note("start sent"))
+        #expect(GameBridge.GameCenterOp(["type": "gc", "op": "note", "text": String(repeating: "x", count: 400)]) == .note(String(repeating: "x", count: 300)))
+        #expect(GameBridge.GameCenterOp(["type": "gc", "op": "note"]) == nil)
+        #expect(GameBridge.GameCenterOp(["type": "gc", "op": "note", "text": ""]) == nil)
         let data = "{\"v\":1,\"t\":\"hello\"}"
         #expect(GameBridge.GameCenterOp(["type": "gc", "op": "send", "to": ["G:2", "G:3"], "data": data]) == .send(to: ["G:2", "G:3"], data: data))
         // a send must name its recipients and carry the page's JSON string unchanged

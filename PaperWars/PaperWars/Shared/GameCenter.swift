@@ -161,6 +161,7 @@ extension GameBridge.GameCenterOp {
         case .send: "send"
         case .leave: "leave"
         case .log: "show log"
+        case .note: "note"
         }
     }
 }
@@ -234,6 +235,7 @@ final class GameCenter {
     func handle(_ op: GameBridge.GameCenterOp) {
         switch op {
         case .send, .log: break
+        case .note(let text): GameCenterLog.add("page: \(text)")
         default: GameCenterLog.add("page asked: \(op.logName)")
         }
         switch op {
@@ -253,6 +255,8 @@ final class GameCenter {
             leave()
         case .log:
             show(UINavigationController(rootViewController: GameCenterLogController()), label: "log")
+        case .note:
+            break // logged above
         }
     }
 
