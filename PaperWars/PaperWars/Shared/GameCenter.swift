@@ -203,6 +203,10 @@ final class GameCenter {
     /// host / invite waiting for sign-in to finish.
     private var queued: GameBridge.GameCenterOp?
     private var match: GKMatch?
+    /// Matches this phone has let go of, kept alive a while. GameKit keeps working on a match after it's disconnected (crash,
+    /// 1.1 (59), 2026-11-26: -[GKMatch conditionallyReinvitePlayer:sessionToken:] ran on a match already freed, a moment
+    /// after this phone let it go), so a dropped match is never freed straight away. A few at most.
+    private var retired: [GKMatch] = []
     private var roster = GameCenterRoster()
     private var matchmaker: GKMatchmakerViewController?
     private let relay = GameCenterRelay()
@@ -500,8 +504,12 @@ final class GameCenter {
     }
 
     private func dropMatch() {
-        match?.delegate = nil
-        match?.disconnect()
+        if let old = match {
+            old.delegate = nil
+            old.disconnect()
+            retired.append(old) // not freed yet: GameKit may still be finishing with it
+            if retired.count > 4 { retired.removeFirst(retired.count - 4) }
+        }
         match = nil
         roster.reset()
     }
@@ -565,10 +573,11 @@ nonisolated private final class GameCenterRelay: NSObject, GKMatchDelegate, GKMa
         GameCenterHop.toMain { owner?.matchFailed(id, text) }
     }
 
-    /// Two-person matches only (GameKit's rule): ask Game Center to bring a dropped player back into this same match.
+    /// No: GameKit's own re-invite never brought anyone back in testing (a dropped phone's match fails outright, logs
+    /// 2026-11-23), and its re-invite step crashed the app on a match that had just been let go (1.1 (59), 2026-11-26).
     /// In a match of three or four the host's page offers "Bring them back" instead, which is the `invite` (addPeople) path.
     func match(_ match: GKMatch, shouldReinviteDisconnectedPlayer player: GKPlayer) -> Bool {
-        true
+        false
     }
 
     // GKInviteEventListener (through GKLocalPlayerListener): a friend's invite was accepted on this phone.
