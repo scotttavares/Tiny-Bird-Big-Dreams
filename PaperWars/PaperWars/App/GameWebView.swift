@@ -5,14 +5,16 @@ import WebKit
 /// - the page's saved values (keys starting with `paperWars`) go to `CloudSaves`, and come back
 ///   before the page starts, so settings, inks, stats and medals follow the player's iCloud;
 /// - the fold posture is pushed in, so the page can split into two halves when the Duo is a tent;
-/// - the Full Arsenal purchase: the page asks to buy, restore or check it, and is told the result.
+/// - the Full Arsenal purchase: the page asks to buy, restore or check it, and is told the result;
+/// - Game Center for two-phone multiplayer: the page's `{type: "gc"}` requests go to `GameCenter`, its events come back.
 struct GameWebView: UIViewRepresentable {
     let posture: Posture
     let saves: CloudSaves
     let store: ArsenalStore
+    let gameCenter: GameCenter
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(saves: saves, store: store)
+        Coordinator(saves: saves, store: store, gameCenter: gameCenter)
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -52,6 +54,12 @@ struct GameWebView: UIViewRepresentable {
         store.onFailure = { [weak coordinator = context.coordinator] message in
             coordinator?.run(GameBridge.arsenalFailedScript(message))
         }
+        gameCenter.onEvent = { [weak coordinator = context.coordinator] script in
+            coordinator?.run(script)
+        }
+        gameCenter.presenter = { [weak coordinator = context.coordinator] in
+            coordinator?.topController()
+        }
         return web
     }
 
@@ -67,12 +75,21 @@ struct GameWebView: UIViewRepresentable {
     final class Coordinator: NSObject, WKScriptMessageHandler {
         let saves: CloudSaves
         let store: ArsenalStore
+        let gameCenter: GameCenter
         weak var webView: WKWebView?
         var lastPosture: Posture?
 
-        init(saves: CloudSaves, store: ArsenalStore) {
+        init(saves: CloudSaves, store: ArsenalStore, gameCenter: GameCenter) {
             self.saves = saves
             self.store = store
+            self.gameCenter = gameCenter
+        }
+
+        /// The view controller on top, to present the share sheet and Game Center's screens over.
+        func topController() -> UIViewController? {
+            guard var top = webView?.window?.rootViewController else { return nil }
+            while let shown = top.presentedViewController { top = shown }
+            return top
         }
 
         func send(posture: Posture) {
@@ -86,6 +103,10 @@ struct GameWebView: UIViewRepresentable {
         }
 
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+            if let op = GameBridge.GameCenterOp(message.body) {
+                gameCenter.handle(op)
+                return
+            }
             if let video = GameBridge.VideoShare(message.body) {
                 share(video)
                 return
@@ -113,9 +134,7 @@ struct GameWebView: UIViewRepresentable {
                 run(GameBridge.videoSharedScript(saved: false))
                 return
             }
-            guard let web = webView, let host = web.window?.rootViewController else { return }
-            var top = host
-            while let shown = top.presentedViewController { top = shown }
+            guard let web = webView, let top = topController() else { return }
             let sheet = UIActivityViewController(activityItems: [url], applicationActivities: nil)
             sheet.popoverPresentationController?.sourceView = web // iPad shows it as a popover
             sheet.popoverPresentationController?.sourceRect = CGRect(x: web.bounds.midX, y: web.bounds.maxY - 80, width: 1, height: 1)
