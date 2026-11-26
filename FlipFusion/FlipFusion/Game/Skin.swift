@@ -1,7 +1,7 @@
 import Foundation
 
 /// A theme: its own colours, its own moving backdrop, its own tile shape and its own
-/// sparks. A theme is bought with gems or unlocked by doing something in play. The
+/// sparks. A theme is won by reaching its world on the adventure map. The
 /// colours are worked out in `Theme`, the backdrop is drawn by `SceneView` and the
 /// tile shape by `TileOutline`.
 struct Skin: Identifiable, Equatable, Sendable {
@@ -9,6 +9,10 @@ struct Skin: Identifiable, Equatable, Sendable {
     enum Unlock: Equatable, Sendable {
         /// Everyone has it from the start.
         case free
+        /// Won by reaching this world of the adventure map (2 is the second world).
+        /// This is the only way a theme is come by now; the ways below are no
+        /// longer given to any theme.
+        case world(Int)
         /// Bought with this many gems.
         case gems(Int)
         /// Unlocked by reaching this score in one game.
@@ -105,34 +109,34 @@ struct Skin: Identifiable, Equatable, Sendable {
         Skin(id: "neon", name: "Neon", blurb: "80s arcade nights", unlock: .free,
              chromeHue: nil, chromeBrightness: 1, tiles: .original,
              backdrop: .grid, shape: .neon, spark: "sparkle", boards: []),
-        Skin(id: "sunset", name: "Sunset", blurb: "A striped sun going down", unlock: .gems(40),
+        Skin(id: "sunset", name: "Sunset", blurb: "A striped sun going down", unlock: .world(2),
              chromeHue: 0.92, chromeBrightness: 1.05, tiles: .shifted(0.04),
              backdrop: .sun, shape: .rounded, spark: "sun.max.fill", boards: [15, 16]),
-        Skin(id: "ocean", name: "Ocean", blurb: "Fish, bubbles and a shark that scatters your tiles", unlock: .gems(80),
+        Skin(id: "ocean", name: "Ocean", blurb: "Fish, bubbles and a shark that scatters your tiles", unlock: .world(3),
              chromeHue: 0.53, chromeBrightness: 0.95, tiles: .band(from: 0.42, to: 0.66),
              backdrop: .bubbles, shape: .bubble, spark: "drop.fill", boards: [17, 18]),
-        Skin(id: "bubblegum", name: "Bubblegum", blurb: "Jelly tiles and floating hearts", unlock: .gems(120),
+        Skin(id: "bubblegum", name: "Bubblegum", blurb: "Jelly tiles and floating hearts", unlock: .world(4),
              chromeHue: 0.84, chromeBrightness: 1.25, tiles: .pastel,
              backdrop: .hearts, shape: .jelly, spark: "heart.fill", boards: [19, 20]),
-        Skin(id: "rainforest", name: "Rainforest", blurb: "Fireflies, a downpour and a monkey in the crates", unlock: .gems(150),
+        Skin(id: "rainforest", name: "Rainforest", blurb: "Fireflies, a downpour and a monkey in the crates", unlock: .world(5),
              chromeHue: 0.4, chromeBrightness: 0.85, tiles: .band(from: 0.2, to: 0.46),
              backdrop: .fireflies, shape: .rounded, spark: "leaf.fill", boards: [31, 32]),
-        Skin(id: "lava", name: "Lava", blurb: "Hot tiles and flying sparks", unlock: .gems(180),
+        Skin(id: "lava", name: "Lava", blurb: "Hot tiles and flying sparks", unlock: .world(6),
              chromeHue: 0.02, chromeBrightness: 0.8, tiles: .band(from: 0.93, to: 1.13),
              backdrop: .embers, shape: .hex, spark: "flame.fill", boards: [21, 22]),
-        Skin(id: "jurassic", name: "Jurassic", blurb: "A lost valley, falling stars and a T-rex in the crates", unlock: .gems(200),
+        Skin(id: "jurassic", name: "Jurassic", blurb: "A lost valley, falling stars and a T-rex in the crates", unlock: .world(7),
              chromeHue: 0.07, chromeBrightness: 0.8, tiles: .band(from: 0.04, to: 0.3),
              backdrop: .ash, shape: .gem, spark: "pawprint.fill", boards: [33, 34]),
-        Skin(id: "frost", name: "Frost", blurb: "Ice crystals in falling snow", unlock: .gems(250),
+        Skin(id: "frost", name: "Frost", blurb: "Ice crystals in falling snow", unlock: .world(8),
              chromeHue: 0.58, chromeBrightness: 1.15, tiles: .icy,
              backdrop: .snow, shape: .crystal, spark: "snowflake", boards: [23, 24]),
-        Skin(id: "gold", name: "Gold Rush", blurb: "Cut gems in a shower of gold", unlock: .score(2000),
+        Skin(id: "gold", name: "Gold Rush", blurb: "Cut gems in a shower of gold", unlock: .world(9),
              chromeHue: 0.09, chromeBrightness: 0.9, tiles: .band(from: 0.02, to: 0.16),
              backdrop: .coins, shape: .gem, spark: "diamond.fill", boards: [25, 26]),
-        Skin(id: "party", name: "Party Lights", blurb: "Sweeping coloured lights", unlock: .level(7),
+        Skin(id: "party", name: "Party Lights", blurb: "Sweeping coloured lights", unlock: .world(10),
              chromeHue: 0.8, chromeBrightness: 0.75, tiles: .shifted(0.25),
              backdrop: .lights, shape: .jelly, spark: "sparkles", boards: [27, 28]),
-        Skin(id: "galaxy", name: "Galaxy", blurb: "Planet tiles and shooting stars", unlock: .megaCombo,
+        Skin(id: "galaxy", name: "Galaxy", blurb: "Planet tiles and shooting stars", unlock: .world(11),
              chromeHue: 0.76, chromeBrightness: 0.7, tiles: .shifted(0.5),
              backdrop: .stars, shape: .orb, spark: "star.fill", boards: [29, 30]),
     ]
@@ -197,6 +201,7 @@ struct Skin: Identifiable, Equatable, Sendable {
     var howToGet: String {
         switch unlock {
         case .free: return "Yours from the start"
+        case .world(let world): return "Reach world \(world) on the map"
         case .gems(let price): return "\(price) gems"
         case .score(let score): return "Score \(score.formatted()) in one game"
         case .megaCombo: return "Merge four tiles at once"
@@ -208,6 +213,7 @@ struct Skin: Identifiable, Equatable, Sendable {
     var lockLabel: String {
         switch unlock {
         case .free, .gems: return ""
+        case .world(let world): return "World \(world)"
         case .score(let score): return "Score \(score.formatted())"
         case .megaCombo: return "4-tile merge"
         case .level(let level): return "Level \(level)"

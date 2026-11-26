@@ -83,7 +83,7 @@ struct HelpView: View {
                             .foregroundStyle(Theme.counter)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    Text("Every theme has its own moving backdrop, tile shape and sparks. A new theme also brings two boards of its own and bigger effects, and your first one unlocks the Shape Shift game. Win gems with super combos, chains, level prizes, big scores and new best scores.")
+                    Text("Every theme has its own moving backdrop, tile shape and sparks. Each one is won by reaching its world on the adventure map: beat a world's boss to open the next. A new theme also brings two boards of its own and bigger effects, and your first one unlocks the Shape Shift game.")
                         .font(.system(size: 15, weight: .medium, design: .rounded))
                         .foregroundStyle(Theme.label)
                         .fixedSize(horizontal: false, vertical: true)
@@ -441,7 +441,7 @@ struct HelpView: View {
             ForEach(Array(shop.products.enumerated()), id: \.element.id) { index, product in
                 packCard(shop, product, index: index)
             }
-            Text("Gems unlock themes and let you keep a finished game going. They are bought with real money through the App Store and cannot be exchanged or refunded for cash.")
+            Text("Gems let you keep a finished game going. They are bought with real money through the App Store and cannot be exchanged or refunded for cash.")
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(Theme.label)
                 .fixedSize(horizontal: false, vertical: true)
@@ -537,7 +537,7 @@ struct HelpView: View {
                 themeNotice = "\(skin.name) costs \(price) gems. You need \(price - store.gems) more."
             }
         } else {
-            themeNotice = "\(skin.name): \(skin.howToGet.lowercased()) to unlock it."
+            themeNotice = "\(skin.name): \(skin.howToGet.prefix(1).lowercased() + skin.howToGet.dropFirst()) to unlock it."
         }
     }
 

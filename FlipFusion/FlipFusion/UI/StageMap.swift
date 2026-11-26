@@ -115,6 +115,30 @@ struct ChestFilm: View {
             Image("prop-chest-f" + (frame < 10 ? "0" : "") + String(frame))
                 .resizable()
                 .scaledToFit()
+                // The film's coins run off its edges: fade them out, not cut them off.
+                .mask(
+                    LinearGradient(
+                        stops: [
+                            .init(color: .clear, location: 0),
+                            .init(color: .black, location: 0.2),
+                            .init(color: .black, location: 0.8),
+                            .init(color: .clear, location: 1),
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .mask(
+                    LinearGradient(
+                        stops: [
+                            .init(color: .black, location: 0),
+                            .init(color: .black, location: 0.82),
+                            .init(color: .clear, location: 1),
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
                 .frame(width: width)
         }
         .onAppear {

@@ -345,7 +345,7 @@ struct GameStoreTests {
         #expect(GameStore(defaults: defaults, animated: false).gems == GameStore.gemsForSuper)
     }
 
-    @Test func aMegaComboUnlocksTheGalaxyTheme() {
+    @Test func aMegaComboNoLongerUnlocksATheme() {
         let defaults = freshDefaults()
         save(GameState(tiles: tiles([[4, 4, 4, 4], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 2, nextID: 10), to: defaults)
         let store = GameStore(defaults: defaults, animated: false)
@@ -354,12 +354,12 @@ struct GameStoreTests {
         store.swipe(.left)
         #expect(store.lastSuperCount == 4)
         #expect(store.gems == GameStore.gemsForMega)
-        #expect(store.owns(galaxy))
-        #expect(store.unlockEvent == 1)
-        #expect(GameStore(defaults: defaults, animated: false).owns(galaxy))
+        // Themes come from the worlds of the map and nowhere else.
+        #expect(!store.owns(galaxy))
+        #expect(store.unlockEvent == 0)
     }
 
-    @Test func aThemeIsBoughtWithGems() {
+    @Test func aThemeCannotBeBoughtWithGems() {
         let defaults = freshDefaults()
         defaults.set(45, forKey: "ff.gems")
         let store = GameStore(defaults: defaults, animated: false)
@@ -370,18 +370,22 @@ struct GameStoreTests {
         #expect(store.mode == .timed)
         #expect(store.owns(Skin.named("neon")))
         #expect(!store.owns(sunset))
-        #expect(store.buy(sunset))
-        #expect(store.gems == 5)
-        #expect(store.owns(sunset))
-        // Not twice, not without the gems, and not a theme that has to be won.
         #expect(!store.buy(sunset))
-        #expect(!store.buy(Skin.named("ocean")))
         #expect(!store.buy(Skin.named("gold")))
-        #expect(store.gems == 5)
-        #expect(GameStore(defaults: defaults, animated: false).owns(sunset))
+        #expect(store.gems == 45)
+        #expect(!store.owns(sunset))
+        #expect(Skin.all.dropFirst().allSatisfy { skin in
+            if case .world = skin.unlock {
+                return true
+            }
+            return false
+        })
+        // Every theme has a world, and the worlds hand them out in order.
+        #expect(Skin.all.map(\.id) .sorted() == GameStore.worldSkins.sorted())
+        #expect(Skin.named(GameStore.worldSkin(2)).unlock == .world(3))
     }
 
-    @Test func aBigScoreUnlocksTheGoldTheme() {
+    @Test func aBigScoreNoLongerUnlocksATheme() {
         let defaults = freshDefaults()
         save(GameState(tiles: tiles([[8, 8, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 1990, movesUntilRotation: 2, nextID: 10), to: defaults)
         let store = GameStore(defaults: defaults, animated: false)
@@ -389,8 +393,7 @@ struct GameStoreTests {
         #expect(!store.owns(gold))
         store.swipe(.left)
         #expect(store.state.score == 2006)
-        #expect(store.owns(gold))
-        #expect(store.lastUnlockedSkin == "Gold Rush")
+        #expect(!store.owns(gold))
     }
 
     @Test func theBombsBoosterArmsThreeTiles() {
@@ -861,7 +864,7 @@ struct GameStoreTests {
         #expect(sprint.secondsLeft == GameStore.sprintSeconds)
     }
 
-    @Test func aHighLevelUnlocksThePartyLightsTheme() {
+    @Test func aHighLevelNoLongerUnlocksATheme() {
         let defaults = freshDefaults()
         save(GameState(tiles: tiles([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 2696, movesUntilRotation: 2, nextID: 10), to: defaults)
         let store = GameStore(defaults: defaults, animated: false)
@@ -870,7 +873,7 @@ struct GameStoreTests {
         #expect(!store.owns(party))
         store.swipe(.left)
         #expect(store.level == 7)
-        #expect(store.owns(party))
+        #expect(!store.owns(party))
     }
 
     @Test func gemsKeepATimedGameGoingOnce() {

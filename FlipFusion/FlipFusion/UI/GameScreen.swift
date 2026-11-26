@@ -641,6 +641,16 @@ struct GameScreen: View {
     /// The boosters, and the level prize under them.
     private func controls(scale: CGFloat, side: CGFloat) -> some View {
         VStack(spacing: 0) {
+            // Where tiles show pictures, the order they merge in is always on view.
+            if store.mode == .fruit || store.symbolTheme != nil {
+                SymbolLadder(
+                    theme: store.symbolTheme,
+                    reached: store.state.tiles.filter { $0.kind != .stone }.map(\.value).max() ?? 0,
+                    scale: scale
+                )
+                .padding(.top, 8 * scale)
+            }
+
             BoosterBar(store: store, scale: scale) { booster in
                 store.useBooster(booster)
             }

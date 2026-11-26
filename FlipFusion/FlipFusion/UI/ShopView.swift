@@ -20,7 +20,7 @@ struct ShopView: View {
         if item.booster != nil {
             return "Three for the price of two"
         }
-        return item == .mixed ? "One of every booster" : "Gems buy themes and carry a game on"
+        return item == .mixed ? "One of every booster" : "Gems carry a finished game on"
     }
 
     var body: some View {
