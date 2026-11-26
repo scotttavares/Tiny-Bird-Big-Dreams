@@ -14,6 +14,8 @@ struct LibraryView: View {
     @State private var newTitle = ""
     @State private var choosingCover: Notebook?
     @State private var isShowingAppIcons = false
+    @State private var isShowingLock = false
+    @Environment(AppLock.self) private var appLock
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -53,6 +55,9 @@ struct LibraryView: View {
                 ToolbarItem(placement: .secondaryAction) {
                     Button("App Icon", systemImage: "app.badge") { isShowingAppIcons = true }
                 }
+                ToolbarItem(placement: .secondaryAction) {
+                    Button("Privacy Lock", systemImage: AppLock.methodSymbol) { isShowingLock = true }
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button("New Notebook", systemImage: "plus") {
                         newTitle = ""
@@ -76,6 +81,9 @@ struct LibraryView: View {
             }
             .sheet(isPresented: $isShowingAppIcons) {
                 AppIconPickerSheet()
+            }
+            .sheet(isPresented: $isShowingLock) {
+                AppLockSheet(lock: appLock)
             }
             .alert("Rename Notebook", isPresented: renameBinding) {
                 TextField("Title", text: $renameText)
