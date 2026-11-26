@@ -9,6 +9,8 @@ struct TileView: View {
     var skin: Skin = Skin.current
     /// The Fruit Salad game: show a fruit in place of the number.
     var isFruit = false
+    /// The world whose pictures to show when `isFruit` is on; nil shows fruit.
+    var faceTheme: String?
 
     @State private var appeared = false
     /// Special tiles throb so they catch the eye.
@@ -51,7 +53,7 @@ struct TileView: View {
         let bottom = style.bottom
 
         ZStack {
-            if isStone, isFruit {
+            if isStone, isFruit, faceTheme == nil {
                 // In the Fruit Salad game the block that will not merge is a coconut.
                 Text("\u{1F965}")
                     .font(.system(size: size * 0.74))
@@ -61,19 +63,19 @@ struct TileView: View {
                 StoneView(size: size, look: skin.stone)
             } else if kind == .bomb, ObstacleArt.has("tile-bomb-" + skin.id) {
                 // The theme's own bomb, with the tile's number on it.
-                ThemedSpecial(picture: "tile-bomb-" + skin.id, text: isFruit ? Fruit.face(for: value) : String(value),
+                ThemedSpecial(picture: "tile-bomb-" + skin.id, text: isFruit ? Fruit.face(for: value, theme: faceTheme) : String(value),
                               size: size, fontSize: isFruit ? size * 0.4 : fontSize * 0.86)
                     .scaleEffect(throb ? 1.07 : 1)
             } else if kind == .time, ObstacleArt.has("tile-clock-" + skin.id) {
-                ThemedSpecial(picture: "tile-clock-" + skin.id, text: isFruit ? Fruit.face(for: value) : String(value),
+                ThemedSpecial(picture: "tile-clock-" + skin.id, text: isFruit ? Fruit.face(for: value, theme: faceTheme) : String(value),
                               size: size, fontSize: isFruit ? size * 0.4 : fontSize * 0.86, isOnPale: true)
                     .scaleEffect(throb ? 1.05 : 1)
             } else if kind == .bomb {
                 // A bomb tile is a bomb, whatever the theme.
-                BombTile(value: value, size: size, fontSize: fontSize, label: isFruit ? Fruit.face(for: value) : nil)
+                BombTile(value: value, size: size, fontSize: fontSize, label: isFruit ? Fruit.face(for: value, theme: faceTheme) : nil)
                     .scaleEffect(throb ? 1.07 : 1)
             } else if kind == .time {
-                ClockTile(value: value, size: size, fontSize: fontSize, label: isFruit ? Fruit.face(for: value) : nil)
+                ClockTile(value: value, size: size, fontSize: fontSize, label: isFruit ? Fruit.face(for: value, theme: faceTheme) : nil)
                     .scaleEffect(throb ? 1.05 : 1)
             } else {
                 if isNeon {
@@ -107,7 +109,7 @@ struct TileView: View {
                     )
                 }
 
-                Text(isFruit ? Fruit.face(for: value) : String(value))
+                Text(isFruit ? Fruit.face(for: value, theme: faceTheme) : String(value))
                     .font(.system(size: isFruit ? size * 0.56 : fontSize, weight: .heavy, design: .rounded))
                     .foregroundStyle(Color.white)
                     .shadow(color: isNeon ? top : Color.black.opacity(0.28), radius: isNeon ? size * 0.09 : 1, x: 0, y: isNeon ? 0 : 1.5)

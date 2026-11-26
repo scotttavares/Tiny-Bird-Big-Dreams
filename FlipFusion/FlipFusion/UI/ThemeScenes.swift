@@ -882,6 +882,10 @@ struct ThemeMoments: ViewModifier {
             .onChange(of: store.comboEvent) { _, _ in
                 play()
             }
+            .onChange(of: store.bossEvent) { _, _ in
+                // The boss has struck; this is it being seen to.
+                release(store.boss)
+            }
             .onChange(of: store.crateOpenEvent) { _, _ in
                 // The game has already done the damage; this is the show.
                 switch store.lastCrateFind {

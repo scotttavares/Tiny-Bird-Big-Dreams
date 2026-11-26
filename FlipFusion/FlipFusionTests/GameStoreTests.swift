@@ -704,6 +704,74 @@ struct GameStoreTests {
         #expect(store.state.tiles.count == 3)
     }
 
+    @Test func finishingAWorldUnlocksTheNextWorldsTheme() {
+        #expect(GameStore.world(ofStage: 8) == 0)
+        #expect(GameStore.world(ofStage: 9) == 1)
+        #expect(GameStore.worldSkin(1) == "sunset")
+        let defaults = freshDefaults()
+        save(GameState(tiles: tiles([[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 3946, movesUntilRotation: 2, nextID: 10), to: defaults)
+        // Stage 8, the last of the first world, is its boss: 3,950 points.
+        defaults.set(8, forKey: "ff.stage")
+        let store = GameStore(defaults: defaults, animated: false)
+        let sunset = Skin.named("sunset")
+        #expect(!store.owns(sunset))
+        store.swipe(.left)
+        #expect(store.isStageWon)
+        #expect(store.stage == 9)
+        #expect(store.owns(sunset))
+        #expect(store.worldEvent == 1)
+        #expect(store.lastWorldSkin == "sunset")
+        // A player already deep in the map has every theme on the way.
+        defaults.set(17, forKey: "ff.stage")
+        let later = GameStore(defaults: defaults, animated: false)
+        #expect(later.owns(sunset))
+        #expect(later.owns(Skin.named("ocean")))
+        #expect(!later.owns(Skin.named("bubblegum")))
+    }
+
+    @Test func theLastStageOfAWorldIsItsBoss() {
+        #expect(GameStore.isBossStage(8))
+        #expect(!GameStore.isBossStage(7))
+        #expect(GameStore.goal(forStage: 8) == .score(3950))
+        #expect(GameStore.twist(forStage: 8) == .plain)
+        #expect(GameStore.boss(forStage: 24) == .shark)
+        #expect(GameStore.bossMove(.shark) == .bite)
+        #expect(GameStore.boss(forStage: 40) == .monkey)
+        #expect(GameStore.bossMove(.monkey) == .steal)
+        #expect(GameStore.bossWords(forStage: 7) == nil)
+        #expect(GameStore.bossWords(forStage: 24) != nil)
+
+        // The shark bites a hole out of the board after a few moves.
+        let defaults = freshDefaults()
+        defaults.set(24, forKey: "ff.stage")
+        let store = GameStore(defaults: defaults, animated: false)
+        store.newGame()
+        #expect(store.isBossGame)
+        let directions: [Direction] = [.left, .down, .right, .up]
+        var tries = 0
+        while store.bossEvent == 0, !store.isGameOver, tries < 80 {
+            store.swipe(directions[tries % 4])
+            tries += 1
+        }
+        #expect(store.bossEvent == 1)
+        #expect(store.state.blocks.contains { $0.kind == .hole })
+        #expect(GameEngine.isValid(store.state))
+        #expect(!store.lastBossWords.isEmpty)
+    }
+
+    @Test func worldsAfterTheFirstShowPicturesForNumbers() {
+        #expect(Fruit.face(for: 2, theme: "ocean") != Fruit.face(for: 2))
+        #expect(Fruit.face(for: 4096, theme: "ocean") == Fruit.face(for: 2048, theme: "ocean"))
+        #expect(Fruit.themed.values.allSatisfy { $0.count == 11 && Set($0).count == 11 })
+        #expect(Set(Fruit.themed.keys) == Set(GameStore.worldSkins).subtracting(["neon"]))
+        #expect(GameStore.tileName(128, stage: 5) == "128")
+        #expect(GameStore.tileName(128, stage: 20) == Fruit.face(for: 128, theme: "ocean"))
+        let defaults = freshDefaults()
+        #expect(GameStore(defaults: defaults, animated: false).symbolTheme == nil)
+        defaults.set(20, forKey: "ff.stage")
+        #expect(GameStore(defaults: defaults, animated: false).symbolTheme == "ocean")
+    }
+
     @Test func oneTileCanBeMovedOnItsOwn() {
         let defaults = freshDefaults()
         save(GameState(tiles: tiles([[2, 4, 0, 8], [0, 0, 0, 2], [0, 0, 0, 0], [0, 0, 0, 0]]), score: 0, movesUntilRotation: 2, nextID: 20), to: defaults)

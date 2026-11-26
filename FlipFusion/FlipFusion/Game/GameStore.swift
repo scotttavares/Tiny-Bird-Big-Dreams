@@ -292,7 +292,7 @@ final class GameStore {
     /// fifth (a chest stage) is a score too; the rest take turns.
     nonisolated static func goal(forStage stage: Int) -> StageGoal {
         let score = stageGoal(stage)
-        if stage < 4 || stage % 5 == 0 {
+        if stage < 4 || stage % 5 == 0 || isBossStage(stage) {
             return .score(score)
         }
         switch stage % 4 {
@@ -321,6 +321,30 @@ final class GameStore {
         case .moves(let score, let moves):
             return "Score " + score.formatted(.number.grouping(.automatic)) + " in \(moves) moves"
         }
+    }
+
+    /// What a tile is called in a stage: its number in the first world, its picture
+    /// in the worlds that show pictures.
+    nonisolated static func tileName(_ value: Int, stage: Int) -> String {
+        let theme = worldSkin(world(ofStage: stage))
+        return theme == "neon" ? String(value) : Fruit.face(for: value, theme: theme)
+    }
+
+    /// A stage's goal as a sentence, and in a word or two.
+    nonisolated static func goalWords(forStage stage: Int) -> String {
+        let goal = goal(forStage: stage)
+        if case .tile(let value) = goal {
+            return "Make a " + tileName(value, stage: stage) + " tile"
+        }
+        return goalWords(goal)
+    }
+
+    nonisolated static func goalShort(forStage stage: Int) -> String {
+        let goal = goal(forStage: stage)
+        if case .tile(let value) = goal {
+            return tileName(value, stage: stage) + " tile"
+        }
+        return goalShort(goal)
     }
 
     /// A goal in a word or two, for the stage map.
@@ -467,6 +491,8 @@ final class GameStore {
     /// every fifth is a plain stage with a big chest; the rest take turns.
     nonisolated static func twist(forStage stage: Int) -> Twist {
         if stage < 3 { return .plain }
+        // A boss is twist enough.
+        if isBossStage(stage) { return .plain }
         if stage % 4 == 0 { return .breather }
         if stage % 5 == 0 { return .plain }
         switch stage % 3 {
@@ -691,6 +717,10 @@ final class GameStore {
         }
         let steps = max(1, stage) - 1
         let goal = 400 + 300 * steps + 50 * steps * steps
+        // A boss fights back, so its stage asks for a fifth less.
+        if isBossStage(stage) {
+            return (goal * 4 / 5) / 50 * 50
+        }
         // A breather asks for a quarter less, to the nearest 50.
         return twist(forStage: stage) == .breather ? (goal * 3 / 4) / 50 * 50 : goal
     }
@@ -704,7 +734,9 @@ final class GameStore {
         let isChest = stage > 0 && stage % 5 == 0
         let coins = min(300, 30 + 15 * stage)
         let gems = min(8, 1 + stage / 3)
-        return StageLoot(stage: stage, coins: isChest ? coins * 2 : coins, gems: isChest ? gems + 3 : gems, isChest: isChest)
+        // A boss pays like a chest.
+        let isBig = isChest || isBossStage(stage)
+        return StageLoot(stage: stage, coins: isBig ? coins * 2 : coins, gems: isBig ? gems + 3 : gems, isChest: isChest)
     }
 
     /// Stars for the time left when the stage was cleared.
@@ -772,6 +804,19 @@ final class GameStore {
         noteQuest(.stages, 1)
         stage += 1
         lastLoot.opened = Self.opens(atStage: stage)
+        // The last stage of a world opens the next world, and its theme with it.
+        let world = Self.world(ofStage: stage)
+        if world != Self.world(ofStage: stage - 1) {
+            let skin = Skin.named(Self.worldSkin(world))
+            if world < Self.worldSkins.count, !owns(skin) {
+                ownedSkins.insert(skin.id)
+            }
+            lastWorldSkin = skin.id
+            worldEvent += 1
+            if lastLoot.opened == nil {
+                lastLoot.opened = "New world! The " + skin.name + " theme is yours"
+            }
+        }
         stageEvent += 1
         defaults.set(stage, forKey: Key.stage)
         defaults.set(stageStreak, forKey: Key.stageStreak)
@@ -1519,6 +1564,151 @@ final class GameStore {
         }
     }
 
+    // MARK: Bosses
+
+    /// What a boss does to the board when its turn comes.
+    enum BossMove: Sendable {
+        /// Bites a hole out of the board.
+        case bite
+        /// Makes off with a tile, and now and then a booster.
+        case steal
+        /// Drops a boulder on the board.
+        case stomp
+    }
+
+    /// The last stage of every world is its boss.
+    nonisolated static func isBossStage(_ stage: Int) -> Bool {
+        stage > 0 && stage % worldSize == 0
+    }
+
+    /// The creature that guards a stage's world.
+    nonisolated static func boss(forStage stage: Int) -> Critter {
+        switch worldSkin(world(ofStage: stage)) {
+        case "sunset": return .crab
+        case "ocean": return .shark
+        case "bubblegum": return .gummy
+        case "rainforest": return .monkey
+        case "lava": return .dragon
+        case "jurassic": return .trex
+        case "frost": return .yeti
+        case "gold": return .mole
+        case "party": return .pinata
+        case "galaxy": return .ufo
+        default: return .robot
+        }
+    }
+
+    nonisolated static func bossMove(_ critter: Critter) -> BossMove {
+        switch critter {
+        case .shark, .crab, .mole, .dragon: return .bite
+        case .monkey, .ufo, .pinata: return .steal
+        case .trex, .yeti, .robot, .gummy: return .stomp
+        }
+    }
+
+    /// A boss stage in a line, or nil for any other stage.
+    nonisolated static func bossWords(forStage stage: Int) -> String? {
+        guard isBossStage(stage) else { return nil }
+        let critter = boss(forStage: stage)
+        switch bossMove(critter) {
+        case .bite: return "Boss: the " + critter.title + " bites holes in the board"
+        case .steal: return "Boss: the " + critter.title + " steals tiles and boosters"
+        case .stomp: return "Boss: the " + critter.title + " drops boulders on the board"
+        }
+    }
+
+    /// The boss strikes after every this many moves.
+    static let bossEvery = 6
+    /// A boss never leaves more than this many holes in the board at once.
+    static let bossMaxHoles = 4
+    /// Goes up each time the boss strikes; `lastBossWords` says what it did.
+    private(set) var bossEvent = 0
+    private(set) var lastBossWords = ""
+    private(set) var bossMovesLeft = GameStore.bossEvery
+
+    /// True while the game on the board is a boss stage still being fought.
+    var isBossGame: Bool { hasStages && !stagePaid && Self.isBossStage(stage) }
+    /// The boss of the stage on the board.
+    var boss: Critter { Self.boss(forStage: playedStage) }
+
+    /// Counts a move toward the boss's next strike, and strikes when it is due.
+    private func bossTurn() {
+        guard isBossGame, !isStageWon else { return }
+        bossMovesLeft -= 1
+        guard bossMovesLeft <= 0 else { return }
+        bossMovesLeft = Self.bossEvery
+        let critter = Self.boss(forStage: stage)
+        switch Self.bossMove(critter) {
+        case .bite:
+            guard state.blocks.count < GameEngine.maxBlocks,
+                  state.blocks.filter({ $0.kind == .hole }).count < Self.bossMaxHoles
+            else { return }
+            // An empty cell when there is one, otherwise the smallest tile's.
+            var cell = GameEngine.emptyCells(state.tiles, blocked: blockedSet).randomElement(using: &rng)
+            if cell == nil, state.tiles.count > 2, let victim = state.tiles.min(by: { $0.value < $1.value }) {
+                state.tiles.removeAll { $0.id == victim.id }
+                nextBurstID += 1
+                bursts.append(Burst(id: nextBurstID, row: victim.row, col: victim.col, value: victim.value))
+                cell = Cell(row: victim.row, col: victim.col)
+            }
+            guard let cell else { return }
+            state.blocks.append(Block(row: cell.row, col: cell.col, kind: .hole))
+            lastBossWords = "The " + critter.title + " bit a hole in the board!"
+        case .steal:
+            guard state.tiles.count > 2, let victim = state.tiles.filter({ $0.kind != .stone }).randomElement(using: &rng) else { return }
+            state.tiles.removeAll { $0.id == victim.id }
+            nextBurstID += 1
+            bursts.append(Burst(id: nextBurstID, row: victim.row, col: victim.col, value: victim.value))
+            lastBossWords = "The " + critter.title + " stole a tile!"
+            // One time in two it takes a booster as well, if the player has any.
+            let held = Booster.allCases.filter { (boosterCounts[$0] ?? 0) > 0 }
+            if Bool.random(using: &rng), let taken = held.randomElement(using: &rng) {
+                boosterCounts[taken, default: 1] -= 1
+                lastBossWords = "The " + critter.title + " stole a tile and a booster!"
+            }
+        case .stomp:
+            let before = state.tiles.count
+            spawnTile(forcing: .stone)
+            guard state.tiles.count > before else { return }
+            lastBossWords = "The " + critter.title + " dropped a boulder!"
+        }
+        bossEvent += 1
+        shake(3)
+    }
+
+    // MARK: Worlds
+
+    /// Stages to a world. Every world is one theme's land on the map.
+    nonisolated static let worldSize = 8
+    /// The themes in the order their worlds are met. Reaching a world unlocks its
+    /// theme; after the last world they come round again.
+    nonisolated static let worldSkins = [
+        "neon", "sunset", "ocean", "bubblegum", "rainforest", "lava",
+        "jurassic", "frost", "gold", "party", "galaxy",
+    ]
+
+    /// The world a stage is in, counting from 0.
+    nonisolated static func world(ofStage stage: Int) -> Int {
+        (max(1, stage) - 1) / worldSize
+    }
+
+    /// The id of a world's theme.
+    nonisolated static func worldSkin(_ world: Int) -> String {
+        worldSkins[max(0, world) % worldSkins.count]
+    }
+
+    /// Goes up each time a new world is reached; `lastWorldSkin` is its theme's id.
+    private(set) var worldEvent = 0
+    private(set) var lastWorldSkin = ""
+
+    /// The world whose pictures the tiles show in place of numbers, or nil for
+    /// numbers: the first world, and any game that is not the adventure.
+    var symbolTheme: String? {
+        guard hasStages else { return nil }
+        let theme = Self.worldSkin(Self.world(ofStage: playedStage))
+        return theme == "neon" ? nil : theme
+    }
+
     /// Head-to-head games open at this stage.
     static let versusStage = 10
     var isVersusOpen: Bool { stage >= Self.versusStage }
@@ -1789,7 +1979,14 @@ final class GameStore {
         self.stageStreak = max(0, defaults.integer(forKey: Key.stageStreak))
         self.stageStars = (defaults.array(forKey: Key.stageStars) as? [Int]) ?? []
         self.dailyStreak = max(0, defaults.integer(forKey: Key.dailyStreak))
-        let owned = Set(defaults.stringArray(forKey: Key.skins) ?? [])
+        var owned = Set(defaults.stringArray(forKey: Key.skins) ?? [])
+        // Every world reached so far has handed over its theme (the first is free).
+        let reached = min(GameStore.world(ofStage: defaults.integer(forKey: Key.stage)), GameStore.worldSkins.count - 1)
+        if reached >= 1 {
+            for world in 1...reached {
+                owned.insert(GameStore.worldSkin(world))
+            }
+        }
         self.ownedSkins = owned
 
         var mode = Mode(rawValue: defaults.string(forKey: Key.mode) ?? "") ?? .timed
@@ -2077,6 +2274,7 @@ final class GameStore {
         singleMovesLeft = Self.freeSingleMoves
         stageCount = 0
         movesLeft = 0
+        bossMovesLeft = Self.bossEvery
         if mode == .timed, case .moves(_, let moves) = Self.goal(forStage: stage) {
             movesLeft = moves
         }
@@ -2497,6 +2695,9 @@ final class GameStore {
         refillEmptyBoard()
         if wasSwipe, mode == .fusion {
             mutateTile()
+        }
+        if wasSwipe {
+            bossTurn()
         }
         let wasOver = isGameOver
         isGameOver = !GameEngine.hasMove(state.tiles, blocked: blockedSet, holes: holeSet) || isTimeUp || isStageWon || isOutOfMoves

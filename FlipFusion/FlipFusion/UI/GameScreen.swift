@@ -33,6 +33,8 @@ struct GameScreen: View {
     /// The lesson of the first game's tutorial being shown, or nil when it is not on.
     @State private var tutorialStep: Int?
     @AppStorage(Tutorial.key) private var tutorialDone = false
+    /// The theme of a world just reached, put on as its first stage starts.
+    @State private var worldSkin: String?
     @State private var showShop = false
     @State private var showQuests = false
     @AppStorage(SoundPlayer.musicKey) private var musicOn = true
@@ -335,6 +337,12 @@ struct GameScreen: View {
                     .padding(.bottom, 14)
             }
         }
+        .onChange(of: store.bossEvent) { _, _ in
+            show(store.lastBossWords, seconds: 2)
+        }
+        .onChange(of: store.worldEvent) { _, _ in
+            worldSkin = store.lastWorldSkin
+        }
         .onChange(of: store.slidePulse) { _, _ in
             if tutorialStep == 0 {
                 tutorialTo(1)
@@ -361,6 +369,11 @@ struct GameScreen: View {
             // A finished game goes on the worldwide leaderboard of its mode.
             oneArmed = false
             // A new stage says what it asks for as it starts.
+            if !isOver, let entered = worldSkin {
+                // The first stage of a new world is played in that world's theme.
+                worldSkin = nil
+                skinID = entered
+            }
             if !isOver, store.hasStages, tutorialStep == nil {
                 show(startWords, seconds: 3)
             }
@@ -699,10 +712,11 @@ struct GameScreen: View {
         let unit: String
         switch store.playedGoal {
         case .tile(let value):
+            let wanted = GameStore.tileName(value, stage: store.playedStage)
             if store.stageProgress * 2 >= value {
-                return "So close! You made a \(store.stageProgress), one step from the \(value)"
+                return "So close! You made a " + GameStore.tileName(store.stageProgress, stage: store.playedStage) + ", one step from the " + wanted
             }
-            return "Stage \(store.stage) needs a \(value) tile"
+            return "Stage \(store.stage) needs a " + wanted + " tile"
         case .merges:
             unit = " merges"
         case .chains:
@@ -726,9 +740,14 @@ struct GameScreen: View {
         let next = store.stage
         var words: String
         let gates = [(5, "Endless"), (8, "Fruit Salad"), (10, "Head to head")]
+        // Stages still to clear before the next world, and its theme, open.
+        let toWorld = GameStore.worldSize - (next - 1) % GameStore.worldSize
         if let gate = gates.first(where: { $0.0 > next && $0.0 - next <= 2 }) {
             let away = gate.0 - next
             words = (away == 1 ? "1 more stage" : "\(away) more stages") + " to unlock " + gate.1
+        } else if toWorld <= 3 {
+            let theme = Skin.named(GameStore.worldSkin(GameStore.world(ofStage: next) + 1)).name
+            words = (toWorld == 1 ? "1 more stage" : "\(toWorld) more stages") + " to the \(theme) world and theme"
         } else {
             let away = (5 - next % 5) % 5
             if away == 0 {
@@ -749,7 +768,7 @@ struct GameScreen: View {
         case .score(let score):
             return score.formatted(.number.grouping(.automatic))
         case .tile(let value):
-            return "Make \(value)"
+            return "Make " + GameStore.tileName(value, stage: store.playedStage)
         case .merges(let count):
             return "\(min(store.stageProgress, count))/\(count) merges"
         case .chains(let count):
@@ -765,8 +784,8 @@ struct GameScreen: View {
         if let hint = GameStore.stageHint(store.stage) {
             return hint
         }
-        var words = "Stage \(store.stage): " + GameStore.goalWords(store.playedGoal)
-        if let twist = GameStore.twistWords(store.twist) {
+        var words = "Stage \(store.stage): " + GameStore.goalWords(forStage: store.playedStage)
+        if let twist = GameStore.bossWords(forStage: store.playedStage) ?? GameStore.twistWords(store.twist) {
             words += "\n" + twist
         } else if GameStore.streakBombs(store.stageStreak) > 0 {
             words += "\n\(store.stageStreak) wins in a row: free bomb!"

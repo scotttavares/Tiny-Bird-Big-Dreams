@@ -168,14 +168,15 @@ struct StageMapView: View {
     private static let rowHeight: CGFloat = 90
     private static let bannerHeight: CGFloat = 70
     /// Eight stages to a world: a world's painting then fits a phone with little cut off.
-    private static let perWorld = 8
+    private static let perWorld = GameStore.worldSize
 
     /// The worlds in the order they are met; after the last they come round again.
-    private static let worlds: [(id: String, name: String)] = [
-        ("neon", "Neon City"), ("sunset", "Sunset Shores"), ("ocean", "Ocean Deep"),
-        ("bubblegum", "Candy Hills"), ("rainforest", "Rainforest"), ("lava", "Lava Peaks"),
-        ("jurassic", "Lost Valley"), ("frost", "Frost Lands"), ("gold", "Gold Canyon"),
-        ("galaxy", "The Galaxy"),
+    /// The lands by name, under the id of the theme each one unlocks.
+    private static let names: [String: String] = [
+        "neon": "Neon City", "sunset": "Sunset Shores", "ocean": "Ocean Deep",
+        "bubblegum": "Candy Hills", "rainforest": "Rainforest", "lava": "Lava Peaks",
+        "jurassic": "Lost Valley", "frost": "Frost Lands", "gold": "Gold Canyon",
+        "party": "Party Plaza", "galaxy": "The Galaxy",
     ]
 
     private static func world(ofStage number: Int) -> Int {
@@ -183,11 +184,11 @@ struct StageMapView: View {
     }
 
     private static func name(ofWorld world: Int) -> String {
-        worlds[world % worlds.count].name
+        names[GameStore.worldSkin(world)] ?? "New World"
     }
 
     private static func art(ofWorld world: Int) -> String {
-        "map-" + worlds[world % worlds.count].id
+        "map-" + GameStore.worldSkin(world)
     }
 
     /// The colours of a world's ground when its painting is not in the app.
@@ -197,7 +198,8 @@ struct StageMapView: View {
             [Color(hex: 0x1F8FB5), Color(hex: 0x0B3B6B)], [Color(hex: 0xF7A8D0), Color(hex: 0x9C6ADE)],
             [Color(hex: 0x2E8B4E), Color(hex: 0x0F3D2A)], [Color(hex: 0x8A2B12), Color(hex: 0x2A0F0B)],
             [Color(hex: 0x8C9A3D), Color(hex: 0x3F4A1D)], [Color(hex: 0xBFE6F7), Color(hex: 0x5D8FC2)],
-            [Color(hex: 0xD9973F), Color(hex: 0x7A3F1B)], [Color(hex: 0x3A1D7A), Color(hex: 0x0A0626)],
+            [Color(hex: 0xD9973F), Color(hex: 0x7A3F1B)], [Color(hex: 0x5A1F8A), Color(hex: 0x1A0A3A)],
+            [Color(hex: 0x3A1D7A), Color(hex: 0x0A0626)],
         ]
         return tones[world % tones.count]
     }
@@ -345,10 +347,10 @@ struct StageMapView: View {
     private var bottomBar: some View {
         VStack(spacing: 8) {
             VStack(spacing: 2) {
-                Text("Stage \(stage): " + GameStore.goalWords(GameStore.goal(forStage: stage)))
+                Text("Stage \(stage): " + GameStore.goalWords(forStage: stage))
                     .font(.system(size: 16, weight: .heavy, design: .rounded))
                     .foregroundStyle(Color.white)
-                if let words = GameStore.twistWords(GameStore.twist(forStage: stage)) {
+                if let words = GameStore.bossWords(forStage: stage) ?? GameStore.twistWords(GameStore.twist(forStage: stage)) {
                     Text(words)
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
                         .foregroundStyle(Theme.counter)
@@ -489,7 +491,7 @@ struct StageMapView: View {
         return HStack(spacing: 8) {
             Image(systemName: isAhead ? "lock.fill" : "flag.fill")
                 .font(.system(size: 13, weight: .heavy))
-            Text(isAhead ? "WORLD \(world + 1)  ·  REACH STAGE \(first)" : "WORLD \(world + 1)  ·  " + Self.name(ofWorld: world).uppercased())
+            Text(isAhead ? Self.name(ofWorld: world).uppercased() + "  ·  CLEAR STAGE \(first - 1) TO UNLOCK" : "WORLD \(world + 1)  ·  " + Self.name(ofWorld: world).uppercased())
                 .font(.system(size: 14, weight: .black, design: .rounded))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
@@ -535,6 +537,8 @@ struct StageMapView: View {
         let twist = GameStore.twist(forStage: number)
         let isChest = number % 5 == 0
         let opens = GameStore.opens(atStage: number + 1) != nil
+        // The last stop of a world is its boss.
+        let isBoss = GameStore.isBossStage(number) && !isDone
         let side: CGFloat = isNow ? 66 : 54
         // Gold once cleared, bright for the one to play, slate for the ones ahead.
         let rim: [Color] = isDone ? [Color(hex: 0xFFE98A), Color(hex: 0xC98A12)] : (isNow ? [Color.white, Color(hex: 0xBFD4FF)] : [Color(hex: 0x9AA6C7), Color(hex: 0x4A5478)])
@@ -579,12 +583,12 @@ struct StageMapView: View {
                 .frame(width: side, height: side)
                 .shadow(color: isNow ? Theme.flip[1].opacity(0.95) : Color.clear, radius: 14)
                 .overlay(alignment: .topTrailing) {
-                    if opens || (twist != .plain && !isDone) {
-                        Image(systemName: opens ? "lock.open.fill" : Self.symbol(twist))
+                    if opens || isBoss || (twist != .plain && !isDone) {
+                        Image(systemName: isBoss ? "crown.fill" : (opens ? "lock.open.fill" : Self.symbol(twist)))
                             .font(.system(size: 11, weight: .heavy))
                             .foregroundStyle(Color.white)
                             .frame(width: 24, height: 24)
-                            .background(Circle().fill(opens ? Color(hex: 0x2FAE6B) : Color(hex: 0x5B4BD6)))
+                            .background(Circle().fill(isBoss ? Color(hex: 0xD9345B) : (opens ? Color(hex: 0x2FAE6B) : Color(hex: 0x5B4BD6))))
                             .overlay(Circle().strokeBorder(Color.white.opacity(0.8), lineWidth: 1.5))
                             .offset(x: 7, y: -5)
                     }
@@ -607,7 +611,7 @@ struct StageMapView: View {
                 }
 
                 if !isDone {
-                    Text(GameStore.goalShort(GameStore.goal(forStage: number)))
+                    Text(GameStore.goalShort(forStage: number))
                         .font(.system(size: 11, weight: .heavy, design: .rounded))
                         .foregroundStyle(isNow ? Theme.counter : Color.white.opacity(0.85))
                         .padding(.horizontal, 7)
