@@ -1,0 +1,4 @@
+build/
+GameHost.xcodeproj/
+*.xcresult
+DerivedData/
